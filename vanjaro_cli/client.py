@@ -8,7 +8,6 @@ from typing import Any
 
 import requests
 
-from vanjaro_cli.auth import AuthError
 from vanjaro_cli.config import Config, ConfigError
 
 __all__ = ["VanjaroClient", "ApiError"]
@@ -65,13 +64,20 @@ class VanjaroClient:
         headers = self._build_headers()
         headers.update(kwargs.pop("headers", {}))
 
-        response = self._session.request(
-            method, url, headers=headers, timeout=30, **kwargs
-        )
+        try:
+            response = self._session.request(
+                method, url, headers=headers, timeout=30, **kwargs
+            )
+        except requests.RequestException as exc:
+            raise ApiError(
+                f"Cannot reach {url}: {exc}. Check your connection and site URL.",
+                status_code=0,
+            ) from exc
 
         if response.status_code == 401:
-            raise AuthError(
-                "Session expired. Run `vanjaro auth login` to re-authenticate."
+            raise ApiError(
+                "Session expired. Run `vanjaro auth login` to re-authenticate.",
+                status_code=401,
             )
 
         self._raise_for_status(response)

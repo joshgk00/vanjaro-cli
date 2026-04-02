@@ -10,7 +10,7 @@ import click
 
 from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
-from vanjaro_cli.commands.helpers import exit_error, get_client, output_result
+from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, parse_json_field
 
 # VanjaroAI content endpoints (bypass DnnPageEditor restriction)
 GET_PAGE = "/API/VanjaroAI/AIPage/Get"
@@ -51,17 +51,8 @@ def get_content(page_id: int, locale: str, draft: bool, output: str | None, as_j
     if data is None:
         exit_error(f"No content returned for page {page_id}.", as_json)
 
-    # Parse ContentJSON/StyleJSON strings into objects for clean output
-    content_json = data.get("contentJSON", "[]")
-    style_json = data.get("styleJSON", "[]")
-    try:
-        components = json.loads(content_json) if isinstance(content_json, str) else content_json
-    except json.JSONDecodeError:
-        components = []
-    try:
-        styles = json.loads(style_json) if isinstance(style_json, str) else style_json
-    except json.JSONDecodeError:
-        styles = []
+    components = parse_json_field(data, "contentJSON")
+    styles = parse_json_field(data, "styleJSON")
 
     result = {
         "page_id": page_id,

@@ -7,7 +7,7 @@ import json
 import pytest
 import responses
 
-from vanjaro_cli.auth import AuthError
+from vanjaro_cli.client import ApiError
 from vanjaro_cli.client import ApiError, VanjaroClient
 from vanjaro_cli.config import Config, ConfigError
 from tests.conftest import (
@@ -88,7 +88,7 @@ def test_401_raises_auth_error():
 
     client = make_client()
 
-    with pytest.raises(AuthError, match="Session expired"):
+    with pytest.raises(ApiError, match="Session expired"):
         client.get(TEST_PATH)
 
 

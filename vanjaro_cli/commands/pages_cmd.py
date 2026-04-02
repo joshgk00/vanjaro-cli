@@ -9,7 +9,7 @@ import click
 from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
 from vanjaro_cli.models.page import Page, PageSettings
-from vanjaro_cli.commands.helpers import exit_error, get_client, output_result
+from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, print_table
 
 # Vanjaro page listing endpoint (works with JWT + anti-forgery)
 GET_PAGES = "/API/Vanjaro/Page/GetPages"
@@ -70,7 +70,7 @@ def list_pages(keyword: str, portal_id: int | None, as_json: bool) -> None:
         if not page_list:
             click.echo("No pages found.")
             return
-        _print_table(
+        print_table(
             ["id", "name", "url", "status", "in_menu"],
             [p.to_row() for p in page_list],
         )
@@ -260,20 +260,3 @@ def page_settings(
     )
 
 
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _print_table(headers: list[str], rows: list[dict]) -> None:
-    if not rows:
-        return
-    col_widths = {h: len(h) for h in headers}
-    for row in rows:
-        for h in headers:
-            col_widths[h] = max(col_widths[h], len(str(row.get(h, ""))))
-
-    header_line = "  ".join(h.upper().ljust(col_widths[h]) for h in headers)
-    click.echo(header_line)
-    click.echo("-" * len(header_line))
-    for row in rows:
-        click.echo("  ".join(str(row.get(h, "")).ljust(col_widths[h]) for h in headers))
