@@ -104,6 +104,8 @@ class VanjaroClient:
         }
         if self._verification_token:
             headers["RequestVerificationToken"] = self._verification_token
+        if self._config.api_key:
+            headers["X-Api-Key"] = self._config.api_key
         return headers
 
     @staticmethod

@@ -1,4 +1,4 @@
-"""vanjaro content get/update/publish commands."""
+"""vanjaro content get/update/publish commands via VanjaroAI API."""
 
 from __future__ import annotations
 
@@ -10,12 +10,12 @@ import click
 
 from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
-from vanjaro_cli.models.content import PageContent
 from vanjaro_cli.commands.helpers import exit_error, get_client, output_result
 
-# Vanjaro content endpoints
-GET_PAGE = "/API/Vanjaro/Page/Get"
-SAVE_PAGE = "/API/Vanjaro/Page/Save"
+# VanjaroAI content endpoints (bypass DnnPageEditor restriction)
+GET_PAGE = "/API/VanjaroAI/AIPage/Get"
+UPDATE_PAGE = "/API/VanjaroAI/AIPage/Update"
+PUBLISH_PAGE = "/API/VanjaroAI/AIPage/Publish"
 
 
 @click.group()
@@ -26,6 +26,7 @@ def content() -> None:
 @content.command("get")
 @click.argument("page_id", type=int)
 @click.option("--locale", "-l", default="en-US", show_default=True)
+@click.option("--draft/--published", default=True, help="Include draft content (default: draft).")
 @click.option(
     "--output",
     "-o",
@@ -34,28 +35,43 @@ def content() -> None:
     help="Write content JSON to this file instead of stdout.",
 )
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON (default for piped use).")
-def get_content(page_id: int, locale: str, output: str | None, as_json: bool) -> None:
+def get_content(page_id: int, locale: str, draft: bool, output: str | None, as_json: bool) -> None:
     """Fetch the GrapesJS content for a page."""
     client, _ = get_client()
 
     try:
         response = client.get(
             GET_PAGE,
-            params={"tabid": page_id, "locale": locale},
+            params={"pageId": page_id, "includeDraft": str(draft).lower(), "locale": locale},
         )
     except (ApiError, ConfigError) as exc:
         exit_error(str(exc), as_json)
 
-    raw = response.json()
-    if raw is None:
-        exit_error(
-            f"No content returned for page {page_id}. "
-            "The Vanjaro content API requires page edit mode, which is only "
-            "available in the browser. Use `vanjaro pages get` for page metadata.",
-            as_json,
-        )
-    page_content = PageContent.from_api(page_id, raw, locale)
-    payload = json.dumps(page_content.model_dump(by_alias=False), indent=2)
+    data = response.json()
+    if data is None:
+        exit_error(f"No content returned for page {page_id}.", as_json)
+
+    # Parse ContentJSON/StyleJSON strings into objects for clean output
+    content_json = data.get("contentJSON", "[]")
+    style_json = data.get("styleJSON", "[]")
+    try:
+        components = json.loads(content_json) if isinstance(content_json, str) else content_json
+    except json.JSONDecodeError:
+        components = []
+    try:
+        styles = json.loads(style_json) if isinstance(style_json, str) else style_json
+    except json.JSONDecodeError:
+        styles = []
+
+    result = {
+        "page_id": page_id,
+        "locale": locale,
+        "version": data.get("version", 0),
+        "is_published": data.get("isPublished", False),
+        "components": components,
+        "styles": styles,
+    }
+    payload = json.dumps(result, indent=2)
 
     if output:
         Path(output).write_text(payload)
@@ -76,11 +92,13 @@ def get_content(page_id: int, locale: str, output: str | None, as_json: bool) ->
     help="JSON file containing GrapesJS components/styles.",
 )
 @click.option("--locale", "-l", default="en-US", show_default=True)
+@click.option("--version", "-v", "expected_version", type=int, default=None, help="Expected version for conflict detection.")
 @click.option("--json", "as_json", is_flag=True)
-def update_content(page_id: int, input_file: str | None, locale: str, as_json: bool) -> None:
+def update_content(page_id: int, input_file: str | None, locale: str, expected_version: int | None, as_json: bool) -> None:
     """Replace the GrapesJS content for a page.
 
     Reads from FILE if provided, otherwise reads JSON from stdin.
+    Creates a new draft version (use `content publish` to make it live).
     """
     if input_file:
         raw_json = Path(input_file).read_text()
@@ -94,31 +112,54 @@ def update_content(page_id: int, input_file: str | None, locale: str, as_json: b
     except json.JSONDecodeError as exc:
         exit_error(f"Invalid JSON: {exc}", as_json)
 
-    # Accept both a raw GrapesJS payload and a PageContent dump
-    if "components" not in data and "raw" in data:
-        inner = data.get("raw", {})
-        components = inner.get("components", [])
-        styles = inner.get("styles", [])
-    else:
-        components = data.get("components", [])
-        styles = data.get("styles", [])
+    # Accept both raw GrapesJS payload and our get output format
+    components = data.get("components", [])
+    styles = data.get("styles", [])
 
-    page_content = PageContent(
-        page_id=page_id,
-        locale=locale,
-        components=components,
-        styles=styles,
-    )
+    # VanjaroAI expects ContentJSON/StyleJSON as JSON strings
+    payload: dict = {
+        "pageId": page_id,
+        "contentJSON": json.dumps(components),
+        "styleJSON": json.dumps(styles),
+        "locale": locale,
+    }
+    if expected_version is not None:
+        payload["expectedVersion"] = expected_version
 
     client, _ = get_client()
     try:
-        client.post(SAVE_PAGE, json=page_content.to_api_payload())
+        response = client.post(UPDATE_PAGE, json=payload)
+    except (ApiError, ConfigError) as exc:
+        exit_error(str(exc), as_json)
+
+    result = response.json()
+    new_version = result.get("version", "?")
+
+    output_result(
+        as_json,
+        status="updated",
+        human_message=f"Content updated for page {page_id} (version {new_version}, draft).",
+        page_id=page_id,
+        version=new_version,
+    )
+
+
+@content.command("publish")
+@click.argument("page_id", type=int)
+@click.option("--locale", "-l", default="en-US", show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def publish_content(page_id: int, locale: str, as_json: bool) -> None:
+    """Publish the latest draft version of a page."""
+    client, _ = get_client()
+
+    try:
+        response = client.post(PUBLISH_PAGE, json={"pageId": page_id, "locale": locale})
     except (ApiError, ConfigError) as exc:
         exit_error(str(exc), as_json)
 
     output_result(
         as_json,
-        status="updated",
-        human_message=f"Content updated for page {page_id}.",
+        status="published",
+        human_message=f"Page {page_id} published.",
         page_id=page_id,
     )

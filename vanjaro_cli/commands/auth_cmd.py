@@ -7,7 +7,7 @@ import json
 import click
 
 from vanjaro_cli.auth import AuthError, login, logout
-from vanjaro_cli.config import CONFIG_FILE, ConfigError, clear_session, load_config
+from vanjaro_cli.config import CONFIG_FILE, ConfigError, clear_session, get_active_profile_name, load_config
 from vanjaro_cli.commands.helpers import exit_error, output_result
 
 
@@ -26,15 +26,16 @@ def auth() -> None:
     prompt=True,
     hide_input=True,
 )
+@click.option("--profile", "profile_name", default=None, help="Save to a named profile.")
 @click.option("--json", "as_json", is_flag=True, help="Output result as JSON.")
-def login_command(url: str, username: str, password: str, as_json: bool) -> None:
+def login_command(url: str, username: str, password: str, profile_name: str | None, as_json: bool) -> None:
     """Authenticate via DNN login form and store session cookies."""
     if not url:
         raise click.UsageError(
             "No site URL provided. Pass --url or set VANJARO_BASE_URL."
         )
     try:
-        config = login(url, username, password)
+        config = login(url, username, password, profile_name=profile_name)
     except AuthError as exc:
         exit_error(str(exc), as_json)
 

@@ -16,6 +16,7 @@ from vanjaro_cli.config import Config
 
 BASE_URL = "https://example.vanjaro.com"
 FAKE_COOKIES = {".DOTNETNUKE": "fake-auth-cookie-abc", "__RequestVerificationToken": "fake-rv-cookie"}
+FAKE_API_KEY = "dGVzdC1hcGkta2V5LWZvci11bml0LXRlc3Rz"
 FAKE_ANTIFORGERY_TOKEN = "fake-antiforgery-token-xyz"
 
 # HTML snippet that mimics a DNN page with an anti-forgery token
@@ -30,6 +31,24 @@ FAKE_HOMEPAGE_HTML = (
 _VANJARO_ENV_VARS = ("VANJARO_BASE_URL", "VANJARO_TOKEN", "VANJARO_PORTAL_ID")
 
 
+def _build_profile_config(
+    base_url: str = BASE_URL,
+    cookies: dict | None = None,
+    api_key: str | None = None,
+    profile_name: str = "default",
+) -> dict:
+    """Build a config dict in the profiles format."""
+    profile_data: dict = {"base_url": base_url, "portal_id": 0}
+    if cookies is not None:
+        profile_data["cookies"] = cookies
+    if api_key is not None:
+        profile_data["api_key"] = api_key
+    return {
+        "active_profile": profile_name,
+        "profiles": {profile_name: profile_data},
+    }
+
+
 @pytest.fixture
 def runner() -> CliRunner:
     return CliRunner()
@@ -41,8 +60,8 @@ def mock_config(tmp_path: Path) -> Generator[Path, None, None]:
     config_dir = tmp_path / ".vanjaro-cli"
     config_dir.mkdir()
     config_file = config_dir / "config.json"
-    config = Config(base_url=BASE_URL, cookies=FAKE_COOKIES)
-    config_file.write_text(config.model_dump_json())
+    config_data = _build_profile_config(cookies=FAKE_COOKIES)
+    config_file.write_text(json.dumps(config_data))
 
     # Save and clear any env vars that would override the test config
     saved_env = {k: os.environ.pop(k) for k in _VANJARO_ENV_VARS if k in os.environ}
@@ -55,6 +74,27 @@ def mock_config(tmp_path: Path) -> Generator[Path, None, None]:
         yield config_file
 
     # Restore any env vars we cleared
+    os.environ.update(saved_env)
+
+
+@pytest.fixture
+def mock_config_with_api_key(tmp_path: Path) -> Generator[Path, None, None]:
+    """Config fixture that includes an API key."""
+    config_dir = tmp_path / ".vanjaro-cli"
+    config_dir.mkdir()
+    config_file = config_dir / "config.json"
+    config_data = _build_profile_config(cookies=FAKE_COOKIES, api_key=FAKE_API_KEY)
+    config_file.write_text(json.dumps(config_data))
+
+    saved_env = {k: os.environ.pop(k) for k in _VANJARO_ENV_VARS if k in os.environ}
+
+    with (
+        patch("vanjaro_cli.config.CONFIG_DIR", config_dir),
+        patch("vanjaro_cli.config.CONFIG_FILE", config_file),
+        patch("vanjaro_cli.commands.auth_cmd.CONFIG_FILE", config_file),
+    ):
+        yield config_file
+
     os.environ.update(saved_env)
 
 

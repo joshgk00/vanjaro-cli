@@ -58,8 +58,11 @@ def test_login_success(runner, tmp_path):
 
     assert config_file.exists()
     saved = json.loads(config_file.read_text())
-    assert saved["base_url"] == BASE_URL
-    assert saved["cookies"] is not None
+    # Config is now stored under profiles (auto-derived from hostname)
+    assert "profiles" in saved
+    profile_data = next(iter(saved["profiles"].values()))
+    assert profile_data["base_url"] == BASE_URL
+    assert profile_data["cookies"] is not None
 
 
 @responses.activate

@@ -13,7 +13,7 @@ import re
 
 import requests
 
-from vanjaro_cli.config import Config, save_config
+from vanjaro_cli.config import Config, derive_profile_name, save_config
 
 __all__ = ["AuthError", "login", "logout"]
 
@@ -32,7 +32,7 @@ _TAB_ID_RE = re.compile(r'sf_tabId`:`(\d+)`')
 _AUTH_COOKIE_NAMES = {".dotnetnuke", ".aspxauth", "authentication"}
 
 
-def login(base_url: str, username: str, password: str) -> Config:
+def login(base_url: str, username: str, password: str, profile_name: str | None = None) -> Config:
     """Authenticate via Vanjaro's login API and return a Config with session cookies."""
     base_url = base_url.rstrip("/")
     session = requests.Session()
@@ -118,7 +118,8 @@ def login(base_url: str, username: str, password: str) -> Config:
         )
 
     config = Config(base_url=base_url, cookies=all_cookies)
-    save_config(config)
+    resolved_profile = profile_name or derive_profile_name(base_url)
+    save_config(config, resolved_profile)
     return config
 
 
