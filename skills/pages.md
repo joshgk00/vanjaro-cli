@@ -1,64 +1,229 @@
-# Pages Skill
+# Pages -- vanjaro-cli
 
-Manage Vanjaro/DNN pages via the PersonaBar Pages API.
+CRUD operations for DNN/Vanjaro pages (tabs).
 
 ## Commands
 
-### `vanjaro pages list`
+### `vanjaro pages list [OPTIONS]`
 
+List all pages in the site.
+
+**Options:**
+- `--keyword, -k TEXT` -- Filter pages by keyword (matches name, title, or text)
+- `--portal-id INT` -- Portal ID (default: from config)
+- `--json` -- Output as JSON
+
+**Example:**
 ```bash
-vanjaro pages list
-vanjaro pages list --keyword "about"
-vanjaro pages list --json        # returns array of page objects
+vanjaro pages list --json
+vanjaro pages list --keyword "About" --json
 ```
 
-Fetches all pages with hierarchy (indented names for children).
+**JSON output:**
+```json
+[
+  {
+    "id": 42,
+    "name": "Home",
+    "title": "Home",
+    "url": "/",
+    "parent_id": null,
+    "is_deleted": false,
+    "include_in_menu": true,
+    "status": "",
+    "level": 0,
+    "has_children": false,
+    "portal_id": 0
+  }
+]
+```
 
-### `vanjaro pages get <id>`
+### `vanjaro pages get PAGE_ID [OPTIONS]`
 
+Get details for a single page.
+
+**Options:**
+- `--json` -- Output as JSON
+
+**Example:**
 ```bash
-vanjaro pages get 42
 vanjaro pages get 42 --json
 ```
 
-### `vanjaro pages create`
-
-```bash
-vanjaro pages create --title "New Page"
-vanjaro pages create --title "Blog" --name "blog" --parent 5
-vanjaro pages create --title "Hidden" --hidden
-vanjaro pages create --title "Blog" --json
+**JSON output:**
+```json
+{
+  "id": 42,
+  "name": "About Us",
+  "title": "About Us",
+  "url": "/about-us",
+  "parent_id": null,
+  "is_deleted": false,
+  "include_in_menu": true,
+  "status": "Visible",
+  "level": 0,
+  "has_children": true,
+  "portal_id": 0
+}
 ```
 
-### `vanjaro pages copy <id>`
+### `vanjaro pages create [OPTIONS]`
 
+Create a new page.
+
+**Options:**
+- `--title, -t TEXT` -- Page title (required; also used as name if `--name` omitted)
+- `--name, -n TEXT` -- Page name/slug (defaults to title)
+- `--parent, -P INT` -- Parent page ID for nesting
+- `--hidden` -- Exclude from navigation menu
+- `--portal-id INT` -- Portal ID (default: from config)
+- `--json` -- Output as JSON
+
+**Example:**
 ```bash
-vanjaro pages copy 10
-vanjaro pages copy 10 --title "Home - Copy"
+vanjaro pages create --title "Contact" --json
+vanjaro pages create --title "FAQ" --parent 42 --hidden --json
 ```
 
-### `vanjaro pages delete <id>`
-
-```bash
-vanjaro pages delete 42 --force        # skip confirmation
-vanjaro pages delete 42                # prompts for confirmation
+**JSON output:**
+```json
+{
+  "status": "created",
+  "page": {
+    "id": 99,
+    "name": "Contact",
+    "title": "Contact",
+    "url": "/contact",
+    "include_in_menu": true
+  }
+}
 ```
 
-### `vanjaro pages settings <id>`
+### `vanjaro pages copy PAGE_ID [OPTIONS]`
 
+Copy an existing page.
+
+**Options:**
+- `--title, -t TEXT` -- Title for the copied page
+- `--json` -- Output as JSON
+
+**Example:**
 ```bash
-vanjaro pages settings 42                        # view current settings
-vanjaro pages settings 42 --title "New Title"   # update title
-vanjaro pages settings 42 --hidden              # remove from menu
-vanjaro pages settings 42 --visible             # add back to menu
+vanjaro pages copy 42 --title "About Us (Copy)" --json
 ```
 
-## API Endpoints Used
+**JSON output:**
+```json
+{
+  "status": "copied",
+  "source_id": 42,
+  "new_page": {
+    "id": 100,
+    "name": "About Us (Copy)",
+    "title": "About Us (Copy)"
+  }
+}
+```
 
-| Action | Method | Endpoint |
-|--------|--------|----------|
-| List | GET | `/API/PersonaBar/Pages/SearchPages` |
-| Get | GET | `/API/PersonaBar/Pages/GetPageDetails` |
-| Create / Update | POST | `/API/PersonaBar/Pages/SavePageDetails` |
-| Delete | POST | `/API/PersonaBar/Pages/DeletePage` |
-| Copy | POST | `/API/PersonaBar/Pages/CopyPage` |
+### `vanjaro pages delete PAGE_ID [OPTIONS]`
+
+Delete a page by ID.
+
+**Options:**
+- `--force` -- Skip confirmation prompt
+- `--json` -- Output as JSON
+
+**Example:**
+```bash
+vanjaro pages delete 99 --force --json
+```
+
+**JSON output:**
+```json
+{
+  "status": "deleted",
+  "page_id": 99
+}
+```
+
+### `vanjaro pages settings PAGE_ID [OPTIONS]`
+
+View or update page settings. Without update flags, shows current settings.
+
+**Options:**
+- `--title TEXT` -- Update page title
+- `--name TEXT` -- Update page name/slug
+- `--hidden / --visible` -- Toggle menu visibility
+- `--json` -- Output as JSON
+
+**Example (view):**
+```bash
+vanjaro pages settings 42 --json
+```
+
+**Example (update):**
+```bash
+vanjaro pages settings 42 --title "New Title" --hidden --json
+```
+
+**JSON output (update):**
+```json
+{
+  "status": "updated",
+  "page_id": 42
+}
+```
+
+## Workflows
+
+### Create a Page Hierarchy
+
+```bash
+# Create parent page
+vanjaro pages create --title "Services" --json
+# Output: {"status": "created", "page": {"id": 50, ...}}
+
+# Create child pages under it
+vanjaro pages create --title "Web Development" --parent 50 --json
+vanjaro pages create --title "Consulting" --parent 50 --json
+```
+
+### Clone and Modify a Page
+
+```bash
+# Copy the page
+vanjaro pages copy 42 --title "About Us v2" --json
+
+# Update settings on the copy
+vanjaro pages settings 100 --hidden --json
+```
+
+### Audit All Pages
+
+```bash
+# Get all pages as JSON and pipe to jq
+vanjaro pages list --json | jq '.[] | select(.include_in_menu == false) | .name'
+```
+
+### Bulk Page ID Lookup
+
+```bash
+# Find a page by keyword, extract ID
+PAGE_ID=$(vanjaro pages list --keyword "Contact" --json | jq '.[0].id')
+vanjaro pages get "$PAGE_ID" --json
+```
+
+## Error Handling
+
+- "No pages found": The site may have no pages, or the keyword filter matched nothing. Try without `--keyword`.
+- 404 on `pages get`: The page ID does not exist. Run `pages list` to see valid IDs.
+- 403 on `pages create/delete`: The authenticated user lacks page management permissions.
+- Confirmation prompt on `delete`: Use `--force` to skip in scripts.
+
+## API Notes
+
+- `pages list` uses Vanjaro's `GetPages` endpoint, which returns a flat list including nesting level.
+- `pages get` and `pages settings` use the DNN PersonaBar `GetPageDetails` endpoint.
+- `pages create` uses Vanjaro's `SavePageDetails` endpoint.
+- `pages delete` uses Vanjaro's `DeletePage` endpoint.
+- `pages copy` uses the DNN PersonaBar `CopyPage` endpoint.

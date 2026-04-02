@@ -1,16 +1,17 @@
-"""vanjaro content get/update/publish commands via VanjaroAI API."""
+"""vanjaro content get/update/publish/snapshot/rollback/diff commands via VanjaroAI API."""
 
 from __future__ import annotations
 
 import json
 import sys
+from datetime import datetime, timezone
 from pathlib import Path
 
 import click
 
 from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
-from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, parse_json_field
+from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, parse_json_field, write_output
 
 # VanjaroAI content endpoints (bypass DnnPageEditor restriction)
 GET_PAGE = "/API/VanjaroAI/AIPage/Get"
@@ -65,7 +66,7 @@ def get_content(page_id: int, locale: str, draft: bool, output: str | None, as_j
     payload = json.dumps(result, indent=2)
 
     if output:
-        Path(output).write_text(payload)
+        write_output(output, payload, as_json)
         if not as_json:
             click.echo(f"Content written to {output}")
     else:
@@ -154,3 +155,238 @@ def publish_content(page_id: int, locale: str, as_json: bool) -> None:
         human_message=f"Page {page_id} published.",
         page_id=page_id,
     )
+
+
+@content.command("snapshot")
+@click.argument("page_id", type=int)
+@click.option(
+    "--output",
+    "-o",
+    type=click.Path(),
+    default=None,
+    help="Write snapshot to this file (default: auto-generated name).",
+)
+@click.option("--locale", "-l", default="en-US", show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def snapshot_content(page_id: int, output: str | None, locale: str, as_json: bool) -> None:
+    """Save current page content to a local snapshot file."""
+    client, config = get_client()
+
+    try:
+        response = client.get(
+            GET_PAGE,
+            params={"pageId": page_id, "includeDraft": "true", "locale": locale},
+        )
+    except (ApiError, ConfigError) as exc:
+        exit_error(str(exc), as_json)
+
+    data = response.json()
+    if data is None:
+        exit_error(f"No content returned for page {page_id}.", as_json)
+
+    components = parse_json_field(data, "contentJSON")
+    styles = parse_json_field(data, "styleJSON")
+    version = data.get("version", 0)
+    timestamp = datetime.now(timezone.utc)
+
+    snapshot = {
+        "snapshot": {
+            "page_id": page_id,
+            "version": version,
+            "locale": locale,
+            "created_at": timestamp.isoformat(),
+            "base_url": config.base_url,
+        },
+        "components": components,
+        "styles": styles,
+    }
+
+    if not output:
+        formatted_time = timestamp.strftime("%Y%m%d-%H%M%S")
+        output = f"page-{page_id}-v{version}-{formatted_time}.json"
+
+    payload = json.dumps(snapshot, indent=2)
+    write_output(output, payload, as_json)
+
+    output_result(
+        as_json,
+        status="created",
+        human_message=f"Snapshot saved to {output} (page {page_id}, version {version}).",
+        page_id=page_id,
+        version=version,
+        file=output,
+    )
+
+
+@content.command("rollback")
+@click.argument("page_id", type=int)
+@click.option(
+    "--file",
+    "-f",
+    "input_file",
+    type=click.Path(),
+    required=True,
+    help="Snapshot file to restore from.",
+)
+@click.option("--locale", "-l", default="en-US", show_default=True)
+@click.option("--json", "as_json", is_flag=True)
+def rollback_content(page_id: int, input_file: str, locale: str, as_json: bool) -> None:
+    """Restore page content from a snapshot file (creates a new draft)."""
+    snapshot_path = Path(input_file)
+    if not snapshot_path.exists():
+        exit_error(f"Snapshot file not found: {input_file}", as_json)
+
+    try:
+        raw = snapshot_path.read_text()
+        data = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        exit_error(f"Invalid JSON in snapshot file: {exc}", as_json)
+
+    if "snapshot" not in data or "components" not in data or "styles" not in data:
+        exit_error("Snapshot file is missing required fields (snapshot, components, styles).", as_json)
+
+    snapshot_page_id = data["snapshot"].get("page_id")
+    if snapshot_page_id is not None and snapshot_page_id != page_id:
+        click.echo(
+            f"Warning: snapshot was taken from page {snapshot_page_id}, "
+            f"applying to page {page_id}.",
+            err=True,
+        )
+
+    payload = {
+        "pageId": page_id,
+        "contentJSON": json.dumps(data["components"]),
+        "styleJSON": json.dumps(data["styles"]),
+        "locale": locale,
+    }
+
+    client, _ = get_client()
+    try:
+        response = client.post(UPDATE_PAGE, json=payload)
+    except (ApiError, ConfigError) as exc:
+        exit_error(str(exc), as_json)
+
+    result = response.json()
+    new_version = result.get("version", "?")
+
+    output_result(
+        as_json,
+        status="restored",
+        human_message=f"Page {page_id} restored from snapshot (version {new_version}, draft).",
+        page_id=page_id,
+        version=new_version,
+    )
+
+
+def _collect_ids(components: list[dict]) -> set[str]:
+    """Recursively extract all component IDs from a GrapesJS component tree."""
+    ids: set[str] = set()
+    for component in components:
+        component_id = component.get("attributes", {}).get("id", "")
+        if component_id:
+            ids.add(component_id)
+        ids.update(_collect_ids(component.get("components", [])))
+    return ids
+
+
+def _find_component_type(components: list[dict], component_id: str) -> str:
+    """Find the type of a component by its ID, searching recursively."""
+    for component in components:
+        if component.get("attributes", {}).get("id", "") == component_id:
+            return component.get("type", "unknown")
+        child_type = _find_component_type(component.get("components", []), component_id)
+        if child_type:
+            return child_type
+    return ""
+
+
+@content.command("diff")
+@click.argument("page_id", type=int)
+@click.option("--locale", "-l", default="en-US", show_default=True)
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def diff_content(page_id: int, locale: str, as_json: bool) -> None:
+    """Compare draft vs published content for a page."""
+    client, _ = get_client()
+
+    params_base = {"pageId": page_id, "locale": locale}
+
+    try:
+        draft_response = client.get(GET_PAGE, params={**params_base, "includeDraft": "true"})
+        published_response = client.get(GET_PAGE, params={**params_base, "includeDraft": "false"})
+    except (ApiError, ConfigError) as exc:
+        exit_error(str(exc), as_json)
+
+    published_data = published_response.json()
+    draft_data = draft_response.json()
+
+    if published_data is None:
+        exit_error(f"Page {page_id} has no published version.", as_json)
+
+    draft_components = parse_json_field(draft_data, "contentJSON")
+    published_components = parse_json_field(published_data, "contentJSON")
+    draft_styles = parse_json_field(draft_data, "styleJSON")
+    published_styles = parse_json_field(published_data, "styleJSON")
+
+    draft_version = draft_data.get("version", 0)
+    published_version = published_data.get("version", 0)
+
+    draft_ids = _collect_ids(draft_components)
+    published_ids = _collect_ids(published_components)
+
+    added_ids = sorted(draft_ids - published_ids)
+    removed_ids = sorted(published_ids - draft_ids)
+
+    styles_changed = draft_styles != published_styles
+    has_changes = bool(added_ids or removed_ids or styles_changed or draft_version != published_version)
+
+    if as_json:
+        result = {
+            "page_id": page_id,
+            "published_version": published_version,
+            "draft_version": draft_version,
+            "has_changes": has_changes,
+            "components": {
+                "published_count": len(published_components),
+                "draft_count": len(draft_components),
+                "added": added_ids,
+                "removed": removed_ids,
+            },
+            "styles": {
+                "published_count": len(published_styles),
+                "draft_count": len(draft_styles),
+                "changed": styles_changed,
+            },
+        }
+        click.echo(json.dumps(result, indent=2))
+        return
+
+    click.echo(f"Page {page_id}: draft version {draft_version} vs published version {published_version}")
+    click.echo()
+
+    click.echo("Components:")
+    click.echo(f"  Published: {len(published_components)} components")
+    click.echo(f"  Draft:     {len(draft_components)} components")
+
+    if added_ids:
+        added_labels = [f"{_find_component_type(draft_components, cid) or 'unknown'} [{cid}]" for cid in added_ids]
+        click.echo(f"  Added:     {', '.join(added_labels)}")
+    else:
+        click.echo("  Added:     (none)")
+
+    if removed_ids:
+        removed_labels = [f"{_find_component_type(published_components, cid) or 'unknown'} [{cid}]" for cid in removed_ids]
+        click.echo(f"  Removed:   {', '.join(removed_labels)}")
+    else:
+        click.echo("  Removed:   (none)")
+
+    click.echo()
+    click.echo("Styles:")
+    click.echo(f"  Published: {len(published_styles)} rules")
+    click.echo(f"  Draft:     {len(draft_styles)} rules")
+    click.echo(f"  Changed:   {'yes' if styles_changed else 'no'}")
+
+    click.echo()
+    if has_changes:
+        click.echo("Has unpublished changes.")
+    else:
+        click.echo("No unpublished changes.")

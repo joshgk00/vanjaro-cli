@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from vanjaro_cli import __version__
 from vanjaro_cli.config import set_profile_override
-from vanjaro_cli.commands import api_key, assets, auth, blocks, branding, content, global_blocks, pages, profile, site, templates
+from vanjaro_cli.commands import api_key, assets, auth, blocks, branding, content, global_blocks, pages, profile, site, templates, theme
 
 load_dotenv()
 
@@ -38,3 +38,4 @@ cli.add_command(api_key)
 cli.add_command(global_blocks)
 cli.add_command(site)
 cli.add_command(templates)
+cli.add_command(theme)

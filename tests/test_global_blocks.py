@@ -11,6 +11,9 @@ from tests.conftest import BASE_URL, mock_homepage
 
 LIST_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/List"
 GET_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Get"
+UPDATE_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Update"
+PUBLISH_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Publish"
+DELETE_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Delete"
 
 SAMPLE_BLOCKS = [
     {
@@ -144,3 +147,110 @@ def test_global_blocks_api_error(runner, mock_config):
     result = runner.invoke(cli, ["global-blocks", "list"])
 
     assert result.exit_code == 1
+
+
+@responses.activate
+def test_global_blocks_update(runner, mock_config, tmp_path):
+    mock_homepage()
+    responses.add(responses.POST, UPDATE_URL, json={"status": "ok"}, status=200)
+
+    block_file = tmp_path / "block.json"
+    block_file.write_text(json.dumps({
+        "content_json": [{"type": "section", "components": []}],
+        "style_json": [{"selectors": [".header"], "style": {"color": "red"}}],
+    }))
+
+    result = runner.invoke(cli, [
+        "global-blocks", "update", "20020077-89f8-468f-a488-017421ce5a0b",
+        "--file", str(block_file),
+    ])
+
+    assert result.exit_code == 0
+    assert "updated" in result.output
+
+    request_body = json.loads(responses.calls[-1].request.body)
+    assert request_body["guid"] == "20020077-89f8-468f-a488-017421ce5a0b"
+    assert request_body["contentJSON"] == [{"type": "section", "components": []}]
+    assert request_body["styleJSON"] == [{"selectors": [".header"], "style": {"color": "red"}}]
+
+
+@responses.activate
+def test_global_blocks_update_json(runner, mock_config, tmp_path):
+    mock_homepage()
+    responses.add(responses.POST, UPDATE_URL, json={"status": "ok"}, status=200)
+
+    block_file = tmp_path / "block.json"
+    block_file.write_text(json.dumps({
+        "contentJSON": [{"type": "div"}],
+        "styleJSON": [],
+    }))
+
+    result = runner.invoke(cli, [
+        "global-blocks", "update", "20020077-89f8-468f-a488-017421ce5a0b",
+        "--file", str(block_file), "--json",
+    ])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["status"] == "updated"
+    assert data["guid"] == "20020077-89f8-468f-a488-017421ce5a0b"
+
+
+@responses.activate
+def test_global_blocks_publish(runner, mock_config):
+    mock_homepage()
+    responses.add(responses.POST, PUBLISH_URL, json={"status": "ok"}, status=200)
+
+    result = runner.invoke(cli, ["global-blocks", "publish", "20020077-89f8-468f-a488-017421ce5a0b"])
+
+    assert result.exit_code == 0
+    assert "published" in result.output
+
+    request_body = json.loads(responses.calls[-1].request.body)
+    assert request_body["guid"] == "20020077-89f8-468f-a488-017421ce5a0b"
+
+
+@responses.activate
+def test_global_blocks_publish_json(runner, mock_config):
+    mock_homepage()
+    responses.add(responses.POST, PUBLISH_URL, json={"status": "ok"}, status=200)
+
+    result = runner.invoke(cli, ["global-blocks", "publish", "20020077-89f8-468f-a488-017421ce5a0b", "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["status"] == "ok"
+    assert data["guid"] == "20020077-89f8-468f-a488-017421ce5a0b"
+
+
+@responses.activate
+def test_global_blocks_delete_with_force(runner, mock_config):
+    mock_homepage()
+    responses.add(responses.POST, DELETE_URL, json={"status": "ok"}, status=200)
+
+    result = runner.invoke(cli, ["global-blocks", "delete", "20020077-89f8-468f-a488-017421ce5a0b", "--force"])
+
+    assert result.exit_code == 0
+    assert "deleted" in result.output
+
+    request_body = json.loads(responses.calls[-1].request.body)
+    assert request_body["guid"] == "20020077-89f8-468f-a488-017421ce5a0b"
+
+
+def test_global_blocks_delete_abort(runner, mock_config):
+    result = runner.invoke(cli, ["global-blocks", "delete", "20020077-89f8-468f-a488-017421ce5a0b"], input="n\n")
+
+    assert result.exit_code != 0
+
+
+@responses.activate
+def test_global_blocks_delete_json(runner, mock_config):
+    mock_homepage()
+    responses.add(responses.POST, DELETE_URL, json={"status": "ok"}, status=200)
+
+    result = runner.invoke(cli, ["global-blocks", "delete", "20020077-89f8-468f-a488-017421ce5a0b", "--force", "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["status"] == "deleted"
+    assert data["guid"] == "20020077-89f8-468f-a488-017421ce5a0b"

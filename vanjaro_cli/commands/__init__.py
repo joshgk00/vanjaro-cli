@@ -9,5 +9,6 @@ from vanjaro_cli.commands.pages_cmd import pages
 from vanjaro_cli.commands.profile_cmd import profile
 from vanjaro_cli.commands.site_cmd import site
 from vanjaro_cli.commands.templates_cmd import templates
+from vanjaro_cli.commands.theme_cmd import theme
 
-__all__ = ["api_key", "assets", "auth", "blocks", "branding", "content", "global_blocks", "pages", "profile", "site", "templates"]
+__all__ = ["api_key", "assets", "auth", "blocks", "branding", "content", "global_blocks", "pages", "profile", "site", "templates", "theme"]
