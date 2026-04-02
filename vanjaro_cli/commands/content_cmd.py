@@ -47,6 +47,13 @@ def get_content(page_id: int, locale: str, output: str | None, as_json: bool) ->
         exit_error(str(exc), as_json)
 
     raw = response.json()
+    if raw is None:
+        exit_error(
+            f"No content returned for page {page_id}. "
+            "The Vanjaro content API requires page edit mode, which is only "
+            "available in the browser. Use `vanjaro pages get` for page metadata.",
+            as_json,
+        )
     page_content = PageContent.from_api(page_id, raw, locale)
     payload = json.dumps(page_content.model_dump(by_alias=False), indent=2)
 
