@@ -9,6 +9,30 @@ Use this workflow when you have:
 - A screenshot or design description
 - A list of sections and content to put on a page
 
+## Before You Start
+
+Ensure your session is active:
+```bash
+vanjaro auth status
+# If not authenticated:
+vanjaro auth login
+vanjaro api-key generate
+```
+
+If building a brand new site, set up the foundation first (see `design.md` for the full setup order):
+```bash
+# 1. Branding
+vanjaro branding update --site-name "Site Name" --footer-text "Copyright 2026..."
+
+# 2. Register fonts (if the design uses custom fonts)
+vanjaro theme register-font --name "Lora" --family "Lora, serif" \
+  --import-url "https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap"
+
+# 3. Theme colors (find control GUIDs first)
+vanjaro theme get --category "Site" --json | jq '.controls[] | {guid, title}'
+vanjaro theme set --guid "GUID-HERE" --value "#336699"
+```
+
 ## Workflow
 
 ### Phase 1: Analyze the design

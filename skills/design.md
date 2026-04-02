@@ -2,6 +2,30 @@
 
 How to translate page designs into Vanjaro page structures using CLI commands.
 
+## Prerequisites
+
+Before building pages, ensure:
+1. You are logged in: `vanjaro auth login --url http://your-site.com`
+2. API key is generated: `vanjaro api-key generate`
+3. Verify connectivity: `vanjaro site health`
+
+Sessions expire after inactivity. If any command fails with "Session expired":
+```bash
+vanjaro auth login
+vanjaro api-key generate
+```
+
+## Site Setup Order
+
+When building a site from a design, follow this order:
+
+1. **Branding** — site name, footer text
+2. **Fonts** — register custom fonts via `theme register-font`
+3. **Theme colors** — update design controls via `theme set`
+4. **Global blocks** — header and footer (shared across all pages)
+5. **Pages** — create and populate each page
+6. **Publish** — publish each page when ready
+
 ## GrapesJS Component Model
 
 Vanjaro stores page content as a GrapesJS component tree. Every page is a list of top-level components, each containing nested children.

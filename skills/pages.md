@@ -89,13 +89,9 @@ vanjaro pages create --title "FAQ" --parent 42 --hidden --json
 ```json
 {
   "status": "created",
-  "page": {
-    "id": 99,
-    "name": "Contact",
-    "title": "Contact",
-    "url": "/contact",
-    "include_in_menu": true
-  }
+  "page_id": 99,
+  "name": "Contact",
+  "path": "/Contact"
 }
 ```
 
@@ -222,8 +218,14 @@ vanjaro pages get "$PAGE_ID" --json
 
 ## API Notes
 
-- `pages list` uses Vanjaro's `GetPages` endpoint, which returns a flat list including nesting level.
+- `pages list` uses Vanjaro's `GetPages` endpoint, which returns a flat list with nesting via `-  ` prefix.
 - `pages get` and `pages settings` use the DNN PersonaBar `GetPageDetails` endpoint.
-- `pages create` uses Vanjaro's `SavePageDetails` endpoint.
-- `pages delete` uses Vanjaro's `DeletePage` endpoint.
+- `pages create` uses the VanjaroAI `AIPage/Create` endpoint (requires the Vanjaro.AI module).
+- `pages delete` uses the VanjaroAI `AIPage/Delete` endpoint.
 - `pages copy` uses the DNN PersonaBar `CopyPage` endpoint.
+
+## Session Notes
+
+- Sessions expire after inactivity. If you get "Session expired", re-login: `vanjaro auth login`
+- After re-login, regenerate the API key: `vanjaro api-key generate`
+- The API key is required for all VanjaroAI endpoints (content, blocks, templates, assets, etc.)

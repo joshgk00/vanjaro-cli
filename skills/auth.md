@@ -209,9 +209,29 @@ export VANJARO_PASSWORD=secret
 vanjaro auth login
 ```
 
+## Session Management
+
+DNN sessions expire after inactivity. When any command fails with "Session expired":
+
+```bash
+# Re-login (uses credentials from .env or prompts)
+vanjaro auth login
+
+# IMPORTANT: Re-login creates a fresh profile and the API key from the old
+# session is NOT carried over. You must regenerate:
+vanjaro api-key generate
+```
+
+To avoid session issues in scripts, check status first:
+```bash
+vanjaro auth status --json | jq -r '.status'
+# Returns "authenticated" or "unauthenticated"
+```
+
 ## Error Handling
 
 - "No site URL provided": Pass `--url` or set `VANJARO_BASE_URL` environment variable.
+- "Session expired": Re-login with `vanjaro auth login` then `vanjaro api-key generate`.
 - "401 Unauthorized" on login: Check username/password. DNN locks accounts after repeated failures.
 - "Profile not found" on `profile use`: Run `vanjaro profile list` to see available profiles.
 - API key commands fail with 403: Only SuperUser (host) accounts can generate API keys.
