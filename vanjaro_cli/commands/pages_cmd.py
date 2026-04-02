@@ -11,15 +11,10 @@ from vanjaro_cli.config import ConfigError
 from vanjaro_cli.models.page import Page, PageSettings
 from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, print_table
 
-# Vanjaro page listing endpoint (works with JWT + anti-forgery)
 GET_PAGES = "/API/Vanjaro/Page/GetPages"
-
-# Vanjaro page management endpoints (under the Pages extension)
-SEARCH_PAGES = "/API/Pages/Pages/SearchPages"
+CREATE_PAGE = "/API/VanjaroAI/AIPage/Create"
 SAVE_PAGE = "/API/Pages/Pages/SavePageDetails"
-DELETE_PAGE = "/API/Pages/Pages/DeletePage"
-
-# DNN PersonaBar endpoint for page details (widely compatible)
+DELETE_PAGE = "/API/VanjaroAI/AIPage/Delete"
 GET_PAGE_DETAILS = "/API/PersonaBar/Pages/GetPageDetails"
 COPY_PAGE = "/API/PersonaBar/Pages/CopyPage"
 
@@ -121,31 +116,31 @@ def create_page(
     as_json: bool,
 ) -> None:
     """Create a new page."""
-    client, config = get_client()
-    pid = portal_id if portal_id is not None else config.portal_id
+    client, _ = get_client()
 
-    settings = PageSettings(
-        name=name or title,
-        title=title,
-        parent_id=parent,
-        include_in_menu=not hidden,
-        portal_id=pid,
-    )
+    payload: dict = {
+        "name": name or title,
+        "title": title,
+        "includeInMenu": not hidden,
+    }
+    if parent is not None:
+        payload["parentId"] = parent
 
     try:
-        response = client.post(SAVE_PAGE, json=settings.to_api_payload())
+        response = client.post(CREATE_PAGE, json=payload)
     except (ApiError, ConfigError) as exc:
         exit_error(str(exc), as_json)
 
     data = response.json()
-    page_data = data.get("page", data)
-    page = Page.from_api(page_data) if isinstance(page_data, dict) else Page()
+    page_id = data.get("pageId", 0)
 
     output_result(
         as_json,
         status="created",
-        human_message=f"Created page '{title}' (ID: {page.id})",
-        page=page.model_dump(by_alias=False),
+        human_message=f"Created page '{title}' (ID: {page_id})",
+        page_id=page_id,
+        name=data.get("name", title),
+        path=data.get("path", ""),
     )
 
 
@@ -191,7 +186,7 @@ def delete_page(page_id: int, force: bool, as_json: bool) -> None:
     client, _ = get_client()
 
     try:
-        client.post(DELETE_PAGE, json={"tabId": page_id})
+        client.post(DELETE_PAGE, json={"pageId": page_id})
     except (ApiError, ConfigError) as exc:
         exit_error(str(exc), as_json)
 

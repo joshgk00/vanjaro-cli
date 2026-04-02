@@ -8,10 +8,9 @@ import click
 
 from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
-from vanjaro_cli.models.page import Page, PageSettings
 from vanjaro_cli.commands.helpers import exit_error, get_client, output_result
 
-SAVE_PAGE = "/API/Pages/Pages/SavePageDetails"
+CREATE_PAGE = "/API/VanjaroAI/AIPage/Create"
 APPLY_TEMPLATE = "/API/VanjaroAI/AITemplate/Apply"
 
 
@@ -29,39 +28,38 @@ def build(
     as_json: bool,
 ) -> None:
     """Create a page and apply a template in one step."""
-    client, config = get_client()
+    client, _ = get_client()
 
-    settings = PageSettings(
-        name=title,
-        title=title,
-        parent_id=parent,
-        include_in_menu=not hidden,
-        portal_id=config.portal_id,
-    )
+    payload: dict = {
+        "name": title,
+        "title": title,
+        "includeInMenu": not hidden,
+    }
+    if parent is not None:
+        payload["parentId"] = parent
 
     try:
-        response = client.post(SAVE_PAGE, json=settings.to_api_payload())
+        response = client.post(CREATE_PAGE, json=payload)
     except (ApiError, ConfigError) as exc:
         exit_error(str(exc), as_json)
 
     data = response.json()
-    page_data = data.get("page", data)
-    page = Page.from_api(page_data) if isinstance(page_data, dict) else Page()
+    page_id = data.get("pageId", 0)
 
     try:
-        client.post(APPLY_TEMPLATE, json={"pageId": page.id, "templateName": template_name})
+        client.post(APPLY_TEMPLATE, json={"pageId": page_id, "templateName": template_name})
     except (ApiError, ConfigError) as exc:
         if as_json:
             click.echo(json.dumps({
                 "status": "partial",
-                "page_id": page.id,
+                "page_id": page_id,
                 "title": title,
                 "template": template_name,
                 "warning": f"Page created but template failed: {exc}",
             }))
         else:
             click.echo(
-                f"Warning: Page '{title}' (ID: {page.id}) was created, "
+                f"Warning: Page '{title}' (ID: {page_id}) was created, "
                 f"but template '{template_name}' could not be applied: {exc}"
             )
         return
@@ -69,8 +67,8 @@ def build(
     output_result(
         as_json,
         status="created",
-        human_message=f"Created page '{title}' (ID: {page.id}) with template '{template_name}'.",
-        page_id=page.id,
+        human_message=f"Created page '{title}' (ID: {page_id}) with template '{template_name}'.",
+        page_id=page_id,
         title=title,
         template=template_name,
     )

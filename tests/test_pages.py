@@ -13,8 +13,9 @@ from tests.conftest import BASE_URL, make_page_item, make_page_detail, mock_home
 
 GET_PAGES_URL = f"{BASE_URL}/API/Vanjaro/Page/GetPages"
 DETAIL_URL = f"{BASE_URL}/API/PersonaBar/Pages/GetPageDetails"
+CREATE_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Create"
 SAVE_URL = f"{BASE_URL}/API/Pages/Pages/SavePageDetails"
-DELETE_URL = f"{BASE_URL}/API/Pages/Pages/DeletePage"
+DELETE_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Delete"
 COPY_URL = f"{BASE_URL}/API/PersonaBar/Pages/CopyPage"
 
 
@@ -165,9 +166,9 @@ def test_pages_create(runner, mock_config):
     mock_homepage()
     responses.add(
         responses.POST,
-        SAVE_URL,
-        json={"page": make_page_detail(99, "New Page", "/new-page")},
-        status=200,
+        CREATE_URL,
+        json={"pageId": 99, "name": "New Page", "version": 1, "path": "/NewPage"},
+        status=201,
     )
 
     result = runner.invoke(cli, ["pages", "create", "--title", "New Page"])
@@ -179,11 +180,11 @@ def test_pages_create(runner, mock_config):
 @responses.activate
 def test_pages_create_sends_correct_payload(runner, mock_config):
     mock_homepage()
-    responses.add(responses.POST, SAVE_URL, json={"page": make_page_detail(99, "Blog")}, status=200)
+    responses.add(responses.POST, CREATE_URL, json={"pageId": 99, "name": "Blog"}, status=201)
 
     runner.invoke(cli, ["pages", "create", "--title", "Blog", "--hidden"])
 
-    post_call = [c for c in responses.calls if "SavePageDetails" in c.request.url][0]
+    post_call = [c for c in responses.calls if "AIPage/Create" in c.request.url][0]
     sent_body = json.loads(post_call.request.body)
     assert sent_body["name"] == "Blog"
     assert sent_body["title"] == "Blog"
@@ -195,9 +196,9 @@ def test_pages_create_json(runner, mock_config):
     mock_homepage()
     responses.add(
         responses.POST,
-        SAVE_URL,
-        json={"page": make_page_detail(99, "Blog", "/blog")},
-        status=200,
+        CREATE_URL,
+        json={"pageId": 99, "name": "Blog", "path": "/Blog"},
+        status=201,
     )
 
     result = runner.invoke(cli, ["pages", "create", "--title", "Blog", "--json"])
@@ -205,6 +206,7 @@ def test_pages_create_json(runner, mock_config):
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert data["status"] == "created"
+    assert data["page_id"] == 99
 
 
 @responses.activate
