@@ -3,19 +3,24 @@
 from __future__ import annotations
 
 import json
-from typing import Optional
 
 import click
 
-from vanjaro_cli.client import ApiError, VanjaroClient
-from vanjaro_cli.config import ConfigError, load_config
+from vanjaro_cli.client import ApiError
+from vanjaro_cli.config import ConfigError
 from vanjaro_cli.models.page import Page, PageSettings
+from vanjaro_cli.commands.helpers import exit_error, get_client, output_result
 
-# PersonaBar page endpoints
-SEARCH_PAGES = "/API/PersonaBar/Pages/SearchPages"
+# Vanjaro page listing endpoint (works with JWT + anti-forgery)
+GET_PAGES = "/API/Vanjaro/Page/GetPages"
+
+# Vanjaro page management endpoints (under the Pages extension)
+SEARCH_PAGES = "/API/Pages/Pages/SearchPages"
+SAVE_PAGE = "/API/Pages/Pages/SavePageDetails"
+DELETE_PAGE = "/API/Pages/Pages/DeletePage"
+
+# DNN PersonaBar endpoint for page details (widely compatible)
 GET_PAGE_DETAILS = "/API/PersonaBar/Pages/GetPageDetails"
-SAVE_PAGE = "/API/PersonaBar/Pages/SavePageDetails"
-DELETE_PAGE = "/API/PersonaBar/Pages/DeletePage"
 COPY_PAGE = "/API/PersonaBar/Pages/CopyPage"
 
 
@@ -28,28 +33,35 @@ def pages() -> None:
 @click.option("--keyword", "-k", default="", help="Filter pages by keyword.")
 @click.option("--portal-id", default=None, type=int, help="Portal ID (default: from config).")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
-def list_pages(keyword: str, portal_id: Optional[int], as_json: bool) -> None:
+def list_pages(keyword: str, portal_id: int | None, as_json: bool) -> None:
     """List all pages in the site."""
-    client, config = _get_client()
-    pid = portal_id if portal_id is not None else config.portal_id
+    client, config = get_client()
 
     try:
-        response = client.get(
-            SEARCH_PAGES,
-            params={
-                "portalId": pid,
-                "searchKey": keyword,
-                "pageType": "",
-                "published": "true",
-                "pageIndex": 0,
-                "pageSize": 500,
-            },
-        )
+        response = client.get(GET_PAGES)
     except (ApiError, ConfigError) as exc:
-        _exit_error(str(exc), as_json)
+        exit_error(str(exc), as_json)
 
     data = response.json()
-    raw_pages = data.get("pages", data.get("Pages", data if isinstance(data, list) else []))
+    # GetPages returns a list of page items directly
+    raw_pages = data if isinstance(data, list) else data.get("pages", data.get("Pages", []))
+
+    # Filter out the "Select Page" placeholder that Vanjaro includes
+    raw_pages = [
+        p for p in raw_pages
+        if p.get("Value", -1) != 0 and p.get("Text") != "Select Page"
+    ]
+
+    # Filter by keyword client-side if provided
+    if keyword:
+        keyword_lower = keyword.lower()
+        raw_pages = [
+            p for p in raw_pages
+            if keyword_lower in (p.get("name", "") or "").lower()
+            or keyword_lower in (p.get("title", "") or "").lower()
+            or keyword_lower in (p.get("Text", "") or "").lower()
+        ]
+
     page_list = [Page.from_api(p) for p in raw_pages]
 
     if as_json:
@@ -69,12 +81,12 @@ def list_pages(keyword: str, portal_id: Optional[int], as_json: bool) -> None:
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
 def get_page(page_id: int, as_json: bool) -> None:
     """Get details for a single page."""
-    client, _ = _get_client()
+    client, _ = get_client()
 
     try:
         response = client.get(GET_PAGE_DETAILS, params={"pageId": page_id})
     except (ApiError, ConfigError) as exc:
-        _exit_error(str(exc), as_json)
+        exit_error(str(exc), as_json)
 
     data = response.json()
     page_data = data.get("page", data)
@@ -102,14 +114,14 @@ def get_page(page_id: int, as_json: bool) -> None:
 @click.option("--json", "as_json", is_flag=True)
 def create_page(
     title: str,
-    name: Optional[str],
-    parent: Optional[int],
+    name: str | None,
+    parent: int | None,
     hidden: bool,
-    portal_id: Optional[int],
+    portal_id: int | None,
     as_json: bool,
 ) -> None:
     """Create a new page."""
-    client, config = _get_client()
+    client, config = get_client()
     pid = portal_id if portal_id is not None else config.portal_id
 
     settings = PageSettings(
@@ -123,26 +135,27 @@ def create_page(
     try:
         response = client.post(SAVE_PAGE, json=settings.to_api_payload())
     except (ApiError, ConfigError) as exc:
-        _exit_error(str(exc), as_json)
+        exit_error(str(exc), as_json)
 
     data = response.json()
     page_data = data.get("page", data)
     page = Page.from_api(page_data) if isinstance(page_data, dict) else Page()
 
-    result = {"status": "created", "page": page.model_dump(by_alias=False)}
-    if as_json:
-        click.echo(json.dumps(result, indent=2))
-    else:
-        click.echo(f"Created page '{title}' (ID: {page.id})")
+    output_result(
+        as_json,
+        status="created",
+        human_message=f"Created page '{title}' (ID: {page.id})",
+        page=page.model_dump(by_alias=False),
+    )
 
 
 @pages.command("copy")
 @click.argument("page_id", type=int)
 @click.option("--title", "-t", default=None, help="Title for the copied page.")
 @click.option("--json", "as_json", is_flag=True)
-def copy_page(page_id: int, title: Optional[str], as_json: bool) -> None:
+def copy_page(page_id: int, title: str | None, as_json: bool) -> None:
     """Copy an existing page."""
-    client, _ = _get_client()
+    client, _ = get_client()
 
     payload: dict = {"tabId": page_id}
     if title:
@@ -151,17 +164,19 @@ def copy_page(page_id: int, title: Optional[str], as_json: bool) -> None:
     try:
         response = client.post(COPY_PAGE, json=payload)
     except (ApiError, ConfigError) as exc:
-        _exit_error(str(exc), as_json)
+        exit_error(str(exc), as_json)
 
     data = response.json()
     new_page_data = data.get("page", data)
     new_page = Page.from_api(new_page_data) if isinstance(new_page_data, dict) else Page()
 
-    result = {"status": "copied", "source_id": page_id, "new_page": new_page.model_dump(by_alias=False)}
-    if as_json:
-        click.echo(json.dumps(result, indent=2))
-    else:
-        click.echo(f"Copied page {page_id} → new ID: {new_page.id}")
+    output_result(
+        as_json,
+        status="copied",
+        human_message=f"Copied page {page_id} -> new ID: {new_page.id}",
+        source_id=page_id,
+        new_page=new_page.model_dump(by_alias=False),
+    )
 
 
 @pages.command("delete")
@@ -173,18 +188,19 @@ def delete_page(page_id: int, force: bool, as_json: bool) -> None:
     if not force:
         click.confirm(f"Delete page {page_id}? This cannot be undone.", abort=True)
 
-    client, _ = _get_client()
+    client, _ = get_client()
 
     try:
-        client.post(DELETE_PAGE, params={"pageId": page_id}, json={})
+        client.post(DELETE_PAGE, json={"tabId": page_id})
     except (ApiError, ConfigError) as exc:
-        _exit_error(str(exc), as_json)
+        exit_error(str(exc), as_json)
 
-    result = {"status": "deleted", "page_id": page_id}
-    if as_json:
-        click.echo(json.dumps(result))
-    else:
-        click.echo(f"Deleted page {page_id}.")
+    output_result(
+        as_json,
+        status="deleted",
+        human_message=f"Deleted page {page_id}.",
+        page_id=page_id,
+    )
 
 
 @pages.command("settings")
@@ -195,24 +211,23 @@ def delete_page(page_id: int, force: bool, as_json: bool) -> None:
 @click.option("--json", "as_json", is_flag=True)
 def page_settings(
     page_id: int,
-    title: Optional[str],
-    name: Optional[str],
-    hidden: Optional[bool],
+    title: str | None,
+    name: str | None,
+    hidden: bool | None,
     as_json: bool,
 ) -> None:
     """View or update page settings. Without flags, shows current settings."""
-    client, _ = _get_client()
+    client, _ = get_client()
 
     try:
         detail_resp = client.get(GET_PAGE_DETAILS, params={"pageId": page_id})
     except (ApiError, ConfigError) as exc:
-        _exit_error(str(exc), as_json)
+        exit_error(str(exc), as_json)
 
     data = detail_resp.json()
     page_data = data.get("page", data)
     page = Page.from_api(page_data)
 
-    # If no update flags given, just display
     if title is None and name is None and hidden is None:
         if as_json:
             click.echo(json.dumps(page.model_dump(by_alias=False), indent=2))
@@ -223,7 +238,6 @@ def page_settings(
                     click.echo(f"  {k}: {v}")
         return
 
-    # Apply updates
     updated = PageSettings(
         name=name or page.name,
         title=title or page.title,
@@ -236,36 +250,19 @@ def page_settings(
     try:
         client.post(SAVE_PAGE, json=payload)
     except (ApiError, ConfigError) as exc:
-        _exit_error(str(exc), as_json)
+        exit_error(str(exc), as_json)
 
-    result = {"status": "updated", "page_id": page_id}
-    if as_json:
-        click.echo(json.dumps(result))
-    else:
-        click.echo(f"Updated settings for page {page_id}.")
+    output_result(
+        as_json,
+        status="updated",
+        human_message=f"Updated settings for page {page_id}.",
+        page_id=page_id,
+    )
 
 
 # ---------------------------------------------------------------------------
 # Helpers
 # ---------------------------------------------------------------------------
-
-def _get_client() -> tuple[VanjaroClient, object]:
-    try:
-        config = load_config()
-    except ConfigError as exc:
-        click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
-    return VanjaroClient(config), config
-
-
-def _exit_error(message: str, as_json: bool) -> None:
-    result = {"status": "error", "message": message}
-    if as_json:
-        click.echo(json.dumps(result))
-    else:
-        click.echo(f"Error: {message}", err=True)
-    raise SystemExit(1)
-
 
 def _print_table(headers: list[str], rows: list[dict]) -> None:
     if not rows:

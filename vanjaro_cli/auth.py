@@ -1,113 +1,138 @@
-"""DNN JWT authentication helpers."""
+"""DNN/Vanjaro cookie-based authentication helpers.
+
+Vanjaro's login module uses a JavaScript AJAX call to its own API endpoint,
+not the standard DNN JWT auth or ASP.NET form postback. We replicate that
+AJAX call: POST credentials to /API/Login/Login/UserLogin with the
+anti-forgery token and DNN Services Framework headers (TabId, ModuleId).
+The server sets auth cookies on success.
+"""
 
 from __future__ import annotations
 
-import time
-from typing import Optional
+import re
 
 import requests
 
-from vanjaro_cli.config import Config, ConfigError, save_config
+from vanjaro_cli.config import Config, save_config
 
-# DNN JWT auth endpoints
-LOGIN_PATH = "/API/JwtAuth/Login"
-REISSUE_PATH = "/API/JwtAuth/ReIssueToken"
-LOGOUT_PATH = "/API/JwtAuth/LogOut"
+__all__ = ["AuthError", "login", "logout"]
+
+# Vanjaro login API endpoint (DNN Services Framework route)
+LOGIN_API_PATH = "/API/Login/Login/UserLogin"
+
+# Regex to extract the anti-forgery token from DNN page HTML
+_ANTIFORGERY_RE = re.compile(
+    r'<input[^>]+name="__RequestVerificationToken"[^>]+value="([^"]+)"'
+)
+
+# Regex to extract sf_tabId from DNN's __dnnVariable hidden field
+_TAB_ID_RE = re.compile(r'sf_tabId`:`(\d+)`')
+
+# Known DNN auth cookie names
+_AUTH_COOKIE_NAMES = {".dotnetnuke", ".aspxauth", "authentication"}
 
 
 def login(base_url: str, username: str, password: str) -> Config:
-    """Authenticate against DNN JWT endpoint and return a populated Config."""
-    url = base_url.rstrip("/") + LOGIN_PATH
-    response = requests.post(
-        url,
-        json={"u": username, "p": password},
-        headers={"Content-Type": "application/json"},
-        timeout=30,
-    )
-    if response.status_code == 401:
-        raise AuthError("Invalid username or password.")
-    response.raise_for_status()
+    """Authenticate via Vanjaro's login API and return a Config with session cookies."""
+    base_url = base_url.rstrip("/")
+    session = requests.Session()
 
-    data = response.json()
-    token = data.get("Token") or data.get("token")
-    refresh_token = data.get("RenewToken") or data.get("renewToken")
+    # Step 1: GET the login page to get anti-forgery token, tabId, and cookies
+    login_page_url = base_url + "/Login"
+    try:
+        page_resp = session.get(login_page_url, timeout=30)
+    except requests.RequestException as exc:
+        raise AuthError(f"Cannot reach {login_page_url}: {exc}") from exc
 
-    if not token:
-        raise AuthError(f"Unexpected login response: {data}")
+    if page_resp.status_code == 404:
+        raise AuthError(
+            f"Login page not found at {login_page_url}. "
+            "Verify the site URL is correct."
+        )
 
-    config = Config(base_url=base_url, token=token, refresh_token=refresh_token)
-    save_config(config)
-    return config
+    # Extract anti-forgery token from the page
+    antiforgery_match = _ANTIFORGERY_RE.search(page_resp.text)
+    if not antiforgery_match:
+        raise AuthError(
+            "Could not find anti-forgery token on login page. "
+            "The site may use a custom login module."
+        )
+    antiforgery_token = antiforgery_match.group(1)
 
+    # Extract tabId from __dnnVariable
+    tab_id_match = _TAB_ID_RE.search(page_resp.text)
+    tab_id = tab_id_match.group(1) if tab_id_match else "-1"
 
-def reissue_token(config: Config) -> Config:
-    """Refresh an expiring token using the renew endpoint."""
-    if not config.refresh_token:
-        raise AuthError("No refresh token available. Please log in again.")
-
-    url = config.base_url + REISSUE_PATH
-    response = requests.get(
-        url,
+    # Step 2: POST credentials to the Vanjaro login API
+    login_url = base_url + LOGIN_API_PATH
+    response = session.post(
+        login_url,
+        json={"Username": username, "Password": password, "Remember": False},
         headers={
-            "Authorization": f"Bearer {config.token}",
+            "Content-Type": "application/json; charset=utf-8",
+            "RequestVerificationToken": antiforgery_token,
+            "TabId": tab_id,
+            "ModuleId": "-1",
         },
         timeout=30,
     )
-    if response.status_code in (401, 403):
-        raise AuthError("Session expired. Please log in again.")
-    response.raise_for_status()
 
-    data = response.json()
-    new_token = data.get("Token") or data.get("token")
-    new_refresh = data.get("RenewToken") or data.get("renewToken")
+    if response.status_code == 401:
+        raise AuthError("Invalid username or password.")
+    if response.status_code == 404:
+        raise AuthError(
+            f"Login API not found at {login_url}. "
+            "Verify Vanjaro is installed on this DNN site."
+        )
+    try:
+        response.raise_for_status()
+    except requests.HTTPError as exc:
+        raise AuthError(f"Login request failed: {exc}") from exc
 
-    if not new_token:
-        raise AuthError(f"Unexpected reissue response: {data}")
+    # Step 3: Check the API response
+    try:
+        data = response.json()
+    except ValueError:
+        raise AuthError(f"Unexpected login response (not JSON): {response.text[:200]}")
 
-    config = config.model_copy(
-        update={"token": new_token, "refresh_token": new_refresh or config.refresh_token}
+    if data.get("HasErrors"):
+        error_msg = data.get("Message", "Login failed.")
+        raise AuthError(error_msg)
+
+    if not data.get("IsSuccess"):
+        raise AuthError(data.get("Message", "Login was not successful."))
+
+    # Step 4: Capture auth cookies
+    all_cookies = {c.name: c.value for c in session.cookies}
+    has_auth_cookie = any(
+        name.lower() in _AUTH_COOKIE_NAMES
+        or "auth" in name.lower()
+        or "dotnetnuke" in name.lower()
+        for name in all_cookies
     )
+
+    if not has_auth_cookie:
+        raise AuthError(
+            "Login succeeded but no auth cookies were returned. "
+            "This may be a server configuration issue."
+        )
+
+    config = Config(base_url=base_url, cookies=all_cookies)
     save_config(config)
     return config
 
 
 def logout(config: Config) -> None:
-    """Invalidate the token server-side."""
-    if not config.token:
+    """Best-effort logout by hitting the DNN logoff endpoint."""
+    if not config.cookies:
         return
-    url = config.base_url + LOGOUT_PATH
     try:
-        requests.get(
-            url,
-            headers={"Authorization": f"Bearer {config.token}"},
-            timeout=10,
-        )
+        session = requests.Session()
+        for name, value in config.cookies.items():
+            session.cookies.set(name, value)
+        session.get(config.base_url + "/Logoff", timeout=10)
     except requests.RequestException:
         pass  # Best-effort; local config is cleared regardless
-
-
-def is_token_expired(token: str) -> bool:
-    """Decode JWT expiry claim without a full validation library."""
-    try:
-        import base64
-
-        parts = token.split(".")
-        if len(parts) != 3:
-            return True
-        # JWT payload is base64url — pad to multiple of 4
-        payload_b64 = parts[1] + "=" * (-len(parts[1]) % 4)
-        payload = json_loads(base64.urlsafe_b64decode(payload_b64))
-        exp = payload.get("exp", 0)
-        # Treat as expired if within 60 s of expiry
-        return time.time() >= (exp - 60)
-    except Exception:
-        return False
-
-
-def json_loads(data: bytes) -> dict:
-    import json
-
-    return json.loads(data)
 
 
 class AuthError(Exception):

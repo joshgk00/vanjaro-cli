@@ -1,26 +1,42 @@
-"""HTTP client wrapper — handles auth headers, CSRF tokens, and error surfacing."""
+"""HTTP client wrapper — handles cookie auth, anti-forgery tokens, and error surfacing."""
 
 from __future__ import annotations
 
-from typing import Any, Optional
+import json
+import re
+from typing import Any
 
 import requests
 
-from vanjaro_cli.auth import AuthError, is_token_expired, reissue_token
+from vanjaro_cli.auth import AuthError
 from vanjaro_cli.config import Config, ConfigError
 
-# DNN PersonaBar calls require this anti-forgery token in the header.
-# We retrieve it once per session from the antiforgery endpoint.
-ANTIFORGERY_PATH = "/API/PersonaBar/Security/GetAntiForgeryToken"
+__all__ = ["VanjaroClient", "ApiError"]
+
+# Regex to extract the anti-forgery token from DNN page HTML
+_ANTIFORGERY_RE = re.compile(
+    r'<input[^>]+name="__RequestVerificationToken"[^>]+value="([^"]+)"'
+)
 
 
 class VanjaroClient:
-    """Thin wrapper around requests that injects auth and CSRF headers."""
+    """Thin wrapper around requests that injects cookie auth and anti-forgery headers.
 
-    def __init__(self, config: Config):
+    DNN/Vanjaro API controllers use [ValidateAntiForgeryToken] which requires
+    both a __RequestVerificationToken cookie (set by the server) and a matching
+    token value in the RequestVerificationToken header. We obtain both by
+    fetching the site homepage once per session with the auth cookies active.
+    """
+
+    def __init__(self, config: Config) -> None:
         self._config = config
         self._session = requests.Session()
-        self._csrf_token: Optional[str] = None
+        self._verification_token: str | None = None
+
+        # Load stored auth cookies into the session
+        if config.cookies:
+            for name, value in config.cookies.items():
+                self._session.cookies.set(name, value)
 
     # ------------------------------------------------------------------
     # Public request methods
@@ -40,9 +56,13 @@ class VanjaroClient:
     # ------------------------------------------------------------------
 
     def _request(self, method: str, path: str, **kwargs: Any) -> requests.Response:
-        self._ensure_token()
+        if not self._config.is_authenticated:
+            raise ConfigError(
+                "Not authenticated. Run `vanjaro auth login` first."
+            )
+        self._ensure_antiforgery()
         url = self._config.base_url + path
-        headers = self._build_headers(method)
+        headers = self._build_headers()
         headers.update(kwargs.pop("headers", {}))
 
         response = self._session.request(
@@ -50,67 +70,55 @@ class VanjaroClient:
         )
 
         if response.status_code == 401:
-            # Try one token refresh before giving up
-            try:
-                self._config = reissue_token(self._config)
-                headers = self._build_headers(method)
-                response = self._session.request(
-                    method, url, headers=headers, timeout=30, **kwargs
-                )
-            except AuthError:
-                raise AuthError(
-                    "Authentication failed. Run `vanjaro auth login` to re-authenticate."
-                )
+            raise AuthError(
+                "Session expired. Run `vanjaro auth login` to re-authenticate."
+            )
 
         self._raise_for_status(response)
         return response
 
-    def _ensure_token(self) -> None:
-        if not self._config.token:
-            raise ConfigError(
-                "Not authenticated. Run `vanjaro auth login` first."
-            )
-        if is_token_expired(self._config.token):
-            try:
-                self._config = reissue_token(self._config)
-            except AuthError:
-                raise AuthError(
-                    "Session expired. Run `vanjaro auth login` to re-authenticate."
-                )
+    def _ensure_antiforgery(self) -> None:
+        """Fetch the anti-forgery token from the site if we don't have one yet.
 
-    def _fetch_csrf_token(self) -> str:
-        url = self._config.base_url + ANTIFORGERY_PATH
-        response = self._session.get(
-            url,
-            headers={"Authorization": f"Bearer {self._config.token}"},
-            timeout=10,
-        )
-        if not response.ok:
-            return ""
-        data = response.json()
-        return data.get("token", data.get("Token", ""))
+        Makes a single GET to the homepage (with auth cookies) which gives us:
+        1. The __RequestVerificationToken cookie (captured by self._session)
+        2. The token value from a hidden form field in the HTML
+        """
+        if self._verification_token is not None:
+            return
 
-    def _build_headers(self, method: str) -> dict[str, str]:
+        url = self._config.base_url + "/"
+        try:
+            response = self._session.get(url, timeout=15)
+        except requests.RequestException:
+            self._verification_token = ""
+            return
+
+        match = _ANTIFORGERY_RE.search(response.text)
+        self._verification_token = match.group(1) if match else ""
+
+    def _build_headers(self) -> dict[str, str]:
         headers: dict[str, str] = {
             "Content-Type": "application/json",
             "Accept": "application/json",
         }
-        if self._config.token:
-            headers["Authorization"] = f"Bearer {self._config.token}"
-
-        # PersonaBar mutating requests need CSRF
-        if method in ("POST", "PUT", "DELETE", "PATCH"):
-            if self._csrf_token is None:
-                self._csrf_token = self._fetch_csrf_token()
-            if self._csrf_token:
-                headers["RequestVerificationToken"] = self._csrf_token
-
+        if self._verification_token:
+            headers["RequestVerificationToken"] = self._verification_token
         return headers
 
     @staticmethod
     def _raise_for_status(response: requests.Response) -> None:
         if response.ok:
             return
+
+        content_type = response.headers.get("Content-Type", "")
+        if "text/html" in content_type:
+            raise ApiError(
+                f"HTTP {response.status_code}: Server returned an HTML error page. "
+                "The API endpoint may not exist on this DNN/Vanjaro installation.",
+                status_code=response.status_code,
+            )
+
         try:
             detail = response.json()
             message = (
@@ -119,7 +127,7 @@ class VanjaroClient:
                 or detail.get("ExceptionMessage")
                 or response.text
             )
-        except Exception:
+        except (json.JSONDecodeError, ValueError):
             message = response.text or response.reason
 
         raise ApiError(
@@ -128,6 +136,6 @@ class VanjaroClient:
 
 
 class ApiError(Exception):
-    def __init__(self, message: str, status_code: int = 0):
+    def __init__(self, message: str, status_code: int = 0) -> None:
         super().__init__(message)
         self.status_code = status_code

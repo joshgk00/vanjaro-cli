@@ -28,8 +28,24 @@ class Page(BaseModel):
 
     @classmethod
     def from_api(cls, data: dict[str, Any]) -> "Page":
+        # Vanjaro GetPages returns {Text, Value, Url} instead of {tabId, name, url}
+        if "Value" in data and "tabId" not in data:
+            text = data.get("Text", "")
+            # Text uses "-  " prefix to indicate child page nesting
+            level = 0
+            while text.startswith("-  "):
+                text = text[3:]
+                level += 1
+            data = {
+                **data,
+                "tabId": data["Value"],
+                "name": text.strip(),
+                "title": text.strip(),
+                "url": data.get("Url") or "",
+                "level": level,
+            }
         # PersonaBar returns camelCase; handle both id spellings
-        if "tabId" not in data and "id" in data:
+        elif "tabId" not in data and "id" in data:
             data = {**data, "tabId": data["id"]}
         return cls.model_validate(data)
 

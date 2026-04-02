@@ -5,18 +5,17 @@ from __future__ import annotations
 import json
 import sys
 from pathlib import Path
-from typing import Optional
 
 import click
 
-from vanjaro_cli.client import ApiError, VanjaroClient
-from vanjaro_cli.config import ConfigError, load_config
+from vanjaro_cli.client import ApiError
+from vanjaro_cli.config import ConfigError
 from vanjaro_cli.models.content import PageContent
+from vanjaro_cli.commands.helpers import exit_error, get_client, output_result
 
 # Vanjaro content endpoints
-GET_CONTENT = "/API/Vanjaro/Page/GetPageContent"
-UPDATE_CONTENT = "/API/Vanjaro/Page/UpdatePageContent"
-PUBLISH_PAGE = "/API/Vanjaro/Page/PublishPage"
+GET_PAGE = "/API/Vanjaro/Page/Get"
+SAVE_PAGE = "/API/Vanjaro/Page/Save"
 
 
 @click.group()
@@ -35,17 +34,17 @@ def content() -> None:
     help="Write content JSON to this file instead of stdout.",
 )
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON (default for piped use).")
-def get_content(page_id: int, locale: str, output: Optional[str], as_json: bool) -> None:
+def get_content(page_id: int, locale: str, output: str | None, as_json: bool) -> None:
     """Fetch the GrapesJS content for a page."""
-    client, _ = _get_client()
+    client, _ = get_client()
 
     try:
         response = client.get(
-            GET_CONTENT,
-            params={"pageId": page_id, "locale": locale},
+            GET_PAGE,
+            params={"tabid": page_id, "locale": locale},
         )
     except (ApiError, ConfigError) as exc:
-        _exit_error(str(exc), as_json)
+        exit_error(str(exc), as_json)
 
     raw = response.json()
     page_content = PageContent.from_api(page_id, raw, locale)
@@ -71,7 +70,7 @@ def get_content(page_id: int, locale: str, output: Optional[str], as_json: bool)
 )
 @click.option("--locale", "-l", default="en-US", show_default=True)
 @click.option("--json", "as_json", is_flag=True)
-def update_content(page_id: int, input_file: Optional[str], locale: str, as_json: bool) -> None:
+def update_content(page_id: int, input_file: str | None, locale: str, as_json: bool) -> None:
     """Replace the GrapesJS content for a page.
 
     Reads from FILE if provided, otherwise reads JSON from stdin.
@@ -86,7 +85,7 @@ def update_content(page_id: int, input_file: Optional[str], locale: str, as_json
     try:
         data = json.loads(raw_json)
     except json.JSONDecodeError as exc:
-        _exit_error(f"Invalid JSON: {exc}", as_json)
+        exit_error(f"Invalid JSON: {exc}", as_json)
 
     # Accept both a raw GrapesJS payload and a PageContent dump
     if "components" not in data and "raw" in data:
@@ -104,59 +103,15 @@ def update_content(page_id: int, input_file: Optional[str], locale: str, as_json
         styles=styles,
     )
 
-    client, _ = _get_client()
+    client, _ = get_client()
     try:
-        client.post(UPDATE_CONTENT, json=page_content.to_api_payload())
+        client.post(SAVE_PAGE, json=page_content.to_api_payload())
     except (ApiError, ConfigError) as exc:
-        _exit_error(str(exc), as_json)
+        exit_error(str(exc), as_json)
 
-    result = {"status": "updated", "page_id": page_id}
-    if as_json:
-        click.echo(json.dumps(result))
-    else:
-        click.echo(f"Content updated for page {page_id}.")
-
-
-@content.command("publish")
-@click.argument("page_id", type=int)
-@click.option("--locale", "-l", default="en-US", show_default=True)
-@click.option("--json", "as_json", is_flag=True)
-def publish_page(page_id: int, locale: str, as_json: bool) -> None:
-    """Publish pending content changes for a page."""
-    client, _ = _get_client()
-
-    try:
-        client.post(
-            PUBLISH_PAGE,
-            json={"pageId": page_id, "locale": locale},
-        )
-    except (ApiError, ConfigError) as exc:
-        _exit_error(str(exc), as_json)
-
-    result = {"status": "published", "page_id": page_id}
-    if as_json:
-        click.echo(json.dumps(result))
-    else:
-        click.echo(f"Page {page_id} published.")
-
-
-# ---------------------------------------------------------------------------
-# Helpers
-# ---------------------------------------------------------------------------
-
-def _get_client() -> tuple[VanjaroClient, object]:
-    try:
-        config = load_config()
-    except ConfigError as exc:
-        click.echo(f"Error: {exc}", err=True)
-        raise SystemExit(1)
-    return VanjaroClient(config), config
-
-
-def _exit_error(message: str, as_json: bool) -> None:
-    result = {"status": "error", "message": message}
-    if as_json:
-        click.echo(json.dumps(result))
-    else:
-        click.echo(f"Error: {message}", err=True)
-    raise SystemExit(1)
+    output_result(
+        as_json,
+        status="updated",
+        human_message=f"Content updated for page {page_id}.",
+        page_id=page_id,
+    )
