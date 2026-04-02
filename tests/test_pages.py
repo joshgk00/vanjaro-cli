@@ -300,3 +300,153 @@ def test_pages_api_error_surfaces(runner, mock_config):
     result = runner.invoke(cli, ["pages", "list"])
 
     assert result.exit_code == 1
+
+
+# --- SEO command tests ---
+
+
+def make_page_detail_with_seo(
+    tab_id: int = 34,
+    name: str = "About Us",
+    url: str = "/About-Us",
+    title: str = "",
+    description: str = "",
+    keywords: str = "",
+    allow_index: bool = True,
+    sitemap_priority: float = 0.5,
+) -> dict:
+    """Build a page detail payload with SEO fields included."""
+    base = make_page_detail(tab_id, name, url)
+    base.update({
+        "title": title or name,
+        "description": description,
+        "keywords": keywords,
+        "allowIndex": allow_index,
+        "sitemapPriority": sitemap_priority,
+        "pageHeadText": "",
+    })
+    return base
+
+
+@responses.activate
+def test_pages_seo_view(runner, mock_config):
+    mock_homepage()
+    responses.add(
+        responses.GET,
+        DETAIL_URL,
+        json={"page": make_page_detail_with_seo(34, "About Us", "/About-Us")},
+        status=200,
+    )
+
+    result = runner.invoke(cli, ["pages", "seo", "34"])
+
+    assert result.exit_code == 0
+    assert "Page 34 SEO settings:" in result.output
+    assert "Title:       About Us" in result.output
+    assert "URL:         /About-Us" in result.output
+    assert "Allow Index: True" in result.output
+    assert "Priority:    0.5" in result.output
+
+
+@responses.activate
+def test_pages_seo_view_json(runner, mock_config):
+    mock_homepage()
+    responses.add(
+        responses.GET,
+        DETAIL_URL,
+        json={"page": make_page_detail_with_seo(
+            34, "About Us", "/About-Us",
+            description="About our company",
+            keywords="about,company",
+        )},
+        status=200,
+    )
+
+    result = runner.invoke(cli, ["pages", "seo", "34", "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["page_id"] == 34
+    assert data["title"] == "About Us"
+    assert data["description"] == "About our company"
+    assert data["keywords"] == "about,company"
+    assert data["allow_index"] is True
+    assert data["sitemap_priority"] == 0.5
+
+
+@responses.activate
+def test_pages_seo_update(runner, mock_config):
+    mock_homepage()
+    responses.add(
+        responses.GET,
+        DETAIL_URL,
+        json={"page": make_page_detail_with_seo(34, "About Us", "/About-Us")},
+        status=200,
+    )
+    responses.add(responses.POST, SAVE_URL, json={}, status=200)
+
+    result = runner.invoke(cli, [
+        "pages", "seo-update", "34",
+        "--title", "New Title",
+        "--description", "New desc",
+        "--keywords", "k1,k2",
+        "--no-index",
+        "--priority", "0.8",
+    ])
+
+    assert result.exit_code == 0
+    assert "Updated SEO settings for page 34" in result.output
+
+    post_call = [c for c in responses.calls if "SavePageDetails" in c.request.url][0]
+    sent_body = json.loads(post_call.request.body)
+    assert sent_body["tabId"] == 34
+    assert sent_body["title"] == "New Title"
+    assert sent_body["description"] == "New desc"
+    assert sent_body["keywords"] == "k1,k2"
+    assert sent_body["allowIndex"] is False
+    assert sent_body["sitemapPriority"] == 0.8
+    assert sent_body["name"] == "About Us"
+
+
+@responses.activate
+def test_pages_seo_update_json(runner, mock_config):
+    mock_homepage()
+    responses.add(
+        responses.GET,
+        DETAIL_URL,
+        json={"page": make_page_detail_with_seo(34, "About Us", "/About-Us")},
+        status=200,
+    )
+    responses.add(responses.POST, SAVE_URL, json={}, status=200)
+
+    result = runner.invoke(cli, [
+        "pages", "seo-update", "34",
+        "--title", "Updated Title",
+        "--json",
+    ])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["status"] == "updated"
+    assert data["page_id"] == 34
+
+
+@responses.activate
+def test_pages_seo_update_no_flags_shows_view(runner, mock_config):
+    mock_homepage()
+    responses.add(
+        responses.GET,
+        DETAIL_URL,
+        json={"page": make_page_detail_with_seo(
+            34, "About Us", "/About-Us",
+            description="Our story",
+        )},
+        status=200,
+    )
+
+    result = runner.invoke(cli, ["pages", "seo-update", "34"])
+
+    assert result.exit_code == 0
+    assert "Page 34 SEO settings:" in result.output
+    assert "Description: Our story" in result.output
+    assert len([c for c in responses.calls if c.request.method == "POST"]) == 0

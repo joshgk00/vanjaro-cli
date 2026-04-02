@@ -1,4 +1,4 @@
-"""vanjaro site info and health commands via VanjaroAI API."""
+"""vanjaro site info, health, and nav commands."""
 
 from __future__ import annotations
 
@@ -9,10 +9,12 @@ import click
 from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
 from vanjaro_cli.commands.helpers import exit_error, get_client
+from vanjaro_cli.models.page import Page
 from vanjaro_cli.models.site import HealthCheck, SiteAnalysis
 
 ANALYZE_ENDPOINT = "/API/VanjaroAI/AISiteAnalysis/Analyze"
 HEALTH_ENDPOINT = "/API/VanjaroAI/AIHealth/Check"
+GET_PAGES = "/API/Vanjaro/Page/GetPages"
 
 
 @click.group()
@@ -91,3 +93,41 @@ def health(as_json: bool) -> None:
     click.echo(f"Vanjaro: {check.vanjaro_version}")
     click.echo(f"User:    {check.user_name} (ID: {check.user_id})")
     click.echo(f"Portal:  {check.portal_id}")
+
+
+@site.command("nav")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def nav(as_json: bool) -> None:
+    """Show site navigation tree."""
+    client, _ = get_client()
+
+    try:
+        response = client.get(GET_PAGES)
+    except (ApiError, ConfigError) as exc:
+        exit_error(str(exc), as_json)
+
+    data = response.json()
+    raw_pages = data if isinstance(data, list) else data.get("pages", data.get("Pages", []))
+
+    raw_pages = [
+        p for p in raw_pages
+        if p.get("Value", -1) != 0 and p.get("Text") != "Select Page"
+    ]
+
+    page_list = [Page.from_api(p) for p in raw_pages]
+
+    if as_json:
+        click.echo(json.dumps(
+            [{"id": p.id, "name": p.name, "level": p.level} for p in page_list],
+            indent=2,
+        ))
+        return
+
+    if not page_list:
+        click.echo("No pages found.")
+        return
+
+    click.echo("Navigation:")
+    for page in page_list:
+        indent = "  " * (page.level + 1)
+        click.echo(f"{indent}{page.name} ({page.id})")

@@ -7,10 +7,11 @@ import json
 import responses
 
 from vanjaro_cli.cli import cli
-from tests.conftest import BASE_URL, mock_homepage
+from tests.conftest import BASE_URL, mock_homepage, make_page_item
 
 ANALYZE_URL = f"{BASE_URL}/API/VanjaroAI/AISiteAnalysis/Analyze"
 HEALTH_URL = f"{BASE_URL}/API/VanjaroAI/AIHealth/Check"
+GET_PAGES_URL = f"{BASE_URL}/API/Vanjaro/Page/GetPages"
 
 SAMPLE_ANALYZE_RESPONSE = {
     "site": {
@@ -171,3 +172,65 @@ def test_site_health_api_error(runner, mock_config):
     result = runner.invoke(cli, ["site", "health"])
 
     assert result.exit_code == 1
+
+
+@responses.activate
+def test_site_nav(runner, mock_config):
+    mock_homepage()
+    responses.add(
+        responses.GET,
+        GET_PAGES_URL,
+        json=[
+            make_page_item(tab_id=21, name="Home"),
+            make_page_item(tab_id=22, name="Activity Feed"),
+            make_page_item(tab_id=25, name="My Profile", level=1),
+            make_page_item(tab_id=26, name="Friends", level=1),
+            make_page_item(tab_id=23, name="Search Results"),
+        ],
+        status=200,
+    )
+
+    result = runner.invoke(cli, ["site", "nav"])
+
+    assert result.exit_code == 0
+    assert "Navigation:" in result.output
+    assert "  Home (21)" in result.output
+    assert "  Activity Feed (22)" in result.output
+    assert "    My Profile (25)" in result.output
+    assert "    Friends (26)" in result.output
+    assert "  Search Results (23)" in result.output
+
+
+@responses.activate
+def test_site_nav_json(runner, mock_config):
+    mock_homepage()
+    responses.add(
+        responses.GET,
+        GET_PAGES_URL,
+        json=[
+            make_page_item(tab_id=21, name="Home"),
+            make_page_item(tab_id=22, name="About Us"),
+            make_page_item(tab_id=25, name="Team", level=1),
+        ],
+        status=200,
+    )
+
+    result = runner.invoke(cli, ["site", "nav", "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert len(data) == 3
+    assert data[0] == {"id": 21, "name": "Home", "level": 0}
+    assert data[1] == {"id": 22, "name": "About Us", "level": 0}
+    assert data[2] == {"id": 25, "name": "Team", "level": 1}
+
+
+@responses.activate
+def test_site_nav_empty(runner, mock_config):
+    mock_homepage()
+    responses.add(responses.GET, GET_PAGES_URL, json=[], status=200)
+
+    result = runner.invoke(cli, ["site", "nav"])
+
+    assert result.exit_code == 0
+    assert "No pages found." in result.output

@@ -1,4 +1,4 @@
-"""vanjaro pages list/get/create/copy/delete/settings commands."""
+"""vanjaro pages list/get/create/copy/delete/settings/seo commands."""
 
 from __future__ import annotations
 
@@ -260,3 +260,101 @@ def page_settings(
     )
 
 
+def _display_seo(page_id: int, page_data: dict, as_json: bool) -> None:
+    """Show SEO fields for a page in human or JSON format."""
+    seo = {
+        "title": page_data.get("title", "") or "",
+        "description": page_data.get("description", "") or "",
+        "keywords": page_data.get("keywords", "") or "",
+        "url": page_data.get("url", "") or "",
+        "allow_index": page_data.get("allowIndex", True),
+        "sitemap_priority": page_data.get("sitemapPriority", 0.5),
+    }
+
+    if as_json:
+        click.echo(json.dumps({"page_id": page_id, **seo}, indent=2))
+    else:
+        click.echo(f"Page {page_id} SEO settings:")
+        click.echo(f"  Title:       {seo['title'] or '(empty)'}")
+        click.echo(f"  Description: {seo['description'] or '(empty)'}")
+        click.echo(f"  Keywords:    {seo['keywords'] or '(empty)'}")
+        click.echo(f"  URL:         {seo['url'] or '(empty)'}")
+        click.echo(f"  Allow Index: {seo['allow_index']}")
+        click.echo(f"  Priority:    {seo['sitemap_priority']}")
+
+
+@pages.command("seo")
+@click.argument("page_id", type=int)
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def page_seo(page_id: int, as_json: bool) -> None:
+    """View SEO settings for a page."""
+    client, _ = get_client()
+
+    try:
+        response = client.get(GET_PAGE_DETAILS, params={"pageId": page_id})
+    except (ApiError, ConfigError) as exc:
+        exit_error(str(exc), as_json)
+
+    data = response.json()
+    page_data = data.get("page", data)
+    _display_seo(page_id, page_data, as_json)
+
+
+@pages.command("seo-update")
+@click.argument("page_id", type=int)
+@click.option("--title", default=None, help="Page title for search engines.")
+@click.option("--description", default=None, help="Meta description.")
+@click.option("--keywords", default=None, help="Meta keywords (comma-separated).")
+@click.option("--allow-index/--no-index", default=None, help="Toggle search engine indexing.")
+@click.option("--priority", default=None, type=float, help="Sitemap priority (0.0-1.0).")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def page_seo_update(
+    page_id: int,
+    title: str | None,
+    description: str | None,
+    keywords: str | None,
+    allow_index: bool | None,
+    priority: float | None,
+    as_json: bool,
+) -> None:
+    """Update SEO settings for a page. Without flags, shows current settings."""
+    client, _ = get_client()
+
+    try:
+        detail_response = client.get(GET_PAGE_DETAILS, params={"pageId": page_id})
+    except (ApiError, ConfigError) as exc:
+        exit_error(str(exc), as_json)
+
+    data = detail_response.json()
+    page_data = data.get("page", data)
+
+    has_updates = any(v is not None for v in (title, description, keywords, allow_index, priority))
+    if not has_updates:
+        _display_seo(page_id, page_data, as_json)
+        return
+
+    updates: dict = {"tabId": page_id}
+    if title is not None:
+        updates["title"] = title
+    if description is not None:
+        updates["description"] = description
+    if keywords is not None:
+        updates["keywords"] = keywords
+    if allow_index is not None:
+        updates["allowIndex"] = allow_index
+    if priority is not None:
+        updates["sitemapPriority"] = priority
+
+    payload = {**page_data, **updates}
+
+    try:
+        client.post(SAVE_PAGE, json=payload)
+    except (ApiError, ConfigError) as exc:
+        exit_error(str(exc), as_json)
+
+    output_result(
+        as_json,
+        status="updated",
+        human_message=f"Updated SEO settings for page {page_id}.",
+        page_id=page_id,
+    )
