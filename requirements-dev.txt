@@ -1,0 +1,4 @@
+-r requirements.txt
+pytest>=7.4
+responses>=0.25
+pytest-mock>=3.12

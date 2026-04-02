@@ -1,0 +1,4 @@
+click>=8.1
+requests>=2.31
+pydantic>=2.0
+python-dotenv>=1.0

@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools>=68", "wheel"]
+build-backend = "setuptools.backends.legacy:build"
+
+[project]
+name = "vanjaro-cli"
+version = "0.1.0"
+description = "CLI tool for managing Vanjaro/DNN websites from Claude Code"
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.1",
+    "requests>=2.31",
+    "pydantic>=2.0",
+    "python-dotenv>=1.0",
+]
+
+[project.scripts]
+vanjaro = "vanjaro_cli.cli:cli"
+
+[tool.pytest.ini_options]
+markers = [
+    "integration: marks tests as integration tests requiring a live Vanjaro instance",
+]
+testpaths = ["tests"]
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["vanjaro_cli*"]
