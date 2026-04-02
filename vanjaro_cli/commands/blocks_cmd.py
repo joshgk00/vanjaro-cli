@@ -28,6 +28,12 @@ def blocks() -> None:
     """Inspect and manipulate page components (blocks)."""
 
 
+# Register scaffold as a subcommand of blocks
+from vanjaro_cli.commands.scaffold_cmd import scaffold  # noqa: E402
+
+blocks.add_command(scaffold)
+
+
 @blocks.command("list")
 @click.argument("page_id", type=int)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
