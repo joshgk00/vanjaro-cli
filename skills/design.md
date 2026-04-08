@@ -8,6 +8,7 @@ Before building pages, ensure:
 1. You are logged in: `vanjaro auth login --url http://your-site.com`
 2. API key is generated: `vanjaro api-key generate`
 3. Verify connectivity: `vanjaro site health`
+4. Verify target pages use the Vanjaro shell: `vanjaro pages shell`
 
 Sessions expire after inactivity. If any command fails with "Session expired":
 ```bash
@@ -20,11 +21,12 @@ vanjaro api-key generate
 When building a site from a design, follow this order:
 
 1. **Branding** — site name, footer text
-2. **Fonts** — register custom fonts via `theme register-font`
-3. **Theme colors** — update design controls via `theme set`
-4. **Global blocks** — header and footer (shared across all pages)
-5. **Pages** — create and populate each page
-6. **Publish** — publish each page when ready
+2. **Page shell audit** — normalize any non-Vanjaro pages via `pages shell PAGE_ID --fix`
+3. **Fonts** — register custom fonts via `theme register-font`
+4. **Theme colors** — update design controls via `theme set`
+5. **Global blocks** — header and footer (shared across all pages)
+6. **Pages** — create and populate each page
+7. **Publish** — publish each page when ready
 
 ## GrapesJS Component Model
 
@@ -263,54 +265,34 @@ vanjaro blocks scaffold \
   --output coaching.json
 ```
 
-## Design Tokens (VGRT Theme)
+## Theming Workflow
 
-These are the CSS custom properties from the VGRT site design:
+After scaffolding pages, apply the site's visual design through theme controls. This is a three-phase process documented in dedicated skills:
 
-### Colors
-| Token | Value | Usage |
-|-------|-------|-------|
-| Blush Light | #FDF2F6 | Section backgrounds |
-| Blush | #F7CCE0 | Accent backgrounds |
-| Rose | #E79ABE | Decorative elements |
-| Hot Pink | #EC72A7 | Script headings |
-| Teal | #7EBEC5 | Accent, checkmarks |
-| CTA Blue | #0069FF | Primary buttons |
-| Dark Gray | #3D3D3D | Body text |
+### Phase 1: Extract design tokens
+Use the **theme-extract-tokens** skill to analyze the design (mockup, Figma, live site) and produce a `design-tokens.json` file with colors, fonts, weights, spacing, and border radius values.
 
-### Typography
-| Element | Font | Weight |
-|---------|------|--------|
-| Body | Lato, sans-serif | 400 |
-| Headings | Lora, serif | 600-700 |
-| Script/decorative | Dancing Script, cursive | 400 |
+### Phase 2: Map tokens to controls
+Use the **theme-control-reference** skill to find the exact LESS variable names for each token. Vanjaro has 838 controls across 16 categories — the reference documents naming patterns, valid values, and known quirks.
 
-### Spacing
-| Context | Value |
-|---------|-------|
-| Section padding | 80px top/bottom |
-| Card padding | 32px 28px |
-| Card border-radius | 20px |
-| Button border-radius | 30px (pill) |
-| Button padding | 12px 28px |
+### Phase 3: Apply to site
+Use the **theme-apply** skill to convert tokens into bulk update JSON files and apply them in the correct order: colors → site globals → fonts → headings → paragraphs → buttons → menu → links.
 
-## Customizing After Scaffold
-
-After scaffolding and pushing content, customize the theme:
+### Quick example
 
 ```bash
-# Register fonts
-vanjaro theme register-font --name "Dancing Script" --family "Dancing Script, cursive" \
-  --import-url "https://fonts.googleapis.com/css2?family=Dancing+Script&display=swap"
-
+# Register a custom font
 vanjaro theme register-font --name "Lora" --family "Lora, serif" \
-  --import-url "https://fonts.googleapis.com/css2?family=Lora:wght@400;600;700&display=swap"
+  --import-url "https://fonts.googleapis.com/css2?family=Lora:wght@400;700&display=swap" --json
 
-# Set theme colors (use theme get --category to find control GUIDs)
-vanjaro theme get --category "Site" --json | jq '.controls[] | {guid, title, lessVariable}'
+# Set theme colors
+vanjaro theme set-bulk colors.json --json
 
-# Update branding
-vanjaro branding update --site-name "Virtual Girlfriend Road Trip"
+# Set heading typography
+vanjaro theme set-bulk heading-typography.json --json
+
+# Verify
+vanjaro theme get --modified --json | jq '.total'
 ```
 
 ## Tips for AI Agents

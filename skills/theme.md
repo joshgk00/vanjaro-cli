@@ -200,6 +200,16 @@ vanjaro theme reset --force --json
 
 ## Workflows
 
+### Preflight Before Any Theme Change
+
+```bash
+# Theme changes only affect pages that are actually on the Vanjaro shell
+vanjaro pages shell --json | jq '.[] | select(.shell != "vanjaro") | {id, name, shell, skin_src}'
+
+# Normalize a page if needed before applying theme settings
+vanjaro pages shell 42 --fix --json
+```
+
 ### Browse and Modify a Color
 
 ```bash
@@ -266,6 +276,91 @@ vanjaro theme reset --force --json
 # If needed later, restore from backup
 vanjaro theme set-bulk theme-backup.json --json
 ```
+
+---
+
+### `vanjaro theme css get [OPTIONS]`
+
+Show the current site-wide custom CSS (portal.css). This is the global stylesheet — classes defined here apply to every page on the site.
+
+**Options:**
+- `--output, -o FILE` -- Write CSS to a file instead of stdout
+- `--json` -- Output as JSON
+
+**Example:**
+```bash
+# View current custom CSS
+vanjaro theme css get
+
+# Export to file
+vanjaro theme css get --output portal.css
+
+# JSON output with content and length
+vanjaro theme css get --json
+```
+
+**JSON output:**
+```json
+{
+  "status": "ok",
+  "css": ".card-hover-lift { transition: transform 0.3s; }\n",
+  "length": 50
+}
+```
+
+---
+
+### `vanjaro theme css update --file FILE [OPTIONS]`
+
+Replace the entire site-wide custom CSS with the contents of a file. This overwrites `portal.css` and clears the client resource cache.
+
+**Options:**
+- `--file, -f FILE` -- CSS file to upload (required)
+- `--json` -- Output as JSON
+
+**Example:**
+```bash
+vanjaro theme css update --file custom-styles.css --json
+```
+
+---
+
+### `vanjaro theme css append --file FILE [OPTIONS]`
+
+Append CSS from a file to the existing site-wide custom CSS without replacing what's already there.
+
+**Options:**
+- `--file, -f FILE` -- CSS file to append (required)
+- `--json` -- Output as JSON
+
+**Example:**
+```bash
+# Add card hover classes to existing CSS
+vanjaro theme css append --file card-classes.css --json
+```
+
+---
+
+### Custom CSS Workflow
+
+The global stylesheet (`portal.css`) is the right place for:
+- Reusable component classes (card hovers, button variants, section backgrounds)
+- Bootstrap 5 extensions (utility classes that compose with BS5)
+- Design-specific overrides (gradients, animations, transitions)
+
+**Best practice:** Define classes in `portal.css`, then reference them on components via the `--classes` option in `blocks add` or in content JSON.
+
+```bash
+# 1. Define reusable classes
+vanjaro theme css update --file site-classes.css --json
+
+# 2. Add a component that uses those classes
+vanjaro blocks add 42 --type section --classes "card-hover-lift,accent-gradient-top" --json
+```
+
+Classes in `portal.css` are available site-wide — no need to duplicate per page.
+
+---
 
 ## Error Handling
 

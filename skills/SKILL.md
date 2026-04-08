@@ -12,6 +12,11 @@ CLI tool for managing Vanjaro/DNN websites. Load specific skills for detailed co
 | blocks | blocks list/get/tree/add/remove, global-blocks list/get/update/publish/delete, templates list/get/apply | Working with page components, shared blocks, and templates |
 | assets | folders, list, upload, delete | Managing files and images |
 | site | site info, site health, branding get/update | Site configuration, monitoring, and branding |
+| theme | get, set, set-bulk, register-font, reset | Viewing and modifying theme design controls |
+| theme-extract-tokens | *(workflow, no commands)* | Analyzing a design and producing a design-tokens.json file |
+| theme-control-reference | *(reference)* | Looking up LESS variable names, valid values, naming quirks |
+| theme-apply | *(workflow, no commands)* | Converting design tokens into bulk files and applying to a site |
+| design | *(workflow)* | End-to-end site building: page structure, scaffolding, theming |
 
 ## Prerequisites
 
