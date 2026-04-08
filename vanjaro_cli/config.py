@@ -97,7 +97,7 @@ def load_config(profile_name: str | None = None) -> Config:
         profiles = raw.get("profiles", {})
         profile_data = profiles.get(resolved_name, {})
 
-    base_url = os.environ.get("VANJARO_BASE_URL", profile_data.get("base_url", ""))
+    base_url = profile_data.get("base_url") or os.environ.get("VANJARO_BASE_URL", "")
     if not base_url:
         if resolved_name != "default":
             raise ConfigError(f"Profile '{resolved_name}' not found.")
@@ -106,11 +106,15 @@ def load_config(profile_name: str | None = None) -> Config:
             "or set VANJARO_BASE_URL."
         )
 
+    portal_id = profile_data.get("portal_id")
+    if portal_id is None:
+        portal_id = os.environ.get("VANJARO_PORTAL_ID", 0)
+
     return Config(
         base_url=base_url,
         cookies=profile_data.get("cookies"),
         api_key=profile_data.get("api_key"),
-        portal_id=int(os.environ.get("VANJARO_PORTAL_ID", profile_data.get("portal_id", 0))),
+        portal_id=int(portal_id),
     )
 
 

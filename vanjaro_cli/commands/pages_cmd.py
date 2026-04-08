@@ -13,6 +13,9 @@ from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, 
 
 GET_PAGES = "/API/Vanjaro/Page/GetPages"
 CREATE_PAGE = "/API/VanjaroAI/AIPage/Create"
+LIST_AI_PAGES = "/API/VanjaroAI/AIPage/List"
+GET_AI_PAGE = "/API/VanjaroAI/AIPage/Get"
+UPDATE_AI_PAGE = "/API/VanjaroAI/AIPage/Update"
 SAVE_PAGE = "/API/Pages/Pages/SavePageDetails"
 DELETE_PAGE = "/API/VanjaroAI/AIPage/Delete"
 GET_PAGE_DETAILS = "/API/PersonaBar/Pages/GetPageDetails"
@@ -253,6 +256,124 @@ def page_settings(
         human_message=f"Updated settings for page {page_id}.",
         page_id=page_id,
     )
+
+
+def _list_ai_pages(client) -> list[Page]:
+    """Fetch all pages from the VanjaroAI listing endpoint."""
+    pages: list[Page] = []
+    skip = 0
+    take = 200
+
+    while True:
+        response = client.get(LIST_AI_PAGES, params={"skip": skip, "take": take})
+        data = response.json()
+        raw_pages = data if isinstance(data, list) else data.get("pages", data.get("Pages", []))
+        if not raw_pages:
+            break
+
+        batch = [Page.from_api(page) for page in raw_pages]
+        pages.extend(batch)
+
+        total = data.get("total") if isinstance(data, dict) else None
+        if total is not None and len(pages) >= total:
+            break
+        if len(batch) < take:
+            break
+
+        skip += take
+
+    return pages
+
+
+def _shell_payload(page: Page) -> dict:
+    """Serialize page shell details for JSON output."""
+    return {
+        "id": page.id,
+        "name": page.name,
+        "title": page.title,
+        "url": page.url,
+        "has_vanjaro_content": page.has_vanjaro_content,
+        "is_portal_home": page.is_portal_home,
+        "shell": page.shell_status(),
+        "skin_src": page.skin_src,
+        "container_src": page.container_src,
+    }
+
+
+def _print_shell(page: Page) -> None:
+    """Render page shell details in human format."""
+    click.echo(f"Page {page.id} shell:")
+    click.echo(f"  Name:                {page.name}")
+    click.echo(f"  URL:                 {page.url or '(empty)'}")
+    click.echo(f"  Portal home:         {page.is_portal_home}")
+    click.echo(f"  Has Vanjaro content: {page.has_vanjaro_content}")
+    click.echo(f"  Shell:               {page.shell_status()}")
+    click.echo(f"  Skin:                {page.skin_src or '(inherited/default)'}")
+    click.echo(f"  Container:           {page.container_src or '(inherited/default)'}")
+
+
+@pages.command("shell")
+@click.argument("page_id", required=False, type=int)
+@click.option("--fix", is_flag=True, help="Normalize the page to the Vanjaro shell before showing details.")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def page_shell(page_id: int | None, fix: bool, as_json: bool) -> None:
+    """Audit or normalize the skin/container shell for pages."""
+    client, _ = get_client()
+
+    if page_id is None:
+        if fix:
+            raise click.UsageError("--fix requires PAGE_ID.")
+
+        try:
+            pages = _list_ai_pages(client)
+        except (ApiError, ConfigError) as exc:
+            exit_error(str(exc), as_json)
+
+        if as_json:
+            click.echo(json.dumps([_shell_payload(page) for page in pages], indent=2))
+            return
+
+        if not pages:
+            click.echo("No pages found.")
+            return
+
+        print_table(
+            ["id", "name", "home", "content", "shell", "skin", "container"],
+            [
+                {
+                    "id": page.id,
+                    "name": page.name,
+                    "home": "yes" if page.is_portal_home else "no",
+                    "content": "yes" if page.has_vanjaro_content else "no",
+                    "shell": page.shell_status(),
+                    "skin": page.skin_src or "(inherited)",
+                    "container": page.container_src or "(inherited)",
+                }
+                for page in pages
+            ],
+        )
+        return
+
+    try:
+        if fix:
+            client.post(UPDATE_AI_PAGE, json={"pageId": page_id, "ensureVanjaroShell": True})
+        response = client.get(GET_AI_PAGE, params={"pageId": page_id, "includeDraft": "true"})
+    except (ApiError, ConfigError) as exc:
+        exit_error(str(exc), as_json)
+
+    page = Page.from_api(response.json())
+
+    if as_json:
+        payload = _shell_payload(page)
+        if fix:
+            payload["status"] = "normalized"
+        click.echo(json.dumps(payload, indent=2))
+        return
+
+    if fix:
+        click.echo(f"Normalized page {page_id} to the Vanjaro shell.")
+        click.echo()
+    _print_shell(page)
 
 
 def _display_seo(page_id: int, page_data: dict, as_json: bool) -> None:

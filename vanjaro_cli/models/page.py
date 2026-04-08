@@ -23,6 +23,10 @@ class Page(BaseModel):
     level: int = Field(alias="level", default=0)
     has_children: bool = Field(alias="hasChildren", default=False)
     portal_id: int = Field(alias="portalId", default=0)
+    has_vanjaro_content: bool = Field(alias="hasVanjaroContent", default=False)
+    is_portal_home: bool = Field(alias="isPortalHome", default=False)
+    skin_src: str = Field(alias="skinSrc", default="")
+    container_src: str = Field(alias="containerSrc", default="")
 
     model_config = {"populate_by_name": True, "extra": "allow"}
 
@@ -47,6 +51,8 @@ class Page(BaseModel):
         # PersonaBar returns camelCase; handle both id spellings
         elif "tabId" not in data and "id" in data:
             data = {**data, "tabId": data["id"]}
+        if "url" not in data and "path" in data:
+            data = {**data, "url": data.get("path") or ""}
         return cls.model_validate(data)
 
     def to_row(self) -> dict[str, Any]:
@@ -58,6 +64,21 @@ class Page(BaseModel):
             "status": self.status,
             "in_menu": self.include_in_menu,
         }
+
+    def shell_status(self) -> str:
+        """Classify the page shell based on its configured skin/container."""
+        skin = (self.skin_src or "").strip().lower()
+        container = (self.container_src or "").strip().lower()
+        vanjaro_skin = "[g]skins/vanjaro/base.ascx"
+        vanjaro_container = "[g]containers/vanjaro/base.ascx"
+
+        if skin == vanjaro_skin and container == vanjaro_container:
+            return "vanjaro"
+        if not skin and not container:
+            return "inherited"
+        if skin == vanjaro_skin or container == vanjaro_container:
+            return "mixed"
+        return "non-vanjaro"
 
 
 class PageSettings(BaseModel):

@@ -45,6 +45,7 @@ vanjaro pages get      PAGE_ID
 vanjaro pages create   --title TITLE [--parent ID] [--hidden]
 vanjaro pages copy     PAGE_ID [--title TITLE]
 vanjaro pages delete   PAGE_ID [--force]
+vanjaro pages shell    [PAGE_ID] [--fix]
 vanjaro pages settings PAGE_ID [--title TITLE] [--hidden|--visible]
 ```
 

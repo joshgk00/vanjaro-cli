@@ -252,3 +252,26 @@ def test_config_has_api_key_property():
 def test_config_strips_trailing_slash():
     config = Config(base_url="http://test.local/")
     assert config.base_url == "http://test.local"
+
+
+def test_load_config_prefers_profile_values_over_env(config_dir):
+    save_config(
+        Config(
+            base_url="http://baseline.local",
+            cookies={"auth": "cookie"},
+            portal_id=7,
+        ),
+        "baseline",
+    )
+
+    os.environ["VANJARO_BASE_URL"] = "http://wrong.local"
+    os.environ["VANJARO_PORTAL_ID"] = "99"
+
+    loaded = load_config("baseline")
+
+    assert loaded.base_url == "http://baseline.local"
+    assert loaded.portal_id == 7
+    assert loaded.cookies == {"auth": "cookie"}
+
+    os.environ.pop("VANJARO_BASE_URL", None)
+    os.environ.pop("VANJARO_PORTAL_ID", None)

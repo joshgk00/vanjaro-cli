@@ -170,6 +170,37 @@ vanjaro pages settings 42 --title "New Title" --hidden --json
 }
 ```
 
+### `vanjaro pages shell [PAGE_ID] [OPTIONS]`
+
+Audit which skin/container shell a page is using, or normalize a page onto the Vanjaro shell.
+
+Without `PAGE_ID`, lists all pages and shows whether each one is using the Vanjaro shell. With `PAGE_ID`, shows shell details for that page. Use `--fix` with `PAGE_ID` to normalize the page to the Vanjaro shell without changing content.
+
+**Options:**
+- `--fix` -- Normalize the page to the Vanjaro shell before showing details (requires `PAGE_ID`)
+- `--json` -- Output as JSON
+
+**Examples:**
+```bash
+vanjaro pages shell
+vanjaro pages shell 42 --json
+vanjaro pages shell 42 --fix --json
+```
+
+**JSON output (single page):**
+```json
+{
+  "id": 42,
+  "name": "Home",
+  "url": "/",
+  "has_vanjaro_content": true,
+  "is_portal_home": true,
+  "shell": "non-vanjaro",
+  "skin_src": "[g]skins/Xcillion/Home.ascx",
+  "container_src": "[g]containers/Xcillion/NoTitle.ascx"
+}
+```
+
 ## Workflows
 
 ### Create a Page Hierarchy
@@ -201,6 +232,16 @@ vanjaro pages settings 100 --hidden --json
 vanjaro pages list --json | jq '.[] | select(.include_in_menu == false) | .name'
 ```
 
+### Audit Theme Readiness
+
+```bash
+# Before any automated theme update, verify the published pages actually use Vanjaro
+vanjaro pages shell --json | jq '.[] | select(.shell != "vanjaro") | {id, name, shell, skin_src}'
+
+# Normalize a page shell if needed
+vanjaro pages shell 42 --fix --json
+```
+
 ### Bulk Page ID Lookup
 
 ```bash
@@ -215,6 +256,7 @@ vanjaro pages get "$PAGE_ID" --json
 - 404 on `pages get`: The page ID does not exist. Run `pages list` to see valid IDs.
 - 403 on `pages create/delete`: The authenticated user lacks page management permissions.
 - Confirmation prompt on `delete`: Use `--force` to skip in scripts.
+- `pages shell --fix` requires `PAGE_ID`: use `pages shell` first to audit the site, then normalize specific pages as needed.
 
 ## API Notes
 

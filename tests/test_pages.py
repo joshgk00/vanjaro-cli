@@ -14,6 +14,9 @@ from tests.conftest import BASE_URL, make_page_item, make_page_detail, mock_home
 GET_PAGES_URL = f"{BASE_URL}/API/Vanjaro/Page/GetPages"
 DETAIL_URL = f"{BASE_URL}/API/PersonaBar/Pages/GetPageDetails"
 CREATE_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Create"
+AI_LIST_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/List"
+AI_DETAIL_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Get"
+AI_UPDATE_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Update"
 SAVE_URL = f"{BASE_URL}/API/Pages/Pages/SavePageDetails"
 DELETE_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Delete"
 COPY_URL = f"{BASE_URL}/API/PersonaBar/Pages/CopyPage"
@@ -290,6 +293,93 @@ def test_pages_settings_update(runner, mock_config):
 
 
 @responses.activate
+def test_pages_shell_list(runner, mock_config):
+    mock_homepage()
+    responses.add(
+        responses.GET,
+        AI_LIST_URL,
+        json={
+            "total": 2,
+            "pages": [
+                make_ai_page_detail(
+                    1,
+                    "Home",
+                    "/",
+                    is_portal_home=True,
+                    skin_src="[g]skins/xcillion/home.ascx",
+                    container_src="[g]containers/xcillion/notitle.ascx",
+                ),
+                make_ai_page_detail(2, "Login", "/Login"),
+            ],
+        },
+        status=200,
+    )
+
+    result = runner.invoke(cli, ["pages", "shell"])
+
+    assert result.exit_code == 0
+    assert "non-vanjaro" in result.output
+    assert "vanjaro" in result.output
+    assert "Home" in result.output
+    assert "Login" in result.output
+
+
+@responses.activate
+def test_pages_shell_json(runner, mock_config):
+    mock_homepage()
+    responses.add(
+        responses.GET,
+        AI_DETAIL_URL,
+        json=make_ai_page_detail(
+            1,
+            "Home",
+            "/",
+            is_portal_home=True,
+            skin_src="[g]skins/xcillion/home.ascx",
+            container_src="[g]containers/xcillion/notitle.ascx",
+        ),
+        status=200,
+    )
+
+    result = runner.invoke(cli, ["pages", "shell", "1", "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["id"] == 1
+    assert data["shell"] == "non-vanjaro"
+    assert data["skin_src"] == "[g]skins/xcillion/home.ascx"
+
+
+@responses.activate
+def test_pages_shell_fix(runner, mock_config):
+    mock_homepage()
+    responses.add(responses.POST, AI_UPDATE_URL, json={"pageId": 1, "shellNormalized": True}, status=200)
+    responses.add(
+        responses.GET,
+        AI_DETAIL_URL,
+        json=make_ai_page_detail(1, "Home", "/", is_portal_home=True),
+        status=200,
+    )
+
+    result = runner.invoke(cli, ["pages", "shell", "1", "--fix"])
+
+    assert result.exit_code == 0
+    assert "Normalized page 1" in result.output
+
+    post_call = [c for c in responses.calls if "AIPage/Update" in c.request.url][0]
+    sent_body = json.loads(post_call.request.body)
+    assert sent_body["pageId"] == 1
+    assert sent_body["ensureVanjaroShell"] is True
+
+
+def test_pages_shell_fix_requires_page_id(runner, mock_config):
+    result = runner.invoke(cli, ["pages", "shell", "--fix"])
+
+    assert result.exit_code != 0
+    assert "PAGE_ID" in result.output or "requires PAGE_ID" in result.output
+
+
+@responses.activate
 def test_pages_api_error_surfaces(runner, mock_config):
     mock_homepage()
     responses.add(
@@ -328,6 +418,34 @@ def make_page_detail_with_seo(
         "pageHeadText": "",
     })
     return base
+
+
+def make_ai_page_detail(
+    tab_id: int = 1,
+    name: str = "Home",
+    path: str = "/",
+    *,
+    has_vanjaro_content: bool = True,
+    is_portal_home: bool = False,
+    skin_src: str = "[g]skins/vanjaro/base.ascx",
+    container_src: str = "[g]containers/vanjaro/base.ascx",
+) -> dict:
+    return {
+        "tabId": tab_id,
+        "name": name,
+        "title": name,
+        "path": path,
+        "version": 3,
+        "isPublished": True,
+        "hasVanjaroContent": has_vanjaro_content,
+        "isPortalHome": is_portal_home,
+        "skinSrc": skin_src,
+        "containerSrc": container_src,
+        "locale": "en-US",
+        "contentJSON": [],
+        "styleJSON": [],
+        "contentHtml": "<div></div>",
+    }
 
 
 @responses.activate
