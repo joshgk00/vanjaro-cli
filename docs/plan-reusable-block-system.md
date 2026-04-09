@@ -299,6 +299,8 @@ Three skills support the block template workflow:
 | `block-template-author` | CREATED | 2 | Validates and creates block template JSON files. Enforces nesting rules, required classes, style presets, and category conventions. Includes a `validate_template.py` script for deterministic checks. |
 | `block-register` | PLANNED | 3 | Batch-registers templates as custom blocks on a live site. Takes a directory or list of template files, registers each via `custom-blocks create`, reports success/failure per template. |
 | `block-compose` | PLANNED | 3 | Customizes a template with content overrides (heading text, button labels, image URLs, column count) and outputs ready JSON for registration or `content update`. |
+| `block-composer` | CREATED | 4 | Analyzes designs (mockups, screenshots, live sites) to identify UI patterns, maps them to block templates, and generates a library plan JSON for batch registration via `build-library`. |
+| `site-builder` | CREATED | 5 | End-to-end orchestration: design → theme → block library → pages → publish. Four-stage pipeline with verification gates between each stage. |
 
 ### Phase 3: Block Composition CLI Commands
 
@@ -345,11 +347,11 @@ vanjaro blocks build-library --plan library-plan.json
 
 **Acceptance**: Can go from template selection to registered custom block in 2-3 CLI commands. Block appears in editor sidebar and creates an independent copy when dragged onto a page.
 
-### Phase 4: Design Analysis Skill
+### Phase 4: Design Analysis Skill [COMPLETE]
 
 **Goal**: A skill that teaches an agent to analyze a design and produce a block library plan.
 
-**Skill: `skills/block-composer.md`**
+**Skill: `.claude/skills/block-composer/SKILL.md`**
 
 The skill instructs the agent to:
 
@@ -396,29 +398,32 @@ The skill instructs the agent to:
 
 **Acceptance**: Agent can look at a design, produce a plan, and build a complete custom block library in one workflow.
 
-### Phase 5: End-to-End Workflow Integration
+### Phase 5: End-to-End Workflow Integration [COMPLETE]
 
 **Goal**: Tie everything together into a single skill that goes from design to drag-and-drop blocks.
 
-**Complete workflow**:
+**Skill**: `.claude/skills/site-builder/SKILL.md`
+
+**Four-stage pipeline**:
 ```
-Design/Mockup
-  → Theme Extraction (colors, fonts, spacing)
-  → Theme Application (112 theme controls + custom CSS)
-  → Design Analysis (identify recurring UI patterns)
-  → Block Library Plan (map patterns to templates)
-  → Block Composition (build GrapesJS JSON for each)
-  → Custom Block Registration (save to editor sidebar)
-  → Global Block Registration (header/footer only)
-  → User drags and drops custom blocks to build pages
+Stage 1: Foundation — Auth → Health check → Branding
+Stage 2: Theme — Extract tokens → Register fonts → Apply controls → Custom CSS
+Stage 3: Block Library — Analyze design → Map templates → Register blocks
+Stage 4: Pages & Content — Create pages → Push content → Global blocks → Publish
 ```
 
-**Integration with existing skills**:
+**Integration with existing skills and commands**:
 - `theme-extract-tokens` → extracts colors, fonts, spacing from the design
 - `theme-apply` → applies theme controls to match the design
 - `theme css update` → injects custom CSS for anything beyond theme controls
-- `block-composer` (new) → analyzes design patterns and builds custom blocks
+- `block-composer` → analyzes design patterns and builds custom blocks
+- `blocks build-library` → batch-registers blocks from the plan
 - `build-page` → assembles pages using custom blocks + page-specific content
+- `content update/publish` → pushes content and publishes pages
+
+**Reference docs**:
+- `references/workflow-checklist.md` — 12-phase progress tracker
+- `references/cli-quick-reference.md` — all CLI commands organized by workflow phase
 
 **User experience after the agent finishes**:
 1. Open any page in the Vanjaro editor

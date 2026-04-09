@@ -1,0 +1,63 @@
+# Block Template Catalog
+
+Available templates in `artifacts/block-templates/`. These are the building blocks the agent maps design patterns to.
+
+## Heroes
+
+| Template | File | Description |
+|----------|------|-------------|
+| Centered Hero | `Heroes/centered-hero.json` | Full-width hero with centered heading, subtext, and CTA button |
+| Split Hero | `Heroes/split-hero.json` | Two-column hero: text + CTA on left, image on right |
+
+## Cards
+
+| Template | File | Description |
+|----------|------|-------------|
+| Feature Cards (3-up) | `Cards/feature-cards-3up.json` | Three equal-width cards with icon, heading, text, and button |
+| Feature Cards (4-up) | `Cards/feature-cards-4up.json` | Four equal-width cards with icon, heading, text, and button |
+| Testimonial Cards (3-up) | `Cards/testimonial-cards-3up.json` | Three quote cards with testimonial text, author name, and role |
+| Pricing Cards (3-up) | `Cards/pricing-cards-3up.json` | Three pricing tier cards with price, feature list, and CTA |
+
+## CTAs
+
+| Template | File | Description |
+|----------|------|-------------|
+| CTA Banner | `CTAs/cta-banner.json` | Full-width centered call-to-action with heading, text, and button |
+| CTA Split | `CTAs/cta-split.json` | Two-column CTA: text on left, button on right |
+
+## Content
+
+| Template | File | Description |
+|----------|------|-------------|
+| Bio/About | `Content/bio-about.json` | Two-column: image on left, bio text + heading on right |
+| Contact Section | `Content/contact-section.json` | Two-column: contact info on left, form placeholder on right |
+
+## Lists
+
+| Template | File | Description |
+|----------|------|-------------|
+| Icon Feature List | `Lists/icon-feature-list.json` | Vertical list of icon + heading + text rows |
+
+## Navigation
+
+| Template | File | Description |
+|----------|------|-------------|
+| Footer (3-column) | `Navigation/footer-3col.json` | Three-column footer with nav links, contact info, and social |
+
+## Template Capabilities
+
+Each template supports content overrides via named slots:
+- `heading_1`, `heading_2`, etc. — heading text
+- `text_1`, `text_2`, etc. — paragraph text
+- `button_1`, `button_2`, etc. — button labels
+- `button_1_href`, etc. — button link targets
+- `image_1_src`, `image_1_alt`, etc. — image sources and alt text
+
+Use `vanjaro blocks compose <template> --list-slots` to see all available slots for a template.
+
+## When No Template Fits
+
+If a design section doesn't match any template:
+1. Check if a template can be adapted with overrides (e.g., different heading style)
+2. Check if a template with fewer/more columns covers the pattern
+3. If truly novel, flag it for custom template creation using the `block-template-author` skill
