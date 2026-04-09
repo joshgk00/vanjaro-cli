@@ -1,0 +1,140 @@
+{
+  "name": "Footer (3-column)",
+  "category": "Navigation",
+  "description": "Three-column footer with brand/about, quick links, and contact info",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-foot-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-foot-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-foot-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-foot-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Company Name",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A brief tagline or description of the company. One or two sentences about what you do and who you serve.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot-t1"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-foot-c2"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Quick Links",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot-h2"}
+                  },
+                  {
+                    "type": "list",
+                    "classes": [
+                      {"name": "list-box", "active": false},
+                      {"name": "list", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot-l1"},
+                    "components": [
+                      {"type": "list-item", "content": "Home", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li1"}},
+                      {"type": "list-item", "content": "About", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li2"}},
+                      {"type": "list-item", "content": "Services", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li3"}},
+                      {"type": "list-item", "content": "Contact", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li4"}}
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-foot-c3"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Contact",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot-h3"}
+                  },
+                  {
+                    "type": "list",
+                    "classes": [
+                      {"name": "list-box", "active": false},
+                      {"name": "list", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot-l2"},
+                    "components": [
+                      {"type": "list-item", "content": "123 Main Street", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li5"}},
+                      {"type": "list-item", "content": "City, ST 12345", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li6"}},
+                      {"type": "list-item", "content": "(555) 123-4567", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li7"}},
+                      {"type": "list-item", "content": "hello@example.com", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li8"}}
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

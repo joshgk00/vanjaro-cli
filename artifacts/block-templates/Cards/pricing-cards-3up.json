@@ -1,0 +1,210 @@
+{
+  "name": "Pricing Cards (3-up)",
+  "category": "Cards",
+  "description": "Three pricing tier cards with plan name, price, feature list, and CTA button",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-pc3-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-pc3-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false},
+              {"name": "text-center", "active": false}
+            ],
+            "attributes": {"id": "tpl-pc3-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-pc3-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Starter",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-h1"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "$9/mo",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-h2"}
+                  },
+                  {
+                    "type": "list",
+                    "classes": [
+                      {"name": "list-box", "active": false},
+                      {"name": "list", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-l1"},
+                    "components": [
+                      {"type": "list-item", "content": "5 Projects", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-pc3-li1"}},
+                      {"type": "list-item", "content": "1 GB Storage", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-pc3-li2"}},
+                      {"type": "list-item", "content": "Email Support", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-pc3-li3"}}
+                    ]
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Choose Plan",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-outline-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-b1", "role": "button", "href": "#"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-pc3-c2"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Professional",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-h3"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "$29/mo",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-h4"}
+                  },
+                  {
+                    "type": "list",
+                    "classes": [
+                      {"name": "list-box", "active": false},
+                      {"name": "list", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-l2"},
+                    "components": [
+                      {"type": "list-item", "content": "25 Projects", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-pc3-li4"}},
+                      {"type": "list-item", "content": "10 GB Storage", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-pc3-li5"}},
+                      {"type": "list-item", "content": "Priority Support", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-pc3-li6"}}
+                    ]
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Choose Plan",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-b2", "role": "button", "href": "#"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-pc3-c3"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Enterprise",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-h5"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "$99/mo",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-h6"}
+                  },
+                  {
+                    "type": "list",
+                    "classes": [
+                      {"name": "list-box", "active": false},
+                      {"name": "list", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-l3"},
+                    "components": [
+                      {"type": "list-item", "content": "Unlimited Projects", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-pc3-li7"}},
+                      {"type": "list-item", "content": "100 GB Storage", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-pc3-li8"}},
+                      {"type": "list-item", "content": "Dedicated Support", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-pc3-li9"}}
+                    ]
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Choose Plan",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-outline-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pc3-b3", "role": "button", "href": "#"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

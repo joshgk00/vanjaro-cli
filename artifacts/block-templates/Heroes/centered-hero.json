@@ -1,0 +1,79 @@
+{
+  "name": "Centered Hero",
+  "category": "Heroes",
+  "description": "Full-width hero with centered heading, subtext, and CTA button",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-hero-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-hero-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "justify-content-center", "active": false}
+            ],
+            "attributes": {"id": "tpl-hero-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-8", "active": false},
+                  {"name": "col-md-10", "active": false},
+                  {"name": "col-12", "active": false},
+                  {"name": "text-center", "active": false}
+                ],
+                "attributes": {"id": "tpl-hero-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h1",
+                    "content": "Your Headline Here",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-hero-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Supporting text that explains the value proposition and tells visitors what to do next.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-hero-t1"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Get Started",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-hero-b1", "role": "button", "href": "#"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

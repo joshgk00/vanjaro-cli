@@ -1,0 +1,79 @@
+{
+  "name": "CTA Banner",
+  "category": "CTAs",
+  "description": "Centered call-to-action banner with heading, supporting text, and button",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-ctab-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-ctab-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "justify-content-center", "active": false}
+            ],
+            "attributes": {"id": "tpl-ctab-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-8", "active": false},
+                  {"name": "col-md-10", "active": false},
+                  {"name": "col-12", "active": false},
+                  {"name": "text-center", "active": false}
+                ],
+                "attributes": {"id": "tpl-ctab-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "Ready to Get Started?",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-ctab-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Join thousands of satisfied customers. Start your free trial today — no credit card required.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-ctab-t1"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Start Free Trial",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-ctab-b1", "role": "button", "href": "#"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

@@ -1,0 +1,167 @@
+{
+  "name": "Testimonial Cards (3-up)",
+  "category": "Cards",
+  "description": "Three testimonial cards with quote text, author name, and author role",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-tc3-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-tc3-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-tc3-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-tc3-c1"},
+                "components": [
+                  {
+                    "type": "text",
+                    "content": "\"This product completely transformed how we work. Highly recommended for any team looking to level up.\"",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "fst-italic", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tc3-t1"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Jane Smith",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false},
+                      {"name": "mt-3", "active": false},
+                      {"name": "mb-0", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tc3-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "CEO, Example Company",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "text-muted", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tc3-t2"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-tc3-c2"},
+                "components": [
+                  {
+                    "type": "text",
+                    "content": "\"The support team was incredible and the onboarding process was seamless. We were up and running in no time.\"",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "fst-italic", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tc3-t3"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "John Doe",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false},
+                      {"name": "mt-3", "active": false},
+                      {"name": "mb-0", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tc3-h2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Director, Another Co.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "text-muted", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tc3-t4"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-tc3-c3"},
+                "components": [
+                  {
+                    "type": "text",
+                    "content": "\"A game-changer for our workflow. The results speak for themselves — 40% faster turnaround.\"",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "fst-italic", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tc3-t5"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Alex Johnson",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false},
+                      {"name": "mt-3", "active": false},
+                      {"name": "mb-0", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tc3-h3"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "VP Engineering, Tech Corp",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "text-muted", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tc3-t6"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

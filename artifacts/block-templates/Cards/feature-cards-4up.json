@@ -1,0 +1,200 @@
+{
+  "name": "Feature Cards (4-up)",
+  "category": "Cards",
+  "description": "Four equal-width cards with icon, heading, and text for showcasing services or features",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-fc4-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-fc4-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false},
+              {"name": "text-center", "active": false}
+            ],
+            "attributes": {"id": "tpl-fc4-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-fc4-c1"},
+                "components": [
+                  {
+                    "type": "icon",
+                    "classes": [
+                      {"name": "icon-box", "active": false},
+                      {"name": "vj-icon", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-i1"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Feature One",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Brief description of this feature.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-t1"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-fc4-c2"},
+                "components": [
+                  {
+                    "type": "icon",
+                    "classes": [
+                      {"name": "icon-box", "active": false},
+                      {"name": "vj-icon", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-i2"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Feature Two",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-h2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Brief description of this feature.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-t2"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-fc4-c3"},
+                "components": [
+                  {
+                    "type": "icon",
+                    "classes": [
+                      {"name": "icon-box", "active": false},
+                      {"name": "vj-icon", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-i3"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Feature Three",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-h3"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Brief description of this feature.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-t3"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-fc4-c4"},
+                "components": [
+                  {
+                    "type": "icon",
+                    "classes": [
+                      {"name": "icon-box", "active": false},
+                      {"name": "vj-icon", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-i4"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Feature Four",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-h4"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Brief description of this feature.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc4-t4"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

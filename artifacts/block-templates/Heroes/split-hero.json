@@ -1,0 +1,104 @@
+{
+  "name": "Split Hero",
+  "category": "Heroes",
+  "description": "Two-column hero with heading, subtext, and CTA on the left and an image on the right",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-splithero-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-splithero-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "align-items-center", "active": false},
+              {"name": "g-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-splithero-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-6", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-splithero-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h1",
+                    "content": "Your Headline Here",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-splithero-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Supporting text that explains the value proposition and tells visitors what to do next.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-splithero-t1"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Get Started",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-splithero-b1", "role": "button", "href": "#"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-6", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-splithero-c2"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "rounded", "active": false}
+                    ],
+                    "attributes": {
+                      "id": "tpl-splithero-i1",
+                      "src": "https://placehold.co/600x400",
+                      "alt": "Hero image"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

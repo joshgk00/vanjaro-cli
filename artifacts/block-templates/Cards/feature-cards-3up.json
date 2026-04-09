@@ -1,0 +1,195 @@
+{
+  "name": "Feature Cards (3-up)",
+  "category": "Cards",
+  "description": "Three equal-width cards with icon, heading, text, and CTA button",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-fc3-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-fc3-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false},
+              {"name": "text-center", "active": false}
+            ],
+            "attributes": {"id": "tpl-fc3-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-fc3-c1"},
+                "components": [
+                  {
+                    "type": "icon",
+                    "classes": [
+                      {"name": "icon-box", "active": false},
+                      {"name": "vj-icon", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-i1"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Feature One",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-3", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Brief description of this feature and why it matters to your audience.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-t1"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Learn More",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-outline-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-b1", "role": "button", "href": "#"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-fc3-c2"},
+                "components": [
+                  {
+                    "type": "icon",
+                    "classes": [
+                      {"name": "icon-box", "active": false},
+                      {"name": "vj-icon", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-i2"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Feature Two",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-3", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-h2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Brief description of this feature and why it matters to your audience.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-t2"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Learn More",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-outline-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-b2", "role": "button", "href": "#"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-fc3-c3"},
+                "components": [
+                  {
+                    "type": "icon",
+                    "classes": [
+                      {"name": "icon-box", "active": false},
+                      {"name": "vj-icon", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-i3"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Feature Three",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-3", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-h3"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Brief description of this feature and why it matters to your audience.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-t3"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Learn More",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-outline-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-fc3-b3", "role": "button", "href": "#"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

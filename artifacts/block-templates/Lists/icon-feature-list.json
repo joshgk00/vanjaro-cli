@@ -1,0 +1,234 @@
+{
+  "name": "Icon Feature List",
+  "category": "Lists",
+  "description": "Vertical list of features, each with an icon, heading, and description text",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-ifl-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-ifl-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "justify-content-center", "active": false}
+            ],
+            "attributes": {"id": "tpl-ifl-r0"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-8", "active": false},
+                  {"name": "col-md-10", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-ifl-c0"},
+                "components": [
+                  {
+                    "type": "row",
+                    "classes": [
+                      {"name": "row", "active": false},
+                      {"name": "g-4", "active": false},
+                      {"name": "align-items-center", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-ifl-r1"},
+                    "components": [
+                      {
+                        "type": "column",
+                        "classes": [
+                          {"name": "col-xl-2", "active": false},
+                          {"name": "col-md-2", "active": false},
+                          {"name": "col-3", "active": false},
+                          {"name": "text-center", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-ifl-ic1"},
+                        "components": [
+                          {
+                            "type": "icon",
+                            "classes": [
+                              {"name": "icon-box", "active": false},
+                              {"name": "vj-icon", "active": false},
+                              {"name": "text-primary", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-ifl-i1"}
+                          }
+                        ]
+                      },
+                      {
+                        "type": "column",
+                        "classes": [
+                          {"name": "col-xl-10", "active": false},
+                          {"name": "col-md-10", "active": false},
+                          {"name": "col-9", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-ifl-tc1"},
+                        "components": [
+                          {
+                            "type": "heading",
+                            "tagName": "h4",
+                            "content": "Feature One",
+                            "classes": [
+                              {"name": "vj-heading", "active": false},
+                              {"name": "head-style-4", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-ifl-h1"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "A short explanation of what this feature does and why it matters.",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-1", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-ifl-t1"}
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "row",
+                    "classes": [
+                      {"name": "row", "active": false},
+                      {"name": "g-4", "active": false},
+                      {"name": "align-items-center", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-ifl-r2"},
+                    "components": [
+                      {
+                        "type": "column",
+                        "classes": [
+                          {"name": "col-xl-2", "active": false},
+                          {"name": "col-md-2", "active": false},
+                          {"name": "col-3", "active": false},
+                          {"name": "text-center", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-ifl-ic2"},
+                        "components": [
+                          {
+                            "type": "icon",
+                            "classes": [
+                              {"name": "icon-box", "active": false},
+                              {"name": "vj-icon", "active": false},
+                              {"name": "text-primary", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-ifl-i2"}
+                          }
+                        ]
+                      },
+                      {
+                        "type": "column",
+                        "classes": [
+                          {"name": "col-xl-10", "active": false},
+                          {"name": "col-md-10", "active": false},
+                          {"name": "col-9", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-ifl-tc2"},
+                        "components": [
+                          {
+                            "type": "heading",
+                            "tagName": "h4",
+                            "content": "Feature Two",
+                            "classes": [
+                              {"name": "vj-heading", "active": false},
+                              {"name": "head-style-4", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-ifl-h2"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "A short explanation of what this feature does and why it matters.",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-1", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-ifl-t2"}
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "row",
+                    "classes": [
+                      {"name": "row", "active": false},
+                      {"name": "g-4", "active": false},
+                      {"name": "align-items-center", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-ifl-r3"},
+                    "components": [
+                      {
+                        "type": "column",
+                        "classes": [
+                          {"name": "col-xl-2", "active": false},
+                          {"name": "col-md-2", "active": false},
+                          {"name": "col-3", "active": false},
+                          {"name": "text-center", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-ifl-ic3"},
+                        "components": [
+                          {
+                            "type": "icon",
+                            "classes": [
+                              {"name": "icon-box", "active": false},
+                              {"name": "vj-icon", "active": false},
+                              {"name": "text-primary", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-ifl-i3"}
+                          }
+                        ]
+                      },
+                      {
+                        "type": "column",
+                        "classes": [
+                          {"name": "col-xl-10", "active": false},
+                          {"name": "col-md-10", "active": false},
+                          {"name": "col-9", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-ifl-tc3"},
+                        "components": [
+                          {
+                            "type": "heading",
+                            "tagName": "h4",
+                            "content": "Feature Three",
+                            "classes": [
+                              {"name": "vj-heading", "active": false},
+                              {"name": "head-style-4", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-ifl-h3"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "A short explanation of what this feature does and why it matters.",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-1", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-ifl-t3"}
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

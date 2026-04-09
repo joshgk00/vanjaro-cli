@@ -1,0 +1,123 @@
+{
+  "name": "Contact Section",
+  "category": "Content",
+  "description": "Two-column contact section with info (address, phone, email) on the left and a call-to-action on the right",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-contact-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-contact-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-contact-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-6", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-contact-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "Get In Touch",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-contact-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "We'd love to hear from you. Reach out with questions, feedback, or just to say hello.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-contact-t1"}
+                  },
+                  {
+                    "type": "list",
+                    "classes": [
+                      {"name": "list-box", "active": false},
+                      {"name": "list", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-contact-l1"},
+                    "components": [
+                      {"type": "list-item", "content": "123 Main Street, Suite 100, City, ST 12345", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-contact-li1"}},
+                      {"type": "list-item", "content": "(555) 123-4567", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-contact-li2"}},
+                      {"type": "list-item", "content": "hello@example.com", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-contact-li3"}}
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-6", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-contact-c2"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Send Us a Message",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-contact-h2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Use the contact form on this page or email us directly. We typically respond within one business day.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-contact-t2"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Email Us",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-contact-b1", "role": "button", "href": "mailto:hello@example.com"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}
