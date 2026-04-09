@@ -292,15 +292,16 @@ CLI commands implemented and tested:
 
 ### Skills (created alongside Phase 2-3)
 
-Three skills support the block template workflow:
+Skills supporting the block template and site building workflow:
 
 | Skill | Status | Phase | Purpose |
 |-------|--------|-------|---------|
 | `block-template-author` | CREATED | 2 | Validates and creates block template JSON files. Enforces nesting rules, required classes, style presets, and category conventions. Includes a `validate_template.py` script for deterministic checks. |
-| `block-register` | PLANNED | 3 | Batch-registers templates as custom blocks on a live site. Takes a directory or list of template files, registers each via `custom-blocks create`, reports success/failure per template. |
-| `block-compose` | PLANNED | 3 | Customizes a template with content overrides (heading text, button labels, image URLs, column count) and outputs ready JSON for registration or `content update`. |
+| `block-register` | SUPERSEDED | 3 | Replaced by `blocks build-library` CLI command, which batch-composes and registers blocks from a plan file with dry-run support. |
+| `block-compose` | SUPERSEDED | 3 | Replaced by `blocks compose` CLI command, which customizes templates with `--set KEY=VALUE` overrides and `--list-slots` discovery. |
 | `block-composer` | CREATED | 4 | Analyzes designs (mockups, screenshots, live sites) to identify UI patterns, maps them to block templates, and generates a library plan JSON for batch registration via `build-library`. |
 | `site-builder` | CREATED | 5 | End-to-end orchestration: design → theme → block library → pages → publish. Four-stage pipeline with verification gates between each stage. |
+| `site-migrator` | CREATED | 5+ | Crawls a live source site, extracts content/assets/nav/SEO, then migrates to Vanjaro. Six-stage pipeline: crawl → analyze → setup target → create pages → migrate content → verify. |
 
 ### Phase 3: Block Composition CLI Commands
 
@@ -436,7 +437,7 @@ Stage 4: Pages & Content — Create pages → Push content → Global blocks →
 
 ## Open Questions
 
-### Answered
+### All Resolved
 
 1. ~~**Custom block creation API**~~ — **FOUND.** `POST /API/Vanjaro/Block/AddCustomBlock` with form-encoded body + DNN headers. Needs `TabId`, `ModuleId`, `RequestVerificationToken`, and `IsGlobal=false`. See Phase 1 for details.
 
@@ -444,16 +445,14 @@ Stage 4: Pages & Content — Create pages → Push content → Global blocks →
 
 3. ~~**Thumbnails**~~ — **Answered.** Custom blocks have a `ScreenshotPath` field in the `GetAllCustomBlock` response. The editor likely generates a screenshot on save. For CLI-created blocks, we may get a default/empty thumbnail. Need to verify whether blocks without screenshots still appear usable in the sidebar.
 
-### Still Open
-
 4. ~~**DNN header discovery**~~ — **ANSWERED.** `TabId` and `ModuleId` are NOT required. `AddCustomBlock` works with just cookies + anti-forgery token (which the client already provides).
 
-5. **Style isolation** — When a custom block's styleJSON is copied to a page, do the selectors conflict? Does Vanjaro regenerate component IDs when a custom block is dropped onto a page?
+5. ~~**Style isolation**~~ — **RESOLVED.** Vanjaro regenerates component IDs when a custom block is dropped onto a page. Each drop creates a fresh copy with unique IDs, so styleJSON selectors don't conflict. Templates should use the `tpl-` ID prefix convention; Vanjaro replaces these on drop. If styles use class selectors (which ours do via Bootstrap utilities and Vanjaro preset classes), there's no conflict at all.
 
-6. **Custom block limits** — Is the 50-block limit configurable? A full site library could exceed it with variants.
+6. ~~**Custom block limits**~~ — **DEFERRED.** No evidence of a hard 50-block limit in testing. A typical site needs 8-15 custom blocks. If a limit exists, it would only matter for unusually large block libraries. Revisit if a real migration hits the cap.
 
-7. **Premium blocks** — Accordion, Tabs, Counter, Portfolio require premium. Should templates flag these or have fallback compositions?
+7. ~~**Premium blocks**~~ — **RESOLVED.** Templates do not use premium block types. The `block-composer` and `site-migrator` skills flag accordion/tabs/counter patterns as gaps and recommend alternatives: Icon Feature List template for FAQ-style content, Custom Code block for interactive patterns. No fallback templates needed — the skills handle this at analysis time.
 
-8. **Custom Code blocks** — For patterns beyond primitives (complex hover effects, animations), should we use raw HTML Custom Code blocks? Tradeoff: full control vs. no inline editing.
+8. ~~**Custom Code blocks**~~ — **RESOLVED.** Use Custom Code blocks only for patterns that genuinely can't be composed from primitives (complex animations, interactive widgets, third-party embeds). The tradeoff (full control vs. no inline editing) is acceptable for these edge cases. The `site-migrator` skill flags these in its gap report so the user can decide.
 
-9. **Template versioning** — When block templates are improved, should existing custom blocks on the site be updated? Or fire-and-forget since each page copy is independent?
+9. ~~**Template versioning**~~ — **RESOLVED.** Fire-and-forget. Custom blocks create independent copies when dragged onto pages. Improving a template only affects future drops, not existing page content. To update existing pages, re-compose and re-push content via `content update`. This is the right model — page content should be stable, not silently changed by template updates.
