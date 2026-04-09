@@ -17,7 +17,9 @@ __all__ = [
     "output_result",
     "parse_json_field",
     "print_table",
+    "read_json_array",
     "read_json_file",
+    "read_json_object",
     "write_output",
 ]
 
@@ -68,6 +70,22 @@ def read_json_file(path: Path, label: str, as_json: bool) -> object:
             f"Invalid JSON in {label} ({path}): {exc.msg} (line {exc.lineno})",
             as_json,
         )
+
+
+def read_json_object(path: Path, label: str, as_json: bool) -> dict:
+    """Read a JSON file and require a top-level object, exiting on failure."""
+    data = read_json_file(path, label, as_json)
+    if not isinstance(data, dict):
+        exit_error(f"{label} {path} must contain a JSON object.", as_json)
+    return data
+
+
+def read_json_array(path: Path, label: str, as_json: bool) -> list:
+    """Read a JSON file and require a top-level array, exiting on failure."""
+    data = read_json_file(path, label, as_json)
+    if not isinstance(data, list):
+        exit_error(f"{label} {path} must contain a JSON array.", as_json)
+    return data
 
 
 def write_output(path: str, content: str, as_json: bool) -> None:

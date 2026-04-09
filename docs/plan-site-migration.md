@@ -246,6 +246,8 @@ Mode B — template reference (compose on the fly):
 
 ### Phase 5: Migration Verification
 
+See `plan-phase5-verify.md` for the full implementation spec. Summary below.
+
 **Goal**: Automated comparison between source pages and migrated Vanjaro pages to catch content gaps.
 
 **New command**:
