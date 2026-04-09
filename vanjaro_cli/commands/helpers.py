@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from pathlib import Path
 from typing import NoReturn
 
 import click
@@ -10,7 +11,15 @@ import click
 from vanjaro_cli.client import VanjaroClient
 from vanjaro_cli.config import Config, ConfigError, load_config
 
-__all__ = ["get_client", "exit_error", "output_result", "parse_json_field", "print_table", "write_output"]
+__all__ = [
+    "exit_error",
+    "get_client",
+    "output_result",
+    "parse_json_field",
+    "print_table",
+    "read_json_file",
+    "write_output",
+]
 
 
 def get_client() -> tuple[VanjaroClient, Config]:
@@ -41,6 +50,24 @@ def output_result(
         click.echo(json.dumps({"status": status, **extra}, indent=None))
     else:
         click.echo(human_message)
+
+
+def read_json_file(path: Path, label: str, as_json: bool) -> object:
+    """Read and parse a JSON file, exiting with a labeled error on failure."""
+    try:
+        raw = path.read_text(encoding="utf-8")
+    except FileNotFoundError:
+        exit_error(f"{label} not found: {path}", as_json)
+    except OSError as exc:
+        exit_error(f"Cannot read {label} ({path}): {exc}", as_json)
+
+    try:
+        return json.loads(raw)
+    except json.JSONDecodeError as exc:
+        exit_error(
+            f"Invalid JSON in {label} ({path}): {exc.msg} (line {exc.lineno})",
+            as_json,
+        )
 
 
 def write_output(path: str, content: str, as_json: bool) -> None:

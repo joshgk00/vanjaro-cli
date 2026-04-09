@@ -12,6 +12,7 @@ from bs4 import BeautifulSoup
 
 from vanjaro_cli.commands.helpers import exit_error, output_result
 from vanjaro_cli.commands.migrate_assemble_cmd import assemble_page
+from vanjaro_cli.commands.migrate_rewrite_cmd import rewrite_urls
 from vanjaro_cli.migration.assets import download_assets
 from vanjaro_cli.migration.crawler import (
     CrawlError,
@@ -36,6 +37,7 @@ def migrate() -> None:
 
 
 migrate.add_command(assemble_page)
+migrate.add_command(rewrite_urls)
 
 
 def _write_json(path: Path, data: object) -> None:

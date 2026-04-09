@@ -9,7 +9,7 @@ from pathlib import Path
 
 import click
 
-from vanjaro_cli.commands.helpers import exit_error, output_result
+from vanjaro_cli.commands.helpers import exit_error, output_result, read_json_file
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
     apply_overrides,
@@ -58,18 +58,11 @@ def _expand_sections(patterns: tuple[str, ...], as_json: bool) -> list[Path]:
 
 
 def _read_section_file(path: Path, as_json: bool) -> dict:
-    """Read a section JSON file, surfacing the file name in any error."""
-    try:
-        raw = path.read_text(encoding="utf-8")
-    except FileNotFoundError:
-        exit_error(f"Section file not found: {path}", as_json)
-    except OSError as exc:
-        exit_error(f"Cannot read {path}: {exc}", as_json)
-
-    try:
-        return json.loads(raw)
-    except json.JSONDecodeError as exc:
-        exit_error(f"Invalid JSON in {path}: {exc.msg} (line {exc.lineno})", as_json)
+    """Read a section JSON file, requiring a top-level object."""
+    data = read_json_file(path, "Section file", as_json)
+    if not isinstance(data, dict):
+        exit_error(f"Section file {path} must contain a JSON object.", as_json)
+    return data
 
 
 def _crawl_section_to_overrides(content: dict) -> dict[str, str]:
