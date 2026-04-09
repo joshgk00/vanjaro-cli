@@ -159,9 +159,87 @@ vanjaro blocks remove 42 abc123 --force --json
 
 ---
 
+## Custom Block Commands
+
+Custom blocks are reusable section templates that appear in the editor sidebar. Dragging one onto a page creates an **independent copy** that can be edited per-page without affecting other instances or the saved block. Use these for heroes, cards, CTAs, testimonials, and any repeatable UI pattern.
+
+Custom blocks use the core Vanjaro Block API (`/API/Vanjaro/Block/*`) and require cookies + anti-forgery token (no API key needed).
+
+### `vanjaro custom-blocks list [OPTIONS]`
+
+List all custom blocks.
+
+**Options:**
+- `--json` -- Output as JSON
+
+**Example:**
+```bash
+vanjaro custom-blocks list --json
+```
+
+**JSON output:**
+```json
+[
+  {
+    "id": 6,
+    "guid": "10fd31f0-...",
+    "name": "Centered Hero",
+    "category": "heroes",
+    "content_json": [],
+    "style_json": []
+  }
+]
+```
+
+### `vanjaro custom-blocks create [OPTIONS]`
+
+Create a custom block from a JSON file.
+
+**Options:**
+- `--name, -n TEXT` -- Block name, must be unique (required)
+- `--category, -c TEXT` -- Block category (default: `general`)
+- `--file, -f PATH` -- JSON file with block content (required)
+- `--json` -- Output as JSON
+
+**Input format:** Accepts multiple JSON shapes:
+- Template format: `{"template": {...}, "styles": []}`
+- API format: `{"contentJSON": [...], "styleJSON": [...]}`
+- Snake-case: `{"content_json": [...], "style_json": [...]}`
+- Scaffold format: `{"components": [...], "styles": [...]}`
+
+**Example:**
+```bash
+vanjaro custom-blocks create -n "Feature Cards" -c "Cards" -f artifacts/block-templates/Cards/feature-cards-3up.json --json
+```
+
+**JSON output:**
+```json
+{
+  "status": "created",
+  "name": "Feature Cards",
+  "guid": "dbda30eb-...",
+  "category": "Cards"
+}
+```
+
+### `vanjaro custom-blocks delete GUID [OPTIONS]`
+
+Delete a custom block by GUID.
+
+**Options:**
+- `--force` -- Skip confirmation prompt
+- `--json` -- Output as JSON
+
+**Example:**
+```bash
+vanjaro custom-blocks delete 10fd31f0-... --force --json
+```
+
+---
+
 ## Global Block Commands
 
-Global blocks are reusable components shared across pages (e.g., Header, Footer). They are identified by GUID.
+Global blocks are reusable components shared across pages (e.g., Header, Footer). Edit once, changes propagate **everywhere**. They are identified by GUID. Only use global blocks for elements that must stay in sync site-wide.
 
 ### `vanjaro global-blocks list [OPTIONS]`
 
@@ -189,6 +267,38 @@ vanjaro global-blocks list --json
   }
 ]
 ```
+
+### `vanjaro global-blocks create [OPTIONS]`
+
+Create a new global block from a JSON file.
+
+**Options:**
+- `--name, -n TEXT` -- Block name, must be unique (required)
+- `--category, -c TEXT` -- Block category (default: `general`)
+- `--file, -f PATH` -- JSON file with block content (required)
+- `--json` -- Output as JSON
+
+**Input format:** Accepts multiple JSON shapes:
+- API format: `{"contentJSON": [...], "styleJSON": [...]}`
+- Snake-case: `{"content_json": [...], "style_json": [...]}`
+- Scaffold format: `{"components": [...], "styles": [...]}`
+
+**Example:**
+```bash
+vanjaro global-blocks create -n "Site Header" -c "Navigation" -f header.json --json
+```
+
+**JSON output:**
+```json
+{
+  "status": "created",
+  "name": "Site Header",
+  "guid": "abc12345-...",
+  "category": "Navigation"
+}
+```
+
+**Note:** Returns 409 if a global block with the same name already exists.
 
 ### `vanjaro global-blocks get GUID [OPTIONS]`
 
@@ -374,6 +484,29 @@ vanjaro blocks add 42 --type text --content "We offer..." --json
 
 # Publish changes
 vanjaro content publish 42
+```
+
+### Register a Custom Block from a Template
+
+```bash
+# List available block templates
+ls artifacts/block-templates/
+
+# Register as a custom block (appears in editor sidebar)
+vanjaro custom-blocks create -n "Feature Cards" -c "Cards" -f artifacts/block-templates/Cards/feature-cards-3up.json
+
+# Verify it's registered
+vanjaro custom-blocks list
+```
+
+### Create a Global Block (Header/Footer)
+
+```bash
+# Create a global block from a JSON file
+vanjaro global-blocks create -n "Site Header" -c "Navigation" -f header.json
+
+# Publish it to make it live
+vanjaro global-blocks publish a1b2c3d4-...
 ```
 
 ### Edit a Global Block

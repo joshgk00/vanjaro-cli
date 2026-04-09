@@ -9,7 +9,7 @@ CLI tool for managing Vanjaro/DNN websites. Load specific skills for detailed co
 | auth | login, logout, status, profile list/use/delete, api-key generate/revoke/status/set | Connecting to a site, managing profiles, API key setup |
 | pages | list, get, create, copy, delete, settings | Managing page structure |
 | content | get, update, publish, diff | Reading/writing page content (GrapesJS JSON) |
-| blocks | blocks list/get/tree/add/remove, global-blocks list/get/update/publish/delete, templates list/get/apply | Working with page components, shared blocks, and templates |
+| blocks | blocks list/get/tree/add/remove, custom-blocks list/create/delete, global-blocks list/create/get/update/publish/delete, templates list/get/apply | Working with page components, custom reusable blocks, shared global blocks, and templates |
 | assets | folders, list, upload, delete | Managing files and images |
 | site | site info, site health, branding get/update | Site configuration, monitoring, and branding |
 | theme | get, set, set-bulk, register-font, reset | Viewing and modifying theme design controls |
