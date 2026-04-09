@@ -11,6 +11,7 @@ from tests.conftest import BASE_URL, mock_homepage
 
 LIST_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/List"
 GET_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Get"
+CREATE_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Create"
 UPDATE_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Update"
 PUBLISH_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Publish"
 DELETE_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Delete"
@@ -84,6 +85,158 @@ def test_global_blocks_list_empty(runner, mock_config):
 
     assert result.exit_code == 0
     assert "No global blocks found." in result.output
+
+
+SAMPLE_CREATE_RESPONSE = {
+    "guid": "abc12345-6789-0000-1111-222233334444",
+    "name": "CTA Banner",
+    "version": 1,
+    "isPublished": False,
+}
+
+SAMPLE_BLOCK_FILE_CONTENT = {
+    "contentJSON": [{"type": "section", "components": [{"type": "heading", "content": "Call to Action"}]}],
+    "styleJSON": [{"selectors": [".cta"], "style": {"background": "#C75B8E"}}],
+}
+
+
+@responses.activate
+def test_global_blocks_create(runner, mock_config, tmp_path):
+    mock_homepage()
+    responses.add(responses.POST, CREATE_URL, json=SAMPLE_CREATE_RESPONSE, status=201)
+
+    block_file = tmp_path / "cta.json"
+    block_file.write_text(json.dumps(SAMPLE_BLOCK_FILE_CONTENT))
+
+    result = runner.invoke(cli, [
+        "global-blocks", "create",
+        "--name", "CTA Banner",
+        "--category", "marketing",
+        "--file", str(block_file),
+    ])
+
+    assert result.exit_code == 0
+    assert "Created global block 'CTA Banner'" in result.output
+    assert "abc12345" in result.output
+
+    request_body = json.loads(responses.calls[-1].request.body)
+    assert request_body["name"] == "CTA Banner"
+    assert request_body["category"] == "marketing"
+    assert json.loads(request_body["contentJSON"])[0]["type"] == "section"
+    assert json.loads(request_body["styleJSON"])[0]["selectors"] == [".cta"]
+
+
+@responses.activate
+def test_global_blocks_create_json(runner, mock_config, tmp_path):
+    mock_homepage()
+    responses.add(responses.POST, CREATE_URL, json=SAMPLE_CREATE_RESPONSE, status=201)
+
+    block_file = tmp_path / "cta.json"
+    block_file.write_text(json.dumps(SAMPLE_BLOCK_FILE_CONTENT))
+
+    result = runner.invoke(cli, [
+        "global-blocks", "create",
+        "--name", "CTA Banner",
+        "--file", str(block_file),
+        "--json",
+    ])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["status"] == "created"
+    assert data["name"] == "CTA Banner"
+    assert data["guid"] == "abc12345-6789-0000-1111-222233334444"
+    assert data["category"] == "general"
+
+
+@responses.activate
+def test_global_blocks_create_duplicate_name(runner, mock_config, tmp_path):
+    mock_homepage()
+    responses.add(responses.POST, CREATE_URL, json={"Message": "Conflict"}, status=409)
+
+    block_file = tmp_path / "block.json"
+    block_file.write_text(json.dumps({"contentJSON": [], "styleJSON": []}))
+
+    result = runner.invoke(cli, [
+        "global-blocks", "create",
+        "--name", "Header",
+        "--file", str(block_file),
+    ])
+
+    assert result.exit_code == 1
+    assert "already exists" in result.output
+
+
+@responses.activate
+def test_global_blocks_create_snake_case_keys(runner, mock_config, tmp_path):
+    """Accepts snake_case keys (content_json) in addition to camelCase."""
+    mock_homepage()
+    responses.add(responses.POST, CREATE_URL, json=SAMPLE_CREATE_RESPONSE, status=201)
+
+    block_file = tmp_path / "block.json"
+    block_file.write_text(json.dumps({
+        "content_json": [{"type": "section"}],
+        "style_json": [],
+    }))
+
+    result = runner.invoke(cli, [
+        "global-blocks", "create",
+        "--name", "Test Block",
+        "--file", str(block_file),
+    ])
+
+    assert result.exit_code == 0
+    request_body = json.loads(responses.calls[-1].request.body)
+    assert json.loads(request_body["contentJSON"]) == [{"type": "section"}]
+
+
+@responses.activate
+def test_global_blocks_create_scaffold_format(runner, mock_config, tmp_path):
+    """Accepts scaffold output format with components/styles keys."""
+    mock_homepage()
+    responses.add(responses.POST, CREATE_URL, json=SAMPLE_CREATE_RESPONSE, status=201)
+
+    block_file = tmp_path / "block.json"
+    block_file.write_text(json.dumps({
+        "components": [{"type": "section", "components": []}],
+        "styles": [],
+    }))
+
+    result = runner.invoke(cli, [
+        "global-blocks", "create",
+        "--name", "Scaffolded Block",
+        "--file", str(block_file),
+    ])
+
+    assert result.exit_code == 0
+    request_body = json.loads(responses.calls[-1].request.body)
+    assert json.loads(request_body["contentJSON"]) == [{"type": "section", "components": []}]
+
+
+def test_global_blocks_create_invalid_json_file(runner, mock_config, tmp_path):
+    block_file = tmp_path / "bad.json"
+    block_file.write_text("not json at all {{{")
+
+    result = runner.invoke(cli, [
+        "global-blocks", "create",
+        "--name", "Bad Block",
+        "--file", str(block_file),
+    ])
+
+    assert result.exit_code == 1
+
+
+def test_global_blocks_create_missing_required_options(runner, mock_config, tmp_path):
+    block_file = tmp_path / "block.json"
+    block_file.write_text(json.dumps({"contentJSON": []}))
+
+    # Missing --name
+    result = runner.invoke(cli, [
+        "global-blocks", "create",
+        "--file", str(block_file),
+    ])
+    assert result.exit_code != 0
+    assert "Missing" in result.output or "required" in result.output.lower()
 
 
 @responses.activate

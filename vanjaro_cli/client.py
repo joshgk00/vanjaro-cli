@@ -47,6 +47,14 @@ class VanjaroClient:
     def post(self, path: str, **kwargs: Any) -> requests.Response:
         return self._request("POST", path, **kwargs)
 
+    def post_form(self, path: str, form_data: dict[str, str], **kwargs: Any) -> requests.Response:
+        """POST with form-encoded body instead of JSON.
+
+        Some core Vanjaro endpoints (Block/AddCustomBlock, Block/EditCustomBlock)
+        expect application/x-www-form-urlencoded, not JSON.
+        """
+        return self._request("POST", path, data=form_data, _form_encoded=True, **kwargs)
+
     def delete(self, path: str, **kwargs: Any) -> requests.Response:
         return self._request("DELETE", path, **kwargs)
 
@@ -61,7 +69,8 @@ class VanjaroClient:
             )
         self._ensure_antiforgery()
         url = self._config.base_url + path
-        headers = self._build_headers()
+        is_form = kwargs.pop("_form_encoded", False)
+        headers = self._build_headers(is_form_encoded=is_form)
         headers.update(kwargs.pop("headers", {}))
 
         try:
@@ -103,11 +112,12 @@ class VanjaroClient:
         match = _ANTIFORGERY_RE.search(response.text)
         self._verification_token = match.group(1) if match else ""
 
-    def _build_headers(self) -> dict[str, str]:
+    def _build_headers(self, *, is_form_encoded: bool = False) -> dict[str, str]:
         headers: dict[str, str] = {
-            "Content-Type": "application/json",
             "Accept": "application/json",
         }
+        if not is_form_encoded:
+            headers["Content-Type"] = "application/json"
         if self._verification_token:
             headers["RequestVerificationToken"] = self._verification_token
         if self._config.api_key:

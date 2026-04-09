@@ -1,4 +1,4 @@
-"""vanjaro global-blocks list/get/update/publish/delete commands via VanjaroAI API."""
+"""vanjaro global-blocks list/create/get/update/publish/delete commands via VanjaroAI API."""
 
 from __future__ import annotations
 
@@ -14,6 +14,7 @@ from vanjaro_cli.models.block import GlobalBlock, GlobalBlockDetail
 
 LIST_BLOCKS = "/API/VanjaroAI/AIGlobalBlock/List"
 GET_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Get"
+CREATE_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Create"
 UPDATE_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Update"
 PUBLISH_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Publish"
 DELETE_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Delete"
@@ -49,6 +50,59 @@ def list_blocks(as_json: bool) -> None:
             ["id", "name", "category", "published", "version"],
             [b.to_row() for b in block_list],
         )
+
+
+@global_blocks.command("create")
+@click.option("--name", "-n", required=True, help="Block name (must be unique).")
+@click.option("--category", "-c", default="general", show_default=True, help="Block category.")
+@click.option(
+    "--file",
+    "-f",
+    "file_path",
+    required=True,
+    type=click.Path(exists=True),
+    help="JSON file with contentJSON and styleJSON.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def create_block(name: str, category: str, file_path: str, as_json: bool) -> None:
+    """Create a new global block from a JSON file."""
+    try:
+        raw = json.loads(Path(file_path).read_text())
+    except (json.JSONDecodeError, OSError) as exc:
+        exit_error(f"Cannot read {file_path}: {exc}", as_json)
+
+    content_json = raw.get("content_json") or raw.get("contentJSON") or raw.get("components", [])
+    style_json = raw.get("style_json") or raw.get("styleJSON") or raw.get("styles", [])
+
+    payload: dict = {
+        "name": name,
+        "category": category,
+        "contentJSON": json.dumps(content_json) if isinstance(content_json, (list, dict)) else content_json,
+        "styleJSON": json.dumps(style_json) if isinstance(style_json, (list, dict)) else style_json,
+    }
+
+    client, _ = get_client()
+
+    try:
+        response = client.post(CREATE_BLOCK, json=payload)
+    except ApiError as exc:
+        if exc.status_code == 409:
+            exit_error(f"A global block named '{name}' already exists.", as_json)
+        exit_error(str(exc), as_json)
+    except ConfigError as exc:
+        exit_error(str(exc), as_json)
+
+    data = response.json()
+    guid = data.get("guid", "")
+
+    output_result(
+        as_json,
+        status="created",
+        human_message=f"Created global block '{name}' [{guid}].",
+        name=name,
+        guid=guid,
+        category=category,
+    )
 
 
 @global_blocks.command("get")
