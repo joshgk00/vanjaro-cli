@@ -28,10 +28,16 @@ def blocks() -> None:
     """Inspect and manipulate page components (blocks)."""
 
 
-# Register scaffold as a subcommand of blocks
+# Register subcommands from separate modules
 from vanjaro_cli.commands.scaffold_cmd import scaffold  # noqa: E402
+from vanjaro_cli.commands.block_templates_cmd import block_templates  # noqa: E402
+from vanjaro_cli.commands.block_compose_cmd import block_compose  # noqa: E402
+from vanjaro_cli.commands.block_build_library_cmd import build_library  # noqa: E402
 
 blocks.add_command(scaffold)
+blocks.add_command(block_templates)
+blocks.add_command(block_compose)
+blocks.add_command(build_library)
 
 
 @blocks.command("list")
