@@ -1,0 +1,272 @@
+{
+  "name": "Blog Post Cards (3-up)",
+  "category": "Cards",
+  "description": "Three blog post cards with image, category tag, heading, excerpt, and read more link",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-bpc3-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-bpc3-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "mb-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-bpc3-r0"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-bpc3-c0"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "Latest Posts",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false},
+                      {"name": "text-center", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-h0"}
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-bpc3-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-bpc3-c1"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "rounded", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-img1", "src": "https://placehold.co/400x240?text=Blog+Post", "alt": "Blog post image"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-primary", "active": false},
+                      {"name": "text-uppercase", "active": false},
+                      {"name": "fw-bold", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-cat1"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Blog Post Title Goes Here",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-3", "active": false},
+                      {"name": "mt-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A brief excerpt from the blog post that gives readers a preview of what the article covers and entices them to click through.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-t1"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Read More",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-link", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-2", "active": false},
+                      {"name": "ps-0", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-b1", "role": "button", "href": "#"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-bpc3-c2"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "rounded", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-img2", "src": "https://placehold.co/400x240?text=Blog+Post", "alt": "Blog post image"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-primary", "active": false},
+                      {"name": "text-uppercase", "active": false},
+                      {"name": "fw-bold", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-cat2"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Another Blog Post Title",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-3", "active": false},
+                      {"name": "mt-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-h2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A brief excerpt from the blog post that gives readers a preview of what the article covers and entices them to click through.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-t2"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Read More",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-link", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-2", "active": false},
+                      {"name": "ps-0", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-b2", "role": "button", "href": "#"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-4", "active": false},
+                  {"name": "col-md-4", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-bpc3-c3"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "rounded", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-img3", "src": "https://placehold.co/400x240?text=Blog+Post", "alt": "Blog post image"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-primary", "active": false},
+                      {"name": "text-uppercase", "active": false},
+                      {"name": "fw-bold", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-cat3"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Third Blog Post Title",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-3", "active": false},
+                      {"name": "mt-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-h3"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A brief excerpt from the blog post that gives readers a preview of what the article covers and entices them to click through.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-t3"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Read More",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-link", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-2", "active": false},
+                      {"name": "ps-0", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc3-b3", "role": "button", "href": "#"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

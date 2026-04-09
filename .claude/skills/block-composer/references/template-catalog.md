@@ -17,6 +17,8 @@ Available templates in `artifacts/block-templates/`. These are the building bloc
 | Feature Cards (4-up) | `Cards/feature-cards-4up.json` | Four equal-width cards with icon, heading, text, and button |
 | Testimonial Cards (3-up) | `Cards/testimonial-cards-3up.json` | Three quote cards with testimonial text, author name, and role |
 | Pricing Cards (3-up) | `Cards/pricing-cards-3up.json` | Three pricing tier cards with price, feature list, and CTA |
+| Blog Post Cards (3-up) | `Cards/blog-post-cards-3up.json` | Three blog post cards with image, category tag, heading, excerpt, and read more link |
+| Team Member Grid (4-up) | `Cards/team-member-grid-4up.json` | Four team member cards with photo, name, role, and short bio |
 
 ## CTAs
 
@@ -31,6 +33,7 @@ Available templates in `artifacts/block-templates/`. These are the building bloc
 |----------|------|-------------|
 | Bio/About | `Content/bio-about.json` | Two-column: image on left, bio text + heading on right |
 | Contact Section | `Content/contact-section.json` | Two-column: contact info on left, form placeholder on right |
+| Logo Bar | `Content/logo-bar.json` | Horizontal row of partner or client logos with optional section heading |
 
 ## Lists
 

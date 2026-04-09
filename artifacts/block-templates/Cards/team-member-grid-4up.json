@@ -1,0 +1,297 @@
+{
+  "name": "Team Member Grid (4-up)",
+  "category": "Cards",
+  "description": "Four team member cards with photo, name, role, and short bio",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-tmg4-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-tmg4-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "mb-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-tmg4-r0"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-tmg4-c0"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "Meet Our Team",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false},
+                      {"name": "text-center", "active": false},
+                      {"name": "mb-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-h0"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "The people behind our success.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "text-center", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-t0"}
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false},
+              {"name": "text-center", "active": false}
+            ],
+            "attributes": {"id": "tpl-tmg4-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-tmg4-c1"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "rounded-circle", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-img1", "src": "https://placehold.co/200x200?text=Photo", "alt": "Team member photo"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Jane Smith",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mb-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "CEO & Founder",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-primary", "active": false},
+                      {"name": "fw-bold", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-role1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A short bio about this team member and their background.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-t1"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-tmg4-c2"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "rounded-circle", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-img2", "src": "https://placehold.co/200x200?text=Photo", "alt": "Team member photo"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "John Doe",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mb-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-h2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Lead Designer",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-primary", "active": false},
+                      {"name": "fw-bold", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-role2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A short bio about this team member and their background.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-t2"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-tmg4-c3"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "rounded-circle", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-img3", "src": "https://placehold.co/200x200?text=Photo", "alt": "Team member photo"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Sarah Johnson",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mb-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-h3"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Marketing Director",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-primary", "active": false},
+                      {"name": "fw-bold", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-role3"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A short bio about this team member and their background.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-t3"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-tmg4-c4"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "rounded-circle", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-img4", "src": "https://placehold.co/200x200?text=Photo", "alt": "Team member photo"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Mike Wilson",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mb-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-h4"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Senior Developer",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-primary", "active": false},
+                      {"name": "fw-bold", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-role4"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A short bio about this team member and their background.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tmg4-t4"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

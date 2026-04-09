@@ -1,0 +1,180 @@
+{
+  "name": "Logo Bar",
+  "category": "Content",
+  "description": "Horizontal row of partner or client logos with optional section heading",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false},
+      {"name": "bg-light", "active": false}
+    ],
+    "attributes": {"id": "tpl-lb-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-lb-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "mb-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-lb-r0"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-lb-c0"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h6",
+                    "content": "Trusted By",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-6", "active": false},
+                      {"name": "text-center", "active": false},
+                      {"name": "text-muted", "active": false},
+                      {"name": "text-uppercase", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-lb-h1"}
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false},
+              {"name": "align-items-center", "active": false},
+              {"name": "justify-content-center", "active": false}
+            ],
+            "attributes": {"id": "tpl-lb-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-2", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-4", "active": false},
+                  {"name": "col-12", "active": false},
+                  {"name": "text-center", "active": false}
+                ],
+                "attributes": {"id": "tpl-lb-c1"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-lb-img1", "src": "https://placehold.co/160x60?text=Logo+1", "alt": "Partner logo"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-2", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-4", "active": false},
+                  {"name": "col-12", "active": false},
+                  {"name": "text-center", "active": false}
+                ],
+                "attributes": {"id": "tpl-lb-c2"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-lb-img2", "src": "https://placehold.co/160x60?text=Logo+2", "alt": "Partner logo"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-2", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-4", "active": false},
+                  {"name": "col-12", "active": false},
+                  {"name": "text-center", "active": false}
+                ],
+                "attributes": {"id": "tpl-lb-c3"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-lb-img3", "src": "https://placehold.co/160x60?text=Logo+3", "alt": "Partner logo"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-2", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-4", "active": false},
+                  {"name": "col-12", "active": false},
+                  {"name": "text-center", "active": false}
+                ],
+                "attributes": {"id": "tpl-lb-c4"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-lb-img4", "src": "https://placehold.co/160x60?text=Logo+4", "alt": "Partner logo"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-2", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-4", "active": false},
+                  {"name": "col-12", "active": false},
+                  {"name": "text-center", "active": false}
+                ],
+                "attributes": {"id": "tpl-lb-c5"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-lb-img5", "src": "https://placehold.co/160x60?text=Logo+5", "alt": "Partner logo"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}
