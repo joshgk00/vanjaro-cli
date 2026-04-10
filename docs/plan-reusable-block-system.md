@@ -1,4 +1,6 @@
-# Reusable Block Composition System
+# Reusable Block Composition System [COMPLETE]
+
+**Status**: All 5 phases complete as of 2026-04-08. See `plan-site-migration.md` for the next initiative building on this foundation.
 
 ## Goal
 

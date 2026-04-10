@@ -19,6 +19,7 @@ Available templates in `artifacts/block-templates/`. These are the building bloc
 | Pricing Cards (3-up) | `Cards/pricing-cards-3up.json` | Three pricing tier cards with price, feature list, and CTA |
 | Blog Post Cards (3-up) | `Cards/blog-post-cards-3up.json` | Three blog post cards with image, category tag, heading, excerpt, and read more link |
 | Team Member Grid (4-up) | `Cards/team-member-grid-4up.json` | Four team member cards with photo, name, role, and short bio |
+| Gallery (3-up) | `Cards/gallery-3up.json` | Three-column image gallery with caption + category — for portfolios, project showcases, visual indices |
 
 ## CTAs
 

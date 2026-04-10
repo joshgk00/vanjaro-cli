@@ -5,30 +5,35 @@ allowed-tools: Read Write Bash Glob Grep Agent WebFetch
 ---
 
 <context>
-The Vanjaro CLI can build a complete site from design artifacts — theme controls, block
-templates, page content, and assets. This skill adds the missing "Stage 0": crawling a
-live source website to extract those artifacts automatically.
+The Vanjaro CLI ships a complete migration pipeline under `vanjaro migrate`. Every
+stage below is a real CLI command — no manual `curl`, no hand-written parsers, no
+bespoke Python scripts. If a stage says "run command X", run command X. If the CLI
+is missing something you need, stop and report it rather than working around it
+with a one-off script.
 
-The pipeline becomes:
+The pipeline is:
 ```
 Source Site (live URL)
-  → Crawl & extract (this skill)
-  → Theme application (site-builder Stage 2)
-  → Block library creation (site-builder Stage 3)
-  → Page creation & content (site-builder Stage 4)
-  → Live Vanjaro site
+  → vanjaro migrate crawl          (Stage 1 — fetch pages, extract sections,
+                                     download assets, extract design tokens)
+  → site-builder theme application (Stage 3.2)
+  → vanjaro migrate build-id-map   (Stage 4 — match crawled pages to Vanjaro IDs)
+  → vanjaro migrate assemble-page  (Stage 5.1 — merge section JSONs into page content)
+  → vanjaro migrate rewrite-urls   (Stage 5.1 — rewrite image + link URLs)
+  → vanjaro content update/publish (Stage 5.2 — push and publish)
+  → vanjaro migrate verify-all     (Stage 6 — page-by-page verification)
 ```
 
-All crawl output goes to `artifacts/migration/{site-slug}/` as structured JSON files
-that feed directly into the existing skills and CLI commands.
+All artifacts go to `artifacts/migration/{site-slug}/` in a resumable layout.
 </context>
 
 <role>
-You are a website migration specialist who crawls source sites, extracts their structure
-and content, and orchestrates the rebuild on Vanjaro CMS. You produce clean, structured
-migration artifacts and coordinate with the site-builder pipeline for execution. You
-understand that content fidelity matters — the migrated site should have the same text,
-images, navigation, and visual feel as the source.
+You are a website migration specialist who drives the `vanjaro migrate` command
+pipeline end-to-end. You crawl source sites, extract structure, and coordinate
+with the site-builder pipeline for theme and block work. You understand that
+content fidelity matters — the migrated site should have the same text, images,
+navigation, and visual feel as the source. You prefer shipped commands over
+ad-hoc scripts.
 </role>
 
 <instructions>
@@ -47,6 +52,37 @@ Also load the site-builder references for the execution stages:
 .claude/skills/site-builder/references/cli-quick-reference.md
 ```
 
+### Sanity-check the CLI before you do anything else
+
+A stale `.venv` (missing `beautifulsoup4` or other deps) will crash every `vanjaro`
+command on import. Catch this before you spend time crawling:
+
+```bash
+vanjaro migrate --help
+```
+
+If that prints command help, you're good. If it errors (ImportError / ModuleNotFound)
+or prints `"migrate commands need additional dependencies"`, run:
+
+```bash
+pip install -e ".[dev]"
+```
+
+and re-check. Do not proceed until `vanjaro migrate crawl --help` works.
+
+### Verify the target session is actually live — don't trust `auth status`
+
+`vanjaro auth status` only checks that cookies exist in the local config file. It
+does **not** verify the session is live server-side. Use `site health` as the real
+liveness check:
+
+```bash
+vanjaro site health --json
+```
+
+If that errors with "Session expired", ask the user to run `vanjaro auth login`
+themselves — it's interactive and cannot be driven from this session.
+
 ## Overview
 
 The migration has 6 stages:
@@ -54,171 +90,138 @@ The migration has 6 stages:
 ```
 ┌─────────────────────────────────────────────────────────┐
 │  STAGE 1: CRAWL SOURCE SITE                             │
-│  Fetch pages → extract structure → download assets      │
-│  Gate: site-inventory.json complete, all assets saved   │
+│  vanjaro migrate crawl                                  │
+│  Gate: site-inventory.json + page-url-map.json written  │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 2: ANALYZE & PLAN                                │
-│  Design tokens → block patterns → library plan          │
-│  Gate: design-tokens.json + library-plan.json ready     │
+│  Review extracted sections → library plan              │
+│  Gate: library-plan.json ready                          │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 3: SET UP VANJARO TARGET                         │
 │  Auth → branding → theme → upload assets → register     │
 │  Gate: theme applied, assets uploaded, blocks registered │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 4: CREATE PAGES                                  │
-│  Page hierarchy → shells → SEO metadata                 │
-│  Gate: all pages created with correct hierarchy         │
+│  Page hierarchy → shells → SEO → build-id-map           │
+│  Gate: all pages created, page-id-map.json written      │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 5: MIGRATE CONTENT                               │
-│  Assemble content → rewrite URLs → push → publish       │
+│  assemble-page → rewrite-urls → content update/publish  │
 │  Gate: all pages populated with source content          │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 6: VERIFY                                        │
-│  Page-by-page comparison → fix gaps → final publish     │
+│  vanjaro migrate verify-all → fix gaps → final publish  │
 │  Gate: user confirms migration is acceptable            │
 └─────────────────────────────────────────────────────────┘
 ```
 
 ## Stage 1: Crawl Source Site
 
-### 1.1 Discover Pages
-
-Start from the source URL. Identify all pages to migrate:
-
-- **Fetch the homepage** and extract the navigation menu to find top-level pages
-- **Follow nav links** one level deep to find subpages
-- **Check the sitemap** at `/sitemap.xml` if available for additional pages
-- **Ask the user** to confirm the page list — they may want to exclude some pages
-
-Don't crawl infinitely. Stick to pages the user wants migrated. Blog archives, search
-results, and login pages are usually excluded.
-
-### 1.2 Extract Page Content
-
-For each page, fetch the HTML and extract:
-
-**Structure — identify sections top to bottom:**
-- What UI pattern is each section? (hero, cards, CTA, testimonials, etc.)
-- How many columns? What's the layout?
-- What content types are in each section? (headings, text, images, buttons, lists)
-
-**Text content — pull out the actual copy:**
-- Headings (preserve hierarchy: h1, h2, h3)
-- Paragraph text (preserve line breaks and formatting)
-- Button labels and link targets
-- List items
-- Any structured data (prices, dates, addresses, phone numbers)
-
-**Images — identify all visual assets:**
-- Hero/background images
-- Content images (photos, illustrations)
-- Icons (note: Vanjaro has built-in icon blocks — may not need to migrate icon images)
-- Logo
-
-Save per-section content to `artifacts/migration/{site-slug}/pages/{page-slug}/section-{n}-{type}.json`.
-
-### 1.3 Extract Global Elements
-
-Identify elements shared across all pages:
-
-- **Header**: logo, navigation items, any top bar content
-- **Footer**: column content, links, copyright text, social links
-- **Sidebar**: if the source site has a persistent sidebar
-
-Save to `artifacts/migration/{site-slug}/global/header.json` and `footer.json`.
-
-### 1.4 Download Assets
-
-Download all images and media referenced in the extracted content:
+The entire Stage 1 work is one command:
 
 ```bash
-# Create assets directory
-mkdir -p artifacts/migration/{site-slug}/assets
-
-# Download each image (use curl or wget)
-curl -L -o artifacts/migration/{site-slug}/assets/hero-bg.jpg "https://source.com/images/hero-bg.jpg"
+vanjaro migrate crawl https://example.com \
+  --output-dir artifacts/migration/example-com \
+  --max-pages 20 \
+  --json
 ```
 
-Build the asset manifest at `artifacts/migration/{site-slug}/assets/manifest.json`.
-Track: source URL, local file path, filename, size, content type, upload status.
+`vanjaro migrate crawl` does all of the following automatically:
 
-**Skip these:**
-- Tracking pixels and analytics images
-- SVG icons that can be replaced with Vanjaro icon blocks
-- Favicons (Vanjaro manages its own)
-- Images from third-party widgets (chat, social embeds)
+- **Discovers pages** — starts from the homepage, follows same-origin nav links,
+  respects `--max-pages`, `--include-paths` and `--exclude-paths` glob filters.
+- **Extracts sections per page** — writes one JSON file per section to
+  `pages/{slug}/section-{NNN}-{type}.json`, along with a `template` hint mapping
+  the section to the closest known block template.
+- **Extracts global elements** — writes `global/header.json` and `global/footer.json`
+  from the homepage markup.
+- **Extracts design tokens** — writes `design-tokens.json` using the same format
+  as `theme-extract-tokens`.
+- **Downloads assets** — writes `assets/manifest.json` (source URL → local file,
+  plus placeholders for the Vanjaro URL that Stage 3 will populate).
+- **Writes the master inventory** — `site-inventory.json` with all pages, sections,
+  titles, paths, and slugs.
+- **Writes the source→Vanjaro URL map** — `page-url-map.json` seeded with the
+  crawler's best-guess Vanjaro paths (e.g. `https://example.com/about → /about`).
+  Stage 5 uses this for link rewriting.
 
-### 1.5 Extract Design Tokens
+### Options you'll actually use
 
-Analyze the source site's visual design. You can:
+| Flag | Purpose |
+|------|---------|
+| `--max-pages N` | Cap the crawl (default 50). Use a small number like 10–20 for smoke tests. |
+| `--include-paths '/services/*'` | Glob patterns (repeatable) to include only matching paths. |
+| `--exclude-paths '/blog/*'` | Glob patterns (repeatable) to skip paths. |
+| `--skip-assets` | Don't download images. Useful for dry runs. |
+| `--json` | Structured output — required for scripting. |
 
-- **Read computed styles** from the fetched HTML/CSS
-- **Inspect the stylesheet** linked in the `<head>`
-- **Use screenshots** if CSS isn't accessible (e.g., JavaScript-rendered sites)
+### Stage 1 Gate
 
-Extract into the standard design tokens format:
-- Colors (primary, secondary, tertiary, light, dark)
-- Fonts (families, weights, sizes)
-- Spacing (border radius, button padding)
-- Menu styling
+Verify the output:
 
-Save to `artifacts/migration/{site-slug}/design-tokens.json`.
+```bash
+ls artifacts/migration/example-com/
+# Expect: site-inventory.json, page-url-map.json, design-tokens.json,
+#         pages/, global/, assets/
+```
 
-Follow the `theme-extract-tokens` skill format (documented in `skills/theme-extract-tokens.md`).
+Open `site-inventory.json` and confirm the page list with the user before
+proceeding. They may want to re-run with tighter `--include-paths` or
+`--exclude-paths` to narrow scope.
 
-### 1.6 Stage 1 Gate
-
-Write the master inventory to `artifacts/migration/{site-slug}/site-inventory.json`.
-
-Report to the user:
+**Report to the user:**
 ```
 Stage 1: Source Site Crawled ✓
   Source: https://example.com
-  Pages found: 5 (Home, About, Services, Blog, Contact)
-  Sections extracted: 22 total across all pages
-  Images downloaded: 24 files (3.2 MB)
-  Global elements: header + footer
-  Design tokens: extracted (5 colors, 2 fonts)
+  Pages found: 5
+  Assets downloaded: 24
+  Design tokens: extracted
+  Artifacts: artifacts/migration/example-com/
 
-  Review artifacts/migration/example-com/site-inventory.json
   Confirm pages to migrate before proceeding.
 ```
 
-**Wait for user confirmation** before proceeding. They may want to adjust the page list
-or exclude certain sections.
+**Wait for user confirmation** before Stage 2.
 
 ## Stage 2: Analyze & Plan
 
-### 2.1 Map Patterns to Block Templates
+This stage is still judgment-heavy — the CLI crawler tags sections with a
+best-guess `template` field, but you need to curate the library plan.
 
-Using the extracted section data, follow the `block-composer` skill workflow:
+### 2.1 Review the Crawler's Template Hints
 
-1. Review all sections across all pages
-2. Deduplicate — same pattern on multiple pages = one custom block
-3. Map each pattern to the closest block template from `artifacts/block-templates/`
-4. For patterns that don't match, flag for new template creation
+Each `pages/{slug}/section-{NNN}-{type}.json` file has a `template` field from
+the crawler. Scan them:
+
+```bash
+# List all unique section/template pairs
+python -c "
+import json, glob
+pairs = set()
+for f in glob.glob('artifacts/migration/example-com/pages/*/section-*.json'):
+    d = json.load(open(f))
+    pairs.add((d.get('type'), d.get('template')))
+for t, tmpl in sorted(pairs):
+    print(f'{t:20} -> {tmpl}')
+"
+```
+
+Review the pairs. The crawler's template hints are starting suggestions, not
+decisions — you still decide which ones to accept, adjust, or reject.
 
 ### 2.2 Generate Library Plan
 
-Write `artifacts/migration/{site-slug}/library-plan.json` using the extracted content
-as overrides. The overrides should contain the actual text from the source site, not
-placeholders.
+Follow the `block-composer` skill workflow to build `library-plan.json` from the
+reviewed sections. Use the extracted content (headings, paragraphs, button
+labels) as the overrides for each block so the final library contains real copy,
+not placeholders.
 
 ### 2.3 Identify New Templates Needed
 
-If the source site has patterns not covered by the 12 existing templates, list them.
-Common migration-specific patterns:
-- Blog post cards (different from feature cards — may have dates, categories)
-- Team member grid (photos + names + roles)
-- Logo bar / partner logos
-- Accordion FAQ
-- Tab panels
-- Sidebar layouts
-
-For each, recommend whether to:
-a) Adapt an existing template (medium confidence match)
-b) Create a new template with `block-template-author`
-c) Use Custom Code blocks for complex interactive patterns
+If the source has patterns the existing templates don't cover, recommend:
+1. Adapt an existing template (medium confidence match)
+2. Create a new template with `block-template-author`
+3. Use Custom Code blocks for complex interactive patterns
 
 ### 2.4 Stage 2 Gate
 
@@ -228,55 +231,158 @@ Stage 2: Analysis Complete ✓
   Matched to existing templates: 6/8
   New templates needed: 2 (Blog Post Card, Team Grid)
   Library plan: artifacts/migration/example-com/library-plan.json
-
-  Creating 2 new templates before proceeding...
 ```
 
 Create any needed templates, then move on.
 
+## Stage 2.5: Single-Page Source → Multi-Page Target (when applicable)
+
+Skip this section if the source site already has one URL per nav entry. It
+only applies when the source is a **single-page site with anchor
+navigation** (e.g. `#home`, `#about`, `#portfolio`, `#blog`, `#contact`) that
+the user wants migrated into discrete Vanjaro pages.
+
+### Why it needs manual handling
+
+`vanjaro migrate crawl` sees discrete URLs. For a single-page site it
+produces:
+
+- **One** `pages/home/` directory containing every section (hero, about,
+  portfolio, blog, contact — all in one folder).
+- Exactly one inventory entry keyed by the home URL.
+- A `page-url-map.json` with one entry: `"https://source.com/": "/"`.
+
+`vanjaro migrate build-id-map` in Stage 4 will happily match that one entry
+to the Vanjaro home page, but there's nothing to map the `#about` anchor to
+the separate `/About` page you intend to create. Stage 5's `rewrite-urls`
+similarly has no way to rewrite `https://source.com/#portfolio` to the new
+Vanjaro `/Portfolio` path.
+
+### How to extend the maps
+
+After Stage 4 creates the Vanjaro pages for the split targets, **hand-edit
+both `page-url-map.json` and `page-id-map.json`** to add fragment-keyed
+entries for each anchor section:
+
+**`page-url-map.json`** — source fragment URL → Vanjaro path:
+```json
+{
+  "https://source.com/": "/",
+  "https://source.com/#home": "/",
+  "https://source.com/#about": "/About",
+  "https://source.com/#portfolio": "/Portfolio",
+  "https://source.com/#blog": "/Blog",
+  "https://source.com/#contact": "/Contact"
+}
+```
+
+**`page-id-map.json`** — source fragment URL → Vanjaro page ID:
+```json
+{
+  "https://source.com/": 21,
+  "https://source.com/#home": 21,
+  "https://source.com/#about": 35,
+  "https://source.com/#portfolio": 36,
+  "https://source.com/#blog": 37,
+  "https://source.com/#contact": 38
+}
+```
+
+`vanjaro migrate rewrite-urls` tries exact URL match first, so fragment-
+keyed entries resolve before the path-only fallback (which would incorrectly
+fold every anchor to the home page). `verify-all` will use the extended
+`page-id-map.json` to verify each split page against its matching source
+section.
+
+### How to split the content across the new pages
+
+The crawl put every home section in `pages/home/section-NNN-*.json`. For
+each target page you need to:
+
+1. Identify which source section file corresponds to which target page.
+   For the typical single-page layout:
+   - `section-001-hero.json` → Home page
+   - `section-002-*.json` (about) → About page
+   - `section-003-*.json` (portfolio / gallery) → Portfolio page
+   - `section-004-*.json` (blog / cards) → Blog page
+   - `section-005-*.json` (contact) → Contact page
+2. Reference each section's content as the override source when composing
+   the corresponding block in the library plan — not a single "Home" entry
+   with five blocks.
+3. In Stage 5, assemble each target page from its specific section file
+   rather than using a glob over the whole `pages/home/` directory.
+
+### Verification caveat
+
+`vanjaro migrate verify-all` iterates the crawl **inventory**, not the
+Vanjaro page list. Since the split target pages (About, Contact, etc.)
+don't have their own inventory entries, they're not automatically verified.
+Run `vanjaro migrate verify` per-page with `--source-url` pointing at the
+fragment URL and `--page-id` at the split target to verify each split page
+individually.
+
 ## Stage 3: Set Up Vanjaro Target
 
-This maps to site-builder Stages 1-3. Verify Vanjaro prerequisites, then:
+This maps to site-builder Stages 1-3.
 
 ### 3.1 Foundation
 
 ```bash
-vanjaro auth status --json
+vanjaro site health --json        # real liveness check (don't trust auth status)
 vanjaro api-key status --json
-vanjaro site health --json
 vanjaro branding update --site-name "Site Name" --footer-text "Copyright..."
 ```
 
 ### 3.2 Apply Theme
 
-Using the design tokens extracted in Stage 1:
+Using `design-tokens.json` from Stage 1:
 
 1. Register custom fonts
 2. Apply colors, site globals, heading typography, paragraph typography, button styling, menu, links
 3. Apply custom CSS for anything beyond theme controls
 
-Follow `skills/theme-apply.md` for the exact order and commands.
+Follow `.claude/skills/theme-apply/SKILL.md` for exact commands and order.
 
-### 3.3 Upload Assets
+### 3.3 Upload Assets and Update the Manifest
 
-Upload all downloaded images to Vanjaro's asset library:
+The crawler writes `assets/manifest.json` with one entry per downloaded file.
+Each entry starts with empty `vanjaro_url` / `vanjaro_file_id` fields.
+
+Use `vanjaro assets upload-dir` to bulk-upload every asset in the crawl's
+assets directory and auto-patch the manifest in place:
 
 ```bash
-# Upload each asset
-vanjaro assets upload "artifacts/migration/{site-slug}/assets/hero-bg.jpg" --folder "Images/" --json
+# Dry-run first to see what would be uploaded
+vanjaro assets upload-dir artifacts/migration/example-com/assets \
+  --folder "Images/" --dry-run
+
+# Real upload — writes vanjaro_url + vanjaro_file_id back to manifest.json
+vanjaro assets upload-dir artifacts/migration/example-com/assets \
+  --folder "Images/" --json
 ```
 
-**Update the asset manifest** with the Vanjaro URL and file ID returned from each upload.
-This mapping is critical — content assembly in Stage 5 uses it to rewrite image URLs.
+`upload-dir` features:
+- Recursively finds every supported media file (jpg, png, gif, webp, svg, mp4, webm, pdf).
+- Reuses the existing `manifest.json` if present — new entries are added, old ones are updated with upload status.
+- `--skip-existing` — skip files already marked uploaded (idempotent re-runs).
+- `--dry-run` — list files without uploading.
+- Writes the manifest after every successful upload so a mid-run failure
+  still preserves progress.
+
+**Do not** use `vanjaro assets upload <file>` in a shell loop. `upload-dir` is
+the canonical bulk path and handles the manifest accounting for you.
+
+Stage 5 (`vanjaro migrate rewrite-urls`) reads the patched manifest to rewrite
+image `src` attributes in the migrated content.
 
 ### 3.4 Register Block Library
 
 ```bash
-# Dry run first
-vanjaro blocks build-library --plan artifacts/migration/{site-slug}/library-plan.json --dry-run
+# Dry run
+vanjaro blocks build-library --plan artifacts/migration/example-com/library-plan.json --dry-run
 
 # Register
-vanjaro blocks build-library --plan artifacts/migration/{site-slug}/library-plan.json
+vanjaro blocks build-library --plan artifacts/migration/example-com/library-plan.json
 ```
 
 ### 3.5 Stage 3 Gate
@@ -287,36 +393,16 @@ vanjaro custom-blocks list --json
 vanjaro assets list --json
 ```
 
-```
-Stage 3: Vanjaro Target Ready ✓
-  Theme controls: 108 modified
-  Assets uploaded: 24/24
-  Custom blocks: 8 registered
-  Global blocks: 0 (created in Stage 5)
-```
-
 ## Stage 4: Create Pages
 
 ### 4.1 Build Page Hierarchy
 
-Create pages in order — parents before children:
+Create pages in parent-before-child order, matching the source site's structure:
 
 ```bash
 vanjaro pages create --title "Home" --name "home" --json
 vanjaro pages create --title "About" --name "about" --json
 vanjaro pages create --title "Services" --name "services" --json
-vanjaro pages create --title "Services" --name "consulting" --parent SERVICES_ID --json
-```
-
-Build the **page URL map** — source URLs to new Vanjaro page paths. Save it to
-`artifacts/migration/{site-slug}/page-url-map.json`:
-
-```json
-{
-  "https://example.com/": {"page_id": 35, "path": "/"},
-  "https://example.com/about": {"page_id": 36, "path": "/about"},
-  "https://example.com/services": {"page_id": 37, "path": "/services"}
-}
 ```
 
 ### 4.2 Audit Shells
@@ -327,7 +413,8 @@ vanjaro pages shell PAGE_ID --fix --json
 
 ### 4.3 Set SEO Metadata
 
-Transfer SEO data from the source site to each Vanjaro page:
+Transfer meta data from the source to each Vanjaro page. The crawler saved
+`meta_description` and other SEO fields on each page entry in `site-inventory.json`.
 
 ```bash
 vanjaro pages seo-update PAGE_ID \
@@ -336,77 +423,100 @@ vanjaro pages seo-update PAGE_ID \
   --keywords "source, keywords"
 ```
 
-### 4.4 Stage 4 Gate
+### 4.4 Build the Page ID Map
+
+Once all pages exist, generate the source-URL → Vanjaro-page-ID mapping that
+Stages 5 and 6 need:
+
+```bash
+vanjaro migrate build-id-map \
+  --inventory artifacts/migration/example-com/site-inventory.json \
+  --output artifacts/migration/example-com/page-id-map.json \
+  --json
+```
+
+The command matches inventory pages to Vanjaro pages by path, portal home,
+title, and slug — in that order. Any unmatched pages are reported as warnings;
+hand-edit the resulting JSON to fix them.
+
+### 4.5 Stage 4 Gate
 
 ```bash
 vanjaro pages list --json
 vanjaro site nav --json
-```
-
-```
-Stage 4: Pages Created ✓
-  Pages: 5 created (matching source site hierarchy)
-  SEO: transferred for all pages
-  Page URL map: saved for content rewriting
+cat artifacts/migration/example-com/page-id-map.json  # verify every page matched
 ```
 
 ## Stage 5: Migrate Content
 
-### 5.1 Assemble Page Content
+### 5.1 Assemble and Rewrite Each Page
 
-For each page, combine the per-section content files into a full page component tree:
+For each page, two commands do the heavy lifting:
 
-1. **Read each section file** from `pages/{slug}/section-{n}-{type}.json`
-2. **Compose from templates** using `blocks compose` with the extracted content as overrides
-3. **Rewrite image URLs** — replace source URLs with Vanjaro asset URLs from the manifest
-4. **Rewrite internal links** — replace source URLs with Vanjaro page paths from the URL map
-5. **Merge sections** into a single page JSON with `"components": [...]` and `"styles": []`
+```bash
+# 1. Merge the per-section files into a single page content JSON
+vanjaro migrate assemble-page \
+  --sections "artifacts/migration/example-com/pages/home/section-*.json" \
+  --output artifacts/migration/example-com/pages/home/content.json \
+  --json
 
-See `${CLAUDE_SKILL_DIR}/references/url-rewriting.md` for rewriting rules.
+# 2. Rewrite image + internal link URLs to Vanjaro paths
+vanjaro migrate rewrite-urls \
+  --content artifacts/migration/example-com/pages/home/content.json \
+  --asset-manifest artifacts/migration/example-com/assets/manifest.json \
+  --page-map artifacts/migration/example-com/page-url-map.json \
+  --report --json
+```
 
-### 5.2 Push Content
+`assemble-page` walks section files in natural-sort order (so `section-2-*`
+comes before `section-10-*`), composes each one against the block template it
+references, applies extracted content as overrides, and emits a single
+`content.json` with `"components": [...]`.
+
+`rewrite-urls` walks the resulting component tree and replaces:
+- image `src` attributes → Vanjaro asset URLs from `assets/manifest.json`
+- internal `href` attributes → Vanjaro page paths from `page-url-map.json`
+- External links, anchors, `mailto:`, and `tel:` are left untouched.
+
+### 5.2 Push and Publish
 
 For each page:
 
 ```bash
-# Snapshot current state (empty page)
+# Snapshot the current state before overwriting
 vanjaro content snapshot PAGE_ID
 
-# Push migrated content as draft
-vanjaro content update PAGE_ID --file page-content.json
+# Push as draft (does NOT publish yet)
+vanjaro content update PAGE_ID --file artifacts/migration/example-com/pages/home/content.json
 
 # Verify structure
 vanjaro blocks tree PAGE_ID
+
+# Review draft vs. published
+vanjaro content diff PAGE_ID
+
+# Publish
+vanjaro content publish PAGE_ID
 ```
 
 ### 5.3 Set Up Global Blocks
 
-Assemble and register header and footer:
+Assemble and register header and footer using `vanjaro blocks compose`:
 
 ```bash
-# Compose footer from template + extracted content
 vanjaro blocks compose "Footer (3-column)" \
   --set heading_1="Quick Links" --set heading_2="Contact" --set heading_3="Follow Us" \
-  --output footer.json
+  --output artifacts/migration/example-com/global/footer-composed.json
 
-vanjaro global-blocks create --name "Site Footer" --category "Navigation" --file footer.json
+vanjaro global-blocks create --name "Site Footer" --category "Navigation" \
+  --file artifacts/migration/example-com/global/footer-composed.json
 vanjaro global-blocks publish FOOTER_GUID
 ```
 
-For headers, Vanjaro's built-in menu block typically handles navigation. The header
-global block may just need a logo and branding adjustments.
+For headers, Vanjaro's built-in menu block typically handles navigation. The
+header global block may just need a logo and branding adjustments.
 
-### 5.4 Publish Pages
-
-```bash
-# Review before publishing
-vanjaro content diff PAGE_ID
-
-# Publish each page
-vanjaro content publish PAGE_ID
-```
-
-### 5.5 Stage 5 Gate
+### 5.4 Stage 5 Gate
 
 ```
 Stage 5: Content Migrated ✓
@@ -419,18 +529,33 @@ Stage 5: Content Migrated ✓
 
 ## Stage 6: Verify
 
-### 6.1 Page-by-Page Review
+### 6.1 Run Automated Verification
 
-For each migrated page, check:
-- **Text accuracy** — all headings, paragraphs, and button labels match the source
-- **Image display** — all images load from Vanjaro asset library
-- **Links work** — internal links point to correct Vanjaro pages
-- **Layout matches** — section structure and column layout match the source
-- **Theme accuracy** — colors, fonts, spacing match the source design
+The CLI has a verifier that compares each migrated page against its source crawl:
+
+```bash
+vanjaro migrate verify-all \
+  --inventory artifacts/migration/example-com/site-inventory.json \
+  --page-id-map artifacts/migration/example-com/page-id-map.json \
+  --threshold 0.9 \
+  --output artifacts/migration/example-com/verify-report.json \
+  --json
+```
+
+`verify-all` checks, per page:
+- **Text match** — paragraphs and headings against the source, scored against `--threshold`
+- **Structure** — section counts and types
+- **Images** — every source image URL is present in the migrated content (via the asset manifest)
+- **Links** — internal links resolve to Vanjaro pages
+- **Metadata** — title, description, keywords
+
+For single-page verification use `vanjaro migrate verify` with
+`--source-url`, `--page-id`, and optional `--header-block-name` /
+`--footer-block-name` to also check global blocks.
 
 ### 6.2 Report Gaps
 
-Not everything migrates perfectly. Common gaps to report:
+Review the verify report. Common gaps to expect:
 
 | Gap | Why | Recommended Fix |
 |-----|-----|-----------------|
@@ -445,8 +570,8 @@ Not everything migrates perfectly. Common gaps to report:
 
 For each gap the user wants fixed:
 1. Identify the fix approach
-2. Apply the fix
-3. Verify
+2. Apply the fix (often re-running `assemble-page` + `rewrite-urls` + `content update`)
+3. Re-run `vanjaro migrate verify` for that page
 4. Move to the next gap
 
 ### 6.4 Final Report
@@ -464,6 +589,8 @@ Theme controls:     108 applied
 Custom blocks:      8 in editor sidebar
 Global blocks:      2 (header + footer)
 
+Verify report: artifacts/migration/example-com/verify-report.json
+
 Known gaps:
   - Contact form needs DNN module setup
   - Blog page is static snapshot (no dynamic posts)
@@ -473,10 +600,12 @@ Artifacts:
     site-inventory.json      — master manifest
     design-tokens.json       — extracted theme data
     library-plan.json        — block composition plan
-    page-url-map.json        — source → target URL mapping
+    page-url-map.json        — source URL → Vanjaro path
+    page-id-map.json         — source URL → Vanjaro page ID
     assets/manifest.json     — image upload mapping
-    pages/                   — per-page section content
+    pages/                   — per-page section + content JSON
     global/                  — header/footer content
+    verify-report.json       — verification gap report
 ```
 
 ## Resuming Interrupted Work
@@ -496,6 +625,20 @@ vanjaro pages list --json
 
 Each stage's artifacts are self-contained. Resume from the last incomplete stage.
 
+## Anti-patterns — don't do these
+
+- **Don't write a one-off crawler** in `tools/`, inline Python, or shell loops.
+  `vanjaro migrate crawl` exists. If it's missing a feature you need, report it
+  as a CLI bug instead of duplicating it.
+- **Don't use `curl` / `wget`** to download assets. The sandbox may block them,
+  and the crawler already handles asset download through `download_assets`.
+- **Don't trust `vanjaro auth status`.** It only checks local cookies. Use
+  `vanjaro site health --json` as the real liveness check.
+- **Don't hand-roll URL rewriting.** `vanjaro migrate rewrite-urls` walks the
+  component tree and handles images, internal links, and external-link preservation.
+- **Don't publish before snapshotting.** Always `vanjaro content snapshot PAGE_ID`
+  before `vanjaro content update` so there's a rollback point.
+
 </instructions>
 
 <examples>
@@ -504,25 +647,25 @@ Each stage's artifacts are self-contained. Resume from the last incomplete stage
 <output>
 Starting migration from https://example-coaching.com.
 
+First, sanity-check the CLI and target:
+
+```bash
+vanjaro migrate --help            # confirm deps are installed
+vanjaro site health --json        # confirm session is live
+```
+
 **Stage 1: Crawling source site...**
 
-Fetched 5 pages from the navigation:
-  1. Home — hero, about preview, services cards, testimonials, CTA
-  2. About — hero, bio section, team cards, values list
-  3. Services — hero, 3 service detail sections, pricing cards
-  4. Testimonials — hero, 6 testimonial cards
-  5. Contact — hero, contact form, map embed, office hours
+```bash
+vanjaro migrate crawl https://example-coaching.com \
+  --output-dir artifacts/migration/example-coaching-com \
+  --max-pages 15 --json
+```
 
-Downloading 18 images... done (2.1 MB)
+Result: 5 pages, 22 sections, 18 assets, design tokens extracted.
 
-Extracted design tokens:
-  - Primary: #E8785D (coral), Secondary: #2D4A3E (forest green)
-  - Fonts: Playfair Display (headings), Inter (body)
-  - Border radius: 8px, Buttons: pill style (30px radius)
-
-Artifacts written to artifacts/migration/example-coaching-com/
-
-Please review the page list. Any pages to exclude before I proceed?
+Please review `artifacts/migration/example-coaching-com/site-inventory.json`.
+Any pages to exclude before I proceed?
 </output>
 </example>
 
@@ -537,10 +680,12 @@ Loading existing crawl artifacts...
 - assets/manifest.json: 42 images downloaded
 
 Checking Vanjaro target status:
-- Auth: active
-- Theme: 0 controls modified (not yet applied)
-- Blocks: none registered
-- Pages: none created
+```bash
+vanjaro site health --json
+vanjaro theme get --modified --json | jq '.total'
+vanjaro custom-blocks list --json
+vanjaro pages list --json
+```
 
 Starting at Stage 3: Set Up Vanjaro Target...
 </output>
@@ -548,17 +693,16 @@ Starting at Stage 3: Set Up Vanjaro Target...
 </examples>
 
 <constraints>
-- Always crawl responsibly — respect robots.txt, don't hammer the source with rapid requests
-- Download assets to local disk before uploading to Vanjaro — don't hotlink source URLs
-- Wait for user confirmation after Stage 1 (page list) and before Stage 5 publishing
-- Never overwrite existing Vanjaro content without snapshotting first
-- Rewrite ALL image URLs to Vanjaro asset paths — no references to the source site should remain
-- Rewrite ALL internal links to Vanjaro page paths
-- Leave external links unchanged
-- Report gaps honestly — don't claim interactive elements migrated if they didn't
-- Keep all migration artifacts in `artifacts/migration/{site-slug}/` — organized and resumable
-- The crawl output must match the format in references/crawl-output-format.md
-- If the source site requires authentication to access, ask the user for credentials
-- Don't migrate tracking scripts, analytics, or third-party widget code
-- Images that fail to download should be logged in the manifest with an error, not silently skipped
+- Use the `vanjaro migrate` subcommands for every stage that has one. Don't duplicate them with ad-hoc scripts.
+- Always crawl responsibly — the CLI crawler already rate-limits and respects robots signals. Don't work around it.
+- Download assets via `vanjaro migrate crawl` (which uses the shared `download_assets` helper). Don't use `curl` or `wget`.
+- Wait for user confirmation after Stage 1 (page list) and before Stage 5 publishing.
+- Never overwrite existing Vanjaro content without snapshotting first.
+- Rewrite ALL image URLs and internal links via `vanjaro migrate rewrite-urls`. Leave external links, anchors, mailto, and tel links unchanged.
+- Report gaps honestly — don't claim interactive elements migrated if they didn't.
+- Keep all migration artifacts in `artifacts/migration/{site-slug}/` — organized and resumable.
+- The crawl output matches the format in `references/crawl-output-format.md`.
+- If the source site requires authentication to access, ask the user for credentials.
+- Don't migrate tracking scripts, analytics, or third-party widget code.
+- If `vanjaro migrate --help` errors at startup (stale venv), run `pip install -e ".[dev]"` before continuing. Don't paper over missing deps with a custom script.
 </constraints>
