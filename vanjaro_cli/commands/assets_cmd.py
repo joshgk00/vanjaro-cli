@@ -125,10 +125,12 @@ def upload_file(file_path: str, folder: str | None, as_json: bool) -> None:
         exit_error(f"File not found: {file_path}", as_json)
 
     file_content = base64.b64encode(local_path.read_bytes()).decode("ascii")
+    # The VanjaroAI /AIAsset/Upload endpoint requires `base64Content` (or
+    # alternatively `sourceUrl`) — it rejects `fileContent` with HTTP 400.
     payload = {
         "fileName": local_path.name,
         "folderPath": folder or "",
-        "fileContent": file_content,
+        "base64Content": file_content,
     }
 
     client, _ = get_client()
@@ -307,7 +309,7 @@ def upload_dir(
         payload = {
             "fileName": file_path.name,
             "folderPath": folder,
-            "fileContent": base64.b64encode(file_path.read_bytes()).decode("ascii"),
+            "base64Content": base64.b64encode(file_path.read_bytes()).decode("ascii"),
         }
         try:
             response = client.post(UPLOAD, json=payload)

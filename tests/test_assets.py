@@ -133,7 +133,7 @@ def test_assets_upload(runner, mock_config, tmp_path):
     assert sent["fileName"] == "photo.jpg"
     assert sent["folderPath"] == ""
     expected_content = base64.b64encode(b"fake-image-bytes").decode("ascii")
-    assert sent["fileContent"] == expected_content
+    assert sent["base64Content"] == expected_content
 
 
 @responses.activate
@@ -274,7 +274,7 @@ def test_assets_upload_dir_happy_path(runner, mock_config, tmp_path):
     sent = json.loads(upload_calls[0].request.body)
     assert sent["folderPath"] == "Images/"
     assert sent["fileName"] in {"hero.jpg", "photo.png", "icon.svg"}
-    assert base64.b64decode(sent["fileContent"]).startswith(b"bytes-for-")
+    assert base64.b64decode(sent["base64Content"]).startswith(b"bytes-for-")
 
 
 @responses.activate

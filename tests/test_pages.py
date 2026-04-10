@@ -17,7 +17,7 @@ CREATE_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Create"
 AI_LIST_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/List"
 AI_DETAIL_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Get"
 AI_UPDATE_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Update"
-SAVE_URL = f"{BASE_URL}/API/Pages/Pages/SavePageDetails"
+SAVE_URL = f"{BASE_URL}/API/PersonaBar/Pages/SavePageDetails"
 DELETE_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Delete"
 COPY_URL = f"{BASE_URL}/API/PersonaBar/Pages/CopyPage"
 
