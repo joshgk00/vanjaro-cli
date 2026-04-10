@@ -32,7 +32,35 @@ ALLOWED_SCHEMES = frozenset({"http", "https"})
 IGNORED_LINK_SCHEMES = frozenset({
     "mailto", "tel", "javascript", "data", "file", "ftp", "sms", "blob", "about",
 })
+# File extensions we refuse to treat as discoverable pages. A site that links
+# directly to an image, document, or archive from an <a href> should not cause
+# the crawler to fetch the binary and try to parse it as HTML — that produces
+# empty "pages" that crowd out real content under the --max-pages cap.
+NON_PAGE_EXTENSIONS = frozenset({
+    ".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".avif", ".bmp", ".ico", ".tiff",
+    ".mp4", ".webm", ".mov", ".avi", ".mkv", ".mp3", ".wav", ".ogg", ".flac",
+    ".pdf", ".doc", ".docx", ".xls", ".xlsx", ".ppt", ".pptx",
+    ".zip", ".tar", ".gz", ".7z", ".rar",
+    ".css", ".js", ".json", ".xml", ".rss", ".atom",
+    ".woff", ".woff2", ".ttf", ".otf", ".eot",
+})
+
 SITEMAP_LOC = re.compile(r"<loc[^>]*>([^<]+)</loc>", re.IGNORECASE)
+
+
+def _is_page_url(url: str) -> bool:
+    """Return False for URLs whose path ends in a known non-page extension.
+
+    Used to drop direct-file links (images, PDFs, zips) from the discoverable
+    page list so the crawler doesn't waste its --max-pages budget fetching
+    binaries and parsing them as HTML.
+    """
+    path = urlparse(url).path.lower()
+    last_segment = path.rsplit("/", 1)[-1]
+    if "." not in last_segment:
+        return True
+    extension = "." + last_segment.rsplit(".", 1)[-1]
+    return extension not in NON_PAGE_EXTENSIONS
 
 
 class CrawlError(Exception):
@@ -131,7 +159,8 @@ def _extract_links_from_html(html: str, base_url: str) -> list[str]:
         if same_domain(absolute, base_url):
             # Drop fragments so /#section doesn't dedupe against /
             clean = parsed._replace(fragment="").geturl()
-            found.append(clean)
+            if _is_page_url(clean):
+                found.append(clean)
 
     return found
 
@@ -173,6 +202,8 @@ def discover_pages(
 
     def _add(url: str) -> None:
         if url in seen:
+            return
+        if not _is_page_url(url):
             return
         parsed = urlparse(url)
         path = parsed.path or "/"

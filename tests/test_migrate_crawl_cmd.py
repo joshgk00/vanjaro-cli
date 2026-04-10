@@ -207,3 +207,73 @@ def test_migrate_crawl_invalid_url(runner, tmp_path: Path):
     )
     assert result.exit_code != 0
     assert "Invalid URL" in result.output
+
+
+GALLERY_HOMEPAGE_HTML = """<!doctype html>
+<html>
+<head><title>Portfolio Site</title></head>
+<body>
+  <main>
+    <section class="hero">
+      <h1>My Portfolio</h1>
+      <p>Designer.</p>
+    </section>
+    <section class="gallery">
+      <a href="/assets/shot-1.jpg"><img src="/assets/shot-1-thumb.jpg" alt="Shot 1"></a>
+      <a href="/assets/shot-2.jpg"><img src="/assets/shot-2-thumb.jpg" alt="Shot 2"></a>
+      <a href="/brochure.pdf">Download brochure</a>
+      <a href="/archive.zip">Download archive</a>
+      <a href="/about.html">About the designer</a>
+    </section>
+  </main>
+</body>
+</html>
+"""
+
+ABOUT_HTML_PAGE = """<!doctype html>
+<html>
+<head><title>About the designer</title></head>
+<body><main><section><h1>About</h1><p>Bio.</p></section></main></body>
+</html>
+"""
+
+
+@responses.activate
+def test_migrate_crawl_skips_direct_asset_links(runner, tmp_path: Path):
+    """Regression: `<a href="image.jpg">` must not be treated as a page.
+
+    Found during end-to-end migration of a portfolio site whose gallery
+    section wrapped each image in an `<a>` pointing directly at the full-size
+    JPG. The crawler fetched each binary, failed to extract sections, and
+    crowded out the real HTML pages under the --max-pages cap.
+    """
+    responses.add(responses.GET, f"{SOURCE_URL}/", body=GALLERY_HOMEPAGE_HTML, status=200)
+    responses.add(responses.GET, f"{SOURCE_URL}/about.html", body=ABOUT_HTML_PAGE, status=200)
+    responses.add(responses.GET, f"{SOURCE_URL}/sitemap.xml", status=404)
+    # Thumbnails are downloaded as assets (via <img src>), not followed as pages.
+    for thumb in ("/assets/shot-1-thumb.jpg", "/assets/shot-2-thumb.jpg"):
+        responses.add(
+            responses.GET,
+            f"{SOURCE_URL}{thumb}",
+            body=FAKE_IMAGE_BYTES,
+            status=200,
+            content_type="image/jpeg",
+        )
+
+    output = tmp_path / "artifacts"
+    result = runner.invoke(
+        cli,
+        ["migrate", "crawl", SOURCE_URL, "--output-dir", str(output)],
+    )
+
+    assert result.exit_code == 0, result.output
+
+    inventory = json.loads((output / "site-inventory.json").read_text())
+    slugs = [page["slug"] for page in inventory["pages"]]
+
+    # Only real HTML pages should show up — the gallery JPGs, PDF, and ZIP
+    # must be filtered out of page discovery.
+    assert slugs == ["home", "about-html"], f"unexpected pages: {slugs}"
+    assert not any("shot-1" in slug or "shot-2" in slug for slug in slugs)
+    assert not any("brochure" in slug for slug in slugs)
+    assert not any("archive" in slug for slug in slugs)
