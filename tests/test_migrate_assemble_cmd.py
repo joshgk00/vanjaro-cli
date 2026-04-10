@@ -94,6 +94,45 @@ def test_crawl_section_handles_missing_keys():
     assert overrides == {}
 
 
+def test_crawl_section_maps_images():
+    content = {
+        "images": [
+            {"src": "https://example.com/hero.jpg", "alt": "Hero image"},
+            {"src": "https://example.com/logo.png", "alt": "Company logo"},
+        ],
+    }
+
+    overrides = _crawl_section_to_overrides(content)
+
+    assert overrides["image_1_src"] == "https://example.com/hero.jpg"
+    assert overrides["image_1_alt"] == "Hero image"
+    assert overrides["image_2_src"] == "https://example.com/logo.png"
+    assert overrides["image_2_alt"] == "Company logo"
+
+
+def test_crawl_section_skips_non_dict_images():
+    content = {
+        "images": ["not-a-dict", {"src": "https://example.com/ok.jpg", "alt": "Valid"}],
+    }
+
+    overrides = _crawl_section_to_overrides(content)
+
+    assert "image_1_src" not in overrides
+    assert overrides["image_2_src"] == "https://example.com/ok.jpg"
+    assert overrides["image_2_alt"] == "Valid"
+
+
+def test_crawl_section_image_missing_alt():
+    content = {
+        "images": [{"src": "https://example.com/no-alt.jpg"}],
+    }
+
+    overrides = _crawl_section_to_overrides(content)
+
+    assert overrides["image_1_src"] == "https://example.com/no-alt.jpg"
+    assert "image_1_alt" not in overrides
+
+
 def test_crawl_section_maps_list_items():
     content = {
         "list_items": ["Home", "About", "Services", "Contact"],

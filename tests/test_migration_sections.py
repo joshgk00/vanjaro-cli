@@ -335,6 +335,297 @@ def test_extract_content_empty_list_items_when_no_lists():
     assert sections[0]["content"]["list_items"] == []
 
 
+def test_extract_blockquotes():
+    """Blockquotes should be extracted with text and citation."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Testimonials</h2>
+          <blockquote>
+            Great service and fast delivery.
+            <cite>Jane Doe</cite>
+          </blockquote>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    blockquotes = sections[0]["content"]["blockquotes"]
+
+    assert len(blockquotes) == 1
+    assert blockquotes[0]["text"] == "Great service and fast delivery."
+    assert blockquotes[0]["citation"] == "Jane Doe"
+
+
+def test_extract_blockquote_without_citation():
+    """Blockquotes without citation should have empty citation field."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Quote</h2>
+          <blockquote>Just a simple quote.</blockquote>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    bq = sections[0]["content"]["blockquotes"][0]
+    assert bq["text"] == "Just a simple quote."
+    assert bq["citation"] == ""
+
+
+def test_extract_tables():
+    """Tables should be extracted as arrays of rows."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Pricing</h2>
+          <table>
+            <tr><th>Plan</th><th>Price</th></tr>
+            <tr><td>Basic</td><td>$10/mo</td></tr>
+            <tr><td>Pro</td><td>$25/mo</td></tr>
+          </table>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    tables = sections[0]["content"]["tables"]
+
+    assert len(tables) == 1
+    assert tables[0][0] == ["Plan", "Price"]
+    assert tables[0][1] == ["Basic", "$10/mo"]
+    assert tables[0][2] == ["Pro", "$25/mo"]
+
+
+def test_extract_videos_native():
+    """Native video elements should be extracted with type=native."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Demo</h2>
+          <video src="/demo.mp4"></video>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    videos = sections[0]["content"]["videos"]
+
+    assert len(videos) == 1
+    assert videos[0]["type"] == "native"
+    assert videos[0]["src"] == "https://example.com/demo.mp4"
+
+
+def test_extract_videos_iframe_embed():
+    """Iframe embeds (YouTube, Vimeo) should be extracted with type=embed."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Watch</h2>
+          <iframe src="https://www.youtube.com/embed/abc123"></iframe>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    videos = sections[0]["content"]["videos"]
+
+    assert len(videos) == 1
+    assert videos[0]["type"] == "embed"
+    assert videos[0]["src"] == "https://www.youtube.com/embed/abc123"
+
+
+def test_extract_video_source_element():
+    """Video with <source> child should extract the source src."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Video</h2>
+          <video><source src="/clip.webm" type="video/webm"></video>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    videos = sections[0]["content"]["videos"]
+
+    assert len(videos) == 1
+    assert videos[0]["src"] == "https://example.com/clip.webm"
+
+
+def test_extract_figure_with_caption():
+    """Figure with figcaption should add caption to the image entry."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Gallery</h2>
+          <figure>
+            <img src="/photo.jpg" alt="Sunset">
+            <figcaption>A beautiful sunset over the lake.</figcaption>
+          </figure>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    images = sections[0]["content"]["images"]
+
+    # The img is extracted by the normal img loop, then figure loop adds caption
+    sunset_img = [i for i in images if "photo.jpg" in i["src"]][0]
+    assert sunset_img["caption"] == "A beautiful sunset over the lake."
+    assert sunset_img["alt"] == "Sunset"
+
+
+def test_extract_empty_new_content_types():
+    """Sections without blockquotes/tables/videos should have empty arrays."""
+    html = _wrap(
+        """
+        <section>
+          <h1>Simple</h1>
+          <p>Just text.</p>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    content = sections[0]["content"]
+    assert content["blockquotes"] == []
+    assert content["tables"] == []
+    assert content["videos"] == []
+
+
+def test_classifies_faq_with_details_elements():
+    """3+ <details> elements should classify as faq."""
+    html = _wrap(
+        """
+        <section>
+          <h2>FAQ</h2>
+          <details><summary>Question 1</summary><p>Answer 1</p></details>
+          <details><summary>Question 2</summary><p>Answer 2</p></details>
+          <details><summary>Question 3</summary><p>Answer 3</p></details>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["type"] == "faq"
+    assert sections[0]["template"] == TEMPLATE_MAP["faq"]
+
+
+def test_classifies_faq_with_accordion_class():
+    """Section with accordion class and 3+ children should classify as faq."""
+    html = _wrap(
+        """
+        <section class="accordion">
+          <div><h3>Q1</h3><p>A1</p></div>
+          <div><h3>Q2</h3><p>A2</p></div>
+          <div><h3>Q3</h3><p>A3</p></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["type"] == "faq"
+
+
+def test_classifies_faq_with_accordion_item_children():
+    """Children with accordion-item class should classify as faq."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Questions</h2>
+          <div class="accordion-item"><h3>Q1</h3><p>A1</p></div>
+          <div class="accordion-item"><h3>Q2</h3><p>A2</p></div>
+          <div class="accordion-item"><h3>Q3</h3><p>A3</p></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["type"] == "faq"
+
+
+def test_two_details_do_not_match_faq():
+    """Below the 3-element threshold, details should not classify as faq."""
+    html = _wrap(
+        """
+        <section>
+          <details><summary>Q1</summary><p>A1</p></details>
+          <details><summary>Q2</summary><p>A2</p></details>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["type"] != "faq"
+
+
+def test_classifies_pricing_by_class_name():
+    """Section with 'pricing' class should classify as pricing."""
+    html = _wrap(
+        """
+        <section class="pricing-section">
+          <h2>Our Plans</h2>
+          <div><h3>Basic</h3><p>$10/mo</p></div>
+          <div><h3>Pro</h3><p>$25/mo</p></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["type"] == "pricing"
+
+
+def test_classifies_pricing_by_currency_symbols():
+    """3+ children with currency+digit patterns should classify as pricing."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Plans</h2>
+          <div><h3>Starter</h3><span>$9</span><p>Basic features</p></div>
+          <div><h3>Growth</h3><span>$29</span><p>More features</p></div>
+          <div><h3>Enterprise</h3><span>$99</span><p>All features</p></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["type"] == "pricing"
+
+
+def test_classifies_stats_by_digit_headings():
+    """3+ children with mostly-digit headings should classify as stats."""
+    html = _wrap(
+        """
+        <section>
+          <div><h3>500+</h3><p>Clients Served</p></div>
+          <div><h3>1,200</h3><p>Projects Completed</p></div>
+          <div><h3>99%</h3><p>Satisfaction Rate</p></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["type"] == "stats"
+    assert sections[0]["template"] == TEMPLATE_MAP["stats"]
+
+
+def test_stats_needs_three_digit_blocks():
+    """Two stat blocks should not classify as stats."""
+    html = _wrap(
+        """
+        <section>
+          <div><span>42</span><p>Employees</p></div>
+          <div><span>7</span><p>Offices</p></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["type"] != "stats"
+
+
 def test_classifier_ladder_priority_gallery_beats_cards():
     """A section with anchor-wrapped images should be gallery, not cards."""
     html = _wrap(

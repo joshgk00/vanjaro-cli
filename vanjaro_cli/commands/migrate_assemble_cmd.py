@@ -69,15 +69,12 @@ def _read_section_file(path: Path, as_json: bool) -> dict:
 def _crawl_section_to_overrides(content: dict) -> dict[str, str]:
     """Map a crawler-extracted content dict to block_compose override keys.
 
-    The crawler produces a content-only extraction like:
-        {"headings": ["Welcome", "Subtitle"],
-         "paragraphs": ["Lead text", "More text"],
-         "buttons": [{"text": "Get Started", "href": "/signup"}]}
-
-    This helper maps the first heading/paragraph/button into the standard
-    `heading_1`, `text_1`, `button_text_1`, `button_href_1` override slots.
-    It is intentionally shallow — callers can refine by providing explicit
-    overrides for anything beyond the first of each type.
+    Maps all extracted content types to their template override slots:
+      - headings   → heading_1, heading_2, ...
+      - paragraphs → text_1, text_2, ...
+      - buttons    → button_1 / button_1_href, ...
+      - images     → image_1_src / image_1_alt, ...
+      - list_items → list-item_1, list-item_2, ...
     """
     overrides: dict[str, str] = {}
 
@@ -106,6 +103,18 @@ def _crawl_section_to_overrides(content: dict) -> dict[str, str]:
                 overrides[f"button_{index}"] = text
             if isinstance(href, str):
                 overrides[f"button_{index}_href"] = href
+
+    images = content.get("images") or []
+    if isinstance(images, list):
+        for index, image in enumerate(images, start=1):
+            if not isinstance(image, dict):
+                continue
+            src = image.get("src")
+            alt = image.get("alt")
+            if isinstance(src, str):
+                overrides[f"image_{index}_src"] = src
+            if isinstance(alt, str):
+                overrides[f"image_{index}_alt"] = alt
 
     list_items = content.get("list_items") or []
     if isinstance(list_items, list):

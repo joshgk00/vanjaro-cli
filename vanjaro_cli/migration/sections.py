@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
@@ -26,6 +27,9 @@ TEMPLATE_MAP: dict[str, str] = {
     "bio": "Bio / About",
     "gallery": "Gallery (3-up)",
     "blog_cards": "Blog Post Cards (3-up)",
+    "faq": "FAQ Accordion",
+    "pricing": "Pricing Cards (3-up)",
+    "stats": "Stats Grid (4-up)",
 }
 
 
@@ -68,7 +72,7 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
 
 
 def _extract_content(element: Tag, base_url: str) -> dict:
-    """Pull headings, paragraphs, images, links, and buttons from an element."""
+    """Pull structured content from an HTML element for migration."""
     headings: list[str] = []
     for level in ("h1", "h2", "h3", "h4"):
         for tag in element.find_all(level):
@@ -123,6 +127,62 @@ def _extract_content(element: Tag, base_url: str) -> dict:
             if text:
                 list_items.append(text)
 
+    blockquotes: list[dict] = []
+    for bq in element.find_all("blockquote"):
+        text = bq.get_text(strip=True)
+        if not text:
+            continue
+        citation_tag = bq.find(["cite", "footer"])
+        citation = citation_tag.get_text(strip=True) if citation_tag else ""
+        quote_text = text
+        if citation and quote_text.endswith(citation):
+            quote_text = quote_text[: -len(citation)].strip(" \u2014\u2013-")
+        blockquotes.append({"text": quote_text, "citation": citation})
+
+    tables: list[list[list[str]]] = []
+    for table in element.find_all("table"):
+        rows: list[list[str]] = []
+        for tr in table.find_all("tr"):
+            cells = [
+                cell.get_text(strip=True)
+                for cell in tr.find_all(["th", "td"])
+            ]
+            if any(cells):
+                rows.append(cells)
+        if rows:
+            tables.append(rows)
+
+    videos: list[dict] = []
+    for video_tag in element.find_all("video"):
+        src = video_tag.get("src")
+        if not src:
+            source_tag = video_tag.find("source")
+            src = source_tag.get("src") if source_tag else None
+        if src:
+            videos.append({"type": "native", "src": urljoin(base_url, src)})
+    for iframe in element.find_all("iframe"):
+        src = iframe.get("src")
+        if src:
+            videos.append({"type": "embed", "src": src})
+
+    for figure in element.find_all("figure"):
+        figcaption = figure.find("figcaption")
+        caption = figcaption.get_text(strip=True) if figcaption else ""
+        img = figure.find("img")
+        if img and img.get("src"):
+            # Find the matching image entry and add the caption
+            img_src = urljoin(base_url, img["src"])
+            for image_entry in images:
+                if image_entry["src"] == img_src:
+                    image_entry["caption"] = caption
+                    break
+            else:
+                images.append({
+                    "src": img_src,
+                    "alt": img.get("alt", ""),
+                    "caption": caption,
+                })
+
     return {
         "headings": headings,
         "paragraphs": paragraphs,
@@ -130,6 +190,9 @@ def _extract_content(element: Tag, base_url: str) -> dict:
         "links": links,
         "buttons": buttons,
         "list_items": list_items,
+        "blockquotes": blockquotes,
+        "tables": tables,
+        "videos": videos,
     }
 
 
@@ -161,11 +224,20 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
     if _looks_like_blog_cards(element):
         return "blog_cards"
 
+    if _looks_like_faq(element):
+        return "faq"
+
+    if _looks_like_pricing(element, classes):
+        return "pricing"
+
     has_big_heading = bool(content["headings"])
     has_cta = bool(content["buttons"])
 
     if is_first and has_big_heading and has_cta:
         return "hero"
+
+    if _looks_like_stats(element):
+        return "stats"
 
     # Cards: ≥3 repeated child blocks each containing heading/image
     child_blocks = [
@@ -289,6 +361,97 @@ def _looks_like_bio(element: Tag, content: dict) -> bool:
     if paragraph_count < 2:
         return False
     return True
+
+
+def _direct_child_blocks(element: Tag) -> list[Tag]:
+    """Return direct child block elements, unwrapping a single container div."""
+    children = [
+        c for c in element.find_all(recursive=False)
+        if isinstance(c, Tag) and c.name in ("div", "article", "li")
+    ]
+    if len(children) == 1 and children[0].name in ("div", "ul", "ol"):
+        children = [
+            c for c in children[0].find_all(recursive=False)
+            if isinstance(c, Tag)
+        ]
+    return children
+
+
+def _looks_like_faq(element: Tag) -> bool:
+    """Detect an FAQ / accordion section.
+
+    Matches:
+    - 3+ ``<details>`` elements (native HTML accordion), OR
+    - 3+ children with an ``accordion-item`` or ``faq-item`` class, OR
+    - 3+ children with ``accordion`` in the parent's class
+    """
+    if len(element.find_all("details")) >= 3:
+        return True
+
+    classes = " ".join(element.get("class", [])).lower()
+    if "accordion" in classes or "faq" in classes:
+        children = [
+            c for c in element.find_all(recursive=False)
+            if isinstance(c, Tag) and c.name not in ("script", "style")
+        ]
+        if len(children) >= 3:
+            return True
+
+    accordion_items = [
+        child for child in _direct_child_blocks(element)
+        if any(
+            token in " ".join(child.get("class", [])).lower()
+            for token in ("accordion-item", "faq-item", "accordion_item")
+        )
+    ]
+    return len(accordion_items) >= 3
+
+
+_CURRENCY_PATTERN = re.compile(r"[\$\u00a3\u20ac]\s*\d")
+_BILLING_PATTERN = re.compile(r"/\s*(?:mo|month|yr|year|week)\b", re.IGNORECASE)
+
+
+def _looks_like_pricing(element: Tag, classes: str) -> bool:
+    """Detect a pricing section.
+
+    Matches:
+    - "pricing" or "plans" in the section's class names, OR
+    - 3+ child blocks each containing a currency symbol followed by a digit
+      (e.g. ``$10``, ``$25/mo``)
+    """
+    if "pricing" in classes or "plans" in classes:
+        return True
+
+    child_blocks = _direct_child_blocks(element)
+    price_cards = 0
+    for child in child_blocks:
+        text = child.get_text()
+        if _CURRENCY_PATTERN.search(text) or _BILLING_PATTERN.search(text):
+            price_cards += 1
+            if price_cards >= 3:
+                return True
+    return False
+
+
+_DIGITS_PATTERN = re.compile(r"^\s*[\d,\.]+[+%]?\s*$")
+
+
+def _looks_like_stats(element: Tag) -> bool:
+    """Detect a stats / counter section.
+
+    Matches when 3+ direct child blocks each contain a short text node that
+    is mostly digits (e.g. ``1,200+``, ``99%``, ``50``). These are the big
+    numbers in a typical stats section, paired with descriptive labels.
+    """
+    child_blocks = _direct_child_blocks(element)
+    stat_count = 0
+    for child in child_blocks:
+        for tag in child.find_all(["h1", "h2", "h3", "h4", "span", "strong", "b"]):
+            text = tag.get_text(strip=True)
+            if text and _DIGITS_PATTERN.match(text):
+                stat_count += 1
+                break
+    return stat_count >= 3
 
 
 def extract_sections(html: str, base_url: str) -> list[dict]:
