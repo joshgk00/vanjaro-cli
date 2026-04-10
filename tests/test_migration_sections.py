@@ -274,6 +274,67 @@ def test_classifier_ladder_priority_form_beats_cards():
     assert sections[0]["type"] == "contact"
 
 
+def test_extract_content_includes_list_items():
+    """List items from <ul> and <ol> should appear in content.list_items."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Quick Links</h2>
+          <ul>
+            <li>Home</li>
+            <li>About</li>
+            <li>Services</li>
+          </ul>
+          <ol>
+            <li>Step One</li>
+            <li>Step Two</li>
+          </ol>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    list_items = sections[0]["content"]["list_items"]
+    assert list_items == ["Home", "About", "Services", "Step One", "Step Two"]
+
+
+def test_extract_content_skips_empty_list_items():
+    """Empty <li> elements should be excluded from list_items."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Links</h2>
+          <ul>
+            <li>Valid</li>
+            <li>  </li>
+            <li>Also Valid</li>
+          </ul>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["content"]["list_items"] == ["Valid", "Also Valid"]
+
+
+def test_extract_content_empty_list_items_when_no_lists():
+    """Sections without lists should have an empty list_items array."""
+    html = _wrap(
+        """
+        <section>
+          <h1>Welcome</h1>
+          <p>Build great sites.</p>
+          <a class="btn" href="/start">Get Started</a>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["content"]["list_items"] == []
+
+
 def test_classifier_ladder_priority_gallery_beats_cards():
     """A section with anchor-wrapped images should be gallery, not cards."""
     html = _wrap(

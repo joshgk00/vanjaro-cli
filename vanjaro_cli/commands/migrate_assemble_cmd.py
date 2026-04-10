@@ -13,6 +13,7 @@ from vanjaro_cli.commands.helpers import exit_error, output_result, read_json_fi
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
     apply_overrides,
+    check_overflow,
     find_template,
 )
 
@@ -106,6 +107,12 @@ def _crawl_section_to_overrides(content: dict) -> dict[str, str]:
             if isinstance(href, str):
                 overrides[f"button_{index}_href"] = href
 
+    list_items = content.get("list_items") or []
+    if isinstance(list_items, list):
+        for index, item in enumerate(list_items, start=1):
+            if isinstance(item, str):
+                overrides[f"list-item_{index}"] = item
+
     return overrides
 
 
@@ -128,6 +135,15 @@ def _compose_template_section(
         composed = apply_overrides(template_data, overrides)
     except (KeyError, ValueError) as exc:
         exit_error(f"Failed to compose template for {source_file}: {exc}", as_json)
+
+    overflow_keys = check_overflow(template_data, overrides)
+    if overflow_keys:
+        click.echo(
+            f"Warning: {source_file.name}: {len(overflow_keys)} override(s) "
+            f"exceed template '{template_name}' capacity and were dropped: "
+            f"{', '.join(overflow_keys)}",
+            err=True,
+        )
 
     section = composed.get("template")
     if not isinstance(section, dict):

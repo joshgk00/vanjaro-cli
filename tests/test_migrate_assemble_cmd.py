@@ -94,6 +94,32 @@ def test_crawl_section_handles_missing_keys():
     assert overrides == {}
 
 
+def test_crawl_section_maps_list_items():
+    content = {
+        "list_items": ["Home", "About", "Services", "Contact"],
+    }
+
+    overrides = _crawl_section_to_overrides(content)
+
+    assert overrides["list-item_1"] == "Home"
+    assert overrides["list-item_2"] == "About"
+    assert overrides["list-item_3"] == "Services"
+    assert overrides["list-item_4"] == "Contact"
+
+
+def test_crawl_section_skips_non_string_list_items():
+    content = {
+        "list_items": [None, "Valid", 42, "Also Valid"],
+    }
+
+    overrides = _crawl_section_to_overrides(content)
+
+    assert "list-item_1" not in overrides
+    assert overrides["list-item_2"] == "Valid"
+    assert "list-item_3" not in overrides
+    assert overrides["list-item_4"] == "Also Valid"
+
+
 def test_crawl_section_ignores_non_string_entries():
     content = {
         "headings": [None, "Only this one"],
@@ -352,3 +378,101 @@ def test_assemble_json_output_shape(runner, tmp_path):
     assert payload["sections"] == 2
     assert payload["components"] == 2
     assert payload["output"].endswith("out.json")
+
+
+# -- overflow warning --
+
+FOOTER_TEMPLATE = {
+    "name": "Footer Links",
+    "category": "Navigation",
+    "description": "Simple footer with list items",
+    "template": {
+        "type": "section",
+        "attributes": {"id": "tpl-foot-s1"},
+        "components": [{
+            "type": "grid",
+            "attributes": {"id": "tpl-foot-g1"},
+            "components": [{
+                "type": "row",
+                "attributes": {"id": "tpl-foot-r1"},
+                "components": [{
+                    "type": "column",
+                    "attributes": {"id": "tpl-foot-c1"},
+                    "components": [
+                        {"type": "heading", "tagName": "h5", "content": "Links", "attributes": {"id": "tpl-foot-h1"}},
+                        {
+                            "type": "list",
+                            "attributes": {"id": "tpl-foot-l1"},
+                            "components": [
+                                {"type": "list-item", "content": "Home", "attributes": {"id": "tpl-foot-li1"}},
+                                {"type": "list-item", "content": "About", "attributes": {"id": "tpl-foot-li2"}},
+                            ],
+                        },
+                    ],
+                }],
+            }],
+        }],
+    },
+    "styles": [],
+}
+
+
+def test_assemble_warns_on_overflow(runner, tmp_path, monkeypatch):
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, FOOTER_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = _write_json(
+        tmp_path / "footer.json",
+        {
+            "type": "footer",
+            "template": "Footer Links",
+            "content": {
+                "headings": ["Quick Links"],
+                "paragraphs": [],
+                "buttons": [],
+                "list_items": ["Home", "About", "Services", "Portfolio", "Contact"],
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "list-item_3" in result.output or "list-item_3" in (result.stderr or "")
+    data = json.loads(output_file.read_text())
+    assert len(data["components"]) == 1
+
+
+def test_assemble_no_warning_when_content_fits(runner, tmp_path, monkeypatch):
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, FOOTER_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = _write_json(
+        tmp_path / "footer.json",
+        {
+            "type": "footer",
+            "template": "Footer Links",
+            "content": {
+                "headings": ["Links"],
+                "paragraphs": [],
+                "buttons": [],
+                "list_items": ["Home", "About"],
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "dropped" not in result.output.lower()
+    assert "Warning" not in result.output

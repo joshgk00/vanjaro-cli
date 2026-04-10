@@ -213,8 +213,27 @@ decisions — you still decide which ones to accept, adjust, or reject.
 
 Follow the `block-composer` skill workflow to build `library-plan.json` from the
 reviewed sections. Use the extracted content (headings, paragraphs, button
-labels) as the overrides for each block so the final library contains real copy,
-not placeholders.
+labels, list items) as the overrides for each block so the final library
+contains real copy, not placeholders.
+
+**List-item overrides**: The crawler now extracts `list_items` from `<ul>`/`<ol>`
+elements. Include `list-item_N` overrides in the library plan for any template
+that has list components (footers, pricing cards, feature lists). Numbering is
+continuous across the entire template — use `--list-slots` to check slot indices.
+
+**Card limit handling**: When a source section has more items than a template
+supports (e.g., 6 portfolio items but a 3-up card template), split it into
+multiple plan entries:
+
+1. Check how many items the template holds: `vanjaro blocks compose "<name>" --list-slots`
+2. Divide the source content into N-item chunks matching the template capacity
+3. Create one plan entry per chunk, naming them sequentially: "Portfolio Row 1",
+   "Portfolio Row 2"
+4. Each entry gets its own section heading (`heading_1`) — repeat the original
+   or use a variation like "More Projects"
+
+If `assemble-page` detects overflow it warns on stderr with the dropped keys,
+but it's better to split at plan time so nothing is lost.
 
 ### 2.3 Identify New Templates Needed
 

@@ -108,17 +108,15 @@ padded indices so natural-sort ordering works (`section-002-` sorts before
         "role": "background"
       }
     ],
-    "lists": [],
-    "structured_data": {}
+    "list_items": ["Home", "About", "Services", "Contact"]
   }
 }
 ```
 
-`vanjaro migrate assemble-page` reads these files and maps the first
-heading/paragraph/button into the `heading_1`, `text_1`, `button_text_1`,
-`button_href_1` override slots for the referenced template. Explicit per-slot
-overrides can be passed at assemble time for anything beyond the first of each
-type.
+`vanjaro migrate assemble-page` reads these files and maps all extracted
+content into override slots: `heading_N`, `text_N`, `button_N`/`button_N_href`,
+and `list-item_N`. If the resulting overrides exceed the template's capacity,
+a warning is emitted to stderr listing the dropped keys.
 
 ## global/header.json and global/footer.json
 

@@ -36,9 +36,35 @@ The plan file is a JSON array consumed by `vanjaro blocks build-library --plan <
 Slots follow the pattern `{type}_{n}` or `{type}_{n}_{attr}`:
 
 - **Content slots**: `heading_1`, `text_1`, `button_1` — replace the text content
+- **List-item slots**: `list-item_1`, `list-item_2`, etc. — replace list item text (numbered across the entire template, not per-list)
 - **Attribute slots**: `button_1_href`, `image_1_src`, `image_1_alt` — replace specific attributes
 
 Slot numbering is 1-based, ordered by document position (top-to-bottom, left-to-right).
+
+### List-item example
+
+The Footer (3-column) template has two lists: Quick Links (4 items) and Contact (4 items). Numbering is continuous across both lists:
+
+```json
+{
+  "template": "Footer (3-column)",
+  "name": "Site Footer",
+  "type": "global",
+  "overrides": {
+    "heading_1": "ACME Co",
+    "heading_2": "Quick Links",
+    "list-item_1": "Home",
+    "list-item_2": "About",
+    "list-item_3": "Services",
+    "list-item_4": "Contact",
+    "heading_3": "Contact",
+    "list-item_5": "123 Main Street",
+    "list-item_6": "City, ST 12345",
+    "list-item_7": "(555) 123-4567",
+    "list-item_8": "hello@example.com"
+  }
+}
+```
 
 ## Block Type Guidance
 

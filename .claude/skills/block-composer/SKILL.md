@@ -133,6 +133,11 @@ Map design content to slots:
 - Button labels → `button_1`, `button_2`, etc.
 - Button links → `button_1_href`, etc.
 - Image sources → `image_1_src`, `image_1_alt`, etc.
+- List items → `list-item_1`, `list-item_2`, etc. (numbered across the entire template, not per-list)
+
+**List-item overrides** are critical for footer navigation links, pricing feature
+lists, and any template with `<ul>`/`<ol>` content. Use `--list-slots` to see the
+available `list-item_N` slots and their default values.
 
 ### 7. Generate the Library Plan
 
@@ -182,6 +187,51 @@ The plan is a JSON array where each entry maps one design section to one block:
   }
 ]
 ```
+
+### Handling sections with more items than a template supports
+
+When a source section has more content items than the template can hold (e.g., 6
+portfolio items but a 3-up card template), split it into multiple plan entries:
+
+```json
+[
+  {
+    "template": "Feature Cards (3-up)",
+    "name": "Services Row 1",
+    "category": "Services",
+    "type": "custom",
+    "overrides": {
+      "heading_1": "Our Services",
+      "heading_2": "Web Design", "text_1": "Beautiful sites.",
+      "heading_3": "SEO",        "text_2": "Grow your traffic.",
+      "heading_4": "Marketing",  "text_3": "Convert visitors."
+    }
+  },
+  {
+    "template": "Feature Cards (3-up)",
+    "name": "Services Row 2",
+    "category": "Services",
+    "type": "custom",
+    "overrides": {
+      "heading_1": "More Services",
+      "heading_2": "Branding",   "text_1": "Stand out.",
+      "heading_3": "Analytics",  "text_2": "Data-driven decisions.",
+      "heading_4": "Support",    "text_3": "24/7 help."
+    }
+  }
+]
+```
+
+Each plan entry becomes its own block in the editor sidebar. On the page, drag
+both blocks to recreate the full section. The section heading (`heading_1`) can
+repeat or say "continued" — whatever fits the design.
+
+Use `--list-slots` to check how many items a template holds before writing overrides:
+```bash
+vanjaro blocks compose "Feature Cards (3-up)" --list-slots
+```
+
+If overflow is detected during `assemble-page`, a warning lists the dropped keys.
 
 **Naming conventions for blocks**:
 - Use clear, descriptive names: "Homepage Hero", "Services Cards", "Site Footer"

@@ -116,12 +116,20 @@ def _extract_content(element: Tag, base_url: str) -> dict:
         if text:
             links.append({"text": text, "href": urljoin(base_url, anchor["href"])})
 
+    list_items: list[str] = []
+    for list_tag in element.find_all(["ul", "ol"]):
+        for li in list_tag.find_all("li", recursive=False):
+            text = li.get_text(strip=True)
+            if text:
+                list_items.append(text)
+
     return {
         "headings": headings,
         "paragraphs": paragraphs,
         "images": images,
         "links": links,
         "buttons": buttons,
+        "list_items": list_items,
     }
 
 
