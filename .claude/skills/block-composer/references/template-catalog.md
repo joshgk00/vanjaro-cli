@@ -20,6 +20,7 @@ Available templates in `artifacts/block-templates/`. These are the building bloc
 | Blog Post Cards (3-up) | `Cards/blog-post-cards-3up.json` | Three blog post cards with image, category tag, heading, excerpt, and read more link |
 | Team Member Grid (4-up) | `Cards/team-member-grid-4up.json` | Four team member cards with photo, name, role, and short bio |
 | Gallery (3-up) | `Cards/gallery-3up.json` | Three-column image gallery with caption + category — for portfolios, project showcases, visual indices |
+| Gallery (6-up) | `Cards/gallery-6up.json` | Six-column (3x2) image gallery with caption + category — for larger portfolios and showcases |
 
 ## CTAs
 
@@ -35,6 +36,8 @@ Available templates in `artifacts/block-templates/`. These are the building bloc
 | Bio/About | `Content/bio-about.json` | Two-column: image on left, bio text + heading on right |
 | Contact Section | `Content/contact-section.json` | Two-column: contact info on left, form placeholder on right |
 | Logo Bar | `Content/logo-bar.json` | Horizontal row of partner or client logos with optional section heading |
+| FAQ Accordion | `Content/faq-accordion.json` | Five Q&A pairs with section heading — for FAQ pages, knowledge bases, support sections |
+| Stats Grid (4-up) | `Content/stats-grid-4up.json` | Four-column stats with large numbers and labels — for impact metrics, company stats, achievements |
 
 ## Lists
 

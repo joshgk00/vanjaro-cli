@@ -1,0 +1,198 @@
+{
+  "name": "Stats Grid (4-up)",
+  "category": "Content",
+  "description": "Four-column stats display with large numbers and labels — for impact metrics, company stats, and achievements",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-stats-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-stats-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "mb-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-stats-r0"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-stats-c0"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "By the Numbers",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false},
+                      {"name": "text-center", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-stats-h0"}
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false},
+              {"name": "text-center", "active": false}
+            ],
+            "attributes": {"id": "tpl-stats-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-stats-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "500+",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-1", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-stats-n1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Clients Served",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-stats-l1"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-stats-c2"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "1,200",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-1", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-stats-n2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Projects Completed",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-stats-l2"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-stats-c3"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "99%",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-1", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-stats-n3"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Satisfaction Rate",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-stats-l3"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-stats-c4"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "15+",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-1", "active": false},
+                      {"name": "text-primary", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-stats-n4"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Years Experience",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-stats-l4"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

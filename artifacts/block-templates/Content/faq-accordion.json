@@ -1,0 +1,185 @@
+{
+  "name": "FAQ Accordion",
+  "category": "Content",
+  "description": "Question-and-answer list with 5 pairs — for FAQ pages, knowledge bases, and support sections",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-faq-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-faq-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "mb-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-faq-r0"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-faq-c0"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "Frequently Asked Questions",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false},
+                      {"name": "text-center", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-h0"}
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false}
+            ],
+            "attributes": {"id": "tpl-faq-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-8", "active": false},
+                  {"name": "col-12", "active": false},
+                  {"name": "mx-auto", "active": false}
+                ],
+                "attributes": {"id": "tpl-faq-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "What is your return policy?",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-4", "active": false},
+                      {"name": "mb-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-q1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "We offer a 30-day return policy on all purchases. Items must be unused and in their original packaging.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-a1"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "How long does shipping take?",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-4", "active": false},
+                      {"name": "mb-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-q2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Standard shipping takes 5-7 business days. Expedited options are available at checkout.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-a2"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Do you offer custom orders?",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-4", "active": false},
+                      {"name": "mb-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-q3"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Yes, we accept custom orders. Contact us with your requirements and we will provide a quote within 48 hours.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-a3"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "What payment methods do you accept?",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-4", "active": false},
+                      {"name": "mb-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-q4"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "We accept all major credit cards, PayPal, and bank transfers for orders over $500.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-a4"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "How can I contact support?",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-4", "active": false},
+                      {"name": "mb-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-q5"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Email us at support@example.com or call (555) 123-4567 during business hours, Monday through Friday.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-faq-a5"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

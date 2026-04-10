@@ -1,0 +1,794 @@
+{
+  "name": "Gallery (6-up)",
+  "category": "Cards",
+  "description": "Six-column image gallery in a 3x2 grid with captions \u2014 for portfolios, project showcases, and visual indices",
+  "template": {
+    "type": "section",
+    "classes": [
+      {
+        "name": "vj-section",
+        "active": false
+      },
+      {
+        "name": "py-5",
+        "active": false
+      }
+    ],
+    "attributes": {
+      "id": "tpl-gal6-s1"
+    },
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {
+            "name": "container",
+            "active": false
+          }
+        ],
+        "attributes": {
+          "id": "tpl-gal6-g1"
+        },
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {
+                "name": "row",
+                "active": false
+              },
+              {
+                "name": "mb-4",
+                "active": false
+              }
+            ],
+            "attributes": {
+              "id": "tpl-gal6-r0"
+            },
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {
+                    "name": "col-12",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-gal6-c0"
+                },
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "Selected Work",
+                    "classes": [
+                      {
+                        "name": "vj-heading",
+                        "active": false
+                      },
+                      {
+                        "name": "head-style-2",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-h0"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {
+                "name": "row",
+                "active": false
+              },
+              {
+                "name": "g-4",
+                "active": false
+              }
+            ],
+            "attributes": {
+              "id": "tpl-gal6-r1"
+            },
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {
+                    "name": "col-xl-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-md-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-sm-6",
+                    "active": false
+                  },
+                  {
+                    "name": "col-12",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-gal6-c1"
+                },
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {
+                        "name": "image-box",
+                        "active": false
+                      },
+                      {
+                        "name": "vj-image",
+                        "active": false
+                      },
+                      {
+                        "name": "img-fluid",
+                        "active": false
+                      },
+                      {
+                        "name": "rounded",
+                        "active": false
+                      },
+                      {
+                        "name": "mb-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-img1",
+                      "src": "https://placehold.co/400x400?text=Project+1",
+                      "alt": "Project image"
+                    }
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Project Title",
+                    "classes": [
+                      {
+                        "name": "vj-heading",
+                        "active": false
+                      },
+                      {
+                        "name": "head-style-4",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-h1"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {
+                        "name": "vj-text",
+                        "active": false
+                      },
+                      {
+                        "name": "paragraph-style-2",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "text-muted",
+                        "active": false
+                      },
+                      {
+                        "name": "text-uppercase",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-t1"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {
+                    "name": "col-xl-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-md-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-sm-6",
+                    "active": false
+                  },
+                  {
+                    "name": "col-12",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-gal6-c2"
+                },
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {
+                        "name": "image-box",
+                        "active": false
+                      },
+                      {
+                        "name": "vj-image",
+                        "active": false
+                      },
+                      {
+                        "name": "img-fluid",
+                        "active": false
+                      },
+                      {
+                        "name": "rounded",
+                        "active": false
+                      },
+                      {
+                        "name": "mb-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-img2",
+                      "src": "https://placehold.co/400x400?text=Project+2",
+                      "alt": "Project image"
+                    }
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Project Title",
+                    "classes": [
+                      {
+                        "name": "vj-heading",
+                        "active": false
+                      },
+                      {
+                        "name": "head-style-4",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-h2"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {
+                        "name": "vj-text",
+                        "active": false
+                      },
+                      {
+                        "name": "paragraph-style-2",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "text-muted",
+                        "active": false
+                      },
+                      {
+                        "name": "text-uppercase",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-t2"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {
+                    "name": "col-xl-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-md-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-sm-6",
+                    "active": false
+                  },
+                  {
+                    "name": "col-12",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-gal6-c3"
+                },
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {
+                        "name": "image-box",
+                        "active": false
+                      },
+                      {
+                        "name": "vj-image",
+                        "active": false
+                      },
+                      {
+                        "name": "img-fluid",
+                        "active": false
+                      },
+                      {
+                        "name": "rounded",
+                        "active": false
+                      },
+                      {
+                        "name": "mb-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-img3",
+                      "src": "https://placehold.co/400x400?text=Project+3",
+                      "alt": "Project image"
+                    }
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Project Title",
+                    "classes": [
+                      {
+                        "name": "vj-heading",
+                        "active": false
+                      },
+                      {
+                        "name": "head-style-4",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-h3"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {
+                        "name": "vj-text",
+                        "active": false
+                      },
+                      {
+                        "name": "paragraph-style-2",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "text-muted",
+                        "active": false
+                      },
+                      {
+                        "name": "text-uppercase",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-t3"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {
+                "name": "row",
+                "active": false
+              },
+              {
+                "name": "g-4",
+                "active": false
+              }
+            ],
+            "attributes": {
+              "id": "tpl-gal6-r2"
+            },
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {
+                    "name": "col-xl-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-md-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-sm-6",
+                    "active": false
+                  },
+                  {
+                    "name": "col-12",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-gal6-c4"
+                },
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {
+                        "name": "image-box",
+                        "active": false
+                      },
+                      {
+                        "name": "vj-image",
+                        "active": false
+                      },
+                      {
+                        "name": "img-fluid",
+                        "active": false
+                      },
+                      {
+                        "name": "rounded",
+                        "active": false
+                      },
+                      {
+                        "name": "mb-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-img4",
+                      "src": "https://placehold.co/400x400?text=Project+4",
+                      "alt": "Project image"
+                    }
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Project Title",
+                    "classes": [
+                      {
+                        "name": "vj-heading",
+                        "active": false
+                      },
+                      {
+                        "name": "head-style-4",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-h4"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {
+                        "name": "vj-text",
+                        "active": false
+                      },
+                      {
+                        "name": "paragraph-style-2",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "text-muted",
+                        "active": false
+                      },
+                      {
+                        "name": "text-uppercase",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-t4"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {
+                    "name": "col-xl-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-md-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-sm-6",
+                    "active": false
+                  },
+                  {
+                    "name": "col-12",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-gal6-c5"
+                },
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {
+                        "name": "image-box",
+                        "active": false
+                      },
+                      {
+                        "name": "vj-image",
+                        "active": false
+                      },
+                      {
+                        "name": "img-fluid",
+                        "active": false
+                      },
+                      {
+                        "name": "rounded",
+                        "active": false
+                      },
+                      {
+                        "name": "mb-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-img5",
+                      "src": "https://placehold.co/400x400?text=Project+5",
+                      "alt": "Project image"
+                    }
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Project Title",
+                    "classes": [
+                      {
+                        "name": "vj-heading",
+                        "active": false
+                      },
+                      {
+                        "name": "head-style-4",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-h5"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {
+                        "name": "vj-text",
+                        "active": false
+                      },
+                      {
+                        "name": "paragraph-style-2",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "text-muted",
+                        "active": false
+                      },
+                      {
+                        "name": "text-uppercase",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-t5"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {
+                    "name": "col-xl-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-md-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-sm-6",
+                    "active": false
+                  },
+                  {
+                    "name": "col-12",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-gal6-c6"
+                },
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {
+                        "name": "image-box",
+                        "active": false
+                      },
+                      {
+                        "name": "vj-image",
+                        "active": false
+                      },
+                      {
+                        "name": "img-fluid",
+                        "active": false
+                      },
+                      {
+                        "name": "rounded",
+                        "active": false
+                      },
+                      {
+                        "name": "mb-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-img6",
+                      "src": "https://placehold.co/400x400?text=Project+6",
+                      "alt": "Project image"
+                    }
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Project Title",
+                    "classes": [
+                      {
+                        "name": "vj-heading",
+                        "active": false
+                      },
+                      {
+                        "name": "head-style-4",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-h6"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {
+                        "name": "vj-text",
+                        "active": false
+                      },
+                      {
+                        "name": "paragraph-style-2",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "text-muted",
+                        "active": false
+                      },
+                      {
+                        "name": "text-uppercase",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-gal6-t6"
+                    }
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}
