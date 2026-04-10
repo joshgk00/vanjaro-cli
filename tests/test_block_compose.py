@@ -11,6 +11,7 @@ from vanjaro_cli.cli import cli
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
     apply_overrides,
+    check_overflow,
     enumerate_slots,
     find_template,
 )
@@ -397,3 +398,120 @@ def test_compose_no_overrides_outputs_original(runner, tmp_path, monkeypatch):
     data = json.loads(result.output)
     col = data["template"]["components"][0]["components"][0]["components"][0]["components"]
     assert col[0]["content"] == "Your Headline Here"
+
+
+# -- list-item support --
+
+FOOTER_TEMPLATE = {
+    "name": "Footer Links",
+    "category": "Navigation",
+    "description": "Simple footer with list items",
+    "template": {
+        "type": "section",
+        "attributes": {"id": "tpl-foot-s1"},
+        "components": [{
+            "type": "grid",
+            "attributes": {"id": "tpl-foot-g1"},
+            "components": [{
+                "type": "row",
+                "attributes": {"id": "tpl-foot-r1"},
+                "components": [{
+                    "type": "column",
+                    "attributes": {"id": "tpl-foot-c1"},
+                    "components": [
+                        {"type": "heading", "tagName": "h5", "content": "Quick Links", "attributes": {"id": "tpl-foot-h1"}},
+                        {
+                            "type": "list",
+                            "attributes": {"id": "tpl-foot-l1"},
+                            "components": [
+                                {"type": "list-item", "content": "Home", "attributes": {"id": "tpl-foot-li1"}},
+                                {"type": "list-item", "content": "About", "attributes": {"id": "tpl-foot-li2"}},
+                                {"type": "list-item", "content": "Contact", "attributes": {"id": "tpl-foot-li3"}},
+                            ],
+                        },
+                    ],
+                }],
+            }],
+        }],
+    },
+    "styles": [],
+}
+
+
+def test_enumerate_slots_includes_list_items():
+    slots = enumerate_slots(FOOTER_TEMPLATE["template"])
+
+    list_item_slots = [s for s in slots if s["type"] == "list-item"]
+    assert len(list_item_slots) == 3
+    assert list_item_slots[0] == {"key": "list-item_1", "type": "list-item", "field": "content", "value": "Home"}
+    assert list_item_slots[1]["key"] == "list-item_2"
+    assert list_item_slots[2]["key"] == "list-item_3"
+
+
+def test_apply_overrides_list_item_content():
+    composed = apply_overrides(FOOTER_TEMPLATE, {"list-item_1": "Portfolio", "list-item_3": "Blog"})
+
+    list_comp = composed["template"]["components"][0]["components"][0]["components"][0]["components"][1]
+    items = list_comp["components"]
+    assert items[0]["content"] == "Portfolio"
+    assert items[1]["content"] == "About"
+    assert items[2]["content"] == "Blog"
+
+
+def test_apply_overrides_list_item_does_not_mutate_original():
+    original = FOOTER_TEMPLATE["template"]["components"][0]["components"][0]["components"][0]["components"][1]["components"][0]["content"]
+    apply_overrides(FOOTER_TEMPLATE, {"list-item_1": "Changed"})
+
+    current = FOOTER_TEMPLATE["template"]["components"][0]["components"][0]["components"][0]["components"][1]["components"][0]["content"]
+    assert current == original
+
+
+# -- check_overflow --
+
+
+def test_check_overflow_returns_empty_when_all_match():
+    unused = check_overflow(HERO_TEMPLATE, {"heading_1": "Hello", "text_1": "World"})
+    assert unused == []
+
+
+def test_check_overflow_returns_unmatched_keys():
+    unused = check_overflow(HERO_TEMPLATE, {
+        "heading_1": "Hello",
+        "heading_2": "Dropped",
+        "image_5_src": "also-dropped.jpg",
+    })
+    assert unused == ["heading_2", "image_5_src"]
+
+
+def test_check_overflow_with_footer_excess_items():
+    overrides = {f"list-item_{i}": f"Link {i}" for i in range(1, 8)}
+    unused = check_overflow(FOOTER_TEMPLATE, overrides)
+
+    assert "list-item_1" not in unused
+    assert "list-item_3" not in unused
+    assert "list-item_4" in unused
+    assert "list-item_7" in unused
+    assert len(unused) == 4
+
+
+def test_check_overflow_empty_overrides():
+    unused = check_overflow(HERO_TEMPLATE, {})
+    assert unused == []
+
+
+# -- CLI: compose overflow warning --
+
+
+def test_compose_warns_on_overflow(runner, tmp_path, monkeypatch):
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, HERO_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    result = runner.invoke(cli, [
+        "blocks", "compose", "Centered Hero",
+        "--set", "heading_1=OK",
+        "--set", "heading_99=Dropped",
+    ])
+
+    assert result.exit_code == 0
+    assert "heading_99" in result.output

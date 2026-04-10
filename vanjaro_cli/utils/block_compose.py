@@ -11,6 +11,7 @@ from typing import Generator
 __all__ = [
     "TemplateNotFoundError",
     "apply_overrides",
+    "check_overflow",
     "enumerate_slots",
     "find_template",
     "get_templates_dir",
@@ -20,7 +21,7 @@ _PACKAGE_ROOT = Path(__file__).resolve().parent.parent.parent
 _DEFAULT_TEMPLATES_DIR = _PACKAGE_ROOT / "artifacts" / "block-templates"
 
 # Component types whose `content` field can be overridden
-CONTENT_TYPES = frozenset({"heading", "text", "button", "link"})
+CONTENT_TYPES = frozenset({"heading", "text", "button", "link", "list-item"})
 
 # Component types with overridable attributes beyond content
 ATTRIBUTE_SLOTS: dict[str, list[tuple[str, str]]] = {
@@ -134,3 +135,14 @@ def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
             if attr_key in overrides:
                 comp.setdefault("attributes", {})[attr_name] = overrides[attr_key]
     return result
+
+
+def check_overflow(template_data: dict, overrides: dict[str, str]) -> list[str]:
+    """Return override keys that don't match any slot in the template.
+
+    Useful for detecting silent data loss when a migration plan has more
+    content items than a template can hold (e.g. 11 portfolio items mapped
+    to a 3-up card template).
+    """
+    available_keys = {slot["key"] for slot in enumerate_slots(template_data["template"])}
+    return sorted(key for key in overrides if key not in available_keys)

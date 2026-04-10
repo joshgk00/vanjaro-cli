@@ -11,6 +11,7 @@ from vanjaro_cli.commands.helpers import exit_error, output_result, print_table,
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
     apply_overrides,
+    check_overflow,
     enumerate_slots,
     find_template,
 )
@@ -99,6 +100,14 @@ def block_compose(
         exit_error(str(exc), as_json)
 
     composed = apply_overrides(template_data, overrides)
+
+    unused = check_overflow(template_data, overrides) if overrides else []
+    if unused:
+        click.echo(
+            f"Warning: {len(unused)} override(s) had no matching slot and were dropped: "
+            + ", ".join(unused),
+            err=True,
+        )
 
     if output:
         payload = json.dumps(composed, indent=2)

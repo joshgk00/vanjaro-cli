@@ -16,6 +16,7 @@ from vanjaro_cli.commands.global_blocks_cmd import CREATE_BLOCK as GLOBAL_CREATE
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
     apply_overrides,
+    check_overflow,
     find_template,
 )
 
@@ -203,24 +204,38 @@ def build_library(
 
         composed = apply_overrides(template_data, overrides)
 
+        unused = check_overflow(template_data, overrides) if overrides else []
+        if unused and not as_json:
+            click.echo(
+                f"  WARN  {name}: {len(unused)} override(s) dropped (no slot): "
+                + ", ".join(unused),
+                err=True,
+            )
+
         # Write to directory
         if output_dir:
             filename = _slugify(name) + ".json"
             filepath = Path(output_dir) / filename
             filepath.write_text(json.dumps(composed, indent=2))
-            results.append({"name": name, "status": "written", "file": filename, "type": block_type})
+            entry_result: dict = {"name": name, "status": "written", "file": filename, "type": block_type}
+            if unused:
+                entry_result["dropped_overrides"] = unused
+            results.append(entry_result)
             if not as_json:
                 click.echo(f"  WROTE {name} -> {filename}")
 
         # Dry run
         elif dry_run:
-            results.append({
+            dry_result: dict = {
                 "name": name,
                 "status": "dry_run",
                 "template": template_name,
                 "type": block_type,
                 "overrides": len(overrides),
-            })
+            }
+            if unused:
+                dry_result["dropped_overrides"] = unused
+            results.append(dry_result)
             if not as_json:
                 click.echo(f"  DRY   {name} ({block_type}) from '{template_name}' with {len(overrides)} override(s)")
 
@@ -232,7 +247,10 @@ def build_library(
                     guid = _register_global_block(client, name, category, composed)
                 else:
                     guid = _register_custom_block(client, name, category, composed)
-                results.append({"name": name, "status": "created", "type": block_type, "guid": guid})
+                reg_result: dict = {"name": name, "status": "created", "type": block_type, "guid": guid}
+                if unused:
+                    reg_result["dropped_overrides"] = unused
+                results.append(reg_result)
                 if not as_json:
                     label = f" [{guid[:8]}...]" if guid else ""
                     click.echo(f"  OK    {name}{label}")
