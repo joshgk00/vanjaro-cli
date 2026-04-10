@@ -275,6 +275,54 @@ def test_rewrite_tree_relative_link_already_at_target_is_unchanged():
     assert report.links_rewritten == 0
 
 
+def test_rewrite_tree_passes_through_library_plan_vanjaro_paths():
+    """Regression: library plan hard-codes `/contact` that is ONLY a target value.
+
+    The source crawl had no `/contact` page (the source site used an anchor
+    `#contact` on the home page). A Stage 2 library plan author wrote
+    ``button_1_href: "/contact"`` anyway because they knew a Vanjaro
+    ``/Contact`` page would be created in Stage 4. The rewriter used to flag
+    this as ``missing`` because the path didn't exist as a key anywhere in
+    the page map — only as a value. Fix: `build_page_lookup` now injects
+    identity mappings for every distinct target so the href passes through
+    as ``links_unchanged`` with no missing report entry.
+    """
+    page_map = {
+        "https://example.com/": "/",
+        "https://example.com/about": "/about",
+        # No entry whose source matches anything producing "/contact" —
+        # "/contact" appears only as a target value via the hand-written
+        # entry below:
+        "https://example.com/#contact": "/contact",
+    }
+    content = {
+        "components": [_section(_button("/contact"))],
+    }
+
+    report = rewrite_tree(content, {}, build_page_lookup(page_map))
+
+    href = content["components"][0]["components"][0]["attributes"]["href"]
+    assert href == "/contact"
+    assert report.links_unchanged == 1
+    assert report.links_rewritten == 0
+    assert report.unique_missing_pages() == []
+
+
+def test_build_page_lookup_injects_target_identity_mappings():
+    """build_page_lookup should expose target paths as identity keys."""
+    page_map = {
+        "https://example.com/": "/",
+        "https://example.com/#about": "/About",
+        "https://example.com/#services": "/Services",
+    }
+
+    lookup = build_page_lookup(page_map)
+
+    assert lookup["/About"] == "/About"
+    assert lookup["/Services"] == "/Services"
+    assert lookup["/"] == "/"
+
+
 def test_rewrite_tree_accepts_single_section_dict():
     # Callers may pass a raw section dict without wrapping in {"components": [...]}.
     section = _section(

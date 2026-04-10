@@ -22,6 +22,10 @@ TEMPLATE_MAP: dict[str, str] = {
     "header": "Site Header",
     "footer": "Site Footer",
     "content": "Rich Text Block",
+    "contact": "Contact Section",
+    "bio": "Bio / About",
+    "gallery": "Gallery (3-up)",
+    "blog_cards": "Blog Post Cards (3-up)",
 }
 
 
@@ -122,7 +126,12 @@ def _extract_content(element: Tag, base_url: str) -> dict:
 
 
 def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
-    """Heuristically label the section type."""
+    """Heuristically label the section type.
+
+    The detector ladder runs most-specific to least-specific. Each
+    detector below either returns a definitive type or falls through to
+    the next one. The final fallback is ``content`` (Rich Text Block).
+    """
     role = element.get("role", "")
     tag_name = element.name or ""
     classes = " ".join(element.get("class", [])).lower()
@@ -134,6 +143,15 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
 
     if element.find("blockquote") or "testimonial" in classes or "quote" in classes:
         return "testimonial"
+
+    if _looks_like_contact_form(element, classes):
+        return "contact"
+
+    if _looks_like_gallery(element):
+        return "gallery"
+
+    if _looks_like_blog_cards(element):
+        return "blog_cards"
 
     has_big_heading = bool(content["headings"])
     has_cta = bool(content["buttons"])
@@ -166,7 +184,103 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
     ):
         return "cta"
 
+    if _looks_like_bio(element, content):
+        return "bio"
+
     return "content"
+
+
+def _looks_like_contact_form(element: Tag, classes: str) -> bool:
+    """Detect a contact section by the presence of a real form.
+
+    Requires:
+    - A ``<form>`` element somewhere inside the section, AND
+    - At least one ``<input>`` / ``<textarea>`` / ``<select>`` child of
+      the form (skips empty form wrappers used for analytics tracking).
+
+    The class-name check is a low-cost early-out for sections explicitly
+    marked as a contact area when the form lives elsewhere on the page.
+    """
+    if any(token in classes for token in ("contact", "get-in-touch", "reach-us")):
+        if element.find(["input", "textarea", "select"]):
+            return True
+
+    form = element.find("form")
+    if form is None:
+        return False
+    return form.find(["input", "textarea", "select"]) is not None
+
+
+def _looks_like_gallery(element: Tag) -> bool:
+    """Detect an image gallery: ≥3 ``<a>`` elements wrapping ``<img>`` elements.
+
+    The thumbnail-to-fullsize lightbox pattern that ashleyslaughterdesigns
+    uses fits this exactly. Plain ``<img>`` grids without anchor wrappers
+    are still picked up by the existing ``cards`` detector below.
+    """
+    anchor_image_count = 0
+    for anchor in element.find_all("a"):
+        if anchor.find("img"):
+            anchor_image_count += 1
+            if anchor_image_count >= 3:
+                return True
+    return False
+
+
+def _looks_like_blog_cards(element: Tag) -> bool:
+    """Detect a blog post grid: ≥3 children each with image + heading + ``Read More``.
+
+    Blog post grids look superficially like the existing ``cards`` detector
+    but distinguish themselves by having a "Read More" / "Continue reading"
+    link in each card. Catching them earlier than ``cards`` lets the
+    crawler suggest the right template (Blog Post Cards 3-up vs Feature Cards).
+    """
+    candidates = [
+        c for c in element.find_all(recursive=False)
+        if isinstance(c, Tag) and c.name in ("div", "article", "li")
+    ]
+    if len(candidates) == 1 and candidates[0].name in ("div", "ul", "ol"):
+        candidates = [
+            c for c in candidates[0].find_all(recursive=False)
+            if isinstance(c, Tag)
+        ]
+
+    blog_like = 0
+    for child in candidates:
+        if not child.find("img"):
+            continue
+        if not child.find(["h2", "h3", "h4"]):
+            continue
+        link_texts = " ".join(
+            (a.get_text(strip=True) or "").lower() for a in child.find_all("a")
+        )
+        if "read more" in link_texts or "continue reading" in link_texts:
+            blog_like += 1
+            if blog_like >= 3:
+                return True
+    return False
+
+
+def _looks_like_bio(element: Tag, content: dict) -> bool:
+    """Detect a bio / about-me split layout: one notable image + paragraph text.
+
+    The Bio / About template is a two-column image-on-one-side, text-on-the-
+    other-side layout. Heuristic: the section contains exactly one or two
+    images, at least one heading, and at least two paragraphs of text. We
+    use the extracted ``content`` dict (which already de-duplicates and
+    filters empty values) to avoid re-walking the tree.
+    """
+    image_count = len(content.get("images", []))
+    heading_count = len(content.get("headings", []))
+    paragraph_count = len(content.get("paragraphs", []))
+
+    if image_count not in (1, 2):
+        return False
+    if heading_count < 1:
+        return False
+    if paragraph_count < 2:
+        return False
+    return True
 
 
 def extract_sections(html: str, base_url: str) -> list[dict]:

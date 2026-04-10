@@ -9,6 +9,7 @@ from pathlib import Path
 
 import click
 
+from vanjaro_cli import config as _config_module
 from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
 from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, parse_json_field, write_output
@@ -17,6 +18,27 @@ from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, 
 GET_PAGE = "/API/VanjaroAI/AIPage/Get"
 UPDATE_PAGE = "/API/VanjaroAI/AIPage/Update"
 PUBLISH_PAGE = "/API/VanjaroAI/AIPage/Publish"
+
+
+def _default_snapshot_path(base_url: str, page_id: int, version: int, formatted_time: str) -> Path:
+    """Build a default snapshot path under ~/.vanjaro-cli/snapshots/<host>/.
+
+    Reads ``CONFIG_DIR`` from the config module live so the test
+    fixture's ``patch("vanjaro_cli.config.CONFIG_DIR", ...)`` is honored
+    — capturing the value at import time would point at the real home
+    directory and litter it during test runs.
+
+    The ``<host>`` segment lets users with multiple profiles keep
+    per-site snapshots separated.
+    """
+    from urllib.parse import urlparse
+
+    host = urlparse(base_url).netloc or "default"
+    # Replace characters that are illegal on Windows in the host segment.
+    safe_host = host.replace(":", "_")
+    destination = _config_module.CONFIG_DIR / "snapshots" / safe_host
+    destination.mkdir(parents=True, exist_ok=True)
+    return destination / f"page-{page_id}-v{version}-{formatted_time}.json"
 
 
 @click.group()
@@ -164,7 +186,11 @@ def publish_content(page_id: int, locale: str, as_json: bool) -> None:
     "-o",
     type=click.Path(),
     default=None,
-    help="Write snapshot to this file (default: auto-generated name).",
+    help=(
+        "Write snapshot to this file. When omitted, a file is created under "
+        "~/.vanjaro-cli/snapshots/<host>/ using a timestamped name so snapshots "
+        "stay out of the working directory."
+    ),
 )
 @click.option("--locale", "-l", default="en-US", show_default=True)
 @click.option("--json", "as_json", is_flag=True)
@@ -203,7 +229,7 @@ def snapshot_content(page_id: int, output: str | None, locale: str, as_json: boo
 
     if not output:
         formatted_time = timestamp.strftime("%Y%m%d-%H%M%S")
-        output = f"page-{page_id}-v{version}-{formatted_time}.json"
+        output = str(_default_snapshot_path(config.base_url, page_id, version, formatted_time))
 
     payload = json.dumps(snapshot, indent=2)
     write_output(output, payload, as_json)

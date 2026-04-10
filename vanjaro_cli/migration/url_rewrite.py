@@ -115,7 +115,14 @@ def build_asset_lookup(manifest: list[dict]) -> dict[str, str]:
 
 
 def build_page_lookup(page_map: dict[str, str] | None) -> dict[str, str]:
-    """Normalize a page URL map so both absolute and path-only keys resolve."""
+    """Normalize a page URL map so both absolute and path-only keys resolve.
+
+    Known Vanjaro target paths (the *values* of ``page_map``) are also added
+    as identity entries (``"/about" → "/about"``). That way, when a block
+    library plan hard-codes a Vanjaro-format href like ``/about`` in a
+    button, the rewriter treats it as an already-correct pass-through
+    instead of flagging it as a missing internal reference.
+    """
     if page_map is None:
         return {}
     if not isinstance(page_map, dict):
@@ -135,6 +142,14 @@ def build_page_lookup(page_map: dict[str, str] | None) -> dict[str, str]:
         if source.endswith("/") and len(source) > 1:
             trimmed = source.rstrip("/")
             lookup.setdefault(trimmed, target)
+
+    # Add identity mappings for each distinct target so pre-rewritten
+    # Vanjaro-format hrefs pass through as `links_unchanged`.
+    for target in {t for t in page_map.values() if isinstance(t, str) and t}:
+        lookup.setdefault(target, target)
+        if target.endswith("/") and len(target) > 1:
+            lookup.setdefault(target.rstrip("/"), target)
+
     return lookup
 
 

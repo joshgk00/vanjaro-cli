@@ -369,9 +369,16 @@ def test_content_diff_no_published_version(runner, mock_config):
 
 
 @responses.activate
-def test_content_snapshot(runner, mock_config, tmp_path):
+def test_content_snapshot_default_location(runner, mock_config, tmp_path):
+    """Default snapshot path lives under ~/.vanjaro-cli/snapshots/<host>/.
+
+    The patched CONFIG_DIR points at tmp_path, so the snapshot file
+    must land there — never in the working directory.
+    """
     mock_homepage()
     responses.add(responses.GET, GET_PAGE_URL, json=SAMPLE_API_RESPONSE, status=200)
+
+    cwd_before = set(Path.cwd().iterdir())
 
     result = runner.invoke(cli, ["content", "snapshot", "10"], catch_exceptions=False)
 
@@ -380,12 +387,20 @@ def test_content_snapshot(runner, mock_config, tmp_path):
     assert "page 10" in result.output
     assert "version 3" in result.output
 
-    # The auto-generated filename should be in the output
-    snapshot_filename = result.output.split("Snapshot saved to ")[1].split(" ")[0]
-    assert snapshot_filename.startswith("page-10-v3-")
-    assert snapshot_filename.endswith(".json")
+    # CRITICAL: snapshot must NOT have been written to the working directory.
+    cwd_after = set(Path.cwd().iterdir())
+    new_in_cwd = cwd_after - cwd_before
+    assert not any(p.name.startswith("page-10-v3-") for p in new_in_cwd), (
+        f"Snapshot leaked into cwd: {[p.name for p in new_in_cwd]}"
+    )
 
-    snapshot_data = json.loads(Path(snapshot_filename).read_text())
+    # The snapshot file should exist under tmp_path/.vanjaro-cli/snapshots/<host>/.
+    snapshot_root = tmp_path / ".vanjaro-cli" / "snapshots"
+    assert snapshot_root.exists(), "snapshot root directory was not created"
+    snapshot_files = list(snapshot_root.rglob("page-10-v3-*.json"))
+    assert len(snapshot_files) == 1, f"expected exactly one snapshot, got {snapshot_files}"
+
+    snapshot_data = json.loads(snapshot_files[0].read_text())
     assert snapshot_data["snapshot"]["page_id"] == 10
     assert snapshot_data["snapshot"]["version"] == 3
     assert snapshot_data["snapshot"]["locale"] == "en-US"
@@ -393,8 +408,6 @@ def test_content_snapshot(runner, mock_config, tmp_path):
     assert "created_at" in snapshot_data["snapshot"]
     assert snapshot_data["components"] == SAMPLE_COMPONENTS
     assert snapshot_data["styles"] == SAMPLE_STYLES
-
-    Path(snapshot_filename).unlink()
 
 
 @responses.activate
