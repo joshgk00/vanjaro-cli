@@ -155,19 +155,81 @@ def test_logout_json(runner, mock_config):
     assert data["status"] == "ok"
 
 
-def test_status_authenticated(runner, mock_config):
+HEALTH_URL = f"{BASE_URL}/API/VanjaroAI/AIHealth/Check"
+
+
+@responses.activate
+def test_status_authenticated_verifies_server(runner, mock_config):
+    """Default `auth status` should ping the server and report verified=True."""
+    responses.add(
+        responses.GET,
+        HEALTH_URL,
+        json={"status": "ok", "dnn_version": "9.10.2"},
+        status=200,
+    )
+
     result = runner.invoke(cli, ["auth", "status"])
+
     assert result.exit_code == 0
     assert "authenticated" in result.output
+    # The status check must have actually hit the server — not just the config file.
+    assert any(HEALTH_URL in call.request.url for call in responses.calls)
 
 
-def test_status_json(runner, mock_config):
+@responses.activate
+def test_status_json_includes_verified_flag(runner, mock_config):
+    responses.add(responses.GET, HEALTH_URL, json={"status": "ok"}, status=200)
+
     result = runner.invoke(cli, ["auth", "status", "--json"])
+
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert data["status"] == "authenticated"
     assert data["base_url"] == BASE_URL
     assert data["has_cookies"] is True
+    assert data["verified"] is True
+
+
+@responses.activate
+def test_status_detects_expired_session(runner, mock_config):
+    """Cookies present but server rejects them → session_expired, not authenticated."""
+    responses.add(responses.GET, HEALTH_URL, status=401)
+
+    result = runner.invoke(cli, ["auth", "status", "--json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["status"] == "session_expired"
+    assert data["has_cookies"] is True
+    assert data["verified"] is False
+    assert "error" in data
+
+
+@responses.activate
+def test_status_human_output_for_expired_session(runner, mock_config):
+    responses.add(responses.GET, HEALTH_URL, status=401)
+
+    result = runner.invoke(cli, ["auth", "status"])
+
+    assert result.exit_code == 0
+    assert "session_expired" in result.output
+    assert "vanjaro auth login" in result.output
+
+
+def test_status_offline_skips_server_check(runner, mock_config):
+    """`--offline` reports authenticated from local cookies without hitting the server."""
+    # No HTTP mocks registered — if the command tries to call the server, the
+    # `responses` library will raise, which would fail this test.
+    with responses.RequestsMock() as rsps:
+        result = runner.invoke(cli, ["auth", "status", "--offline", "--json"])
+
+        assert len(rsps.calls) == 0
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert data["status"] == "authenticated"
+    assert data["has_cookies"] is True
+    assert data["verified"] is False
 
 
 def test_status_not_logged_in(runner, tmp_path):

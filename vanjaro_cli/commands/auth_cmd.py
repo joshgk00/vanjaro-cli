@@ -7,8 +7,13 @@ import json
 import click
 
 from vanjaro_cli.auth import AuthError, login, logout
+from vanjaro_cli.client import ApiError, VanjaroClient
 from vanjaro_cli.config import CONFIG_FILE, ConfigError, clear_session, get_active_profile_name, load_config
 from vanjaro_cli.commands.helpers import exit_error, output_result
+
+# Lightweight endpoint used by `auth status` to verify the session is still
+# valid server-side. Requires authentication but returns quickly.
+_STATUS_VERIFY_ENDPOINT = "/API/VanjaroAI/AIHealth/Check"
 
 
 @click.group()
@@ -63,9 +68,22 @@ def logout_command(as_json: bool) -> None:
 
 
 @auth.command("status")
+@click.option(
+    "--offline",
+    is_flag=True,
+    help="Only check local cookies — skip the server-side verification call.",
+)
 @click.option("--json", "as_json", is_flag=True, help="Output result as JSON.")
-def status_command(as_json: bool) -> None:
-    """Show the current authentication status."""
+def status_command(offline: bool, as_json: bool) -> None:
+    """Show the current authentication status.
+
+    By default, ``auth status`` verifies the stored session against the
+    server. Cookies that exist locally but are expired server-side are
+    reported as ``session_expired`` rather than ``authenticated`` — the
+    original behavior produced a misleading green light that tripped up
+    migration workflows. Use ``--offline`` to opt back in to the cookie-only
+    check when you just want to know whether a profile is configured.
+    """
     if not CONFIG_FILE.exists():
         _not_logged_in(as_json)
         return
@@ -76,18 +94,78 @@ def status_command(as_json: bool) -> None:
         _not_logged_in(as_json, str(exc))
         return
 
-    is_authed = config.is_authenticated
-    result = {
-        "status": "authenticated" if is_authed else "unauthenticated",
+    has_cookies = config.is_authenticated
+    if not has_cookies:
+        _emit_status(as_json, "unauthenticated", config, has_cookies=False)
+        return
+
+    if offline:
+        _emit_status(as_json, "authenticated", config, has_cookies=True, verified=False)
+        return
+
+    # Default path: ping the server with the stored cookies to confirm the
+    # session is actually live. Any failure downgrades the reported status.
+    try:
+        client = VanjaroClient(config)
+        client.get(_STATUS_VERIFY_ENDPOINT)
+    except ApiError as exc:
+        _emit_status(
+            as_json,
+            "session_expired",
+            config,
+            has_cookies=True,
+            verified=False,
+            error=str(exc),
+        )
+        return
+    except ConfigError as exc:
+        _emit_status(
+            as_json,
+            "unauthenticated",
+            config,
+            has_cookies=False,
+            error=str(exc),
+        )
+        return
+
+    _emit_status(as_json, "authenticated", config, has_cookies=True, verified=True)
+
+
+def _emit_status(
+    as_json: bool,
+    status: str,
+    config,
+    *,
+    has_cookies: bool,
+    verified: bool | None = None,
+    error: str | None = None,
+) -> None:
+    """Write an ``auth status`` result in JSON or human format."""
+    result: dict[str, object] = {
+        "status": status,
         "base_url": config.base_url,
         "portal_id": config.portal_id,
-        "has_cookies": is_authed,
+        "has_cookies": has_cookies,
     }
+    if verified is not None:
+        result["verified"] = verified
+    if error:
+        result["error"] = error
+
     if as_json:
         click.echo(json.dumps(result))
-    else:
-        icon = "+" if is_authed else "x"
-        click.echo(f"{icon} {result['status']} — {config.base_url}")
+        return
+
+    icons = {
+        "authenticated": "+",
+        "session_expired": "!",
+        "unauthenticated": "x",
+    }
+    icon = icons.get(status, "?")
+    suffix = ""
+    if status == "session_expired":
+        suffix = " (run `vanjaro auth login` to re-authenticate)"
+    click.echo(f"{icon} {status} — {config.base_url}{suffix}")
 
 
 def _not_logged_in(as_json: bool, reason: str = "No config found.") -> None:
