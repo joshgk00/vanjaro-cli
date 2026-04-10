@@ -34,8 +34,12 @@ vanjaro content publish 42
 ```
 vanjaro auth login   --url URL -u USER -p PASS
 vanjaro auth logout
-vanjaro auth status
+vanjaro auth status  [--offline]
 ```
+
+`auth status` verifies the stored session against the server by default.
+Expired cookies are reported as `session_expired` instead of `authenticated`.
+Use `--offline` to skip server verification and only check local cookies.
 
 ### Pages
 
