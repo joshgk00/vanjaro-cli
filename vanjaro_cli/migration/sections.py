@@ -71,6 +71,26 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
     return sections
 
 
+_SRCSET_ENTRY = re.compile(r"([^\s,]+)\s+[\d.]+[wx]")
+_BG_IMAGE_URL = re.compile(r"""background-image:\s*url\(\s*['"]?([^'")]+)['"]?\s*\)""", re.IGNORECASE)
+
+
+def _parse_srcset_urls(srcset: str, base_url: str) -> list[str]:
+    """Parse a srcset attribute value and return resolved absolute URLs."""
+    urls: list[str] = []
+    for match in _SRCSET_ENTRY.finditer(srcset):
+        raw = match.group(1).strip()
+        if raw:
+            urls.append(urljoin(base_url, raw))
+    if not urls:
+        # Fallback: split on commas and take the first token of each entry
+        for part in srcset.split(","):
+            token = part.strip().split()[0] if part.strip() else ""
+            if token:
+                urls.append(urljoin(base_url, token))
+    return urls
+
+
 def _extract_content(element: Tag, base_url: str) -> dict:
     """Pull structured content from an HTML element for migration."""
     headings: list[str] = []
@@ -91,10 +111,42 @@ def _extract_content(element: Tag, base_url: str) -> dict:
         src = img.get("src")
         if not src:
             continue
-        images.append({
+        entry: dict = {
             "src": urljoin(base_url, src),
             "alt": img.get("alt", ""),
-        })
+        }
+        srcset = img.get("srcset")
+        if srcset:
+            entry["srcset"] = srcset
+            entry["srcset_urls"] = _parse_srcset_urls(srcset, base_url)
+        sizes = img.get("sizes")
+        if sizes:
+            entry["sizes"] = sizes
+        images.append(entry)
+
+    for picture in element.find_all("picture"):
+        img_tag = picture.find("img")
+        fallback_src = ""
+        fallback_alt = ""
+        if img_tag:
+            fallback_src = urljoin(base_url, img_tag.get("src", ""))
+            fallback_alt = img_tag.get("alt", "")
+        for source in picture.find_all("source"):
+            srcset = source.get("srcset")
+            if not srcset:
+                continue
+            parsed_urls = _parse_srcset_urls(srcset, base_url)
+            media = source.get("media", "")
+            source_type = source.get("type", "")
+            images.append({
+                "src": parsed_urls[0] if parsed_urls else fallback_src,
+                "alt": fallback_alt,
+                "srcset": srcset,
+                "srcset_urls": parsed_urls,
+                "media": media,
+                "source_type": source_type,
+                "role": "picture_source",
+            })
 
     buttons: list[dict] = []
     for btn in element.find_all("button"):
@@ -182,6 +234,23 @@ def _extract_content(element: Tag, base_url: str) -> dict:
                     "alt": img.get("alt", ""),
                     "caption": caption,
                 })
+
+    seen_bg_urls: set[str] = set()
+    for tag in element.find_all(style=True):
+        style = tag.get("style", "")
+        for match in _BG_IMAGE_URL.finditer(style):
+            raw_url = match.group(1).strip()
+            if not raw_url:
+                continue
+            absolute_url = urljoin(base_url, raw_url)
+            if absolute_url in seen_bg_urls:
+                continue
+            seen_bg_urls.add(absolute_url)
+            images.append({
+                "src": absolute_url,
+                "alt": "",
+                "role": "background",
+            })
 
     return {
         "headings": headings,
@@ -493,13 +562,22 @@ def extract_global_element(html: str, base_url: str, element_name: str) -> dict 
 
 
 def collect_image_urls(page_sections: list[dict]) -> list[str]:
-    """Collect unique image URLs referenced across a page's sections."""
+    """Collect unique image URLs referenced across a page's sections.
+
+    Includes main ``src`` values, all ``srcset_urls`` from responsive images,
+    and ``background`` role images from CSS inline styles.
+    """
     seen: set[str] = set()
     ordered: list[str] = []
+
+    def _add(url: str) -> None:
+        if url and url not in seen:
+            seen.add(url)
+            ordered.append(url)
+
     for section in page_sections:
         for image in section.get("content", {}).get("images", []):
-            src = image.get("src")
-            if src and src not in seen:
-                seen.add(src)
-                ordered.append(src)
+            _add(image.get("src", ""))
+            for srcset_url in image.get("srcset_urls", []):
+                _add(srcset_url)
     return ordered

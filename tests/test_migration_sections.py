@@ -8,7 +8,11 @@ the public ``extract_sections`` API.
 
 from __future__ import annotations
 
-from vanjaro_cli.migration.sections import TEMPLATE_MAP, extract_sections
+from vanjaro_cli.migration.sections import (
+    TEMPLATE_MAP,
+    collect_image_urls,
+    extract_sections,
+)
 
 BASE_URL = "https://example.com/"
 
@@ -641,3 +645,216 @@ def test_classifier_ladder_priority_gallery_beats_cards():
 
     sections = extract_sections(html, BASE_URL)
     assert sections[0]["type"] == "gallery"
+
+
+# -- Responsive image extraction (srcset, <picture>) --
+
+
+def test_extract_img_srcset_and_sizes():
+    """img tags with srcset and sizes should capture those attributes."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Hero</h2>
+          <img src="/hero.jpg" alt="Hero"
+               srcset="/hero-400.jpg 400w, /hero-800.jpg 800w"
+               sizes="(max-width: 600px) 400px, 800px">
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    img = sections[0]["content"]["images"][0]
+
+    assert img["src"] == "https://example.com/hero.jpg"
+    assert img["srcset"] == "/hero-400.jpg 400w, /hero-800.jpg 800w"
+    assert img["sizes"] == "(max-width: 600px) 400px, 800px"
+    assert "https://example.com/hero-400.jpg" in img["srcset_urls"]
+    assert "https://example.com/hero-800.jpg" in img["srcset_urls"]
+
+
+def test_extract_img_without_srcset_has_no_srcset_key():
+    """Plain img tags without srcset should not have srcset/sizes keys."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Simple</h2>
+          <img src="/photo.jpg" alt="Photo">
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    img = sections[0]["content"]["images"][0]
+
+    assert "srcset" not in img
+    assert "sizes" not in img
+    assert "srcset_urls" not in img
+
+
+def test_extract_picture_source_elements():
+    """<picture> with <source> elements should extract each source entry."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Responsive</h2>
+          <picture>
+            <source srcset="/hero.webp 1x, /hero@2x.webp 2x" type="image/webp">
+            <source srcset="/hero.jpg 1x, /hero@2x.jpg 2x" type="image/jpeg">
+            <img src="/hero.jpg" alt="Fallback">
+          </picture>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    images = sections[0]["content"]["images"]
+
+    # The <img> inside <picture> is extracted by the normal img loop
+    fallback = [i for i in images if i["src"] == "https://example.com/hero.jpg" and i.get("role") != "picture_source"]
+    assert len(fallback) == 1
+
+    # Each <source> also generates an entry
+    sources = [i for i in images if i.get("role") == "picture_source"]
+    assert len(sources) == 2
+    assert sources[0]["source_type"] == "image/webp"
+    assert "https://example.com/hero.webp" in sources[0]["srcset_urls"]
+    assert sources[1]["source_type"] == "image/jpeg"
+
+
+def test_collect_image_urls_includes_srcset_urls():
+    """collect_image_urls should include all srcset URLs in the manifest."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Gallery</h2>
+          <img src="/photo.jpg" alt="Photo"
+               srcset="/photo-sm.jpg 400w, /photo-lg.jpg 800w">
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    urls = collect_image_urls(sections)
+
+    assert "https://example.com/photo.jpg" in urls
+    assert "https://example.com/photo-sm.jpg" in urls
+    assert "https://example.com/photo-lg.jpg" in urls
+
+
+# -- CSS background-image extraction --
+
+
+def test_extract_background_image_from_inline_style():
+    """Elements with background-image in inline style should add to images."""
+    html = _wrap(
+        """
+        <section>
+          <div style="background-image: url('/hero-bg.jpg'); height: 400px;">
+            <h1>Welcome</h1>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    images = sections[0]["content"]["images"]
+
+    bg_images = [i for i in images if i.get("role") == "background"]
+    assert len(bg_images) == 1
+    assert bg_images[0]["src"] == "https://example.com/hero-bg.jpg"
+
+
+def test_extract_background_image_with_quotes():
+    """background-image url() with double quotes should be parsed."""
+    html = _wrap(
+        """
+        <section>
+          <div style='background-image: url("/banner.png")'>
+            <h2>Banner</h2>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    bg_images = [i for i in sections[0]["content"]["images"] if i.get("role") == "background"]
+
+    assert len(bg_images) == 1
+    assert bg_images[0]["src"] == "https://example.com/banner.png"
+
+
+def test_extract_background_image_no_quotes():
+    """background-image url() without quotes should be parsed."""
+    html = _wrap(
+        """
+        <section>
+          <div style="background-image: url(https://cdn.example.com/bg.jpg)">
+            <h2>CDN Image</h2>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    bg_images = [i for i in sections[0]["content"]["images"] if i.get("role") == "background"]
+
+    assert len(bg_images) == 1
+    assert bg_images[0]["src"] == "https://cdn.example.com/bg.jpg"
+
+
+def test_extract_background_image_deduplicates():
+    """Duplicate background-image URLs within a section should appear once."""
+    html = _wrap(
+        """
+        <section>
+          <div style="background-image: url('/bg.jpg')">
+            <div style="background-image: url('/bg.jpg')">
+              <h2>Nested</h2>
+            </div>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    bg_images = [i for i in sections[0]["content"]["images"] if i.get("role") == "background"]
+
+    assert len(bg_images) == 1
+
+
+def test_no_background_image_when_no_inline_styles():
+    """Sections without inline styles should not have background role images."""
+    html = _wrap(
+        """
+        <section>
+          <h1>Plain</h1>
+          <p>No background images here.</p>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    bg_images = [i for i in sections[0]["content"]["images"] if i.get("role") == "background"]
+
+    assert len(bg_images) == 0
+
+
+def test_collect_image_urls_includes_background_images():
+    """collect_image_urls should include background-image URLs."""
+    html = _wrap(
+        """
+        <section>
+          <div style="background-image: url('/hero-bg.jpg')">
+            <h1>Hero</h1>
+            <img src="/logo.png" alt="Logo">
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    urls = collect_image_urls(sections)
+
+    assert "https://example.com/logo.png" in urls
+    assert "https://example.com/hero-bg.jpg" in urls
