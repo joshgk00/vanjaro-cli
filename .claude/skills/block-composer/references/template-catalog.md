@@ -49,7 +49,8 @@ Available templates in `artifacts/block-templates/`. These are the building bloc
 
 | Template | File | Description |
 |----------|------|-------------|
-| Footer (3-column) | `Navigation/footer-3col.json` | Three-column footer with nav links, contact info, and social |
+| Footer (3-column) | `Navigation/footer-3col.json` | Three-column footer with brand, nav links (6), and contact info (6) — 12 list-item slots |
+| Footer (4-column) | `Navigation/footer-4col.json` | Four-column footer with brand, two link sections, and contact — 18 list-item slots |
 
 ## Template Capabilities
 
@@ -59,6 +60,7 @@ Each template supports content overrides via named slots:
 - `button_1`, `button_2`, etc. — button labels
 - `button_1_href`, etc. — button link targets
 - `image_1_src`, `image_1_alt`, etc. — image sources and alt text
+- `list-item_1`, `list-item_2`, etc. — list item text content
 
 Use `vanjaro blocks compose <template> --list-slots` to see all available slots for a template.
 

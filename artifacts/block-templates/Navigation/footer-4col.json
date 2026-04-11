@@ -1,0 +1,183 @@
+{
+  "name": "Footer (4-column)",
+  "category": "Navigation",
+  "description": "Four-column footer with brand/about, two link sections, and contact info",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-foot4-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-foot4-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-foot4-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-foot4-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Company Name",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot4-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A brief tagline or description of the company. One or two sentences about what you do and who you serve.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot4-t1"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-foot4-c2"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Company",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot4-h2"}
+                  },
+                  {
+                    "type": "list",
+                    "classes": [
+                      {"name": "list-box", "active": false},
+                      {"name": "list", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot4-l1"},
+                    "components": [
+                      {"type": "list-item", "content": "About Us", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li1"}},
+                      {"type": "list-item", "content": "Our Team", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li2"}},
+                      {"type": "list-item", "content": "Careers", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li3"}},
+                      {"type": "list-item", "content": "News", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li4"}},
+                      {"type": "list-item", "content": "Partners", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li5"}},
+                      {"type": "list-item", "content": "Press", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li6"}}
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-foot4-c3"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Services",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot4-h3"}
+                  },
+                  {
+                    "type": "list",
+                    "classes": [
+                      {"name": "list-box", "active": false},
+                      {"name": "list", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot4-l2"},
+                    "components": [
+                      {"type": "list-item", "content": "Web Design", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li7"}},
+                      {"type": "list-item", "content": "Development", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li8"}},
+                      {"type": "list-item", "content": "SEO", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li9"}},
+                      {"type": "list-item", "content": "Marketing", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li10"}},
+                      {"type": "list-item", "content": "Consulting", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li11"}},
+                      {"type": "list-item", "content": "Support", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li12"}}
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-foot4-c4"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Contact",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot4-h4"}
+                  },
+                  {
+                    "type": "list",
+                    "classes": [
+                      {"name": "list-box", "active": false},
+                      {"name": "list", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-foot4-l3"},
+                    "components": [
+                      {"type": "list-item", "content": "123 Main Street", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li13"}},
+                      {"type": "list-item", "content": "City, ST 12345", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li14"}},
+                      {"type": "list-item", "content": "(555) 123-4567", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li15"}},
+                      {"type": "list-item", "content": "hello@example.com", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li16"}},
+                      {"type": "list-item", "content": "Mon-Fri 9am-5pm", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li17"}},
+                      {"type": "list-item", "content": "Follow us @company", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot4-li18"}}
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

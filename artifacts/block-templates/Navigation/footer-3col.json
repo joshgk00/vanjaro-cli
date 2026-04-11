@@ -88,7 +88,9 @@
                       {"type": "list-item", "content": "Home", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li1"}},
                       {"type": "list-item", "content": "About", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li2"}},
                       {"type": "list-item", "content": "Services", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li3"}},
-                      {"type": "list-item", "content": "Contact", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li4"}}
+                      {"type": "list-item", "content": "Portfolio", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li4"}},
+                      {"type": "list-item", "content": "Blog", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li5"}},
+                      {"type": "list-item", "content": "Contact", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li6"}}
                     ]
                   }
                 ]
@@ -122,10 +124,12 @@
                     ],
                     "attributes": {"id": "tpl-foot-l2"},
                     "components": [
-                      {"type": "list-item", "content": "123 Main Street", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li5"}},
-                      {"type": "list-item", "content": "City, ST 12345", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li6"}},
-                      {"type": "list-item", "content": "(555) 123-4567", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li7"}},
-                      {"type": "list-item", "content": "hello@example.com", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li8"}}
+                      {"type": "list-item", "content": "123 Main Street", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li7"}},
+                      {"type": "list-item", "content": "City, ST 12345", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li8"}},
+                      {"type": "list-item", "content": "(555) 123-4567", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li9"}},
+                      {"type": "list-item", "content": "hello@example.com", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li10"}},
+                      {"type": "list-item", "content": "Mon-Fri 9am-5pm", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li11"}},
+                      {"type": "list-item", "content": "Follow us @company", "classes": [{"name": "list-item", "active": false}], "attributes": {"id": "tpl-foot-li12"}}
                     ]
                   }
                 ]
