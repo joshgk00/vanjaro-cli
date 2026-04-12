@@ -120,7 +120,7 @@ def test_migrate_crawl_writes_inventory_and_sections(runner, tmp_path: Path):
     assert url_map[f"{SOURCE_URL}/about"] == "/about"
 
     tokens = json.loads((output / "design-tokens.json").read_text())
-    assert "#333333" in tokens["colors"]
+    assert "#ff5500" in tokens["colors"]
     assert "Inter" in tokens["fonts"]
 
     header_file = output / "global" / "header.json"
