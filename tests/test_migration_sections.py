@@ -11,6 +11,7 @@ from __future__ import annotations
 from vanjaro_cli.migration.sections import (
     TEMPLATE_MAP,
     collect_image_urls,
+    extract_global_element,
     extract_sections,
 )
 
@@ -858,3 +859,133 @@ def test_collect_image_urls_includes_background_images():
 
     assert "https://example.com/logo.png" in urls
     assert "https://example.com/hero-bg.jpg" in urls
+
+
+# --- Header nav_items extraction ---
+
+
+def _header_html(nav_markup: str) -> str:
+    return f"<!doctype html><html><body><header>{nav_markup}</header></body></html>"
+
+
+def test_header_extracts_flat_nav_items():
+    """Top-level nav links become a flat nav_items list."""
+    html = _header_html(
+        """
+        <nav>
+          <ul>
+            <li><a href="/">Home</a></li>
+            <li><a href="/about">About</a></li>
+            <li><a href="/contact">Contact</a></li>
+          </ul>
+        </nav>
+        """
+    )
+
+    header = extract_global_element(html, BASE_URL, "header")
+
+    assert header is not None
+    nav_items = header["content"]["nav_items"]
+    labels = [item["label"] for item in nav_items]
+    assert labels == ["Home", "About", "Contact"]
+    assert all(item["children"] == [] for item in nav_items)
+    assert nav_items[1]["href"] == "https://example.com/about"
+
+
+def test_header_extracts_nested_dropdown_as_children():
+    """A <li> containing a nested <ul> produces a children array."""
+    html = _header_html(
+        """
+        <nav>
+          <ul>
+            <li><a href="/services">Services</a>
+              <ul>
+                <li><a href="/services/web">Web Design</a></li>
+                <li><a href="/services/seo">SEO</a></li>
+              </ul>
+            </li>
+          </ul>
+        </nav>
+        """
+    )
+
+    nav_items = extract_global_element(html, BASE_URL, "header")["content"]["nav_items"]
+
+    assert len(nav_items) == 1
+    services = nav_items[0]
+    assert services["label"] == "Services"
+    assert len(services["children"]) == 2
+    assert services["children"][0]["label"] == "Web Design"
+    assert services["children"][1]["href"] == "https://example.com/services/seo"
+
+
+def test_header_skips_hash_only_anchors():
+    """Hash-only hrefs like #home aren't real pages and must be dropped."""
+    html = _header_html(
+        """
+        <nav>
+          <ul>
+            <li><a href="#home">Home</a></li>
+            <li><a href="/about">About</a></li>
+            <li><a href="#contact">Contact</a></li>
+          </ul>
+        </nav>
+        """
+    )
+
+    nav_items = extract_global_element(html, BASE_URL, "header")["content"]["nav_items"]
+
+    labels = [item["label"] for item in nav_items]
+    assert labels == ["About"]
+
+
+def test_header_skips_protocol_links():
+    """mailto:, tel:, and javascript: links are dropped from the nav tree."""
+    html = _header_html(
+        """
+        <nav>
+          <ul>
+            <li><a href="mailto:hi@example.com">Email</a></li>
+            <li><a href="tel:+15551234567">Call</a></li>
+            <li><a href="javascript:void(0)">Do thing</a></li>
+            <li><a href="/real-page">Real Page</a></li>
+          </ul>
+        </nav>
+        """
+    )
+
+    nav_items = extract_global_element(html, BASE_URL, "header")["content"]["nav_items"]
+
+    labels = [item["label"] for item in nav_items]
+    assert labels == ["Real Page"]
+
+
+def test_header_without_nav_returns_empty_nav_items():
+    """A header with no <nav> element still returns nav_items=[]."""
+    html = "<!doctype html><html><body><header><h1>Hi</h1></header></body></html>"
+
+    header = extract_global_element(html, BASE_URL, "header")
+
+    assert header["content"]["nav_items"] == []
+
+
+def test_header_with_empty_nav_returns_empty_nav_items():
+    """A <nav> with no <ul> returns nav_items=[]."""
+    html = _header_html("<nav></nav>")
+
+    header = extract_global_element(html, BASE_URL, "header")
+
+    assert header["content"]["nav_items"] == []
+
+
+def test_footer_does_not_get_nav_items():
+    """Only headers get nav_items — footers keep the existing flat links list."""
+    html = (
+        "<!doctype html><html><body><footer>"
+        "<nav><ul><li><a href='/privacy'>Privacy</a></li></ul></nav>"
+        "</footer></body></html>"
+    )
+
+    footer = extract_global_element(html, BASE_URL, "footer")
+
+    assert "nav_items" not in footer["content"]

@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 from vanjaro_cli.commands.helpers import exit_error, output_result
 from vanjaro_cli.commands.migrate_assemble_cmd import assemble_page
 from vanjaro_cli.commands.migrate_build_id_map_cmd import build_id_map
+from vanjaro_cli.commands.migrate_create_pages_cmd import create_pages
 from vanjaro_cli.commands.migrate_rewrite_cmd import rewrite_urls
 from vanjaro_cli.commands.migrate_verify_cmd import verify, verify_all
 from vanjaro_cli.migration.assets import download_assets
@@ -20,6 +21,7 @@ from vanjaro_cli.migration.crawler import (
     CrawlError,
     discover_pages,
     fetch_url_text,
+    infer_page_hierarchy,
     slugify_path,
 )
 from vanjaro_cli.migration.sections import (
@@ -40,6 +42,7 @@ def migrate() -> None:
 
 migrate.add_command(assemble_page)
 migrate.add_command(build_id_map)
+migrate.add_command(create_pages)
 migrate.add_command(rewrite_urls)
 migrate.add_command(verify)
 migrate.add_command(verify_all)
@@ -153,6 +156,8 @@ def crawl(
             if image_url not in seen_images:
                 seen_images.add(image_url)
                 all_image_urls.append(image_url)
+
+    infer_page_hierarchy(pages_summary)
 
     global_dir = destination / "global"
     global_dir.mkdir(exist_ok=True)

@@ -7,6 +7,8 @@ from urllib.parse import urljoin
 
 from bs4 import BeautifulSoup, Tag
 
+from vanjaro_cli.migration.crawler import IGNORED_LINK_SCHEMES
+
 __all__ = [
     "extract_sections",
     "extract_page_title",
@@ -547,6 +549,78 @@ def extract_sections(html: str, base_url: str) -> list[dict]:
     return sections
 
 
+def _is_real_page_href(href: str) -> bool:
+    """Return True if ``href`` points at a real navigable page.
+
+    Hash-only anchors, protocol links (``mailto:``, ``tel:``, ``javascript:``,
+    ...), and empty strings are all skipped — none of them represent a page
+    whose parent-child relationship can be preserved in DNN's menu. The
+    ignored-scheme set is shared with the crawler so both paths drop the
+    same kinds of links.
+    """
+    if not href:
+        return False
+    stripped = href.strip()
+    if not stripped or stripped.startswith("#"):
+        return False
+    if ":" in stripped:
+        scheme = stripped.split(":", 1)[0].lower()
+        if scheme in IGNORED_LINK_SCHEMES:
+            return False
+    return True
+
+
+def _walk_nav_items(list_element: Tag, base_url: str) -> list[dict]:
+    """Recursively walk a ``<ul>`` / ``<ol>`` into a nested nav-items tree.
+
+    Each entry is ``{"label", "href", "children"}`` where ``children`` is
+    another list of the same shape. Non-page links (hash anchors, mailto,
+    etc.) are dropped so the tree only contains hrefs that can map to real
+    DNN pages.
+    """
+    items: list[dict] = []
+    for li in list_element.find_all("li", recursive=False):
+        anchor = li.find("a", recursive=False) or li.find("a")
+        if anchor is None:
+            continue
+        href = anchor.get("href", "").strip()
+        if not _is_real_page_href(href):
+            continue
+        label = anchor.get_text(strip=True)
+        if not label:
+            continue
+
+        children: list[dict] = []
+        nested_list = li.find(["ul", "ol"], recursive=False)
+        if nested_list is not None:
+            children = _walk_nav_items(nested_list, base_url)
+
+        items.append({
+            "label": label,
+            "href": urljoin(base_url, href),
+            "children": children,
+        })
+    return items
+
+
+def _extract_nav_structure(element: Tag, base_url: str) -> list[dict]:
+    """Extract a nested nav-items tree from the first ``<nav>`` inside ``element``.
+
+    Returns an empty list when the element has no nav, or when the nav has
+    no top-level ``<ul>`` / ``<ol>``. Used by :func:`extract_global_element`
+    to annotate ``<header>`` sections so downstream tooling (page-creation
+    orchestration) can match nav labels to real pages and mark them for
+    inclusion in the menu.
+    """
+    nav = element.find("nav")
+    if nav is None:
+        return []
+    top_list = nav.find(["ul", "ol"])
+    if top_list is None:
+        return []
+    return _walk_nav_items(top_list, base_url)
+
+
 def extract_global_element(html: str, base_url: str, element_name: str) -> dict | None:
     """Extract the first <header> or <footer> from HTML as a section dict."""
     soup = BeautifulSoup(html, "html.parser")
@@ -554,6 +628,8 @@ def extract_global_element(html: str, base_url: str, element_name: str) -> dict 
     if not element:
         return None
     content = _extract_content(element, base_url)
+    if element_name == "header":
+        content["nav_items"] = _extract_nav_structure(element, base_url)
     return {
         "type": element_name,
         "template": TEMPLATE_MAP.get(element_name, TEMPLATE_MAP["content"]),

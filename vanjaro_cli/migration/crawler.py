@@ -17,6 +17,7 @@ __all__ = [
     "USER_AGENT",
     "fetch_url_text",
     "discover_pages",
+    "infer_page_hierarchy",
     "same_domain",
     "path_matches",
     "slugify_path",
@@ -138,6 +139,65 @@ def slugify_path(path: str) -> str:
     if not cleaned:
         return "home"
     return "".join(c if c.isalnum() or c in "-_" else "-" for c in cleaned).strip("-") or "home"
+
+
+def _normalize_path(path: str) -> str:
+    """Return a canonical form of ``path`` for parent-slug comparison.
+
+    Strips trailing slashes (except on the root), strips a trailing ``.html``
+    /``.htm``/``.php``/``.aspx`` extension, and lowercases the whole value.
+    Two URL paths that point at the same logical page (``/services`` and
+    ``/services.html``, ``/Services/`` and ``/services``) collapse to the
+    same normalized form so parent inference can match them.
+    """
+    normalized = path.lower().rstrip("/") or "/"
+    for extension in (".html", ".htm", ".php", ".aspx"):
+        if normalized.endswith(extension):
+            normalized = normalized[: -len(extension)] or "/"
+            break
+    return normalized
+
+
+def infer_page_hierarchy(pages: list[dict]) -> list[dict]:
+    """Annotate each page dict with a ``parent_slug`` inferred from URL paths.
+
+    For each page, walks up its URL path segment-by-segment looking for a
+    shallower page whose path matches a prefix — ``/services/web-design``
+    finds ``/services`` as its parent, not the root. Root pages (``/``) and
+    pages whose parent isn't in the inventory get ``parent_slug = None``.
+    Mutates ``pages`` in place and returns the same list.
+    """
+    path_to_slug: dict[str, str] = {}
+    for page in pages:
+        path = page.get("path")
+        slug = page.get("slug")
+        if isinstance(path, str) and isinstance(slug, str):
+            path_to_slug[_normalize_path(path)] = slug
+
+    for page in pages:
+        path = page.get("path")
+        slug = page.get("slug")
+        if not isinstance(path, str) or not isinstance(slug, str):
+            continue
+
+        normalized = _normalize_path(path)
+        if normalized == "/":
+            page["parent_slug"] = None
+            continue
+
+        # The site root ("/") is never considered a parent: DNN treats
+        # top-level pages as siblings of home, not children of it.
+        segments = normalized.strip("/").split("/")
+        parent_slug: str | None = None
+        for depth in range(len(segments) - 1, 0, -1):
+            candidate = "/" + "/".join(segments[:depth])
+            if candidate in path_to_slug and path_to_slug[candidate] != slug:
+                parent_slug = path_to_slug[candidate]
+                break
+
+        page["parent_slug"] = parent_slug
+
+    return pages
 
 
 def _extract_links_from_html(html: str, base_url: str) -> list[str]:
