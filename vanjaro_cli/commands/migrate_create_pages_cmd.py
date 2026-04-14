@@ -120,10 +120,16 @@ def create_pages(
                     "creating as top-level."
                 )
 
+        # AIPage/Create uses ``isVisible`` (not ``includeInMenu``) to control
+        # menu visibility. The PersonaBar GetPageDetails response surfaces the
+        # same value as ``includeInMenu``, but the create payload field name
+        # is ``isVisible``. Discovered during the cmw e2e test: passing
+        # ``includeInMenu`` was silently ignored and every page defaulted to
+        # visible regardless of source nav membership.
         payload: dict = {
             "name": slug,
             "title": title,
-            "includeInMenu": _should_include_in_menu(page.get("url", ""), in_menu_urls),
+            "isVisible": _should_include_in_menu(page.get("url", ""), in_menu_urls),
         }
         if parent_id is not None:
             payload["parentId"] = parent_id

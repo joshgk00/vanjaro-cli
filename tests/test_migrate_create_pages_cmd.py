@@ -310,9 +310,9 @@ def test_create_pages_marks_in_menu_from_header_nav(
     )
 
     by_slug = {b["name"]: b for b in _create_page_bodies(mocked_responses)}
-    assert by_slug["home"]["includeInMenu"] is True
-    assert by_slug["about"]["includeInMenu"] is True
-    assert by_slug["privacy"]["includeInMenu"] is False
+    assert by_slug["home"]["isVisible"] is True
+    assert by_slug["about"]["isVisible"] is True
+    assert by_slug["privacy"]["isVisible"] is False
 
 
 def test_create_pages_matches_in_menu_when_nav_uses_www_and_pages_do_not(
@@ -361,9 +361,9 @@ def test_create_pages_matches_in_menu_when_nav_uses_www_and_pages_do_not(
     )
 
     by_slug = {b["name"]: b for b in _create_page_bodies(mocked_responses)}
-    assert by_slug["home"]["includeInMenu"] is True
-    assert by_slug["about"]["includeInMenu"] is True
-    assert by_slug["hidden"]["includeInMenu"] is False
+    assert by_slug["home"]["isVisible"] is True
+    assert by_slug["about"]["isVisible"] is True
+    assert by_slug["hidden"]["isVisible"] is False
 
 
 def test_create_pages_matches_in_menu_when_pages_use_www_and_nav_does_not(
@@ -429,9 +429,9 @@ def test_create_pages_matches_in_menu_when_pages_use_www_and_nav_does_not(
     )
 
     by_slug = {b["name"]: b for b in _create_page_bodies(mocked_responses)}
-    assert by_slug["home"]["includeInMenu"] is True
-    assert by_slug["about"]["includeInMenu"] is True
-    assert by_slug["hidden"]["includeInMenu"] is False
+    assert by_slug["home"]["isVisible"] is True
+    assert by_slug["about"]["isVisible"] is True
+    assert by_slug["hidden"]["isVisible"] is False
 
 
 def test_create_pages_includes_all_when_no_header_nav(
@@ -462,7 +462,7 @@ def test_create_pages_includes_all_when_no_header_nav(
     )
 
     bodies = _create_page_bodies(mocked_responses)
-    assert all(body["includeInMenu"] is True for body in bodies)
+    assert all(body["isVisible"] is True for body in bodies)
 
 
 def test_create_pages_dry_run_does_not_hit_api(
