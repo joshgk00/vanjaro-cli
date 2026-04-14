@@ -515,3 +515,106 @@ def test_assemble_no_warning_when_content_fits(runner, tmp_path, monkeypatch):
     assert result.exit_code == 0, result.output
     assert "dropped" not in result.output.lower()
     assert "Warning" not in result.output
+
+
+# --- Global block wrapping ---
+
+
+def test_assemble_wraps_with_header_and_footer_when_guids_provided(runner, tmp_path):
+    section_file = _write_json(
+        tmp_path / "sections" / "s.json",
+        _raw_section("s1", "Hello"),
+    )
+    output_file = tmp_path / "wrapped.json"
+
+    result = runner.invoke(
+        assemble_page,
+        [
+            "--sections", str(section_file),
+            "--output", str(output_file),
+            "--header-block-guid", "20020077-89f8-468f-a488-017421ce5a0b",
+            "--footer-block-guid", "fe37ff48-2c99-4201-85fc-913cac94914d",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    content = json.loads(output_file.read_text())
+    components = content["components"]
+    assert len(components) == 3
+    assert components[0]["type"] == "globalblockwrapper"
+    assert components[0]["name"] == "Global: Header"
+    assert components[0]["attributes"]["data-guid"] == "20020077-89f8-468f-a488-017421ce5a0b"
+    assert components[0]["attributes"]["data-block-type"] == "global"
+    assert components[1]["type"] == "section"  # the real page section stays in the middle
+    assert components[2]["type"] == "globalblockwrapper"
+    assert components[2]["name"] == "Global: Footer"
+    assert components[2]["attributes"]["data-guid"] == "fe37ff48-2c99-4201-85fc-913cac94914d"
+
+
+def test_assemble_wraps_only_header_when_footer_guid_omitted(runner, tmp_path):
+    section_file = _write_json(
+        tmp_path / "sections" / "s.json",
+        _raw_section("s1", "Hello"),
+    )
+    output_file = tmp_path / "header-only.json"
+
+    result = runner.invoke(
+        assemble_page,
+        [
+            "--sections", str(section_file),
+            "--output", str(output_file),
+            "--header-block-guid", "abc",
+        ],
+    )
+
+    assert result.exit_code == 0
+    components = json.loads(output_file.read_text())["components"]
+    assert len(components) == 2
+    assert components[0]["type"] == "globalblockwrapper"
+    assert components[1]["type"] == "section"
+
+
+def test_assemble_does_not_wrap_when_no_guids_provided(runner, tmp_path):
+    """Existing callers that don't opt in to wrapping must keep the old shape."""
+    section_file = _write_json(
+        tmp_path / "sections" / "s.json",
+        _raw_section("s1", "Hello"),
+    )
+    output_file = tmp_path / "unwrapped.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0
+    components = json.loads(output_file.read_text())["components"]
+    assert len(components) == 1
+    assert components[0]["type"] == "section"
+    assert not any(c.get("type") == "globalblockwrapper" for c in components)
+
+
+def test_assemble_wrapper_ids_are_unique(runner, tmp_path):
+    """Header and footer wrappers must get distinct auto-generated ids."""
+    section_file = _write_json(
+        tmp_path / "sections" / "s.json",
+        _raw_section("s1", "Hello"),
+    )
+    output_file = tmp_path / "wrapped.json"
+
+    runner.invoke(
+        assemble_page,
+        [
+            "--sections", str(section_file),
+            "--output", str(output_file),
+            "--header-block-guid", "h",
+            "--footer-block-guid", "f",
+        ],
+    )
+
+    components = json.loads(output_file.read_text())["components"]
+    header_id = components[0]["attributes"]["id"]
+    footer_id = components[2]["attributes"]["id"]
+    assert header_id != footer_id
+    assert header_id
+    assert footer_id

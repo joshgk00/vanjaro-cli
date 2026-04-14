@@ -5,6 +5,7 @@ from __future__ import annotations
 import glob
 import json
 import re
+import uuid
 from pathlib import Path
 
 import click
@@ -18,6 +19,12 @@ from vanjaro_cli.utils.block_compose import (
 )
 
 __all__ = ["assemble_page"]
+
+# The globalblockwrapper component type is registered in Vanjaro's core
+# GrapesJS schema. Its ``data-block-guid`` is a fixed identifier for the
+# wrapper TYPE itself — the ``data-guid`` attribute points at the specific
+# global block instance the wrapper references.
+GLOBAL_BLOCK_WRAPPER_TYPE_GUID = "7a4be0f2-56ab-410a-9422-6bc91b488150"
 
 
 def _natural_sort_key(value: str) -> list:
@@ -255,6 +262,27 @@ def _merge_styles(existing: list, additions: list) -> list:
     return existing
 
 
+def _make_global_block_wrapper(name: str, block_guid: str) -> dict:
+    """Build a ``globalblockwrapper`` component referencing a global block.
+
+    Vanjaro renders these as empty divs at save time and expands them
+    server-side by looking up the ``data-guid``, so the wrapper's nested
+    ``components`` array is intentionally empty.
+    """
+    return {
+        "type": "globalblockwrapper",
+        "name": name,
+        "content": "",
+        "attributes": {
+            "data-block-type": "global",
+            "data-block-guid": GLOBAL_BLOCK_WRAPPER_TYPE_GUID,
+            "data-guid": block_guid,
+            "id": uuid.uuid4().hex[:5],
+        },
+        "components": [],
+    }
+
+
 @click.command("assemble-page")
 @click.option(
     "--sections",
@@ -271,10 +299,23 @@ def _merge_styles(existing: list, additions: list) -> list:
     required=True,
     help="Destination path for the assembled content JSON.",
 )
+@click.option(
+    "--header-block-guid",
+    default=None,
+    help="Global block GUID to wrap the page with as a top-level header. "
+    "Get the value from `vanjaro global-blocks list --json`.",
+)
+@click.option(
+    "--footer-block-guid",
+    default=None,
+    help="Global block GUID to wrap the page with as a top-level footer.",
+)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
 def assemble_page(
     section_patterns: tuple[str, ...],
     output_file: str,
+    header_block_guid: str | None,
+    footer_block_guid: str | None,
     as_json: bool,
 ) -> None:
     """Merge per-section JSON files into a single page content JSON.
@@ -287,11 +328,18 @@ def assemble_page(
       2. Template reference: {"template": "Name", "overrides": {...}}
          or the crawler shape: {"template": "Name", "content": {...}}.
 
+    When ``--header-block-guid`` and/or ``--footer-block-guid`` are provided,
+    the merged components are wrapped with ``globalblockwrapper`` entries
+    referencing those global block instances. Vanjaro's renderer requires
+    these wrappers to emit the site chrome around page content.
+
     \b
     Example:
       vanjaro migrate assemble-page \\
         --sections "pages/home/section-*.json" \\
-        --output home-content.json
+        --output home-content.json \\
+        --header-block-guid 20020077-89f8-468f-a488-017421ce5a0b \\
+        --footer-block-guid fe37ff48-2c99-4201-85fc-913cac94914d
     """
     if not section_patterns:
         exit_error("At least one --sections value is required.", as_json)
@@ -308,6 +356,11 @@ def assemble_page(
         _validate_section_component(section_component, source_file, as_json)
         components.append(section_component)
         _merge_styles(styles, section_styles)
+
+    if header_block_guid:
+        components.insert(0, _make_global_block_wrapper("Global: Header", header_block_guid))
+    if footer_block_guid:
+        components.append(_make_global_block_wrapper("Global: Footer", footer_block_guid))
 
     result = {"components": components, "styles": styles}
 
