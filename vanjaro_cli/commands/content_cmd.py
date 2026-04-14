@@ -13,6 +13,7 @@ from vanjaro_cli import config as _config_module
 from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
 from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, parse_json_field, write_output
+from vanjaro_cli.utils.grapesjs import render_components
 
 # VanjaroAI content endpoints (bypass DnnPageEditor restriction)
 GET_PAGE = "/API/VanjaroAI/AIPage/Get"
@@ -130,11 +131,21 @@ def update_content(page_id: int, input_file: str | None, locale: str, expected_v
     components = data.get("components", [])
     styles = data.get("styles", [])
 
+    # Vanjaro's renderer uses ``contentHtml`` — a pre-rendered HTML string
+    # of the component tree — to emit the visitor-facing page. Without it,
+    # the page stores correctly but renders blank to anonymous visitors.
+    # Generate it from the component tree whenever the caller doesn't
+    # provide one, so every round-trip leaves the page renderable.
+    content_html = data.get("contentHtml")
+    if not isinstance(content_html, str):
+        content_html = render_components(components)
+
     # VanjaroAI expects ContentJSON/StyleJSON as JSON strings
     payload: dict = {
         "pageId": page_id,
         "contentJSON": json.dumps(components),
         "styleJSON": json.dumps(styles),
+        "contentHtml": content_html,
         "locale": locale,
     }
     if expected_version is not None:
@@ -283,6 +294,7 @@ def rollback_content(page_id: int, input_file: str, locale: str, as_json: bool) 
         "pageId": page_id,
         "contentJSON": json.dumps(data["components"]),
         "styleJSON": json.dumps(data["styles"]),
+        "contentHtml": render_components(data["components"]),
         "locale": locale,
     }
 

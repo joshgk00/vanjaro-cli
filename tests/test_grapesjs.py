@@ -12,6 +12,8 @@ from vanjaro_cli.utils.grapesjs import (
     insert_component,
     list_components,
     remove_component,
+    render_component,
+    render_components,
 )
 
 SAMPLE_TREE = [
@@ -262,3 +264,171 @@ class TestCreateComponent:
         original_attrs = dict(attrs)
         create_component("text", attributes=attrs)
         assert attrs == original_attrs
+
+
+class TestRenderComponents:
+    """Serialize GrapesJS component trees to the HTML shape Vanjaro expects."""
+
+    def test_empty_list_returns_empty_string(self) -> None:
+        assert render_components([]) == ""
+
+    def test_section_type_maps_to_section_tag(self) -> None:
+        component = {"type": "section", "attributes": {"id": "s1"}}
+        assert render_component(component) == '<section id="s1"></section>'
+
+    def test_tagname_overrides_type_mapping(self) -> None:
+        component = {"type": "heading", "tagName": "h1", "attributes": {"id": "h"}}
+        assert render_component(component) == '<h1 id="h"></h1>'
+
+    def test_classes_are_serialized_from_active_array_shape(self) -> None:
+        component = {
+            "type": "section",
+            "attributes": {"id": "s"},
+            "classes": [
+                {"name": "vj-section", "active": True},
+                {"name": "py-5", "active": False},
+            ],
+        }
+        # Both names serialized — active flag is GrapesJS runtime state, not HTML
+        assert render_component(component) == '<section id="s" class="vj-section py-5"></section>'
+
+    def test_classes_accept_plain_string_entries(self) -> None:
+        component = {"type": "section", "attributes": {"id": "s"}, "classes": ["alpha", "beta"]}
+        assert render_component(component) == '<section id="s" class="alpha beta"></section>'
+
+    def test_attribute_order_puts_data_before_id_before_class(self) -> None:
+        """Matches the byte shape the Vanjaro editor emits."""
+        component = {
+            "type": "section",
+            "attributes": {"id": "s", "data-role": "main", "role": "region"},
+            "classes": ["vj-section"],
+        }
+        assert render_component(component) == (
+            '<section data-role="main" id="s" role="region" class="vj-section"></section>'
+        )
+
+    def test_published_attribute_is_stripped_as_internal_state(self) -> None:
+        component = {
+            "type": "section",
+            "attributes": {"id": "s", "published": True},
+        }
+        assert "published" not in render_component(component)
+
+    def test_text_content_is_rendered_inside_tag(self) -> None:
+        component = {"type": "heading", "tagName": "h2", "content": "Hello", "attributes": {"id": "h"}}
+        assert render_component(component) == '<h2 id="h">Hello</h2>'
+
+    def test_nested_components_are_rendered_recursively(self) -> None:
+        component = {
+            "type": "section",
+            "attributes": {"id": "s"},
+            "components": [
+                {"type": "grid", "attributes": {"id": "g"}, "components": [
+                    {"type": "heading", "tagName": "h3", "content": "Nested", "attributes": {"id": "h"}},
+                ]},
+            ],
+        }
+        result = render_component(component)
+        assert result == '<section id="s"><div id="g"><h3 id="h">Nested</h3></div></section>'
+
+    def test_void_elements_are_self_closing_with_no_children(self) -> None:
+        component = {"type": "image", "attributes": {"id": "i", "src": "/a.png", "alt": "Alt"}}
+        assert render_component(component) == '<img id="i" src="/a.png" alt="Alt">'
+
+    def test_globalblockwrapper_renders_as_empty_div(self) -> None:
+        """Vanjaro expands these server-side by their data-guid reference."""
+        component = {
+            "type": "globalblockwrapper",
+            "name": "Global: Header",
+            "attributes": {
+                "data-block-type": "global",
+                "data-block-guid": "7a4be0f2-56ab-410a-9422-6bc91b488150",
+                "data-guid": "20020077-89f8-468f-a488-017421ce5a0b",
+                "id": "hdr",
+                "published": True,
+            },
+            "components": [{"type": "section", "content": "ignored at render"}],
+        }
+        result = render_component(component)
+        assert result == (
+            '<div data-block-type="global" '
+            'data-block-guid="7a4be0f2-56ab-410a-9422-6bc91b488150" '
+            'data-guid="20020077-89f8-468f-a488-017421ce5a0b" id="hdr"></div>'
+        )
+
+    def test_textnode_emits_content_without_wrapping_tag(self) -> None:
+        component = {"type": "textnode", "content": "bare text"}
+        assert render_component(component) == "bare text"
+
+    def test_textnode_escapes_html_entities(self) -> None:
+        component = {"type": "textnode", "content": "<script>x</script>"}
+        assert render_component(component) == "&lt;script&gt;x&lt;/script&gt;"
+
+    def test_attribute_values_are_quote_escaped(self) -> None:
+        component = {"type": "section", "attributes": {"id": "s", "data-q": 'a"b'}}
+        assert 'data-q="a&quot;b"' in render_component(component)
+
+    def test_multiple_top_level_components_concatenated(self) -> None:
+        components = [
+            {"type": "section", "attributes": {"id": "s1"}},
+            {"type": "section", "attributes": {"id": "s2"}},
+        ]
+        assert render_components(components) == '<section id="s1"></section><section id="s2"></section>'
+
+    def test_non_dict_entries_are_skipped(self) -> None:
+        components = [
+            {"type": "section", "attributes": {"id": "s"}},
+            "invalid",
+            None,
+            42,
+        ]
+        assert render_components(components) == '<section id="s"></section>'
+
+    def test_full_ui_page_roundtrip_matches_server_output(self) -> None:
+        """Header + empty section + footer — the minimal Vanjaro page shape.
+
+        This exact byte shape was captured from a UI-created test page on
+        ``vanjarocli.local`` and is what Vanjaro's server-side renderer expects
+        as ``contentHtml``. Regressing the byte shape would break rendering
+        for migrated sites.
+        """
+        components = [
+            {
+                "type": "globalblockwrapper",
+                "name": "Global: Header",
+                "attributes": {
+                    "data-block-type": "global",
+                    "data-block-guid": "7a4be0f2-56ab-410a-9422-6bc91b488150",
+                    "data-guid": "20020077-89f8-468f-a488-017421ce5a0b",
+                    "id": "inp2m",
+                    "published": True,
+                },
+            },
+            {
+                "type": "section",
+                "content": "\n\t\t\t\t",
+                "classes": [{"name": "vj-section", "active": True}],
+                "attributes": {"id": "ihtp1"},
+            },
+            {
+                "type": "globalblockwrapper",
+                "name": "Global: Footer",
+                "attributes": {
+                    "data-block-type": "global",
+                    "data-block-guid": "7a4be0f2-56ab-410a-9422-6bc91b488150",
+                    "data-guid": "fe37ff48-2c99-4201-85fc-913cac94914d",
+                    "id": "i2orf",
+                    "published": True,
+                },
+            },
+        ]
+        expected = (
+            '<div data-block-type="global" '
+            'data-block-guid="7a4be0f2-56ab-410a-9422-6bc91b488150" '
+            'data-guid="20020077-89f8-468f-a488-017421ce5a0b" id="inp2m"></div>'
+            '<section id="ihtp1" class="vj-section">\n\t\t\t\t</section>'
+            '<div data-block-type="global" '
+            'data-block-guid="7a4be0f2-56ab-410a-9422-6bc91b488150" '
+            'data-guid="fe37ff48-2c99-4201-85fc-913cac94914d" id="i2orf"></div>'
+        )
+        assert render_components(components) == expected
