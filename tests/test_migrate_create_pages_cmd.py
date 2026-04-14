@@ -294,6 +294,125 @@ def test_create_pages_marks_in_menu_from_header_nav(
     assert by_slug["privacy"]["includeInMenu"] is False
 
 
+def test_create_pages_matches_in_menu_when_nav_uses_www_and_pages_do_not(
+    runner, mock_config, tmp_path: Path, mocked_responses
+):
+    """Real-world case: source nav links use ``www.`` but crawl is at bare domain.
+
+    The crawler often visits ``https://example.com/`` while the source nav
+    markup links to ``https://www.example.com/page``. Without normalizing
+    the host, the includeInMenu filter would treat every page as missing
+    from the nav and hide them all.
+    """
+    inventory_path = _write_inventory(
+        tmp_path,
+        [
+            _inventory_page("/", "home"),
+            _inventory_page("/about", "about"),
+            _inventory_page("/hidden", "hidden"),
+        ],
+    )
+    _write_header(
+        tmp_path,
+        [
+            {"label": "Home", "href": "https://www.source.example.com/", "children": []},
+            {"label": "About", "href": "https://www.source.example.com/about", "children": []},
+        ],
+    )
+    _register_create_responses(
+        mocked_responses,
+        [
+            {"pageId": 401, "name": "home"},
+            {"pageId": 402, "name": "about"},
+            {"pageId": 403, "name": "hidden"},
+        ],
+    )
+
+    runner.invoke(
+        cli,
+        [
+            "migrate",
+            "create-pages",
+            "--inventory",
+            str(inventory_path),
+            "--json",
+        ],
+    )
+
+    by_slug = {b["name"]: b for b in _create_page_bodies(mocked_responses)}
+    assert by_slug["home"]["includeInMenu"] is True
+    assert by_slug["about"]["includeInMenu"] is True
+    assert by_slug["hidden"]["includeInMenu"] is False
+
+
+def test_create_pages_matches_in_menu_when_pages_use_www_and_nav_does_not(
+    runner, mock_config, tmp_path: Path, mocked_responses
+):
+    """Inverse of the prior test: crawl visits the ``www.`` host but nav links
+    point at the bare domain. Symmetry must hold — both sides are normalized.
+    """
+    inventory_path = _write_inventory(
+        tmp_path,
+        [
+            {
+                "url": "https://www.source.example.com/",
+                "path": "/",
+                "title": "Home",
+                "slug": "home",
+                "parent_slug": None,
+                "sections": [],
+            },
+            {
+                "url": "https://www.source.example.com/about",
+                "path": "/about",
+                "title": "About",
+                "slug": "about",
+                "parent_slug": None,
+                "sections": [],
+            },
+            {
+                "url": "https://www.source.example.com/hidden",
+                "path": "/hidden",
+                "title": "Hidden",
+                "slug": "hidden",
+                "parent_slug": None,
+                "sections": [],
+            },
+        ],
+    )
+    _write_header(
+        tmp_path,
+        [
+            {"label": "Home", "href": "https://source.example.com/", "children": []},
+            {"label": "About", "href": "https://source.example.com/about", "children": []},
+        ],
+    )
+    _register_create_responses(
+        mocked_responses,
+        [
+            {"pageId": 501, "name": "home"},
+            {"pageId": 502, "name": "about"},
+            {"pageId": 503, "name": "hidden"},
+        ],
+    )
+
+    runner.invoke(
+        cli,
+        [
+            "migrate",
+            "create-pages",
+            "--inventory",
+            str(inventory_path),
+            "--json",
+        ],
+    )
+
+    by_slug = {b["name"]: b for b in _create_page_bodies(mocked_responses)}
+    assert by_slug["home"]["includeInMenu"] is True
+    assert by_slug["about"]["includeInMenu"] is True
+    assert by_slug["hidden"]["includeInMenu"] is False
+
+
 def test_create_pages_includes_all_when_no_header_nav(
     runner, mock_config, tmp_path: Path, mocked_responses
 ):

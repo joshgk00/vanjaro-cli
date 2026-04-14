@@ -240,9 +240,18 @@ def _collect_nav_urls(nav_items: list, urls: set[str]) -> None:
 
 
 def _normalize_url(url: str) -> str:
-    """Strip fragments and trailing slashes for URL comparison."""
+    """Canonicalize a URL for cross-source comparison.
+
+    Strips fragments, trailing slashes, and a leading ``www.`` from the host.
+    The ``www.`` strip is load-bearing: real-world sites often link from their
+    nav using ``https://www.example.com/page`` while the crawler discovers
+    pages at the bare domain (or vice versa). Without normalizing the host,
+    ``_should_include_in_menu`` would treat every page as missing from the
+    nav and incorrectly hide all pages from the menu.
+    """
     parsed = urlparse(url)
-    clean = parsed._replace(fragment="").geturl()
+    netloc = parsed.netloc.removeprefix("www.")
+    clean = parsed._replace(fragment="", netloc=netloc).geturl()
     return clean.rstrip("/") or "/"
 
 
