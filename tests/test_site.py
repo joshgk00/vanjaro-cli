@@ -11,7 +11,7 @@ from tests.conftest import BASE_URL, mock_homepage, make_page_item
 
 ANALYZE_URL = f"{BASE_URL}/API/VanjaroAI/AISiteAnalysis/Analyze"
 HEALTH_URL = f"{BASE_URL}/API/VanjaroAI/AIHealth/Check"
-GET_PAGES_URL = f"{BASE_URL}/API/Vanjaro/Page/GetPages"
+GET_PAGES_URL = f"{BASE_URL}/API/PersonaBar/Pages/GetPageList"
 
 SAMPLE_ANALYZE_RESPONSE = {
     "site": {

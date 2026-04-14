@@ -32,10 +32,11 @@ class Page(BaseModel):
 
     @classmethod
     def from_api(cls, data: dict[str, Any]) -> "Page":
-        # Vanjaro GetPages returns {Text, Value, Url} instead of {tabId, name, url}
+        # Legacy Vanjaro/Page/GetPages returns {Text, Value, Url} instead of
+        # {tabId, name, url}. Kept for backward compatibility with any caller
+        # still hitting that endpoint.
         if "Value" in data and "tabId" not in data:
             text = data.get("Text", "")
-            # Text uses "-  " prefix to indicate child page nesting
             level = 0
             while text.startswith("-  "):
                 text = text[3:]
@@ -53,6 +54,10 @@ class Page(BaseModel):
             data = {**data, "tabId": data["id"]}
         if "url" not in data and "path" in data:
             data = {**data, "url": data.get("path") or ""}
+        # DNN encodes "no parent" as -1 in PersonaBar list responses.
+        # Normalize to None so consumers can use a single Pythonic value.
+        if data.get("parentId") == -1:
+            data = {**data, "parentId": None}
         return cls.model_validate(data)
 
     def to_row(self) -> dict[str, Any]:

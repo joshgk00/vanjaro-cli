@@ -11,7 +11,7 @@ from vanjaro_cli.config import ConfigError
 from vanjaro_cli.models.page import Page, PageSettings
 from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, print_table
 
-GET_PAGES = "/API/Vanjaro/Page/GetPages"
+GET_PAGES = "/API/PersonaBar/Pages/GetPageList"
 CREATE_PAGE = "/API/VanjaroAI/AIPage/Create"
 LIST_AI_PAGES = "/API/VanjaroAI/AIPage/List"
 GET_AI_PAGE = "/API/VanjaroAI/AIPage/Get"
@@ -40,24 +40,14 @@ def list_pages(keyword: str, portal_id: int | None, as_json: bool) -> None:
     except (ApiError, ConfigError) as exc:
         exit_error(str(exc), as_json)
 
-    data = response.json()
-    # GetPages returns a list of page items directly
-    raw_pages = data if isinstance(data, list) else data.get("pages", data.get("Pages", []))
+    raw_pages = _walk_page_tree(client, response.json())
 
-    # Filter out the "Select Page" placeholder that Vanjaro includes
-    raw_pages = [
-        p for p in raw_pages
-        if p.get("Value", -1) != 0 and p.get("Text") != "Select Page"
-    ]
-
-    # Filter by keyword client-side if provided
     if keyword:
         keyword_lower = keyword.lower()
         raw_pages = [
             p for p in raw_pages
             if keyword_lower in (p.get("name", "") or "").lower()
             or keyword_lower in (p.get("title", "") or "").lower()
-            or keyword_lower in (p.get("Text", "") or "").lower()
         ]
 
     page_list = [Page.from_api(p) for p in raw_pages]
@@ -256,6 +246,30 @@ def page_settings(
         human_message=f"Updated settings for page {page_id}.",
         page_id=page_id,
     )
+
+
+def _walk_page_tree(client, top_level_response: object) -> list[dict]:
+    """Flatten the GetPageList tree into a single ordered list.
+
+    GetPageList only returns top-level pages by default — children must be
+    fetched per-parent via ``parentId=N``. This helper recursively walks
+    every page that has a non-zero ``childCount`` so callers see the full
+    site tree without having to know the API's lazy-loading shape.
+    """
+    raw = (
+        top_level_response
+        if isinstance(top_level_response, list)
+        else top_level_response.get("pages", top_level_response.get("Pages", []))
+    )
+    flat: list[dict] = []
+    for page in raw:
+        flat.append(page)
+        if not isinstance(page, dict):
+            continue
+        if page.get("childCount", 0) > 0:
+            child_response = client.get(GET_PAGES, params={"parentId": page["id"]})
+            flat.extend(_walk_page_tree(client, child_response.json()))
+    return flat
 
 
 def _list_ai_pages(client) -> list[Page]:

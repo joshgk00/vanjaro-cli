@@ -11,7 +11,7 @@ import responses
 from vanjaro_cli.cli import cli
 from tests.conftest import BASE_URL, make_page_item, make_page_detail, mock_homepage
 
-GET_PAGES_URL = f"{BASE_URL}/API/Vanjaro/Page/GetPages"
+GET_PAGES_URL = f"{BASE_URL}/API/PersonaBar/Pages/GetPageList"
 DETAIL_URL = f"{BASE_URL}/API/PersonaBar/Pages/GetPageDetails"
 CREATE_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/Create"
 AI_LIST_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/List"
@@ -82,14 +82,15 @@ def test_pages_list_parses_child_levels(runner, mock_config):
 
 
 @responses.activate
-def test_pages_list_filters_select_page_placeholder(runner, mock_config):
+def test_pages_list_returns_parent_id_when_set(runner, mock_config):
+    """Pages with a parent expose parent_id; root pages normalize -1 to None."""
     mock_homepage()
     responses.add(
         responses.GET,
         GET_PAGES_URL,
         json=[
-            {"Text": "Select Page", "Value": 0, "Url": None},
-            make_page_item(1, "Home"),
+            make_page_item(1, "Blog", parent_id=-1),
+            make_page_item(2, "Post", parent_id=1, level=1),
         ],
         status=200,
     )
@@ -97,8 +98,9 @@ def test_pages_list_filters_select_page_placeholder(runner, mock_config):
     result = runner.invoke(cli, ["pages", "list", "--json"])
 
     data = json.loads(result.output)
-    assert len(data) == 1
-    assert data[0]["name"] == "Home"
+    by_id = {p["id"]: p for p in data}
+    assert by_id[1]["parent_id"] is None
+    assert by_id[2]["parent_id"] == 1
 
 
 @responses.activate

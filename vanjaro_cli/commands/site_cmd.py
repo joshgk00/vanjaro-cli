@@ -14,7 +14,7 @@ from vanjaro_cli.models.site import HealthCheck, SiteAnalysis
 
 ANALYZE_ENDPOINT = "/API/VanjaroAI/AISiteAnalysis/Analyze"
 HEALTH_ENDPOINT = "/API/VanjaroAI/AIHealth/Check"
-GET_PAGES = "/API/Vanjaro/Page/GetPages"
+GET_PAGES = "/API/PersonaBar/Pages/GetPageList"
 
 
 @click.group()
@@ -106,14 +106,9 @@ def nav(as_json: bool) -> None:
     except (ApiError, ConfigError) as exc:
         exit_error(str(exc), as_json)
 
-    data = response.json()
-    raw_pages = data if isinstance(data, list) else data.get("pages", data.get("Pages", []))
+    from vanjaro_cli.commands.pages_cmd import _walk_page_tree
 
-    raw_pages = [
-        p for p in raw_pages
-        if p.get("Value", -1) != 0 and p.get("Text") != "Select Page"
-    ]
-
+    raw_pages = _walk_page_tree(client, response.json())
     page_list = [Page.from_api(p) for p in raw_pages]
 
     if as_json:

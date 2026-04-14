@@ -125,13 +125,26 @@ def make_page_item(
     tab_id: int = 1,
     name: str = "Home",
     level: int = 0,
+    parent_id: int = -1,
+    url: str | None = None,
 ) -> dict:
-    """Build a page item matching the Vanjaro GetPages response format."""
-    prefix = "-  " * level
+    """Build a page item matching the PersonaBar GetPageList response format.
+
+    ``parent_id`` defaults to -1 (DNN's "no parent" sentinel), which the
+    ``Page`` model normalizes to ``None``.
+    """
     return {
-        "Text": f"{prefix}{name}",
-        "Value": tab_id,
-        "Url": None,
+        "id": tab_id,
+        "name": name,
+        "url": url if url is not None else f"/{name}",
+        "parentId": parent_id,
+        "level": level,
+        "status": "Visible",
+        "publishStatus": "Published",
+        "childCount": 0,
+        "tabpath": f"/{name}",
+        "isspecial": False,
+        "pageType": "normal",
     }
 
 
