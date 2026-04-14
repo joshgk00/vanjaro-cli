@@ -32,7 +32,7 @@ from vanjaro_cli.commands.helpers import (
     print_table,
     read_json_object,
 )
-from vanjaro_cli.commands.pages_cmd import CREATE_PAGE
+from vanjaro_cli.commands.pages_cmd import CREATE_PAGE, _list_ai_pages
 from vanjaro_cli.config import ConfigError
 
 __all__ = ["create_pages"]
@@ -85,13 +85,31 @@ def create_pages(
 
     client, _ = get_client()
 
+    existing_by_name = _existing_page_index(client, as_json)
     slug_to_id: dict[str, int] = {}
+    slug_to_path: dict[str, str] = {}
     warnings: list[str] = []
+    created_count = 0
+    skipped_count = 0
 
     for page in ordered:
         title = page.get("title") or page.get("slug") or "Untitled"
         slug = page["slug"]
         parent_slug = page.get("parent_slug")
+
+        # Collision check: if a page with this name already exists, register
+        # its id so children can still be parented and skip the create call.
+        # DNN treats names case-insensitively for routing.
+        existing = existing_by_name.get(slug.lower())
+        if existing is not None:
+            slug_to_id[slug] = existing["id"]
+            if existing.get("path"):
+                slug_to_path[slug] = existing["path"]
+            warnings.append(
+                f"Page '{slug}' already exists as id {existing['id']} — skipping create."
+            )
+            skipped_count += 1
+            continue
 
         parent_id = None
         if parent_slug:
@@ -123,6 +141,13 @@ def create_pages(
             continue
 
         slug_to_id[slug] = page_id
+        # Capture the actual path the server assigned. This reflects DNN's
+        # parent-aware URL nesting (e.g. /blog/post-slug for a blog child)
+        # and is used to overwrite the crawler's flat-slug page-url-map.
+        returned_path = data.get("path")
+        if isinstance(returned_path, str) and returned_path:
+            slug_to_path[slug] = returned_path
+        created_count += 1
 
     url_to_id = {
         page["url"]: slug_to_id[page["slug"]]
@@ -130,10 +155,25 @@ def create_pages(
         if page.get("url") and page["slug"] in slug_to_id
     }
 
+    # Build a fresh page-url-map that reflects the actual DNN URLs (which
+    # include parent path nesting). The crawler wrote a flat-slug map at
+    # crawl time before any pages existed; that version is wrong for any
+    # child page whose parent was inferred by Phase E hierarchy logic.
+    url_to_path = {
+        page["url"]: slug_to_path[page["slug"]]
+        for page in ordered
+        if page.get("url") and page["slug"] in slug_to_path
+    }
+
     output_path = _resolve_output_path(inventory_path, output_file)
+    page_url_map_path = inventory_path.parent / "page-url-map.json"
     try:
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(json.dumps(url_to_id, indent=2), encoding="utf-8")
+        if url_to_path:
+            page_url_map_path.write_text(
+                json.dumps(url_to_path, indent=2), encoding="utf-8"
+            )
     except OSError as exc:
         exit_error(f"Cannot write {output_path}: {exc}", as_json)
 
@@ -145,11 +185,12 @@ def create_pages(
         as_json,
         status="ok",
         human_message=(
-            f"Created {len(slug_to_id)} page(s) from {inventory_path.name}. "
-            f"Output: {output_path}"
+            f"Created {created_count} page(s), skipped {skipped_count} existing "
+            f"from {inventory_path.name}. Output: {output_path}"
         ),
         output=str(output_path),
-        created=len(slug_to_id),
+        created=created_count,
+        skipped=skipped_count,
         warnings=warnings,
     )
 
@@ -270,6 +311,27 @@ def _resolve_output_path(inventory_path: Path, output_file: str | None) -> Path:
     if output_file:
         return Path(output_file)
     return inventory_path.parent / "page-id-map.json"
+
+
+def _existing_page_index(client, as_json: bool) -> dict[str, dict]:
+    """Return a lowercase-name → ``{id, path}`` map of pages already in Vanjaro.
+
+    Used by ``create-pages`` to detect slug collisions before posting
+    ``AIPage/Create`` (which returns HTTP 500 on duplicate names). DNN
+    treats page names case-insensitively for routing, so the lookup key is
+    lowercased.
+    """
+    try:
+        existing = _list_ai_pages(client)
+    except (ApiError, ConfigError) as exc:
+        exit_error(f"Cannot list existing Vanjaro pages: {exc}", as_json)
+
+    index: dict[str, dict] = {}
+    for page in existing:
+        if not page.name:
+            continue
+        index[page.name.lower()] = {"id": page.id, "path": page.url}
+    return index
 
 
 def _print_dry_run(

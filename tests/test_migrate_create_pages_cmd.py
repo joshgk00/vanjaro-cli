@@ -71,15 +71,36 @@ def _write_header(tmp_path: Path, nav_items: list[dict]) -> Path:
     return header_path
 
 
+LIST_AI_PAGES_URL = f"{BASE_URL}/API/VanjaroAI/AIPage/List"
+
+
+def _register_existing_pages(
+    rsps: responses.RequestsMock, existing: list[dict] | None = None
+) -> None:
+    """Register the AIPage/List response that ``create-pages`` uses for its
+    collision pre-flight check. Defaults to an empty list (no collisions).
+    """
+    rsps.add(
+        responses.GET,
+        LIST_AI_PAGES_URL,
+        json={"total": len(existing or []), "skip": 0, "take": 200, "pages": existing or []},
+        status=200,
+    )
+
+
 def _register_create_responses(
-    rsps: responses.RequestsMock, responses_sequence: list[dict]
+    rsps: responses.RequestsMock,
+    responses_sequence: list[dict],
+    existing: list[dict] | None = None,
 ) -> None:
     """Register a sequence of CREATE_PAGE mock responses in order.
 
     Also registers the homepage GET that the client fetches once to obtain
-    an anti-forgery token before making any POST.
+    an anti-forgery token, and the AIPage/List response used by the slug
+    collision pre-flight check.
     """
     mock_homepage(rsps)
+    _register_existing_pages(rsps, existing)
     for payload in responses_sequence:
         rsps.add(
             responses.POST,
@@ -515,3 +536,181 @@ def test_create_pages_errors_when_inventory_has_no_pages(
 
     assert result.exit_code != 0
     assert "no pages" in result.output.lower()
+
+
+# --- #2: Slug collision pre-flight ---
+
+
+def test_create_pages_skips_existing_slug_and_reuses_id_for_children(
+    runner, mock_config, tmp_path: Path, mocked_responses
+):
+    """When a page with the same name already exists, register its id for
+    parenting children and skip the create POST."""
+    inventory_path = _write_inventory(
+        tmp_path,
+        [
+            _inventory_page("/", "home"),
+            _inventory_page("/blog", "blog"),
+            _inventory_page("/blog/post-1", "blog-post-1", parent_slug="blog"),
+        ],
+    )
+
+    # Existing pages: "home" already exists (id 21), "blog" does not
+    _register_create_responses(
+        mocked_responses,
+        [
+            {"pageId": 38, "name": "blog", "path": "/blog"},
+            {"pageId": 39, "name": "blog-post-1", "path": "/blog/blog-post-1"},
+        ],
+        existing=[{"tabId": 21, "name": "Home", "path": "/Home"}],
+    )
+
+    result = runner.invoke(
+        cli,
+        [
+            "migrate",
+            "create-pages",
+            "--inventory",
+            str(inventory_path),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    output = json.loads(result.output)
+    assert output["created"] == 2
+    assert output["skipped"] == 1
+    assert any("home" in w.lower() and "skipping" in w.lower() for w in output["warnings"])
+
+    # Only 2 POSTs (blog + blog-post-1), home was skipped
+    bodies = _create_page_bodies(mocked_responses)
+    assert len(bodies) == 2
+    assert {b["name"] for b in bodies} == {"blog", "blog-post-1"}
+
+
+def test_create_pages_collision_match_is_case_insensitive(
+    runner, mock_config, tmp_path: Path, mocked_responses
+):
+    """DNN treats names case-insensitively, so "Home" and "home" must collide."""
+    inventory_path = _write_inventory(
+        tmp_path,
+        [_inventory_page("/", "home")],
+    )
+
+    _register_create_responses(
+        mocked_responses,
+        [],
+        existing=[{"tabId": 21, "name": "HOME", "path": "/"}],
+    )
+
+    result = runner.invoke(
+        cli,
+        ["migrate", "create-pages", "--inventory", str(inventory_path), "--json"],
+    )
+
+    assert result.exit_code == 0
+    output = json.loads(result.output)
+    assert output["created"] == 0
+    assert output["skipped"] == 1
+
+
+def test_create_pages_existing_parent_id_is_reused_by_children(
+    runner, mock_config, tmp_path: Path, mocked_responses
+):
+    """A child whose parent already exists in Vanjaro should be parented
+    to the existing id, not orphaned to the root."""
+    inventory_path = _write_inventory(
+        tmp_path,
+        [
+            _inventory_page("/blog", "blog"),
+            _inventory_page("/blog/post-1", "blog-post-1", parent_slug="blog"),
+        ],
+    )
+
+    _register_create_responses(
+        mocked_responses,
+        [{"pageId": 99, "name": "blog-post-1", "path": "/blog/blog-post-1"}],
+        existing=[{"tabId": 50, "name": "Blog", "path": "/Blog"}],
+    )
+
+    result = runner.invoke(
+        cli,
+        ["migrate", "create-pages", "--inventory", str(inventory_path), "--json"],
+    )
+
+    assert result.exit_code == 0
+    bodies = _create_page_bodies(mocked_responses)
+    assert len(bodies) == 1
+    assert bodies[0]["name"] == "blog-post-1"
+    assert bodies[0]["parentId"] == 50  # existing blog id, not None
+
+
+# --- #3: page-url-map.json reflects actual paths ---
+
+
+def test_create_pages_writes_page_url_map_with_actual_paths(
+    runner, mock_config, tmp_path: Path, mocked_responses
+):
+    """The fresh page-url-map.json must use the path returned from the API,
+    which reflects parent-aware URL nesting (e.g. /blog/<slug> not /<slug>)."""
+    inventory_path = _write_inventory(
+        tmp_path,
+        [
+            _inventory_page("/blog", "blog"),
+            _inventory_page("/blog/post-1", "blog-post-1", parent_slug="blog"),
+        ],
+    )
+
+    # Crawler wrote a stale page-url-map (flat slugs) — create-pages should overwrite.
+    stale_map_path = tmp_path / "page-url-map.json"
+    stale_map_path.write_text(json.dumps({
+        "https://source.example.com/blog/post-1": "/blog-post-1",
+    }), encoding="utf-8")
+
+    _register_create_responses(
+        mocked_responses,
+        [
+            {"pageId": 50, "name": "blog", "path": "/blog"},
+            {"pageId": 51, "name": "blog-post-1", "path": "/blog/blog-post-1"},
+        ],
+    )
+
+    result = runner.invoke(
+        cli,
+        ["migrate", "create-pages", "--inventory", str(inventory_path), "--json"],
+    )
+
+    assert result.exit_code == 0
+    new_map = json.loads(stale_map_path.read_text())
+    assert new_map["https://source.example.com/blog/post-1"] == "/blog/blog-post-1"
+    assert new_map["https://source.example.com/blog"] == "/blog"
+    # stale flat-slug entry must be gone
+    assert "/blog-post-1" not in new_map.values()
+
+
+def test_create_pages_skipped_existing_pages_keep_their_path_in_url_map(
+    runner, mock_config, tmp_path: Path, mocked_responses
+):
+    """When a page is skipped due to collision, its existing path should
+    still appear in the page-url-map so rewrite-urls can target it."""
+    inventory_path = _write_inventory(
+        tmp_path,
+        [_inventory_page("/about", "about")],
+    )
+
+    _register_create_responses(
+        mocked_responses,
+        [],
+        existing=[{"tabId": 99, "name": "About", "path": "/About"}],
+    )
+
+    result = runner.invoke(
+        cli,
+        ["migrate", "create-pages", "--inventory", str(inventory_path), "--json"],
+    )
+
+    assert result.exit_code == 0
+    url_map_path = tmp_path / "page-url-map.json"
+    assert url_map_path.exists()
+    url_map = json.loads(url_map_path.read_text())
+    assert url_map["https://source.example.com/about"] == "/About"
