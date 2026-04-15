@@ -13,6 +13,7 @@ from bs4 import BeautifulSoup
 from vanjaro_cli.commands.helpers import exit_error, output_result
 from vanjaro_cli.commands.migrate_assemble_cmd import assemble_page
 from vanjaro_cli.commands.migrate_build_id_map_cmd import build_id_map
+from vanjaro_cli.commands.migrate_compose_global_cmd import compose_global
 from vanjaro_cli.commands.migrate_create_pages_cmd import create_pages
 from vanjaro_cli.commands.migrate_rewrite_cmd import rewrite_urls
 from vanjaro_cli.commands.migrate_verify_cmd import verify, verify_all
@@ -42,6 +43,7 @@ def migrate() -> None:
 
 migrate.add_command(assemble_page)
 migrate.add_command(build_id_map)
+migrate.add_command(compose_global)
 migrate.add_command(create_pages)
 migrate.add_command(rewrite_urls)
 migrate.add_command(verify)

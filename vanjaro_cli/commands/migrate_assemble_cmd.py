@@ -11,6 +11,7 @@ from pathlib import Path
 import click
 
 from vanjaro_cli.commands.helpers import exit_error, output_result, read_json_file
+from vanjaro_cli.migration.overrides import crawl_content_to_overrides
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
     apply_overrides,
@@ -73,63 +74,10 @@ def _read_section_file(path: Path, as_json: bool) -> dict:
     return data
 
 
-def _crawl_section_to_overrides(content: dict) -> dict[str, str]:
-    """Map a crawler-extracted content dict to block_compose override keys.
-
-    Maps all extracted content types to their template override slots:
-      - headings   → heading_1, heading_2, ...
-      - paragraphs → text_1, text_2, ...
-      - buttons    → button_1 / button_1_href, ...
-      - images     → image_1_src / image_1_alt, ...
-      - list_items → list-item_1, list-item_2, ...
-    """
-    overrides: dict[str, str] = {}
-
-    headings = content.get("headings") or []
-    if isinstance(headings, list):
-        for index, heading in enumerate(headings, start=1):
-            if isinstance(heading, str):
-                overrides[f"heading_{index}"] = heading
-            elif isinstance(heading, dict) and isinstance(heading.get("text"), str):
-                overrides[f"heading_{index}"] = heading["text"]
-
-    paragraphs = content.get("paragraphs") or []
-    if isinstance(paragraphs, list):
-        for index, paragraph in enumerate(paragraphs, start=1):
-            if isinstance(paragraph, str):
-                overrides[f"text_{index}"] = paragraph
-
-    buttons = content.get("buttons") or []
-    if isinstance(buttons, list):
-        for index, button in enumerate(buttons, start=1):
-            if not isinstance(button, dict):
-                continue
-            text = button.get("text")
-            href = button.get("href")
-            if isinstance(text, str):
-                overrides[f"button_{index}"] = text
-            if isinstance(href, str):
-                overrides[f"button_{index}_href"] = href
-
-    images = content.get("images") or []
-    if isinstance(images, list):
-        for index, image in enumerate(images, start=1):
-            if not isinstance(image, dict):
-                continue
-            src = image.get("src")
-            alt = image.get("alt")
-            if isinstance(src, str):
-                overrides[f"image_{index}_src"] = src
-            if isinstance(alt, str):
-                overrides[f"image_{index}_alt"] = alt
-
-    list_items = content.get("list_items") or []
-    if isinstance(list_items, list):
-        for index, item in enumerate(list_items, start=1):
-            if isinstance(item, str):
-                overrides[f"list-item_{index}"] = item
-
-    return overrides
+# Override extraction used to live here; moved to
+# ``vanjaro_cli.migration.overrides.crawl_content_to_overrides`` so
+# ``migrate compose-global`` can reuse the same mapping for header and
+# footer JSONs without duplicating the logic.
 
 
 def _compose_template_section(
@@ -202,7 +150,7 @@ def _classify_and_resolve(
                     f"Section file {source_file} has a 'content' key that is not an object.",
                     as_json,
                 )
-            overrides = _crawl_section_to_overrides(content_block)
+            overrides = crawl_content_to_overrides(content_block)
         elif raw_overrides is None:
             overrides = {}
         elif isinstance(raw_overrides, dict):

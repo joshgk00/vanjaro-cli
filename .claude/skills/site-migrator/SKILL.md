@@ -18,9 +18,9 @@ Source Site (live URL)
                                            download assets, extract design tokens,
                                            write global/header.json + footer.json)
   → site-builder theme application       (Stage 3.2)
-  → vanjaro blocks compose               (Stage 3.5 — compose site-specific
-                                           Site Header and Site Footer from the
-                                           crawled global/header.json + footer.json)
+  → vanjaro migrate compose-global       (Stage 3.5 — bridge the crawler's
+                                           global/header.json + footer.json
+                                           into composed block JSONs)
   → vanjaro global-blocks create         (Stage 3.5 — register Site Header and
                                            Site Footer as new global blocks and
                                            capture their GUIDs in block-guids.json)
@@ -448,38 +448,72 @@ not the migrated site's. Using them means the migrated site will render with
 the source's page content sandwiched between Vanjaro's default chrome, which
 is a fidelity failure.
 
-#### 3.5.1 Compose From the Crawled Header/Footer
+#### 3.5.1 Template availability
+
+The block library (``artifacts/block-templates/``) currently ships:
+
+- **``Footer (3-column)``** — 3 headings + 1 text (copyright) + 12 list-item
+  slots. **No image slots** — the template has no logo area, so any crawled
+  logo images land in the "dropped overrides" warning list and need to be
+  handled separately (e.g. as a custom code block or logo bar inserted
+  inside the footer, if the footer template grows image support later).
+- **``Footer (4-column)``** — 4 headings + 1 text + 18 list-item slots. Same
+  image gap as the 3-column.
+- **No site-header template ships today.** If the source has a real header
+  (logo + multi-level nav), you need to **author one first** using the
+  ``block-template-author`` skill before running Stage 3.5. The crawled
+  ``global/header.json`` gives you the content shape — headings, images
+  (the logo), list_items (the top-level nav), and ``nav_items`` (the nested
+  nav tree). Target template slots: ``image_1_src`` / ``image_1_alt`` (logo)
+  and ``list-item_1..N`` (nav labels). Once the template exists in the
+  library, ``compose-global`` uses it the same way as the footer.
+
+#### 3.5.2 Compose From the Crawled Header/Footer
 
 The crawler writes ``global/header.json`` and ``global/footer.json`` during
-Stage 1. Each file is a section-shaped object with a ``template`` hint and
-``content`` (headings, paragraphs, images, links, buttons, ``nav_items``).
-Compose each against the chosen block template:
+Stage 1. Each file is a section-shaped object with ``type``, a ``template``
+hint (the crawler's classification — ignore for composition), and
+``content`` (headings, paragraphs, images, links, buttons, list_items,
+nav_items).
+
+Use ``vanjaro migrate compose-global`` to bridge the crawl shape and the
+block-compose shape in one step. It reads the crawled global file, derives
+overrides from the ``content`` block via the same mapping that
+``assemble-page`` uses for sections, merges any ``--set`` extras, and
+writes a composed block JSON ready for ``global-blocks create``:
 
 ```bash
 # Inspect what the crawler captured
 cat artifacts/migration/example-com/global/header.json
 cat artifacts/migration/example-com/global/footer.json
 
-# Compose the header (pick an appropriate header template; adjust --set
-# values from the crawled content, especially the logo src and nav links)
-vanjaro blocks compose "Site Header (centered logo)" \
-  --set logo_src="/Portals/0/logo.png" \
-  --set logo_alt="Example Corp" \
-  --output artifacts/migration/example-com/global/header-composed.json
+# Compose the footer — the crawled content (headings, text, list-items)
+# maps automatically; use --set for any overrides the crawler didn't catch
+# (e.g. column headings the source didn't have as headings).
+vanjaro migrate compose-global \
+  --source artifacts/migration/example-com/global/footer.json \
+  --template "Footer (3-column)" \
+  --output artifacts/migration/example-com/global/footer-composed.json \
+  --set heading_1="Quick Links" \
+  --set heading_2="Contact" \
+  --set heading_3="Follow Us" \
+  --json
 
-# Compose the footer
-vanjaro blocks compose "Footer (3-column)" \
-  --set heading_1="Quick Links" --set heading_2="Contact" --set heading_3="Follow Us" \
-  --set text_1="© 2026 Example Corp. All rights reserved." \
-  --output artifacts/migration/example-com/global/footer-composed.json
+# Compose the header (assuming a site-header template exists — see 3.5.1)
+vanjaro migrate compose-global \
+  --source artifacts/migration/example-com/global/header.json \
+  --template "Site Header" \
+  --output artifacts/migration/example-com/global/header-composed.json \
+  --json
 ```
 
-Use ``vanjaro blocks compose <template> --list-slots`` to discover which
-slots each template exposes, and fill them from the crawled ``content``
-block. List-item slots (``list-item_1``, ``list-item_2``, ...) cover nav
-links, footer link columns, and social icons.
+``compose-global`` reports any overrides that couldn't be applied under
+``dropped_overrides`` in its JSON output (or as a warning on stderr). A
+common drop is ``image_N_src`` / ``image_N_alt`` against the current footer
+templates, which lack image slots — that's a known template gap, not a
+composition bug.
 
-#### 3.5.2 Register and Capture the GUIDs
+#### 3.5.3 Register and Capture the GUIDs
 
 Register each composed file as a new global block. **Save the returned GUIDs**
 — they're what Stage 5.1 needs for the ``--header-block-guid`` /

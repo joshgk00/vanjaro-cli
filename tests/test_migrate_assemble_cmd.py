@@ -5,10 +5,8 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from vanjaro_cli.commands.migrate_assemble_cmd import (
-    _crawl_section_to_overrides,
-    assemble_page,
-)
+from vanjaro_cli.commands.migrate_assemble_cmd import assemble_page
+from vanjaro_cli.migration.overrides import crawl_content_to_overrides
 
 HERO_TEMPLATE = {
     "name": "Centered Hero",
@@ -69,7 +67,7 @@ def _raw_section(section_id: str, heading_text: str) -> dict:
     }
 
 
-# -- _crawl_section_to_overrides --
+# -- crawl_content_to_overrides --
 
 
 def test_crawl_section_maps_first_heading_paragraph_button():
@@ -79,7 +77,7 @@ def test_crawl_section_maps_first_heading_paragraph_button():
         "buttons": [{"text": "Get Started", "href": "/signup"}],
     }
 
-    overrides = _crawl_section_to_overrides(content)
+    overrides = crawl_content_to_overrides(content)
 
     assert overrides["heading_1"] == "Welcome to VGRT"
     assert overrides["heading_2"] == "Subtitle"
@@ -90,7 +88,7 @@ def test_crawl_section_maps_first_heading_paragraph_button():
 
 
 def test_crawl_section_handles_missing_keys():
-    overrides = _crawl_section_to_overrides({})
+    overrides = crawl_content_to_overrides({})
     assert overrides == {}
 
 
@@ -102,7 +100,7 @@ def test_crawl_section_maps_images():
         ],
     }
 
-    overrides = _crawl_section_to_overrides(content)
+    overrides = crawl_content_to_overrides(content)
 
     assert overrides["image_1_src"] == "https://example.com/hero.jpg"
     assert overrides["image_1_alt"] == "Hero image"
@@ -115,7 +113,7 @@ def test_crawl_section_skips_non_dict_images():
         "images": ["not-a-dict", {"src": "https://example.com/ok.jpg", "alt": "Valid"}],
     }
 
-    overrides = _crawl_section_to_overrides(content)
+    overrides = crawl_content_to_overrides(content)
 
     assert "image_1_src" not in overrides
     assert overrides["image_2_src"] == "https://example.com/ok.jpg"
@@ -127,7 +125,7 @@ def test_crawl_section_image_missing_alt():
         "images": [{"src": "https://example.com/no-alt.jpg"}],
     }
 
-    overrides = _crawl_section_to_overrides(content)
+    overrides = crawl_content_to_overrides(content)
 
     assert overrides["image_1_src"] == "https://example.com/no-alt.jpg"
     assert "image_1_alt" not in overrides
@@ -138,7 +136,7 @@ def test_crawl_section_maps_list_items():
         "list_items": ["Home", "About", "Services", "Contact"],
     }
 
-    overrides = _crawl_section_to_overrides(content)
+    overrides = crawl_content_to_overrides(content)
 
     assert overrides["list-item_1"] == "Home"
     assert overrides["list-item_2"] == "About"
@@ -151,7 +149,7 @@ def test_crawl_section_skips_non_string_list_items():
         "list_items": [None, "Valid", 42, "Also Valid"],
     }
 
-    overrides = _crawl_section_to_overrides(content)
+    overrides = crawl_content_to_overrides(content)
 
     assert "list-item_1" not in overrides
     assert overrides["list-item_2"] == "Valid"
@@ -165,7 +163,7 @@ def test_crawl_section_ignores_non_string_entries():
         "buttons": ["not-a-dict", {"text": 42, "href": "/ok"}],
     }
 
-    overrides = _crawl_section_to_overrides(content)
+    overrides = crawl_content_to_overrides(content)
 
     assert overrides["heading_2"] == "Only this one"
     assert "heading_1" not in overrides

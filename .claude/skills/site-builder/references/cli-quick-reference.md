@@ -107,6 +107,15 @@ vanjaro migrate create-pages --inventory INVENTORY.json [--dry-run] [--output MA
 # Alternative to create-pages when pages already exist on the target
 vanjaro migrate build-id-map --inventory INVENTORY.json --output MAP.json
 
+# Stage 3.5 — compose a Site Header / Site Footer block from the crawled
+# global/header.json or global/footer.json. Bridges the crawler's section
+# shape and the block-compose overrides shape in one step.
+vanjaro migrate compose-global \
+  --source global/footer.json \
+  --template "Footer (3-column)" \
+  --output global/footer-composed.json \
+  --set heading_1="Quick Links" --set heading_2="Contact"
+
 # Stage 5.1 — assemble per-section JSONs into one page content JSON.
 # ALWAYS pass both global block guids on a migration — without them the
 # page stores correctly but renders blank to anonymous visitors.
