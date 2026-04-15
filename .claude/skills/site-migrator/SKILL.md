@@ -15,14 +15,21 @@ The pipeline is:
 ```
 Source Site (live URL)
   → vanjaro migrate crawl                (Stage 1 — fetch pages, extract sections,
-                                           download assets, extract design tokens)
+                                           download assets, extract design tokens,
+                                           write global/header.json + footer.json)
   → site-builder theme application       (Stage 3.2)
+  → vanjaro blocks compose               (Stage 3.5 — compose site-specific
+                                           Site Header and Site Footer from the
+                                           crawled global/header.json + footer.json)
+  → vanjaro global-blocks create         (Stage 3.5 — register Site Header and
+                                           Site Footer as new global blocks and
+                                           capture their GUIDs in block-guids.json)
   → vanjaro migrate create-pages         (Stage 4 — create Vanjaro pages with
                                            hierarchy, collision detection, and
-                                           writes page-id-map.json)
+                                           write page-id-map.json)
   → vanjaro migrate assemble-page        (Stage 5.1 — merge sections with
                                            --header-block-guid / --footer-block-guid
-                                           wrapping so pages render)
+                                           pointing at the Stage 3.5 blocks)
   → vanjaro migrate rewrite-urls         (Stage 5.1 — rewrite image + link URLs)
   → vanjaro content update/publish       (Stage 5.2 — push and publish; the
                                            update command auto-generates the
@@ -37,9 +44,12 @@ time. Without it, pages save correctly but render **blank** to anonymous
 visitors. ``vanjaro content update`` auto-generates ``contentHtml`` from the
 component tree as of Phase E, so the CLI path is correct by default. But page
 content also **must** be top-level-wrapped in ``globalblockwrapper`` components
-referencing the Header and Footer global blocks — otherwise Vanjaro renders
-just the page section with no site chrome. ``migrate assemble-page`` handles
-that wrapping when you pass the guids from ``vanjaro global-blocks list``.
+referencing the **migration-created** ``Site Header`` and ``Site Footer``
+global blocks — not the default install's Header and Footer, which are generic
+Vanjaro chrome and have nothing to do with the source site. Stage 3.5 is where
+the migration creates those site-specific global blocks from the crawled
+``global/header.json`` and ``global/footer.json``; Stage 5.1 then wraps every
+page with the GUIDs from Stage 3.5.
 
 All artifacts go to `artifacts/migration/{site-slug}/` in a resumable layout.
 </context>
@@ -115,8 +125,11 @@ The migration has 6 stages:
 │  Gate: library-plan.json ready                          │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 3: SET UP VANJARO TARGET                         │
-│  Auth → branding → theme → upload assets → register     │
-│  Gate: theme applied, assets uploaded, blocks registered │
+│  Auth → branding → theme → assets → block library →     │
+│  create site-specific Site Header + Site Footer global  │
+│  blocks from crawled header.json/footer.json            │
+│  Gate: theme applied, assets uploaded, blocks registered,│
+│        block-guids.json written with Site Header/Footer  │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 4: CREATE PAGES                                  │
 │  Page hierarchy → shells → SEO → build-id-map           │
@@ -421,12 +434,93 @@ vanjaro blocks build-library --plan artifacts/migration/example-com/library-plan
 vanjaro blocks build-library --plan artifacts/migration/example-com/library-plan.json
 ```
 
-### 3.5 Stage 3 Gate
+### 3.5 Create Site-Specific Global Header and Footer Blocks
+
+**This step is mandatory for content fidelity** — the crawled source has its
+own header (logo, nav, branding) and footer (copyright, links, social).
+Stage 5 will wrap every migrated page with ``globalblockwrapper`` components
+referencing these blocks, so they have to exist **before** Stage 5 content
+assembly starts.
+
+Do **not** wrap pages with the default Vanjaro install's ``Header`` and
+``Footer`` global blocks — those represent the fresh-install theme's chrome,
+not the migrated site's. Using them means the migrated site will render with
+the source's page content sandwiched between Vanjaro's default chrome, which
+is a fidelity failure.
+
+#### 3.5.1 Compose From the Crawled Header/Footer
+
+The crawler writes ``global/header.json`` and ``global/footer.json`` during
+Stage 1. Each file is a section-shaped object with a ``template`` hint and
+``content`` (headings, paragraphs, images, links, buttons, ``nav_items``).
+Compose each against the chosen block template:
+
+```bash
+# Inspect what the crawler captured
+cat artifacts/migration/example-com/global/header.json
+cat artifacts/migration/example-com/global/footer.json
+
+# Compose the header (pick an appropriate header template; adjust --set
+# values from the crawled content, especially the logo src and nav links)
+vanjaro blocks compose "Site Header (centered logo)" \
+  --set logo_src="/Portals/0/logo.png" \
+  --set logo_alt="Example Corp" \
+  --output artifacts/migration/example-com/global/header-composed.json
+
+# Compose the footer
+vanjaro blocks compose "Footer (3-column)" \
+  --set heading_1="Quick Links" --set heading_2="Contact" --set heading_3="Follow Us" \
+  --set text_1="© 2026 Example Corp. All rights reserved." \
+  --output artifacts/migration/example-com/global/footer-composed.json
+```
+
+Use ``vanjaro blocks compose <template> --list-slots`` to discover which
+slots each template exposes, and fill them from the crawled ``content``
+block. List-item slots (``list-item_1``, ``list-item_2``, ...) cover nav
+links, footer link columns, and social icons.
+
+#### 3.5.2 Register and Capture the GUIDs
+
+Register each composed file as a new global block. **Save the returned GUIDs**
+— they're what Stage 5.1 needs for the ``--header-block-guid`` /
+``--footer-block-guid`` flags:
+
+```bash
+# Register and capture
+HEADER_GUID=$(vanjaro global-blocks create \
+  --name "Site Header" --category "Navigation" \
+  --file artifacts/migration/example-com/global/header-composed.json \
+  --json | python -c "import json, sys; print(json.load(sys.stdin)['guid'])")
+vanjaro global-blocks publish "$HEADER_GUID"
+
+FOOTER_GUID=$(vanjaro global-blocks create \
+  --name "Site Footer" --category "Navigation" \
+  --file artifacts/migration/example-com/global/footer-composed.json \
+  --json | python -c "import json, sys; print(json.load(sys.stdin)['guid'])")
+vanjaro global-blocks publish "$FOOTER_GUID"
+
+# Persist them so Stage 5 can pick them up without re-deriving
+cat > artifacts/migration/example-com/global/block-guids.json <<EOF
+{
+  "header": "$HEADER_GUID",
+  "footer": "$FOOTER_GUID"
+}
+EOF
+```
+
+Re-runs: if the blocks already exist from a previous attempt, use
+``vanjaro global-blocks update GUID --file ...`` to refresh their content
+instead of creating duplicates. Check ``vanjaro global-blocks list --json``
+first.
+
+### 3.6 Stage 3 Gate
 
 ```bash
 vanjaro theme get --modified --json | jq '.total'
 vanjaro custom-blocks list --json
 vanjaro assets list --json
+vanjaro global-blocks list --json | jq '.[] | {name, guid}'  # Site Header + Site Footer present
+cat artifacts/migration/example-com/global/block-guids.json   # guids saved
 ```
 
 ## Stage 4: Create Pages
@@ -513,27 +607,32 @@ cat artifacts/migration/example-com/page-id-map.json # every page mapped
 
 ## Stage 5: Migrate Content
 
-### 5.0 Fetch Global Block GUIDs (Required)
+### 5.0 Load the Global Block GUIDs From Stage 3.5
 
-Before assembling any page, fetch the Header and Footer global block GUIDs
-from the target Vanjaro instance. ``assemble-page`` needs them to wrap each
-page with ``globalblockwrapper`` components — without wrapping, migrated
-pages store correctly but render blank to anonymous visitors because
-Vanjaro's renderer has no site chrome to emit around page content.
-
-```bash
-vanjaro global-blocks list --json
-```
-
-Extract the ``guid`` field for the blocks named ``Header`` and ``Footer``.
-Every Vanjaro install has these by default. Save them as shell variables:
+Stage 3.5 created and registered site-specific ``Site Header`` and ``Site
+Footer`` global blocks from the crawled content, and wrote their GUIDs to
+``global/block-guids.json``. Load them now so Stage 5.1 can wrap every
+page with the correct wrappers:
 
 ```bash
-HEADER_GUID=$(vanjaro global-blocks list --json | \
-  python -c "import json, sys; [print(b['guid']) for b in json.load(sys.stdin) if b['name'] == 'Header']")
-FOOTER_GUID=$(vanjaro global-blocks list --json | \
-  python -c "import json, sys; [print(b['guid']) for b in json.load(sys.stdin) if b['name'] == 'Footer']")
+HEADER_GUID=$(python -c "import json; print(json.load(open('artifacts/migration/example-com/global/block-guids.json'))['header'])")
+FOOTER_GUID=$(python -c "import json; print(json.load(open('artifacts/migration/example-com/global/block-guids.json'))['footer'])")
 ```
+
+**Use the Stage-3.5 GUIDs, not the default install's ``Header``/``Footer``
+GUIDs from ``vanjaro global-blocks list``.** The defaults represent the
+fresh-install Vanjaro theme chrome and have nothing to do with the source
+site. Wrapping with them produces a migrated site that has the source's
+page content between Vanjaro's default chrome — a fidelity failure you
+won't catch until visual QA.
+
+If Stage 3.5 wasn't run (or the ``block-guids.json`` file is missing), stop
+and go back to Stage 3.5 rather than falling back to the install defaults.
+
+``assemble-page`` needs these GUIDs to wrap each page with
+``globalblockwrapper`` components. Without wrapping, migrated pages store
+correctly but render blank to anonymous visitors because Vanjaro's renderer
+has no site chrome to emit around page content.
 
 ### 5.1 Assemble and Rewrite Each Page
 
@@ -616,22 +715,29 @@ the assembled file was missing the global header/footer wrappers.
 Re-run Stage 5.1 with ``--header-block-guid`` / ``--footer-block-guid``
 and push again.
 
-### 5.3 Set Up Global Blocks
+### 5.3 Refine Global Blocks (Optional)
 
-Assemble and register header and footer using `vanjaro blocks compose`:
+The ``Site Header`` and ``Site Footer`` global blocks were already created
+in Stage 3.5 and wrapped into every migrated page by Stage 5.1. If the
+smoke test in Stage 5.2a reveals that the header or footer is wrong (wrong
+logo, missing links, outdated copy), iterate here using
+``vanjaro global-blocks update``:
 
 ```bash
-vanjaro blocks compose "Footer (3-column)" \
-  --set heading_1="Quick Links" --set heading_2="Contact" --set heading_3="Follow Us" \
-  --output artifacts/migration/example-com/global/footer-composed.json
+# Re-compose with updated overrides
+vanjaro blocks compose "Site Header (centered logo)" \
+  --set logo_src="/Portals/0/logo-v2.png" \
+  --output artifacts/migration/example-com/global/header-composed.json
 
-vanjaro global-blocks create --name "Site Footer" --category "Navigation" \
-  --file artifacts/migration/example-com/global/footer-composed.json
-vanjaro global-blocks publish FOOTER_GUID
+# Push the new content to the existing block (keeps the same GUID)
+vanjaro global-blocks update "$HEADER_GUID" \
+  --file artifacts/migration/example-com/global/header-composed.json
+vanjaro global-blocks publish "$HEADER_GUID"
 ```
 
-For headers, Vanjaro's built-in menu block typically handles navigation. The
-header global block may just need a logo and branding adjustments.
+Every migrated page that wraps ``$HEADER_GUID`` picks up the new content
+automatically at render time — no need to re-wrap or re-publish pages.
+That's the whole point of the wrapper indirection.
 
 ### 5.4 Stage 5 Gate
 
@@ -763,6 +869,14 @@ Each stage's artifacts are self-contained. Resume from the last incomplete stage
   manual content edits outside the migration flow, the same wrapping rule
   applies — make sure the top-level components include the `globalblockwrapper`
   entries.
+- **Don't wrap with the default install's ``Header``/``Footer`` guids.**
+  Those are generic Vanjaro chrome — they have nothing to do with the
+  source site. Using them gives you the source's page content sandwiched
+  between default Vanjaro chrome, which is a fidelity failure you'll catch
+  at visual QA and then have to re-wrap every page to fix. Stage 3.5 exists
+  specifically to create migration-owned ``Site Header`` and ``Site Footer``
+  blocks from the crawled ``global/header.json`` and ``global/footer.json``.
+  Use their GUIDs — not the install defaults.
 
 </instructions>
 

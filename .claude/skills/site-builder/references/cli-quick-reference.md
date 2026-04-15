@@ -125,7 +125,26 @@ vanjaro migrate verify --source-url URL --page-id ID [--header-block-name N] [--
 ```
 
 **Getting the global block guids:**
+
+For a **migration**, the Header and Footer guids must come from the
+site-specific ``Site Header`` / ``Site Footer`` blocks the migration
+creates from the crawled ``global/header.json`` and ``global/footer.json``
+— NOT the default install's ``Header`` / ``Footer``, which are generic
+Vanjaro chrome and produce a fidelity-broken result.
+
 ```bash
-vanjaro global-blocks list --json
-# Extract the "guid" value for blocks named "Header" and "Footer"
+# Migration path — compose, register, and capture the guids
+vanjaro blocks compose "Site Header (centered logo)" --output header.json
+HEADER_GUID=$(vanjaro global-blocks create --name "Site Header" --file header.json --json | \
+  python -c "import json, sys; print(json.load(sys.stdin)['guid'])")
+vanjaro global-blocks publish "$HEADER_GUID"
+
+# Same pattern for Footer
+```
+
+For a **non-migration site build** where the default chrome is fine, you
+can pull the install defaults by name:
+```bash
+vanjaro global-blocks list --json | python -c "import json, sys; \
+  print({b['name']: b['guid'] for b in json.load(sys.stdin)})"
 ```
