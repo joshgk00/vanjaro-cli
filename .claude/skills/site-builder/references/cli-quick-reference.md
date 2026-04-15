@@ -93,3 +93,39 @@ vanjaro global-blocks delete GUID --force
 vanjaro assets list [--folder F]               # List uploaded files
 vanjaro assets upload FILE [--folder F]        # Upload file to site
 ```
+
+## Migration
+```bash
+# Stage 1 — crawl a source site into migration artifacts
+vanjaro migrate crawl URL --output-dir DIR [--max-pages N] [--include-paths PAT] [--exclude-paths PAT]
+
+# Stage 4 — create Vanjaro pages from the crawl inventory
+# Handles hierarchy (parent-first), slug collisions (case-insensitive skip),
+# writes page-id-map.json AND overwrites page-url-map.json with actual DNN paths.
+vanjaro migrate create-pages --inventory INVENTORY.json [--dry-run] [--output MAP.json]
+
+# Alternative to create-pages when pages already exist on the target
+vanjaro migrate build-id-map --inventory INVENTORY.json --output MAP.json
+
+# Stage 5.1 — assemble per-section JSONs into one page content JSON.
+# ALWAYS pass both global block guids on a migration — without them the
+# page stores correctly but renders blank to anonymous visitors.
+vanjaro migrate assemble-page \
+  --sections "pages/slug/section-*.json" \
+  --output content.json \
+  --header-block-guid "$HEADER_GUID" \
+  --footer-block-guid "$FOOTER_GUID"
+
+# Stage 5.1 — rewrite image + internal link URLs to Vanjaro paths
+vanjaro migrate rewrite-urls --content content.json --asset-manifest manifest.json --page-map map.json
+
+# Stage 6 — verify every migrated page against its source crawl
+vanjaro migrate verify-all --inventory INVENTORY.json --page-id-map MAP.json [--threshold 0.9]
+vanjaro migrate verify --source-url URL --page-id ID [--header-block-name N] [--footer-block-name N]
+```
+
+**Getting the global block guids:**
+```bash
+vanjaro global-blocks list --json
+# Extract the "guid" value for blocks named "Header" and "Footer"
+```

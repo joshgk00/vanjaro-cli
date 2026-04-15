@@ -14,15 +14,32 @@ with a one-off script.
 The pipeline is:
 ```
 Source Site (live URL)
-  → vanjaro migrate crawl          (Stage 1 — fetch pages, extract sections,
-                                     download assets, extract design tokens)
-  → site-builder theme application (Stage 3.2)
-  → vanjaro migrate build-id-map   (Stage 4 — match crawled pages to Vanjaro IDs)
-  → vanjaro migrate assemble-page  (Stage 5.1 — merge section JSONs into page content)
-  → vanjaro migrate rewrite-urls   (Stage 5.1 — rewrite image + link URLs)
-  → vanjaro content update/publish (Stage 5.2 — push and publish)
-  → vanjaro migrate verify-all     (Stage 6 — page-by-page verification)
+  → vanjaro migrate crawl                (Stage 1 — fetch pages, extract sections,
+                                           download assets, extract design tokens)
+  → site-builder theme application       (Stage 3.2)
+  → vanjaro migrate create-pages         (Stage 4 — create Vanjaro pages with
+                                           hierarchy, collision detection, and
+                                           writes page-id-map.json)
+  → vanjaro migrate assemble-page        (Stage 5.1 — merge sections with
+                                           --header-block-guid / --footer-block-guid
+                                           wrapping so pages render)
+  → vanjaro migrate rewrite-urls         (Stage 5.1 — rewrite image + link URLs)
+  → vanjaro content update/publish       (Stage 5.2 — push and publish; the
+                                           update command auto-generates the
+                                           contentHtml string Vanjaro needs)
+  → vanjaro migrate verify-all           (Stage 6 — page-by-page verification)
 ```
+
+**Why the wrapping and contentHtml matter:** The Vanjaro AIPage backend stores
+three things — ``contentJSON`` (canonical tree), ``styleJSON`` (styles), and
+``contentHtml`` (pre-rendered HTML). The server uses ``contentHtml`` at render
+time. Without it, pages save correctly but render **blank** to anonymous
+visitors. ``vanjaro content update`` auto-generates ``contentHtml`` from the
+component tree as of Phase E, so the CLI path is correct by default. But page
+content also **must** be top-level-wrapped in ``globalblockwrapper`` components
+referencing the Header and Footer global blocks — otherwise Vanjaro renders
+just the page section with no site chrome. ``migrate assemble-page`` handles
+that wrapping when you pass the guids from ``vanjaro global-blocks list``.
 
 All artifacts go to `artifacts/migration/{site-slug}/` in a resumable layout.
 </context>
@@ -414,38 +431,53 @@ vanjaro assets list --json
 
 ## Stage 4: Create Pages
 
-### 4.1 Build Page Hierarchy
+### 4.1 Create Pages From the Inventory
 
-Create pages in parent-before-child order, matching the source site's structure:
-
-```bash
-vanjaro pages create --title "Home" --name "home" --json
-vanjaro pages create --title "About" --name "about" --json
-vanjaro pages create --title "Services" --name "services" --json
-```
-
-### 4.2 Audit Shells
+One command creates every page from the crawl inventory, respects hierarchy,
+skips existing pages by name, and writes both ``page-id-map.json`` and
+``page-url-map.json`` with the actual server-assigned URLs:
 
 ```bash
-vanjaro pages shell PAGE_ID --fix --json
+vanjaro migrate create-pages \
+  --inventory artifacts/migration/example-com/site-inventory.json \
+  --json
 ```
 
-### 4.3 Set SEO Metadata
+What it does automatically:
 
-Transfer meta data from the source to each Vanjaro page. The crawler saved
-`meta_description` and other SEO fields on each page entry in `site-inventory.json`.
+- **Pre-flight collision check** — lists existing Vanjaro pages and skips any
+  whose slug (case-insensitive) already exists. The existing page id is still
+  registered for child parenting, so e.g. a migrated ``blog-post-1`` will be
+  parented to an existing ``Blog`` page.
+- **Topological sort** — parents are always created before their children, so
+  each child's ``parentId`` points at the freshly returned tab id.
+- **``isVisible`` from nav** — pages linked from the crawled header
+  ``nav_items`` are created visible in the menu; pages not in the nav default
+  to hidden. (The AIPage/Create endpoint silently ignores ``includeInMenu``
+  and accepts ``isVisible`` — the CLI uses the right field.)
+- **Writes ``page-id-map.json``** — source URL → Vanjaro page id.
+- **Overwrites ``page-url-map.json``** — source URL → the actual DNN path
+  returned by the API, including parent-aware nesting (e.g.
+  ``/blog/blog-post-1`` for a child of blog). The crawler's original flat-slug
+  version is replaced.
+
+### 4.2 Dry Run First (Optional but Recommended)
 
 ```bash
-vanjaro pages seo-update PAGE_ID \
-  --title "Source Page Title" \
-  --description "Source meta description" \
-  --keywords "source, keywords"
+vanjaro migrate create-pages \
+  --inventory artifacts/migration/example-com/site-inventory.json \
+  --dry-run
 ```
 
-### 4.4 Build the Page ID Map
+The dry run prints the planned creation order, parent slugs, and menu
+visibility without calling the API. Good for sanity-checking the hierarchy
+before writing to the live instance.
 
-Once all pages exist, generate the source-URL → Vanjaro-page-ID mapping that
-Stages 5 and 6 need:
+### 4.3 Alternative: Build-ID-Map for Existing Pages
+
+If the migration target already has all the pages created manually and you
+only want to map source URLs to existing Vanjaro page ids, use
+``build-id-map`` instead of ``create-pages``:
 
 ```bash
 vanjaro migrate build-id-map \
@@ -458,25 +490,62 @@ The command matches inventory pages to Vanjaro pages by path, portal home,
 title, and slug — in that order. Any unmatched pages are reported as warnings;
 hand-edit the resulting JSON to fix them.
 
+### 4.4 Audit Shells and Set SEO
+
+```bash
+vanjaro pages shell PAGE_ID --fix --json
+vanjaro pages seo-update PAGE_ID \
+  --title "Source Page Title" \
+  --description "Source meta description" \
+  --keywords "source, keywords"
+```
+
+The crawler saves ``meta_description`` and other SEO fields on each page
+entry in ``site-inventory.json`` — use those as the inputs.
+
 ### 4.5 Stage 4 Gate
 
 ```bash
-vanjaro pages list --json
+vanjaro pages list --json                            # includes parent_id now
 vanjaro site nav --json
-cat artifacts/migration/example-com/page-id-map.json  # verify every page matched
+cat artifacts/migration/example-com/page-id-map.json # every page mapped
 ```
 
 ## Stage 5: Migrate Content
+
+### 5.0 Fetch Global Block GUIDs (Required)
+
+Before assembling any page, fetch the Header and Footer global block GUIDs
+from the target Vanjaro instance. ``assemble-page`` needs them to wrap each
+page with ``globalblockwrapper`` components — without wrapping, migrated
+pages store correctly but render blank to anonymous visitors because
+Vanjaro's renderer has no site chrome to emit around page content.
+
+```bash
+vanjaro global-blocks list --json
+```
+
+Extract the ``guid`` field for the blocks named ``Header`` and ``Footer``.
+Every Vanjaro install has these by default. Save them as shell variables:
+
+```bash
+HEADER_GUID=$(vanjaro global-blocks list --json | \
+  python -c "import json, sys; [print(b['guid']) for b in json.load(sys.stdin) if b['name'] == 'Header']")
+FOOTER_GUID=$(vanjaro global-blocks list --json | \
+  python -c "import json, sys; [print(b['guid']) for b in json.load(sys.stdin) if b['name'] == 'Footer']")
+```
 
 ### 5.1 Assemble and Rewrite Each Page
 
 For each page, two commands do the heavy lifting:
 
 ```bash
-# 1. Merge the per-section files into a single page content JSON
+# 1. Merge the per-section files and wrap with global header/footer
 vanjaro migrate assemble-page \
   --sections "artifacts/migration/example-com/pages/home/section-*.json" \
   --output artifacts/migration/example-com/pages/home/content.json \
+  --header-block-guid "$HEADER_GUID" \
+  --footer-block-guid "$FOOTER_GUID" \
   --json
 
 # 2. Rewrite image + internal link URLs to Vanjaro paths
@@ -490,7 +559,16 @@ vanjaro migrate rewrite-urls \
 `assemble-page` walks section files in natural-sort order (so `section-2-*`
 comes before `section-10-*`), composes each one against the block template it
 references, applies extracted content as overrides, and emits a single
-`content.json` with `"components": [...]`.
+`content.json`. When the ``--header-block-guid`` / ``--footer-block-guid``
+flags are provided, it prepends and appends ``globalblockwrapper`` components
+referencing those global block instances so Vanjaro's server-side renderer
+can emit the site chrome.
+
+**Don't skip the wrapping flags for migrations.** A page assembled without
+them pushes successfully and is stored correctly in the AIPage backend, but
+``content update`` will also generate a matching empty-chrome ``contentHtml``
+and the rendered page will have only the page sections with no header/footer.
+Anonymous visitors see a broken layout.
 
 `rewrite-urls` walks the resulting component tree and replaces:
 - image `src` attributes → Vanjaro asset URLs from `assets/manifest.json`
@@ -505,7 +583,11 @@ For each page:
 # Snapshot the current state before overwriting
 vanjaro content snapshot PAGE_ID
 
-# Push as draft (does NOT publish yet)
+# Push as draft (does NOT publish yet).
+# content update auto-generates the contentHtml Vanjaro needs at render
+# time — it walks the component tree and serializes top-level nodes. You
+# don't need to pre-render HTML yourself, but the component tree MUST
+# already be wrapped with global header/footer from Stage 5.1.
 vanjaro content update PAGE_ID --file artifacts/migration/example-com/pages/home/content.json
 
 # Verify structure
@@ -517,6 +599,22 @@ vanjaro content diff PAGE_ID
 # Publish
 vanjaro content publish PAGE_ID
 ```
+
+### 5.2a Smoke-Test Anonymous Render
+
+After publishing each page, fetch it as an unauthenticated visitor to
+verify the server actually renders the migrated content:
+
+```bash
+curl -s -o /dev/null -w "%{http_code} %{size_download}\n" \
+  http://site.local/page-path
+```
+
+A healthy page returns HTTP 200 with 15–30 KB of body. A blank page
+(under 5 KB) means the ``contentHtml`` path didn't work — most likely
+the assembled file was missing the global header/footer wrappers.
+Re-run Stage 5.1 with ``--header-block-guid`` / ``--footer-block-guid``
+and push again.
 
 ### 5.3 Set Up Global Blocks
 
@@ -657,6 +755,14 @@ Each stage's artifacts are self-contained. Resume from the last incomplete stage
   component tree and handles images, internal links, and external-link preservation.
 - **Don't publish before snapshotting.** Always `vanjaro content snapshot PAGE_ID`
   before `vanjaro content update` so there's a rollback point.
+- **Don't skip the global block wrapping flags.** Running `migrate assemble-page`
+  without `--header-block-guid` / `--footer-block-guid` produces a page that
+  stores and publishes successfully but renders blank to anonymous visitors
+  because Vanjaro's server has no site chrome to emit around the page
+  content. Always pass both guids during a migration. If you're pushing
+  manual content edits outside the migration flow, the same wrapping rule
+  applies — make sure the top-level components include the `globalblockwrapper`
+  entries.
 
 </instructions>
 
@@ -718,6 +824,8 @@ Starting at Stage 3: Set Up Vanjaro Target...
 - Wait for user confirmation after Stage 1 (page list) and before Stage 5 publishing.
 - Never overwrite existing Vanjaro content without snapshotting first.
 - Rewrite ALL image URLs and internal links via `vanjaro migrate rewrite-urls`. Leave external links, anchors, mailto, and tel links unchanged.
+- **Wrap every assembled page with global header/footer guids.** The `migrate assemble-page` command takes `--header-block-guid` and `--footer-block-guid` — always pass both during migration. A page pushed without wrapping stores and publishes successfully but renders blank to anonymous visitors.
+- **Smoke-test anonymous render** after publishing each page — a live fetch under 5 KB is a rendering failure, usually caused by missing global wrappers.
 - Report gaps honestly — don't claim interactive elements migrated if they didn't.
 - Keep all migration artifacts in `artifacts/migration/{site-slug}/` — organized and resumable.
 - The crawl output matches the format in `references/crawl-output-format.md`.
