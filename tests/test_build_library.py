@@ -12,7 +12,9 @@ from tests.conftest import BASE_URL, mock_homepage
 
 CUSTOM_ADD_URL = f"{BASE_URL}/API/Vanjaro/Block/AddCustomBlock"
 CUSTOM_LIST_URL = f"{BASE_URL}/API/Vanjaro/Block/GetAllCustomBlock"
-GLOBAL_CREATE_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Create"
+# Global blocks hit the same endpoint with IsGlobal=true — see
+# global_blocks_cmd.CREATE_BLOCK for the reason.
+GLOBAL_CREATE_URL = CUSTOM_ADD_URL
 
 HERO_TEMPLATE = {
     "name": "Centered Hero",
@@ -236,7 +238,12 @@ def test_build_library_register_global(runner, mock_config, tmp_path, monkeypatc
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
     mock_homepage()
-    responses.add(responses.POST, GLOBAL_CREATE_URL, json={"guid": "global-guid-456"}, status=200)
+    responses.add(
+        responses.POST,
+        GLOBAL_CREATE_URL,
+        json={"Status": "Success", "Guid": "global-guid-456"},
+        status=200,
+    )
 
     plan_file = _write_plan(tmp_path, [
         {"template": "Centered Hero", "name": "Global Hero", "type": "global"},
@@ -247,6 +254,14 @@ def test_build_library_register_global(runner, mock_config, tmp_path, monkeypatc
     assert result.exit_code == 0
     assert "OK    Global Hero" in result.output
     assert "global-g" in result.output
+
+    # Verify IsGlobal=true and a non-empty Html are sent — both are required
+    # for the server to register the block for render-time wrapper expansion.
+    from urllib.parse import parse_qs
+    add_request = responses.calls[1].request
+    form = {k: v[0] for k, v in parse_qs(add_request.body, keep_blank_values=True).items()}
+    assert form["IsGlobal"] == "true"
+    assert form["Html"], "Html must be rendered from the component tree"
 
 
 @responses.activate

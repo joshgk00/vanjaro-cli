@@ -11,10 +11,15 @@ from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
 from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, print_table, write_output
 from vanjaro_cli.models.block import GlobalBlock, GlobalBlockDetail
+from vanjaro_cli.utils.grapesjs import render_components
 
 LIST_BLOCKS = "/API/VanjaroAI/AIGlobalBlock/List"
 GET_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Get"
-CREATE_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Create"
+# Create goes through the core Block endpoint the admin UI uses — the VanjaroAI
+# `AIGlobalBlock/Create` variant persists the block but doesn't populate the
+# server-side registry that governs wrapper expansion at render time, so
+# wrappers pointing at blocks made through it render as empty divs.
+CREATE_BLOCK = "/API/Vanjaro/Block/AddCustomBlock"
 UPDATE_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Update"
 PUBLISH_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Publish"
 DELETE_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Delete"
@@ -74,26 +79,36 @@ def create_block(name: str, category: str, file_path: str, as_json: bool) -> Non
     content_json = raw.get("content_json") or raw.get("contentJSON") or raw.get("components", [])
     style_json = raw.get("style_json") or raw.get("styleJSON") or raw.get("styles", [])
 
-    payload: dict = {
-        "name": name,
-        "category": category,
-        "contentJSON": json.dumps(content_json) if isinstance(content_json, (list, dict)) else content_json,
-        "styleJSON": json.dumps(style_json) if isinstance(style_json, (list, dict)) else style_json,
+    # Pre-render the Html from the component tree. The admin UI sends a fully
+    # rendered HTML string and the server relies on it when registering the
+    # block for render-time wrapper expansion — an empty Html causes the
+    # record to land in the custom-block table instead of the global one.
+    html = render_components(content_json) if isinstance(content_json, list) else ""
+
+    form_data = {
+        "Name": name,
+        "Category": category,
+        "Html": html,
+        "Css": "",
+        "IsGlobal": "true",
+        "ContentJSON": json.dumps(content_json) if isinstance(content_json, (list, dict)) else content_json,
+        "StyleJSON": json.dumps(style_json) if isinstance(style_json, (list, dict)) else style_json,
     }
 
     client, _ = get_client()
 
     try:
-        response = client.post(CREATE_BLOCK, json=payload)
-    except ApiError as exc:
-        if exc.status_code == 409:
-            exit_error(f"A global block named '{name}' already exists.", as_json)
-        exit_error(str(exc), as_json)
-    except ConfigError as exc:
+        response = client.post_form(CREATE_BLOCK, form_data)
+    except (ApiError, ConfigError) as exc:
         exit_error(str(exc), as_json)
 
     data = response.json()
-    guid = data.get("guid", "")
+    if data.get("Status") == "Exist":
+        exit_error(f"A global block named '{name}' already exists.", as_json)
+    if data.get("Status") != "Success":
+        exit_error(f"Unexpected response: {data}", as_json)
+
+    guid = data.get("Guid", "")
 
     output_result(
         as_json,

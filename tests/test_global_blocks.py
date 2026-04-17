@@ -1,8 +1,9 @@
-"""Tests for vanjaro global-blocks commands (VanjaroAI endpoints)."""
+"""Tests for vanjaro global-blocks commands."""
 
 from __future__ import annotations
 
 import json
+from urllib.parse import parse_qs
 
 import responses
 
@@ -11,10 +12,19 @@ from tests.conftest import BASE_URL, mock_homepage
 
 LIST_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/List"
 GET_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Get"
-CREATE_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Create"
+# Create hits the core Block endpoint (same one the admin UI uses) — the
+# VanjaroAI/AIGlobalBlock/Create endpoint stores the record but doesn't
+# register it for render-time expansion.
+CREATE_URL = f"{BASE_URL}/API/Vanjaro/Block/AddCustomBlock"
 UPDATE_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Update"
 PUBLISH_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Publish"
 DELETE_URL = f"{BASE_URL}/API/VanjaroAI/AIGlobalBlock/Delete"
+
+
+def _form_fields(request) -> dict[str, str]:
+    """Decode the last form-encoded POST body into a flat dict."""
+    parsed = parse_qs(request.body, keep_blank_values=True)
+    return {k: v[0] for k, v in parsed.items()}
 
 SAMPLE_BLOCKS = [
     {
@@ -88,10 +98,8 @@ def test_global_blocks_list_empty(runner, mock_config):
 
 
 SAMPLE_CREATE_RESPONSE = {
-    "guid": "abc12345-6789-0000-1111-222233334444",
-    "name": "CTA Banner",
-    "version": 1,
-    "isPublished": False,
+    "Status": "Success",
+    "Guid": "abc12345-6789-0000-1111-222233334444",
 }
 
 SAMPLE_BLOCK_FILE_CONTENT = {
@@ -119,11 +127,16 @@ def test_global_blocks_create(runner, mock_config, tmp_path):
     assert "Created global block 'CTA Banner'" in result.output
     assert "abc12345" in result.output
 
-    request_body = json.loads(responses.calls[-1].request.body)
-    assert request_body["name"] == "CTA Banner"
-    assert request_body["category"] == "marketing"
-    assert json.loads(request_body["contentJSON"])[0]["type"] == "section"
-    assert json.loads(request_body["styleJSON"])[0]["selectors"] == [".cta"]
+    fields = _form_fields(responses.calls[-1].request)
+    assert fields["Name"] == "CTA Banner"
+    assert fields["Category"] == "marketing"
+    assert fields["IsGlobal"] == "true"
+    # Server requires a non-empty Html to register the block as global — an
+    # empty Html causes it to land in the custom-block table instead.
+    assert fields["Html"], "Html must be rendered from the component tree"
+    assert "Call to Action" in fields["Html"]
+    assert json.loads(fields["ContentJSON"])[0]["type"] == "section"
+    assert json.loads(fields["StyleJSON"])[0]["selectors"] == [".cta"]
 
 
 @responses.activate
@@ -152,7 +165,7 @@ def test_global_blocks_create_json(runner, mock_config, tmp_path):
 @responses.activate
 def test_global_blocks_create_duplicate_name(runner, mock_config, tmp_path):
     mock_homepage()
-    responses.add(responses.POST, CREATE_URL, json={"Message": "Conflict"}, status=409)
+    responses.add(responses.POST, CREATE_URL, json={"Status": "Exist"}, status=200)
 
     block_file = tmp_path / "block.json"
     block_file.write_text(json.dumps({"contentJSON": [], "styleJSON": []}))
@@ -186,8 +199,8 @@ def test_global_blocks_create_snake_case_keys(runner, mock_config, tmp_path):
     ])
 
     assert result.exit_code == 0
-    request_body = json.loads(responses.calls[-1].request.body)
-    assert json.loads(request_body["contentJSON"]) == [{"type": "section"}]
+    fields = _form_fields(responses.calls[-1].request)
+    assert json.loads(fields["ContentJSON"]) == [{"type": "section"}]
 
 
 @responses.activate
@@ -209,8 +222,8 @@ def test_global_blocks_create_scaffold_format(runner, mock_config, tmp_path):
     ])
 
     assert result.exit_code == 0
-    request_body = json.loads(responses.calls[-1].request.body)
-    assert json.loads(request_body["contentJSON"]) == [{"type": "section", "components": []}]
+    fields = _form_fields(responses.calls[-1].request)
+    assert json.loads(fields["ContentJSON"]) == [{"type": "section", "components": []}]
 
 
 def test_global_blocks_create_invalid_json_file(runner, mock_config, tmp_path):

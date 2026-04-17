@@ -19,6 +19,7 @@ from vanjaro_cli.utils.block_compose import (
     check_overflow,
     find_template,
 )
+from vanjaro_cli.utils.grapesjs import render_components
 
 __all__ = ["build_library"]
 
@@ -94,23 +95,40 @@ def _register_global_block(
     category: str,
     composed: dict,
 ) -> str:
-    """Register a composed template as a global block. Returns GUID."""
+    """Register a composed template as a global block. Returns GUID.
+
+    Uses the same ``AddCustomBlock`` endpoint as custom blocks with
+    ``IsGlobal=true`` — the admin UI's path. The ``AIGlobalBlock/Create``
+    endpoint persists a block record but doesn't register it for render-time
+    wrapper expansion, so wrappers referencing those blocks render as empty
+    divs.
+    """
     content_json = [composed["template"]]
     style_json = composed.get("styles", [])
-    payload = {
-        "name": name,
-        "category": category,
-        "contentJSON": json.dumps(content_json),
-        "styleJSON": json.dumps(style_json),
+    # An empty Html causes the server to register the block in the custom-block
+    # table rather than the global one — pre-render so the global-block path is
+    # taken and wrapper expansion works at render time.
+    form_data = {
+        "Name": name,
+        "Category": category,
+        "Html": render_components(content_json),
+        "Css": "",
+        "IsGlobal": "true",
+        "ContentJSON": json.dumps(content_json),
+        "StyleJSON": json.dumps(style_json),
     }
     try:
-        response = client.post(GLOBAL_CREATE_URL, json=payload)
+        response = client.post_form(GLOBAL_CREATE_URL, form_data)
     except ApiError as exc:
-        if exc.status_code == 409:
-            raise ValueError(f"A global block named '{name}' already exists") from exc
         raise ValueError(str(exc)) from exc
 
-    return response.json().get("guid", "")
+    data = response.json()
+    if data.get("Status") == "Exist":
+        raise ValueError(f"A global block named '{name}' already exists")
+    if data.get("Status") != "Success":
+        raise ValueError(f"Unexpected API response: {data}")
+
+    return data.get("Guid", "")
 
 
 @click.command("build-library")
