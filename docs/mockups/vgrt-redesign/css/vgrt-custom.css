@@ -1,0 +1,507 @@
+/* ============================================================
+   VGRT Redesign — Custom Bootstrap 5 Theme
+   Color Scheme: Existing pink palette + teal accent + blue CTA
+   Fonts: Dancing Script (decorative), Lora (headings), Lato (body)
+   ============================================================ */
+
+/* ========== CSS VARIABLES ========== */
+:root {
+  --vgrt-blush-light: #FDF2F6;
+  --vgrt-blush: #F7CCE0;
+  --vgrt-rose: #E79ABE;
+  --vgrt-rose-deep: #D4749F;
+  --vgrt-pink-text: #C75B8E;
+  --vgrt-hot-pink: #EC72A7;
+  --vgrt-teal: #7EBEC5;
+  --vgrt-teal-light: #D5EEEF;
+  --vgrt-teal-deep: #5DA8B0;
+  --vgrt-gray-dark: #3D3D3D;
+  --vgrt-gray-body: #555555;
+  --vgrt-gray-muted: #888888;
+  --vgrt-gray-light: #F5F5F5;
+  --vgrt-cta-blue: #0069FF;
+  --vgrt-cta-blue-hover: #0055D4;
+  --vgrt-green-text: #5A8A3C;
+}
+
+/* ========== BASE ========== */
+body {
+  font-family: 'Lato', sans-serif;
+  color: var(--vgrt-gray-body);
+  line-height: 1.7;
+  overflow-x: hidden;
+}
+
+h1, h2, h3, h4, h5, h6 {
+  font-family: 'Lora', serif;
+  color: var(--vgrt-gray-dark);
+}
+
+a {
+  color: var(--vgrt-pink-text);
+  transition: all 0.2s ease;
+}
+a:hover {
+  color: var(--vgrt-rose-deep);
+}
+
+/* ========== ACCENT BAR ========== */
+.vgrt-accent-bar {
+  height: 4px;
+  background: linear-gradient(90deg, var(--vgrt-blush), var(--vgrt-rose), var(--vgrt-teal), var(--vgrt-blush));
+}
+
+/* ========== NAVBAR ========== */
+.navbar-vgrt {
+  background: rgba(255,255,255,0.97) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid rgba(231,154,190,0.15);
+  padding: 0.5rem 0;
+  transition: box-shadow 0.3s;
+}
+.navbar-vgrt.scrolled {
+  box-shadow: 0 2px 20px rgba(199,91,142,0.08);
+}
+.navbar-vgrt .navbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+.navbar-vgrt .navbar-brand img {
+  height: 52px;
+  width: auto;
+}
+.navbar-vgrt .navbar-brand span {
+  font-family: 'Dancing Script', cursive;
+  font-size: 20px;
+  font-weight: 700;
+  color: var(--vgrt-pink-text);
+}
+.navbar-vgrt .nav-link {
+  color: var(--vgrt-gray-dark) !important;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  padding: 0.5rem 1rem !important;
+  position: relative;
+}
+.navbar-vgrt .nav-link::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  left: 1rem;
+  right: 1rem;
+  height: 2px;
+  background: var(--vgrt-hot-pink);
+  border-radius: 2px;
+  transform: scaleX(0);
+  transition: transform 0.3s;
+}
+.navbar-vgrt .nav-link:hover::after,
+.navbar-vgrt .nav-link.active::after {
+  transform: scaleX(1);
+}
+.navbar-vgrt .nav-link:hover {
+  color: var(--vgrt-pink-text) !important;
+}
+
+/* ========== BUTTONS ========== */
+.btn-vgrt-primary {
+  background: var(--vgrt-cta-blue);
+  color: #fff;
+  border: none;
+  border-radius: 30px;
+  padding: 12px 28px;
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: 0.3px;
+  transition: all 0.3s;
+}
+.btn-vgrt-primary:hover {
+  background: var(--vgrt-cta-blue-hover);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(0,105,255,0.3);
+}
+.btn-vgrt-outline {
+  color: var(--vgrt-pink-text);
+  border: 2px solid var(--vgrt-rose);
+  border-radius: 30px;
+  padding: 10px 26px;
+  font-weight: 700;
+  font-size: 15px;
+  background: transparent;
+  transition: all 0.3s;
+}
+.btn-vgrt-outline:hover {
+  background: var(--vgrt-blush-light);
+  border-color: var(--vgrt-hot-pink);
+  color: var(--vgrt-pink-text);
+}
+.btn-vgrt-nav {
+  background: var(--vgrt-cta-blue) !important;
+  color: #fff !important;
+  border-radius: 25px !important;
+  padding: 8px 20px !important;
+  font-weight: 700 !important;
+  font-size: 13px !important;
+}
+.btn-vgrt-nav:hover {
+  background: var(--vgrt-cta-blue-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 6px 16px rgba(0,105,255,0.25);
+}
+
+/* ========== SCRIPT HEADINGS (Dancing Script) ========== */
+.script-heading {
+  font-family: 'Dancing Script', cursive;
+  color: var(--vgrt-hot-pink);
+  font-weight: 500;
+}
+.script-heading-sm { font-size: 28px; }
+.script-heading-md { font-size: 32px; }
+.script-heading-lg { font-size: 40px; }
+
+/* ========== PROGRAM LABEL (green like existing) ========== */
+.program-label {
+  color: var(--vgrt-green-text);
+  font-family: 'Lora', serif;
+  font-weight: 600;
+}
+
+/* ========== PAGE HERO BANNERS ========== */
+.page-hero {
+  background: linear-gradient(135deg, var(--vgrt-blush), var(--vgrt-rose));
+  padding: 80px 0 60px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+}
+.page-hero::before {
+  content: '';
+  position: absolute;
+  top: -100px;
+  right: -80px;
+  width: 350px;
+  height: 350px;
+  background: radial-gradient(circle, rgba(255,255,255,0.2), transparent 70%);
+}
+.page-hero h1 {
+  font-family: 'Dancing Script', cursive;
+  font-size: 48px;
+  color: #fff;
+  font-weight: 700;
+  text-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+.page-hero .subtitle {
+  color: rgba(255,255,255,0.9);
+  font-size: 18px;
+  font-weight: 300;
+}
+
+/* Page hero with background image */
+.page-hero-img {
+  padding: 100px 0 80px;
+  text-align: center;
+  position: relative;
+  background-size: cover;
+  background-position: center;
+  color: #fff;
+}
+.page-hero-img::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,0.3);
+}
+.page-hero-img h1 {
+  font-family: 'Dancing Script', cursive;
+  font-size: 48px;
+  color: #fff;
+  position: relative;
+  z-index: 2;
+}
+.page-hero-img .subtitle {
+  position: relative;
+  z-index: 2;
+  color: rgba(255,255,255,0.9);
+  font-size: 20px;
+  font-weight: 400;
+}
+
+/* ========== SECTION SPACING ========== */
+.section-padding {
+  padding: 80px 0;
+}
+.section-padding-sm {
+  padding: 60px 0;
+}
+
+/* ========== CARDS ========== */
+.vgrt-card {
+  background: #fff;
+  border-radius: 20px;
+  border: 1px solid #F0ECF0;
+  padding: 32px 28px;
+  transition: all 0.3s;
+  position: relative;
+  overflow: hidden;
+  height: 100%;
+}
+.vgrt-card::before {
+  content: '';
+  position: absolute;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: linear-gradient(90deg, var(--vgrt-rose), var(--vgrt-teal));
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+.vgrt-card:hover::before { opacity: 1; }
+.vgrt-card:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 36px rgba(199,91,142,0.1);
+}
+.vgrt-card .card-icon {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  margin-bottom: 18px;
+}
+.card-icon-pink { background: var(--vgrt-blush); }
+.card-icon-teal { background: var(--vgrt-teal-light); }
+.card-icon-warm { background: #FFF3E0; }
+.card-icon-lavender { background: #EDE7F6; }
+
+/* ========== TESTIMONIAL CARDS ========== */
+.testimonial-card {
+  background: #fff;
+  border-radius: 16px;
+  padding: 28px;
+  box-shadow: 0 4px 16px rgba(199,91,142,0.06);
+  height: 100%;
+}
+.testimonial-card .stars {
+  color: #F2C94C;
+  font-size: 14px;
+  letter-spacing: 2px;
+  margin-bottom: 12px;
+}
+.testimonial-card blockquote {
+  font-family: 'Lora', serif;
+  font-size: 15px;
+  color: var(--vgrt-gray-dark);
+  line-height: 1.7;
+  font-style: italic;
+  border: none;
+  padding: 0;
+  margin-bottom: 16px;
+}
+.testimonial-card .author {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--vgrt-pink-text);
+}
+
+/* ========== BELONG BANNER ========== */
+.belong-banner {
+  background: linear-gradient(160deg, #c8c8c8, #b8b8b8);
+  color: #fff;
+  position: relative;
+  overflow: hidden;
+}
+.belong-banner::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 50%, rgba(247,204,224,0.12), transparent 50%),
+    radial-gradient(circle at 80% 50%, rgba(126,190,197,0.08), transparent 50%);
+}
+
+/* ========== MISSION STRIP ========== */
+.mission-strip {
+  background: var(--vgrt-blush-light);
+}
+.mission-strip p {
+  font-family: 'Lora', serif;
+  font-style: italic;
+  color: var(--vgrt-gray-dark);
+}
+
+/* ========== FEATURE LIST ITEMS ========== */
+.feature-item {
+  background: rgba(255,255,255,0.8);
+  backdrop-filter: blur(8px);
+  border-radius: 14px;
+  padding: 18px 22px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 12px;
+}
+.feature-item .feature-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  flex-shrink: 0;
+  box-shadow: 0 2px 8px rgba(199,91,142,0.08);
+}
+
+/* ========== COACH BIO ========== */
+.coach-photo-placeholder {
+  width: 100%;
+  height: 320px;
+  border-radius: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  opacity: 0.5;
+}
+
+/* ========== CHECK LIST ========== */
+.vgrt-checklist {
+  list-style: none;
+  padding: 0;
+}
+.vgrt-checklist li {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  margin-bottom: 12px;
+  font-size: 15px;
+}
+.vgrt-checklist .check-icon {
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+  background: var(--vgrt-teal-light);
+  color: var(--vgrt-teal-deep);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  flex-shrink: 0;
+  margin-top: 3px;
+  font-weight: 700;
+}
+
+/* ========== PROGRAM WEEK LIST ========== */
+.week-item {
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+.week-item:last-child { border-bottom: none; }
+.week-item strong {
+  color: var(--vgrt-gray-dark);
+}
+
+/* ========== CONTACT FORM ========== */
+.vgrt-form .form-control {
+  border-radius: 12px;
+  border: 1px solid #e0dce4;
+  padding: 12px 16px;
+  font-size: 15px;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+.vgrt-form .form-control:focus {
+  border-color: var(--vgrt-rose);
+  box-shadow: 0 0 0 3px rgba(231,154,190,0.15);
+}
+.vgrt-form .form-label {
+  font-weight: 700;
+  font-size: 14px;
+  color: var(--vgrt-gray-dark);
+}
+
+/* ========== FOOTER ========== */
+.footer-vgrt {
+  background: var(--vgrt-gray-dark);
+  color: rgba(255,255,255,0.6);
+}
+.footer-vgrt .footer-logo {
+  font-family: 'Dancing Script', cursive;
+  font-size: 22px;
+  color: #fff;
+}
+.footer-vgrt h6 {
+  color: #fff;
+  font-family: 'Lato', sans-serif;
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+}
+.footer-vgrt a {
+  color: rgba(255,255,255,0.55);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 300;
+}
+.footer-vgrt a:hover { color: #fff; }
+.footer-vgrt .footer-bottom {
+  border-top: 1px solid rgba(255,255,255,0.08);
+}
+.footer-social a {
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(255,255,255,0.08);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 15px;
+  transition: background 0.2s;
+}
+.footer-social a:hover { background: rgba(255,255,255,0.15); }
+
+/* ========== STICKY CTA ========== */
+.sticky-cta {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  z-index: 999;
+  background: var(--vgrt-cta-blue);
+  color: #fff !important;
+  padding: 14px 24px;
+  border-radius: 30px;
+  text-decoration: none;
+  font-weight: 700;
+  font-size: 14px;
+  box-shadow: 0 6px 20px rgba(0,105,255,0.35);
+  transition: all 0.3s;
+}
+.sticky-cta:hover {
+  background: var(--vgrt-cta-blue-hover);
+  color: #fff;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 28px rgba(0,105,255,0.4);
+}
+
+/* ========== UTILITY ========== */
+.text-pink { color: var(--vgrt-pink-text) !important; }
+.text-hot-pink { color: var(--vgrt-hot-pink) !important; }
+.text-teal { color: var(--vgrt-teal-deep) !important; }
+.text-muted-custom { color: var(--vgrt-gray-muted) !important; }
+.bg-blush-light { background-color: var(--vgrt-blush-light) !important; }
+.bg-blush { background-color: var(--vgrt-blush) !important; }
+.bg-teal-light { background-color: var(--vgrt-teal-light) !important; }
+.rounded-vgrt { border-radius: 20px !important; }
+
+/* ========== RESPONSIVE TWEAKS ========== */
+@media (max-width: 767.98px) {
+  .page-hero h1 { font-size: 36px; }
+  .script-heading-lg { font-size: 30px; }
+  .section-padding { padding: 60px 0; }
+}
