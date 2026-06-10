@@ -18,6 +18,26 @@ from vanjaro_cli.migration.url_rewrite import (
 __all__ = ["rewrite_urls"]
 
 
+def _unuploaded_entries(manifest: list) -> list[str]:
+    """Return source URLs for manifest entries missing a vanjaro_url.
+
+    An entry counts as unuploaded when it has a ``source_url`` but ``vanjaro_url``
+    is empty or null. Entries without a ``source_url`` (manual additions) are
+    ignored — only crawler-produced entries are considered.
+    """
+    missing: list[str] = []
+    for entry in manifest:
+        if not isinstance(entry, dict):
+            continue
+        source_url = entry.get("source_url")
+        if not isinstance(source_url, str) or not source_url:
+            continue
+        vanjaro_url = entry.get("vanjaro_url")
+        if not isinstance(vanjaro_url, str) or not vanjaro_url:
+            missing.append(source_url)
+    return missing
+
+
 @click.command("rewrite-urls")
 @click.option(
     "--content",
@@ -49,6 +69,14 @@ __all__ = ["rewrite_urls"]
     help="Destination file (defaults to overwriting --content).",
 )
 @click.option("--report", is_flag=True, help="Print a summary of rewrites.")
+@click.option(
+    "--allow-missing-assets",
+    is_flag=True,
+    help=(
+        "Proceed even when the asset manifest has entries with no vanjaro_url. "
+        "Use only for partial re-runs; the default requires uploads to be complete."
+    ),
+)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
 def rewrite_urls(
     content_file: str,
@@ -56,6 +84,7 @@ def rewrite_urls(
     page_map_file: str | None,
     output_file: str | None,
     report: bool,
+    allow_missing_assets: bool,
     as_json: bool,
 ) -> None:
     """Rewrite image and link URLs in a content JSON file.
@@ -81,6 +110,20 @@ def rewrite_urls(
             f"Asset manifest {manifest_path} must be a JSON array of entries.",
             as_json,
         )
+
+    if not allow_missing_assets:
+        unuploaded = _unuploaded_entries(manifest_data)
+        if unuploaded:
+            sample = ", ".join(unuploaded[:3])
+            suffix = f" (+{len(unuploaded) - 3} more)" if len(unuploaded) > 3 else ""
+            exit_error(
+                f"Asset manifest {manifest_path} has {len(unuploaded)} entries "
+                f"with no vanjaro_url: {sample}{suffix}. "
+                f"Run `vanjaro assets upload-dir {manifest_path.parent}` to "
+                f"upload assets and patch the manifest, or pass "
+                f"--allow-missing-assets to skip this check.",
+                as_json,
+            )
 
     page_map_data: dict | None = None
     if page_map_path is not None:

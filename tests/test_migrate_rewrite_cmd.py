@@ -541,6 +541,110 @@ def test_cli_manifest_not_a_list_errors_with_file_path(runner, tmp_path):
     assert "JSON array" in result.output
 
 
+def test_cli_fails_when_manifest_has_unuploaded_entries(runner, tmp_path):
+    manifest = _basic_manifest()
+    manifest.append(
+        {
+            "source_url": "https://example.com/images/not-yet-uploaded.jpg",
+            "local_file": "not-yet-uploaded.jpg",
+            "vanjaro_url": None,
+            "uploaded": False,
+        }
+    )
+    content_file = _write_json(tmp_path / "page.json", {"components": []})
+    manifest_file = _write_json(tmp_path / "manifest.json", manifest)
+
+    result = runner.invoke(
+        rewrite_urls,
+        [
+            "--content", str(content_file),
+            "--asset-manifest", str(manifest_file),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "not-yet-uploaded.jpg" in result.output
+    assert "assets upload-dir" in result.output
+
+
+def test_cli_allow_missing_assets_bypasses_upload_check(runner, tmp_path):
+    manifest = _basic_manifest()
+    manifest.append(
+        {
+            "source_url": "https://example.com/images/skipped.jpg",
+            "local_file": "skipped.jpg",
+            "vanjaro_url": None,
+            "uploaded": False,
+        }
+    )
+    content_file = _write_json(tmp_path / "page.json", {"components": []})
+    manifest_file = _write_json(tmp_path / "manifest.json", manifest)
+
+    result = runner.invoke(
+        rewrite_urls,
+        [
+            "--content", str(content_file),
+            "--asset-manifest", str(manifest_file),
+            "--allow-missing-assets",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+
+def test_cli_fails_when_all_manifest_entries_are_unuploaded(runner, tmp_path):
+    manifest = [
+        {
+            "source_url": "https://example.com/images/a.jpg",
+            "vanjaro_url": None,
+            "uploaded": False,
+        },
+        {
+            "source_url": "https://example.com/images/b.jpg",
+            "vanjaro_url": None,
+            "uploaded": False,
+        },
+    ]
+    content_file = _write_json(tmp_path / "page.json", {"components": []})
+    manifest_file = _write_json(tmp_path / "manifest.json", manifest)
+
+    result = runner.invoke(
+        rewrite_urls,
+        [
+            "--content", str(content_file),
+            "--asset-manifest", str(manifest_file),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "2 entries" in result.output
+
+
+def test_cli_ignores_entries_without_source_url_in_upload_check(runner, tmp_path):
+    # Manually-appended entries with no source_url shouldn't block the rewrite —
+    # the check only catches crawler output that wasn't uploaded.
+    manifest = _basic_manifest()
+    manifest.append(
+        {
+            "local_file": "manual-upload.jpg",
+            "vanjaro_url": None,
+            "uploaded": False,
+        }
+    )
+    content_file = _write_json(tmp_path / "page.json", {"components": []})
+    manifest_file = _write_json(tmp_path / "manifest.json", manifest)
+
+    result = runner.invoke(
+        rewrite_urls,
+        [
+            "--content", str(content_file),
+            "--asset-manifest", str(manifest_file),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+
+
 def test_cli_invalid_json_reports_clear_error(runner, tmp_path):
     content_file = tmp_path / "page.json"
     content_file.write_text("{not valid json")
