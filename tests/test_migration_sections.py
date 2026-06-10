@@ -989,3 +989,190 @@ def test_footer_does_not_get_nav_items():
     footer = extract_global_element(html, BASE_URL, "footer")
 
     assert "nav_items" not in footer["content"]
+
+
+# -- Per-card content rescoping --
+
+
+def test_blog_cards_realign_heading_to_image_per_card():
+    """Blog card sections should pair each heading with the image inside its own card.
+
+    Regression: the cmw blog index had header logos and chamber-of-commerce
+    images ahead of the blog cards in document order. The flat extractor put
+    those images at positions 1-4 in ``images[]`` while the real blog card
+    headings started at position 1 in ``headings[]``, so ``image_N`` for
+    each card resolved to the wrong URL (all cards shared the site logo).
+    """
+    # The scenario: the source page wraps everything in a single <form> with
+    # chrome imagery before the blog cards. The anchor-wrapped thumbnails on
+    # the cards make the gallery classifier fire first (same as cmw's live
+    # blog index), so the rescope must still find the per-card wrappers.
+    html = _wrap(
+        """
+        <section>
+          <img src="/site-logo.png" alt="Site Logo">
+          <img src="/banner.jpg" alt="Site Banner">
+          <article>
+            <a href="/post/1"><img src="/post-1-featured.jpg" alt="Post 1"></a>
+            <h2>Post One</h2>
+            <p>Excerpt one.</p>
+          </article>
+          <article>
+            <a href="/post/2"><img src="/post-2-featured.jpg" alt="Post 2"></a>
+            <h2>Post Two</h2>
+            <p>Excerpt two.</p>
+          </article>
+          <article>
+            <a href="/post/3"><img src="/post-3-featured.jpg" alt="Post 3"></a>
+            <h2>Post Three</h2>
+            <p>Excerpt three.</p>
+          </article>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    content = sections[0]["content"]
+    assert content["headings"] == ["Post One", "Post Two", "Post Three"]
+    assert [img["src"] for img in content["images"]] == [
+        "https://example.com/post-1-featured.jpg",
+        "https://example.com/post-2-featured.jpg",
+        "https://example.com/post-3-featured.jpg",
+    ]
+    assert content["paragraphs"] == ["Excerpt one.", "Excerpt two.", "Excerpt three."]
+
+
+def test_feature_cards_realign_per_card_with_sibling_img_and_heading():
+    """Feature cards with sibling img/heading inside each card wrapper should align."""
+    html = _wrap(
+        """
+        <section>
+          <h1>Page Title</h1>
+          <img src="/site-logo.png" alt="Logo">
+          <div class="features">
+            <div>
+              <img src="/speed.svg"><h3>Speed</h3><p>Fast.</p>
+            </div>
+            <div>
+              <img src="/safety.svg"><h3>Safety</h3><p>Secure.</p>
+            </div>
+            <div>
+              <img src="/simplicity.svg"><h3>Simplicity</h3><p>Easy.</p>
+            </div>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    content = sections[0]["content"]
+    assert content["headings"] == ["Speed", "Safety", "Simplicity"]
+    assert [img["src"] for img in content["images"]] == [
+        "https://example.com/speed.svg",
+        "https://example.com/safety.svg",
+        "https://example.com/simplicity.svg",
+    ]
+
+
+def test_anchor_gallery_falls_back_to_alt_text_when_no_per_card_headings():
+    """Plain anchor-wrapped image galleries (no per-card headings) use alt text.
+
+    Regression guard: ``_find_cards_by_heading`` returns nothing for a pure
+    gallery, so the fallback path that treats each ``<a>`` as a card must
+    still produce aligned per-image entries.
+    """
+    html = _wrap(
+        """
+        <section>
+          <h2>Portfolio</h2>
+          <a href="/full-1.jpg"><img src="/thumb-1.jpg" alt="Shot One"></a>
+          <a href="/full-2.jpg"><img src="/thumb-2.jpg" alt="Shot Two"></a>
+          <a href="/full-3.jpg"><img src="/thumb-3.jpg" alt="Shot Three"></a>
+          <a href="/full-4.jpg"><img src="/thumb-4.jpg" alt="Shot Four"></a>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["type"] == "gallery"
+    content = sections[0]["content"]
+    assert [img["src"] for img in content["images"]] == [
+        "https://example.com/thumb-1.jpg",
+        "https://example.com/thumb-2.jpg",
+        "https://example.com/thumb-3.jpg",
+        "https://example.com/thumb-4.jpg",
+    ]
+    assert content["headings"] == [
+        "Shot One",
+        "Shot Two",
+        "Shot Three",
+        "Shot Four",
+    ]
+
+
+def test_rescoping_only_applies_to_card_like_section_types():
+    """Non-card sections (e.g. bio) should keep the flat extraction untouched."""
+    html = _wrap(
+        """
+        <section>
+          <img src="/headshot.jpg" alt="Founder">
+          <h2>About the Founder</h2>
+          <p>Started the company in 2015.</p>
+          <p>Designs for clients across the country.</p>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["type"] == "bio"
+    content = sections[0]["content"]
+    # Flat extraction preserved — single image, single heading, two paragraphs
+    assert len(content["images"]) == 1
+    assert content["images"][0]["src"] == "https://example.com/headshot.jpg"
+
+
+def test_blog_cards_without_per_card_buttons_preserve_alignment():
+    """Cards missing button slots emit None placeholders so remaining buttons stay aligned.
+
+    Card 1 has no button, card 2 has "Read More". The overrides mapper must
+    still associate the button with card 2 (button_2), not card 1, so the
+    template doesn't render a stray "Read More" on the first post card.
+    """
+    # Preceding hero section prevents the cards section from being is_first,
+    # which would otherwise trigger the hero classifier and skip card rescoping.
+    html = _wrap(
+        """
+        <section>
+          <h1>Welcome</h1>
+          <a class="btn" href="/start">Get Started</a>
+        </section>
+        <section>
+          <article>
+            <img src="/p1.jpg"><h3>Post One</h3><p>No button here.</p>
+          </article>
+          <article>
+            <img src="/p2.jpg"><h3>Post Two</h3><p>Has a button.</p>
+            <a class="btn" href="/post/2">Read More</a>
+          </article>
+          <article>
+            <img src="/p3.jpg"><h3>Post Three</h3><p>Also no button.</p>
+          </article>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[1]["type"] == "cards"
+    buttons = sections[1]["content"]["buttons"]
+    assert buttons[0] is None
+    assert buttons[1] == {
+        "text": "Read More",
+        "href": "https://example.com/post/2",
+    }
+    assert buttons[2] is None

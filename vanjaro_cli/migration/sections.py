@@ -93,6 +93,12 @@ def _parse_srcset_urls(srcset: str, base_url: str) -> list[str]:
     return urls
 
 
+def _is_button_styled(anchor: Tag) -> bool:
+    """True when the anchor's classes mark it as a button (``btn``/``button``)."""
+    classes = " ".join(anchor.get("class", []))
+    return "btn" in classes or "button" in classes
+
+
 def _extract_content(element: Tag, base_url: str) -> dict:
     """Pull structured content from an HTML element for migration."""
     headings: list[str] = []
@@ -156,8 +162,7 @@ def _extract_content(element: Tag, base_url: str) -> dict:
         if text:
             buttons.append({"text": text, "href": ""})
     for anchor in element.find_all("a"):
-        classes = " ".join(anchor.get("class", []))
-        if "btn" not in classes and "button" not in classes:
+        if not _is_button_styled(anchor):
             continue
         text = anchor.get_text(strip=True)
         raw_href = (anchor.get("href") or "").strip()
@@ -167,8 +172,7 @@ def _extract_content(element: Tag, base_url: str) -> dict:
 
     links: list[dict] = []
     for anchor in element.find_all("a", href=True):
-        classes = " ".join(anchor.get("class", []))
-        if "btn" in classes or "button" in classes:
+        if _is_button_styled(anchor):
             continue
         text = anchor.get_text(strip=True)
         if text:
@@ -525,6 +529,136 @@ def _looks_like_stats(element: Tag) -> bool:
     return stat_count >= 3
 
 
+_CARD_LIKE_TYPES = frozenset({"gallery", "blog_cards", "cards"})
+_HEADING_TAGS = ("h1", "h2", "h3", "h4", "h5", "h6")
+
+
+def _find_cards_by_heading(element: Tag) -> list[Tag]:
+    """Find per-card wrappers by walking up from each heading to its nearest scope.
+
+    A card is the closest ancestor of a heading that is a ``div``/``article``/``li``
+    containing exactly one heading and at least one ``<img>`` tag. This isolates
+    card boundaries inside sections that the flat ``_extract_content`` pass can't
+    distinguish (e.g. a page-wide ``<form>`` wrapper that also contains header
+    logos and chamber-of-commerce images).
+    """
+    cards: list[Tag] = []
+    seen_ids: set[int] = set()
+    for heading in element.find_all(_HEADING_TAGS):
+        walker = heading.parent
+        while walker is not None and walker is not element:
+            if walker.name in ("div", "article", "li"):
+                nested_headings = walker.find_all(_HEADING_TAGS)
+                if len(nested_headings) == 1 and walker.find("img") is not None:
+                    walker_id = id(walker)
+                    if walker_id not in seen_ids:
+                        seen_ids.add(walker_id)
+                        cards.append(walker)
+                    break
+            walker = walker.parent
+    return cards
+
+
+def _find_gallery_anchors(element: Tag) -> list[Tag]:
+    """Return every ``<a>`` element in ``element`` that directly wraps an ``<img>``."""
+    return [anchor for anchor in element.find_all("a") if anchor.find("img")]
+
+
+def _first_image_entry(card: Tag, base_url: str) -> dict:
+    """Extract a single ``{src, alt}`` entry from the first ``<img>`` inside ``card``.
+
+    Returns an empty-string placeholder when no image is found so positional
+    alignment with sibling ``headings`` / ``paragraphs`` arrays is preserved.
+    """
+    img = card.find("img")
+    if img is None or not img.get("src"):
+        return {"src": "", "alt": ""}
+    return {
+        "src": urljoin(base_url, img["src"]),
+        "alt": img.get("alt", ""),
+    }
+
+
+def _first_card_button(card: Tag, base_url: str) -> dict | None:
+    """Return the first ``btn``/``button``-classed anchor inside ``card`` as a dict."""
+    for anchor in card.find_all("a"):
+        if not _is_button_styled(anchor):
+            continue
+        text = anchor.get_text(strip=True)
+        href = (anchor.get("href") or "").strip()
+        if text and href:
+            return {"text": text, "href": urljoin(base_url, href)}
+    return None
+
+
+def _first_card_link(card: Tag, base_url: str) -> dict | None:
+    """Return the first non-button anchor with real text and href inside ``card``."""
+    for anchor in card.find_all("a", href=True):
+        if _is_button_styled(anchor):
+            continue
+        text = anchor.get_text(strip=True)
+        href = anchor.get("href", "").strip()
+        if text and href:
+            return {"text": text, "href": urljoin(base_url, href)}
+    return None
+
+
+def _rescope_content_to_cards(
+    element: Tag,
+    section_type: str,
+    base_url: str,
+    content: dict,
+) -> dict:
+    """Realign ``content`` so ``heading_N`` / ``image_N`` / ``text_N`` refer to the Nth card.
+
+    Called after the classifier labels a section as a card-like type. The flat
+    extraction in ``_extract_content`` walks ``<img>`` tags in document order,
+    which pulls in header logos and chrome imagery before the actual card
+    contents. That causes templates like ``Gallery (3-up)`` to pair post titles
+    with the site logo instead of the per-post featured image.
+
+    Returns ``content`` unchanged when we can't identify ≥3 cards — the flat
+    extraction is better than an empty realigned result.
+    """
+    cards = _find_cards_by_heading(element)
+    if len(cards) < 3 and section_type == "gallery":
+        # Pure anchor-wrapped image grids (e.g. portfolio thumbnail lightboxes)
+        # have no per-card headings, so fall back to ``<a>`` elements as cards.
+        cards = _find_gallery_anchors(element)
+    if len(cards) < 3:
+        return content
+
+    headings: list[str] = []
+    paragraphs: list[str] = []
+    images: list[dict] = []
+    buttons: list[dict | None] = []
+    links: list[dict | None] = []
+
+    for card in cards:
+        heading_tag = card.find(_HEADING_TAGS)
+        image_entry = _first_image_entry(card, base_url)
+        heading_text = heading_tag.get_text(strip=True) if heading_tag else ""
+        if not heading_text and image_entry["alt"]:
+            heading_text = image_entry["alt"]
+        headings.append(heading_text)
+        images.append(image_entry)
+
+        paragraph_tag = card.find("p")
+        paragraphs.append(paragraph_tag.get_text(strip=True) if paragraph_tag else "")
+
+        buttons.append(_first_card_button(card, base_url))
+        links.append(_first_card_link(card, base_url))
+
+    return {
+        **content,
+        "headings": headings,
+        "paragraphs": paragraphs,
+        "images": images,
+        "buttons": buttons,
+        "links": links,
+    }
+
+
 def extract_sections(html: str, base_url: str) -> list[dict]:
     """
     Extract sections from a page's HTML.
@@ -541,6 +675,8 @@ def extract_sections(html: str, base_url: str) -> list[dict]:
         if not any(content.values()):
             continue
         section_type = _classify_section(element, content, is_first=index == 0)
+        if section_type in _CARD_LIKE_TYPES:
+            content = _rescope_content_to_cards(element, section_type, base_url, content)
         sections.append({
             "type": section_type,
             "template": TEMPLATE_MAP.get(section_type, TEMPLATE_MAP["content"]),
