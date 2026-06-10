@@ -22,3 +22,13 @@ htmlcov/
 
 # CLI config (contains tokens — never commit)
 ~/.vanjaro-cli/
+
+# Regenerable run outputs (block-templates/ stays tracked)
+artifacts/baseline-*
+artifacts/e2e-*/
+artifacts/migration/
+artifacts/*.json
+tmp/
+
+# Agent review scratch output
+.agent/
