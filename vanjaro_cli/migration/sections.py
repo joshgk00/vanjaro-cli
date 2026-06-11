@@ -1067,6 +1067,19 @@ def _first_card_link(card: Tag, base_url: str) -> dict | None:
     return None
 
 
+def _excerpt(text: str, limit: int = 200) -> str:
+    """Truncate ``text`` to an excerpt at a word boundary near ``limit``.
+
+    Adds an ellipsis only when something was cut. Used for post-grid cards
+    whose rendered DOM carries the full article body where a card should show
+    a teaser.
+    """
+    if len(text) <= limit:
+        return text
+    clipped = text[:limit].rsplit(" ", 1)[0].rstrip(",;:.—- ")
+    return f"{clipped}…"
+
+
 def _rescope_content_to_cards(
     element: Tag,
     section_type: str,
@@ -1113,7 +1126,11 @@ def _rescope_content_to_cards(
         images.append(image_entry)
 
         paragraph_tag = card.find("p")
-        paragraphs.append(paragraph_tag.get_text(separator=" ", strip=True) if paragraph_tag else "")
+        paragraph_text = paragraph_tag.get_text(separator=" ", strip=True) if paragraph_tag else ""
+        # A card whose paragraph is far longer than any teaser is a post grid
+        # carrying the full article body in the rendered DOM; trim it to an
+        # excerpt. The generous gate leaves normal feature-card copy intact.
+        paragraphs.append(_excerpt(paragraph_text, limit=240))
 
         buttons.append(_first_card_button(card, base_url))
         links.append(_first_card_link(card, base_url))

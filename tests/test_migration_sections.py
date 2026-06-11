@@ -1878,3 +1878,35 @@ def test_animated_card_grid_groups_despite_varying_classes():
 
     assert sections[0]["type"] == "cards"
     assert sections[0]["content"]["headings"] == ["Benefit 1", "Benefit 2", "Benefit 3"]
+
+
+def test_post_grid_cards_get_excerpts_not_full_bodies():
+    """Recent-posts/gallery cards truncate long bodies to an excerpt."""
+    long_body = " ".join(f"sentence number {n} in the article body" for n in range(1, 40))
+    cards = "".join(
+        f'<div class="post-card"><img src="/p{n}.jpg" alt=""><h3>Post {n}</h3>'
+        f"<p>{long_body}</p></div>"
+        for n in range(1, 4)
+    )
+    html = _wrap(f'<section><div class="posts">{cards}</div></section>')
+
+    sections = extract_sections(html, BASE_URL)
+
+    for paragraph in sections[0]["content"]["paragraphs"]:
+        assert len(paragraph) <= 245
+        assert paragraph.endswith("…")
+
+
+def test_feature_cards_keep_full_text():
+    """Non-post feature cards (no images) are not excerpt-truncated."""
+    body = "This benefit description is moderately long but should never be cut because feature cards are not post grids and their copy is the whole point of the card here."
+    cards = "".join(
+        f'<div class="col-sm-4 feat"><h3>Benefit {n}</h3><p>{body}</p></div>'
+        for n in range(1, 4)
+    )
+    html = _wrap(f'<section><div class="row">{cards}</div></section>')
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["type"] == "cards"
+    assert sections[0]["content"]["paragraphs"][0] == body
