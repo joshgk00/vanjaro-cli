@@ -1542,3 +1542,56 @@ def test_article_body_with_repeated_headings_stays_content():
 
     assert len(sections) == 1
     assert sections[0]["type"] == "content"
+
+
+# ---------------------------------------------------------------------------
+# layout bands must split apart (not read as uniform card grids)
+# ---------------------------------------------------------------------------
+
+
+def test_repeated_layout_bands_split_into_sections():
+    """DNN layout bands sharing a class are sections, not a card grid."""
+    html = _wrap(
+        """
+        <header class="header_bg"><img src="/logo.png" alt="logo"></header>
+        <section>
+          <div class="dnn_layout clearfix"><div class="row"><div class="col-sm-12">
+            <h2>Websites from Concept to Creation</h2>
+            <p>The foundation for your business is a well-designed site with plenty of explanatory text to carry weight.</p>
+          </div></div></div>
+          <div class="Full_Screen_PaneE"><div class="DnnModule"><div class="White">
+            <h2>Each Website Includes</h2>
+            <ul><li>Hosting</li><li>Design</li><li>SEO</li></ul>
+          </div></div></div>
+          <div class="dnn_layout clearfix"><div class="row"><div class="col-sm-12">
+            <h2>Our Prices</h2>
+            <p>Website Only and Branding Package plans with long descriptive copy for each plan offered here.</p>
+          </div></div></div>
+        </section>
+        <footer class="footer_box"><p>Copyright</p></footer>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 3
+    first_headings = [s["content"]["headings"][0] for s in sections]
+    assert first_headings == [
+        "Websites from Concept to Creation",
+        "Each Website Includes",
+        "Our Prices",
+    ]
+
+
+def test_uniform_card_grid_still_not_split():
+    """A real card grid (uniform col children) stays one section."""
+    cards = "".join(
+        f'<div class="col-md-4 feature"><h3>Card {n}</h3><p>Text {n}.</p></div>'
+        for n in range(1, 4)
+    )
+    html = _wrap(f'<section><div class="cards">{cards}</div></section>')
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert len(sections[0]["content"]["headings"]) == 3

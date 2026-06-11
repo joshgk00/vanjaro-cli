@@ -228,19 +228,42 @@ def _is_chrome_like(element: Tag) -> bool:
     return "header" in classes or "footer" in classes or "menu" in classes
 
 
+# Whole-class names that mark a child as theme/CMS layout plumbing rather
+# than a content card. Repeated ``div.dnn_layout`` bands must not read as a
+# "uniform card grid" — that blocks splitting a page's section bands apart.
+_LAYOUT_CLASS_NAMES = frozenset({"dnn_layout", "clearfix", "container", "wrapper", "row"})
+
+
+def _is_layout_classed(child: Tag) -> bool:
+    for cls in child.get("class", []):
+        lowered = cls.lower()
+        if lowered in _LAYOUT_CLASS_NAMES:
+            return True
+        # DNN pane classes (BannerPane, Full_Screen_PaneE, contentpane) —
+        # 'panel' is real card markup and must not match.
+        if "pane" in lowered and "panel" not in lowered:
+            return True
+    return False
+
+
 def _children_look_like_cards(element: Tag) -> bool:
     """True when a majority of visible children share one tag+class signature.
 
     Card grids repeat one child shape (3x ``article``, Nx ``div.col-md-4``);
-    page-level layout containers (DNN panes, theme rows) mix shapes. Uniform
+    page-level layout containers (DNN panes, theme rows) mix shapes or carry
+    layout class names, which never count toward uniformity. Uniform
     children mean the element is a leaf section that must not be split.
     """
     children = _visible_children(element)
     if len(children) < 2:
         return False
     signatures = [
-        (child.name, tuple(sorted(child.get("class", [])))) for child in children
+        (child.name, tuple(sorted(child.get("class", []))))
+        for child in children
+        if not _is_layout_classed(child)
     ]
+    if not signatures:
+        return False
     most_common_count = max(signatures.count(sig) for sig in set(signatures))
     return most_common_count >= 2 and most_common_count / len(children) >= 0.5
 
