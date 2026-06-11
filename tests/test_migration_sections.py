@@ -1720,3 +1720,36 @@ def test_footer_extraction_captures_social_and_copyright():
         {"label": "Twitter", "href": "https://twitter.com/cmw"},
     ]
     assert content["copyright_text"] == "Copyright 2026 by Clicks & Mortar Websites"
+
+
+def test_post_body_gains_date_and_tag_meta_line():
+    """Blog byline (detail-date + label spans) leads the content paragraphs."""
+    paragraphs = "".join(
+        f"<p>Paragraph {n} of the security article, long enough to keep this "
+        f"section out of the bio classification path entirely.</p>"
+        for n in range(1, 8)
+    )
+    html = _wrap(
+        f"""
+        <section>
+          <div class="detail-date">21 Sep</div>
+          <span class="label label-default">Website Security</span>
+          <span class="label label-default">Website Updates</span>
+          <h1>It's Time to Get Serious About Security</h1>
+          {paragraphs}
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["type"] == "content"
+    assert sections[0]["content"]["paragraphs"][0] == "21 Sep — Website Security, Website Updates"
+
+
+def test_sections_without_byline_markup_are_unchanged():
+    html = _wrap("<section><h2>About</h2><p>First paragraph.</p><p>Second one.</p><p>Third paragraph here to avoid bio.</p></section>")
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["content"]["paragraphs"][0] == "First paragraph."

@@ -1062,6 +1062,12 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
             continue
         if section_type in _CARD_LIKE_TYPES:
             content = _rescope_content_to_cards(element, section_type, base_url, content)
+        elif section_type == "content":
+            # Blog post bodies carry their byline in date/label elements that
+            # paragraph extraction misses; surface it as the leading line.
+            meta_line = _extract_post_meta(element)
+            if meta_line:
+                content["paragraphs"] = [meta_line] + (content.get("paragraphs") or [])
         sections.append({
             "type": section_type,
             "template": TEMPLATE_MAP.get(section_type, TEMPLATE_MAP["content"]),
@@ -1172,6 +1178,34 @@ def extract_global_element(html: str, base_url: str, element_name: str) -> dict 
         "template": TEMPLATE_MAP.get(element_name, TEMPLATE_MAP["content"]),
         "content": content,
     }
+
+
+_DATE_CLASS = re.compile(r"\bdate\b|detail-date|post-date|entry-date", re.IGNORECASE)
+_TAG_CLASS = re.compile(r"^label$|\btag\b", re.IGNORECASE)
+
+
+def _extract_post_meta(element: Tag) -> str:
+    """Build a post meta line ('21 Sep — Website Security, Updates') if present.
+
+    Blog modules render the date and category labels in dedicated elements
+    (``div.detail-date``, ``span.label``) that paragraph extraction never
+    sees, so post pages lose their byline entirely without this.
+    """
+    date_text = ""
+    date_el = element.find(class_=_DATE_CLASS)
+    if date_el is not None:
+        candidate = date_el.get_text(" ", strip=True)
+        if candidate and len(candidate) <= 20:
+            date_text = candidate
+
+    tags = []
+    for tag_el in element.find_all("span", class_=_TAG_CLASS, limit=8):
+        text = tag_el.get_text(" ", strip=True)
+        if text and len(text) <= 40 and text not in tags:
+            tags.append(text)
+
+    parts = [p for p in (date_text, ", ".join(tags)) if p]
+    return " — ".join(parts)
 
 
 _SOCIAL_DOMAINS = {
