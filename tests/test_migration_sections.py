@@ -1077,21 +1077,23 @@ def test_feature_cards_realign_per_card_with_sibling_img_and_heading():
     ]
 
 
-def test_anchor_gallery_falls_back_to_alt_text_when_no_per_card_headings():
-    """Plain anchor-wrapped image galleries (no per-card headings) use alt text.
+def test_anchor_gallery_preserves_section_intro_over_image_alts():
+    """A pure image gallery keeps its section heading + intro, not image alts.
 
-    Regression guard: ``_find_cards_by_heading`` returns nothing for a pure
-    gallery, so the fallback path that treats each ``<a>`` as a card must
-    still produce aligned per-image entries.
+    The gallery's only real text is the section's own heading and description
+    (a service page: 'Lighting' + a paragraph above a photo grid). Image alt
+    text must not masquerade as per-card titles, and the description must
+    survive — only the image list is rebuilt to drop chrome.
     """
     html = _wrap(
         """
         <section>
-          <h2>Portfolio</h2>
-          <a href="/full-1.jpg"><img src="/thumb-1.jpg" alt="Shot One"></a>
-          <a href="/full-2.jpg"><img src="/thumb-2.jpg" alt="Shot Two"></a>
-          <a href="/full-3.jpg"><img src="/thumb-3.jpg" alt="Shot Three"></a>
-          <a href="/full-4.jpg"><img src="/thumb-4.jpg" alt="Shot Four"></a>
+          <h2>Lighting</h2>
+          <p>Landscape lighting changes the way people see your property at night.</p>
+          <a href="/full-1.jpg"><img src="/thumb-1.jpg" alt="Lighting Gallery - 1"></a>
+          <a href="/full-2.jpg"><img src="/thumb-2.jpg" alt="Lighting Gallery - 2"></a>
+          <a href="/full-3.jpg"><img src="/thumb-3.jpg" alt="Lighting Gallery - 3"></a>
+          <a href="/full-4.jpg"><img src="/thumb-4.jpg" alt="Lighting Gallery - 4"></a>
         </section>
         """
     )
@@ -1106,12 +1108,10 @@ def test_anchor_gallery_falls_back_to_alt_text_when_no_per_card_headings():
         "https://example.com/thumb-3.jpg",
         "https://example.com/thumb-4.jpg",
     ]
-    assert content["headings"] == [
-        "Shot One",
-        "Shot Two",
-        "Shot Three",
-        "Shot Four",
-    ]
+    assert content["headings"] == ["Lighting"]
+    assert "Landscape lighting changes" in content["paragraphs"][0]
+    # image alt text must NOT become headings
+    assert not any("Gallery -" in h for h in content["headings"])
 
 
 def test_rescoping_only_applies_to_card_like_section_types():

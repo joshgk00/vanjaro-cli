@@ -1117,6 +1117,14 @@ def _rescope_content_to_cards(
     if len(cards) < 3:
         return content
 
+    # A pure image gallery (no card carries a heading) has no per-card text —
+    # its only real content is the section's own heading + intro paragraph,
+    # which the flat extraction already captured. Keep that and just clean up
+    # the image list (dropping chrome logos), so a service page's description
+    # survives and image alt-text doesn't masquerade as card titles.
+    if all(card.find(_HEADING_TAGS) is None for card in cards):
+        return {**content, "images": [_first_image_entry(card, base_url) for card in cards]}
+
     headings: list[str] = []
     paragraphs: list[str] = []
     images: list[dict] = []
