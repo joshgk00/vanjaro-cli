@@ -122,6 +122,42 @@ def _compose_template_section(
     return section, styles
 
 
+_HEX_COLOR = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
+
+
+def _is_dark_color(value: str) -> bool:
+    match = _HEX_COLOR.match(value.strip())
+    if not match:
+        return False
+    hex_part = match.group(1)
+    if len(hex_part) == 3:
+        hex_part = "".join(c * 2 for c in hex_part)
+    red, green, blue = (int(hex_part[i : i + 2], 16) for i in (0, 2, 4))
+    return (0.299 * red + 0.587 * green + 0.114 * blue) < 128
+
+
+def _apply_section_background(section: dict, content: dict) -> None:
+    """Carry the crawled section background onto the composed component.
+
+    Templates ship unstyled; without this the source's full-width color bands
+    all render white. Dark backgrounds with no explicit text color get white
+    text so the band stays readable.
+    """
+    background = content.get("background_color")
+    if not isinstance(background, str) or not background:
+        return
+    text_color = content.get("text_color")
+    if not isinstance(text_color, str) or not text_color:
+        text_color = "#ffffff" if _is_dark_color(background) else None
+
+    style = f"background-color:{background};"
+    if text_color:
+        style += f"color:{text_color};"
+    attributes = section.setdefault("attributes", {})
+    existing = attributes.get("style", "")
+    attributes["style"] = f"{existing.rstrip(';')};{style}".lstrip(";") if existing else style
+
+
 def _classify_and_resolve(
     section_data: dict,
     source_file: Path,
@@ -161,7 +197,13 @@ def _classify_and_resolve(
                 as_json,
             )
 
-        return _compose_template_section(template_name, overrides, source_file, as_json)
+        section, styles = _compose_template_section(
+            template_name, overrides, source_file, as_json
+        )
+        content_block = section_data.get("content")
+        if isinstance(content_block, dict):
+            _apply_section_background(section, content_block)
+        return section, styles
 
     exit_error(
         f"Section file {source_file} must have either a 'template' key or a 'components' array.",

@@ -32,7 +32,7 @@ from vanjaro_cli.migration.sections import (
     extract_page_title,
     extract_sections,
 )
-from vanjaro_cli.migration.tokens import extract_design_tokens
+from vanjaro_cli.migration.tokens import extract_design_tokens, fetch_stylesheets
 
 __all__ = ["migrate"]
 
@@ -117,6 +117,10 @@ def crawl(
     all_image_urls: list[str] = []
     seen_images: set[str] = set()
 
+    # Pages on a site share stylesheets — fetch once from the homepage and
+    # reuse for section background/color resolution on every page.
+    site_css = fetch_stylesheets(homepage_html, page_urls[0], _warn)
+
     pages_root = destination / "pages"
     pages_root.mkdir(exist_ok=True)
 
@@ -132,7 +136,7 @@ def crawl(
         page_path = urlparse(page_url).path or "/"
         slug = slugify_path(page_path)
 
-        sections = extract_sections(html, page_url)
+        sections = extract_sections(html, page_url, css_text=site_css)
         page_dir = pages_root / slug
         page_dir.mkdir(exist_ok=True)
 

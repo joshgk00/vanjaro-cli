@@ -37,7 +37,7 @@ from bs4 import BeautifulSoup
 
 from vanjaro_cli.migration.crawler import CrawlError, fetch_url_text, same_domain
 
-__all__ = ["extract_design_tokens"]
+__all__ = ["extract_design_tokens", "fetch_stylesheets"]
 
 HEX_COLOR = re.compile(r"#(?:[0-9a-fA-F]{3,4}){1,2}\b")
 RGB_COLOR = re.compile(r"rgba?\(\s*\d+\s*,\s*\d+\s*,\s*\d+(?:\s*,\s*[\d.]+)?\s*\)")
@@ -137,7 +137,7 @@ def _noop_warn(_: str) -> None:
     pass
 
 
-def _fetch_stylesheets(
+def fetch_stylesheets(
     homepage_html: str,
     base_url: str,
     on_warning: Callable[[str], None],
@@ -411,7 +411,7 @@ def extract_design_tokens(
     consuming this output is expected to review and refine the result.
     """
     warn = on_warning or _noop_warn
-    css_text = _fetch_stylesheets(homepage_html, base_url, warn)
+    css_text = fetch_stylesheets(homepage_html, base_url, warn)
 
     variables = _extract_css_variables(css_text)
     resolved_css = _resolve_variables_in_css(css_text, variables)

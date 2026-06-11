@@ -1268,3 +1268,98 @@ def test_dnn_chrome_siblings_with_dominant_content_pane():
     assert sections[0]["type"] == "hero"
     assert "Welcome to the Site" in sections[0]["content"]["headings"]
     assert "Our Prices" in sections[1]["content"]["headings"]
+
+
+# ---------------------------------------------------------------------------
+# Section background extraction
+# ---------------------------------------------------------------------------
+
+SECTION_BG_CSS = """
+.dark-band { background-color: #640f0d; color: #ffffff; }
+.btn { background: #20a3f0; }
+"""
+
+
+def test_css_background_resolves_onto_section():
+    html = _wrap(
+        """
+        <section class="dark-band">
+          <h2>Get started on your website today!</h2>
+          <p>Call us now to begin.</p>
+          <a class="btn" href="/contact">Contact</a>
+        </section>
+        <section>
+          <h2>Plain Section</h2><p>No background here.</p>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL, css_text=SECTION_BG_CSS)
+
+    assert sections[0]["content"]["background_color"] == "#640f0d"
+    assert sections[0]["content"]["text_color"] == "#ffffff"
+    assert "background_color" not in sections[1]["content"]
+
+
+def test_button_background_does_not_leak_to_section():
+    html = _wrap(
+        """
+        <section>
+          <h2>Heading Here</h2><p>Some content text for this section.</p>
+          <a class="btn" href="/go">Go</a>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL, css_text=SECTION_BG_CSS)
+
+    assert "background_color" not in sections[0]["content"]
+
+
+def test_inline_style_background_wins():
+    html = _wrap(
+        """
+        <section style="background-color: #111111">
+          <h2>Inline Styled</h2><p>Content.</p>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL, css_text=SECTION_BG_CSS)
+
+    assert sections[0]["content"]["background_color"] == "#111111"
+
+
+def test_background_on_inner_band_wrapper_is_found():
+    """Backgrounds often sit on an inner full-width band div, not the pane."""
+    html = _wrap(
+        """
+        <div class="pane">
+          <div class="dark-band">
+            <h2>Banded Content</h2><p>Lots of text living inside the band.</p>
+          </div>
+        </div>
+        <section><h2>Sibling</h2><p>Keeps this from being one section.</p></section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL, css_text=SECTION_BG_CSS)
+
+    banded = next(s for s in sections if "Banded Content" in s["content"]["headings"])
+    assert banded["content"]["background_color"] == "#640f0d"
+
+
+def test_white_and_transparent_backgrounds_are_dropped():
+    """Page-default backgrounds add style noise without visual value."""
+    css = ".pane { background: #FFF; } .clear { background-color: transparent; }"
+    html = _wrap(
+        """
+        <div class="pane"><h2>White Pane</h2><p>Content text.</p></div>
+        <div class="clear"><h2>Clear Pane</h2><p>More text.</p></div>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL, css_text=css)
+
+    for section in sections:
+        assert "background_color" not in section["content"]

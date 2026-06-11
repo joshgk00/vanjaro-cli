@@ -47,6 +47,91 @@ def extract_page_title(soup: BeautifulSoup) -> str:
     return ""
 
 
+BACKGROUND_ATTR = "data-migrate-bg"
+TEXT_COLOR_ATTR = "data-migrate-color"
+
+_CSS_RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
+_CSS_BG_DECL = re.compile(r"(?:^|;)\s*background(?:-color)?\s*:\s*([^;}]+)", re.IGNORECASE)
+_CSS_COLOR_DECL = re.compile(r"(?:^|;)\s*color\s*:\s*([^;}]+)", re.IGNORECASE)
+_CSS_COLOR_VALUE = re.compile(r"#[0-9a-fA-F]{3,8}\b|rgba?\([^)]*\)")
+
+
+def _color_from_declaration(declaration: str) -> str | None:
+    match = _CSS_COLOR_VALUE.search(declaration)
+    return match.group(0) if match else None
+
+
+def annotate_section_styles(soup: BeautifulSoup, css_text: str) -> None:
+    """Stamp elements matched by CSS background rules with their colors.
+
+    Section-level backgrounds almost always come from stylesheet classes, not
+    inline styles, so the extractor can't see them in the HTML alone. This
+    pass resolves background-color rules (and the text color set in the same
+    rule) onto the matched elements as ``data-migrate-*`` attributes for
+    :func:`extract_sections` to pick up. Later rules win, approximating the
+    cascade without computing specificity.
+    """
+    for selector_group, body in _CSS_RULE.findall(css_text):
+        bg_match = _CSS_BG_DECL.search(body)
+        if not bg_match:
+            continue
+        background = _color_from_declaration(bg_match.group(1))
+        if not background:
+            continue
+        fg_match = _CSS_COLOR_DECL.search(body)
+        text_color = _color_from_declaration(fg_match.group(1)) if fg_match else None
+        for selector in selector_group.split(","):
+            selector = selector.strip()
+            if not selector or selector.startswith("@") or ":" in selector:
+                continue
+            try:
+                matches = soup.select(selector)
+            except Exception:  # noqa: BLE001 — soupsieve raises several types on unsupported selectors
+                continue
+            for element in matches:
+                element[BACKGROUND_ATTR] = background
+                if text_color:
+                    element[TEXT_COLOR_ATTR] = text_color
+
+
+_DEFAULT_BACKGROUNDS = frozenset({"#fff", "#ffffff", "white", "transparent", "none"})
+
+
+def _is_default_background(value: str) -> bool:
+    """White/transparent is the page default — carrying it adds style noise."""
+    return value.strip().lower() in _DEFAULT_BACKGROUNDS
+
+
+def _section_background(element: Tag) -> tuple[str | None, str | None]:
+    """Return (background_color, text_color) for a section element.
+
+    Checks the element's inline style, its annotation, then large child
+    wrappers (carrying most of the section's text) — backgrounds often sit on
+    an inner band div rather than the layout pane itself. Small annotated
+    descendants like buttons are ignored.
+    """
+    inline = element.get("style", "")
+    bg_match = _CSS_BG_DECL.search(inline)
+    if bg_match:
+        background = _color_from_declaration(bg_match.group(1))
+        if background:
+            fg_match = _CSS_COLOR_DECL.search(inline)
+            return background, _color_from_declaration(fg_match.group(1)) if fg_match else None
+
+    candidates = [element]
+    section_text = len(element.get_text(strip=True)) or 1
+    for descendant in element.find_all(
+        ("div", "section", "article"), attrs={BACKGROUND_ATTR: True}, limit=8
+    ):
+        if len(descendant.get_text(strip=True)) / section_text >= 0.5:
+            candidates.append(descendant)
+    for candidate in candidates:
+        background = candidate.get(BACKGROUND_ATTR)
+        if background:
+            return background, candidate.get(TEXT_COLOR_ATTR)
+    return None, None
+
+
 _NON_STRUCTURAL_TAGS = ("script", "style", "noscript", "input", "link", "meta", "template")
 
 # Tags that commonly wrap an entire page body without contributing structure.
@@ -748,13 +833,17 @@ def _rescope_content_to_cards(
     }
 
 
-def extract_sections(html: str, base_url: str) -> list[dict]:
+def extract_sections(html: str, base_url: str, css_text: str | None = None) -> list[dict]:
     """
     Extract sections from a page's HTML.
 
-    Each result dict has `type`, `template`, and `content` keys.
+    Each result dict has `type`, `template`, and `content` keys. When
+    ``css_text`` is provided, section background/text colors are resolved
+    from the stylesheet and included in content.
     """
     soup = BeautifulSoup(html, "html.parser")
+    if css_text:
+        annotate_section_styles(soup, css_text)
     top_level = _top_level_sections(soup)
 
     sections: list[dict] = []
@@ -763,6 +852,11 @@ def extract_sections(html: str, base_url: str) -> list[dict]:
         # Skip empty wrappers
         if not any(content.values()):
             continue
+        background, text_color = _section_background(element)
+        if background and not _is_default_background(background):
+            content["background_color"] = background
+            if text_color:
+                content["text_color"] = text_color
         # First *kept* section is hero-eligible — skipped chrome (headers)
         # and empty wrappers shouldn't cost the real first section its slot.
         section_type = _classify_section(element, content, is_first=not sections)

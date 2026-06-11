@@ -616,3 +616,64 @@ def test_assemble_wrapper_ids_are_unique(runner, tmp_path):
     assert header_id != footer_id
     assert header_id
     assert footer_id
+
+
+def test_assemble_applies_section_background_from_content(runner, tmp_path, monkeypatch):
+    """Crawled background colors land as inline style on the composed section."""
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, HERO_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = _write_json(
+        tmp_path / "band.json",
+        {
+            "type": "cta",
+            "template": "Centered Hero",
+            "content": {
+                "headings": ["Get started today!"],
+                "background_color": "#640f0d",
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    section = json.loads(output_file.read_text())["components"][0]
+    style = section["attributes"]["style"]
+    assert "background-color:#640f0d;" in style
+    # Dark band with no explicit text color gets readable white text
+    assert "color:#ffffff;" in style
+
+
+def test_assemble_light_background_keeps_default_text_color(runner, tmp_path, monkeypatch):
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, HERO_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = _write_json(
+        tmp_path / "light.json",
+        {
+            "type": "content",
+            "template": "Centered Hero",
+            "content": {
+                "headings": ["Bright Section"],
+                "background_color": "#e8e8e8",
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    style = json.loads(output_file.read_text())["components"][0]["attributes"]["style"]
+    assert "background-color:#e8e8e8;" in style
+    assert "color:" not in style.replace("background-color:", "")
