@@ -408,6 +408,42 @@ def _is_button_styled(anchor: Tag) -> bool:
     return "btn" in classes or "button" in classes
 
 
+_PRICE_AMOUNT = re.compile(r"[\$£€]\s*[\d][\d.,]*")
+_PRICE_PERIOD = re.compile(r"/\s*(month|mo|year|yr|week|wk)\b", re.IGNORECASE)
+
+
+def _price_for_heading(heading: Tag) -> str:
+    """Return a normalized price ('$99.95/month') scoped to a plan heading.
+
+    Pricing tables keep the amount in a ``<span class="price">`` with the
+    currency and billing period in surrounding markup — none of it visible to
+    heading/paragraph extraction, so plan cards migrate priceless. Walks up to
+    the card wrapper that owns this heading, and only the first heading inside
+    that wrapper claims the price (so a card's sub-headings don't all repeat
+    it).
+    """
+    walker = heading.parent
+    for _ in range(5):
+        if walker is None:
+            break
+        price_el = walker.find(class_=re.compile(r"\bprice\b", re.IGNORECASE))
+        if price_el is not None:
+            headings_here = walker.find_all(_HEADING_TAGS)
+            if headings_here and headings_here[0] is not heading:
+                return ""
+            scope_text = (price_el.find_parent(class_=re.compile(r"price")) or walker).get_text(
+                " ", strip=True
+            )
+            amount = _PRICE_AMOUNT.search(scope_text)
+            if amount:
+                price = amount.group(0).replace(" ", "")
+                period = _PRICE_PERIOD.search(scope_text)
+                return f"{price}/{period.group(1).lower()}" if period else price
+            return ""
+        walker = walker.parent
+    return ""
+
+
 def _is_bold_only_paragraph(tag: Tag) -> bool:
     """True when a <p>'s entire visible text comes from a single bold run."""
     bold = tag.find(["strong", "b"])
@@ -425,7 +461,8 @@ def _extract_content(element: Tag, base_url: str) -> dict:
         for tag in element.find_all(level):
             text = tag.get_text(separator=" ", strip=True)
             if text:
-                headings.append(text)
+                price = _price_for_heading(tag)
+                headings.append(f"{text} — {price}" if price else text)
 
     paragraphs = []
     for tag in element.find_all("p"):

@@ -1788,3 +1788,41 @@ def test_paragraph_with_inline_bold_is_not_wrapped():
 
     paragraphs = sections[0]["content"]["paragraphs"]
     assert paragraphs[0] == "This is very important to remember always."
+
+
+def test_plan_heading_absorbs_its_price():
+    """Pricing card price spans fold into the plan heading text."""
+    html = _wrap(
+        """
+        <section>
+          <div class="price-table">
+            <div class="col-md-6 price-card">
+              <div class="price_title"><h2>Website Only</h2></div>
+              <div class="price_holder"><div class="price_box"><div class="box">
+                <span class="currency">$</span><span class="price">99.95</span>
+                <span class="period">/month</span></div></div></div>
+            </div>
+            <div class="col-md-6 price-card">
+              <div class="price_title"><h2>Branding Package</h2></div>
+              <div class="price_holder"><div class="price_box"><div class="box">
+                <span class="currency">$</span><span class="price">249.95</span>
+                <span class="period">/month</span></div></div></div>
+            </div>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    headings = sections[0]["content"]["headings"]
+    assert "Website Only — $99.95/month" in headings
+    assert "Branding Package — $249.95/month" in headings
+
+
+def test_heading_without_price_is_unchanged():
+    html = _wrap("<section><h2>Plain Heading</h2><p>Body text that is reasonably long here.</p><p>Second.</p><p>Third paragraph.</p></section>")
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["content"]["headings"][0] == "Plain Heading"
