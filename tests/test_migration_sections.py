@@ -1595,3 +1595,50 @@ def test_uniform_card_grid_still_not_split():
 
     assert len(sections) == 1
     assert len(sections[0]["content"]["headings"]) == 3
+
+
+# ---------------------------------------------------------------------------
+# hidden-content stripping (rendered crawl visibility + aria-hidden)
+# ---------------------------------------------------------------------------
+
+
+def test_hidden_stamped_subtrees_are_dropped():
+    """data-migrate-hidden subtrees (inactive tab panes) never extract."""
+    html = _wrap(
+        """
+        <section>
+          <h2>What Clients Say</h2>
+          <div class="tab-pane active"><p>Visible testimonial quote.</p></div>
+          <div class="tab-pane" data-migrate-hidden="1">
+            <p>Hidden testimonial one with a very long body.</p>
+            <p>Hidden testimonial two with a very long body.</p>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    paragraphs = sections[0]["content"]["paragraphs"]
+    assert paragraphs == ["Visible testimonial quote."]
+
+
+def test_aria_hidden_subtrees_are_dropped():
+    """aria-hidden carousel clones never extract."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Recent Posts</h2>
+          <div class="owl-item"><h3>Post One</h3><p>Excerpt one.</p></div>
+          <div class="owl-item cloned" aria-hidden="true"><h3>Post One</h3><p>Excerpt one.</p></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    content = sections[0]["content"]
+    assert content["headings"] == ["Recent Posts", "Post One"]
+    assert content["paragraphs"] == ["Excerpt one."]

@@ -46,12 +46,19 @@ class VisualCaptureError(Exception):
 # Stamps computed backgrounds onto elements as the same data-migrate-*
 # attributes that sections.annotate_section_styles produces from static CSS,
 # so the section extractor consumes rendered DOM with no downstream changes.
+# Elements the browser doesn't paint (inactive tab panes, hidden slides,
+# offcanvas menus) get data-migrate-hidden so extraction can drop them —
+# serialized DOM otherwise carries entire hidden datasets onto the page.
 COMPUTED_STYLE_STAMP_JS = """() => {
     const candidates = document.querySelectorAll(
         'div, section, article, header, footer, main, aside'
     );
     for (const el of candidates) {
         const cs = getComputedStyle(el);
+        if (cs.display === 'none' || cs.visibility === 'hidden') {
+            el.setAttribute('data-migrate-hidden', '1');
+            continue;
+        }
         const bg = cs.backgroundColor;
         if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
             el.setAttribute('data-migrate-bg', bg);

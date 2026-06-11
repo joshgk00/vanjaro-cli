@@ -50,6 +50,22 @@ def extract_page_title(soup: BeautifulSoup) -> str:
 BACKGROUND_ATTR = "data-migrate-bg"
 TEXT_COLOR_ATTR = "data-migrate-color"
 BACKGROUND_IMAGE_ATTR = "data-migrate-bg-image"
+HIDDEN_ATTR = "data-migrate-hidden"
+
+
+def _strip_hidden_elements(soup: BeautifulSoup) -> None:
+    """Drop subtrees the browser never painted.
+
+    The rendered crawl stamps ``data-migrate-hidden`` on display:none /
+    visibility:hidden elements (inactive tab panes, hidden slides, offcanvas
+    menus); ``aria-hidden="true"`` catches carousel clone items in static
+    fetches too. Without this, serialized DOMs dump entire hidden datasets
+    (e.g. every testimonial tab) into extracted sections.
+    """
+    for element in soup.find_all(attrs={HIDDEN_ATTR: True}):
+        element.decompose()
+    for element in soup.find_all(attrs={"aria-hidden": "true"}):
+        element.decompose()
 
 _CSS_RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
 _CSS_BG_DECL = re.compile(r"(?:^|;)\s*background(?:-color)?\s*:\s*([^;}]+)", re.IGNORECASE)
@@ -983,6 +999,7 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
     from the stylesheet and included in content.
     """
     soup = BeautifulSoup(html, "html.parser")
+    _strip_hidden_elements(soup)
     if css_text:
         annotate_section_styles(soup, css_text)
     top_level = _top_level_sections(soup)
@@ -1105,6 +1122,7 @@ def _extract_nav_structure(element: Tag, base_url: str) -> list[dict]:
 def extract_global_element(html: str, base_url: str, element_name: str) -> dict | None:
     """Extract the first <header> or <footer> from HTML as a section dict."""
     soup = BeautifulSoup(html, "html.parser")
+    _strip_hidden_elements(soup)
     element = soup.find(element_name)
     if not element:
         return None
