@@ -2186,3 +2186,23 @@ def test_outer_section_with_uniform_card_grid_stays_whole():
 
     assert len(sections) == 1
     assert sections[0]["type"] == "cards"
+
+
+def test_extract_content_includes_h5_and_h6_headings():
+    """Small feature labels marked up as h5/h6 are captured, not dropped."""
+    html = _wrap(
+        """
+        <section>
+          <h5>Nation Wide Bonding</h5>
+          <h5>We Accept Collateral</h5>
+          <h6>Available 24/7</h6>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    headings = sections[0]["content"]["headings"]
+
+    assert "Nation Wide Bonding" in headings
+    assert "We Accept Collateral" in headings
+    assert "Available 24/7" in headings

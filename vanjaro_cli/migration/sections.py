@@ -521,7 +521,7 @@ def _is_bold_only_paragraph(tag: Tag) -> bool:
 def _extract_content(element: Tag, base_url: str) -> dict:
     """Pull structured content from an HTML element for migration."""
     headings: list[str] = []
-    for level in ("h1", "h2", "h3", "h4"):
+    for level in ("h1", "h2", "h3", "h4", "h5", "h6"):
         for tag in element.find_all(level):
             # A heading inside a <blockquote> is the quote's own text, not a
             # section/card heading; it's captured separately in blockquotes.
