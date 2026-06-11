@@ -146,6 +146,42 @@ def _settle(page, timeout_ms: int) -> None:
     page.wait_for_timeout(min(500, timeout_ms))
 
 
+# Vision models downscale tall full-page screenshots until headers and text
+# become unreadable (a 7500px page shrinks ~6x), which makes scoring agents
+# misreport styling. Tiles keep every region at readable resolution.
+TILE_HEIGHT = 2000
+
+
+def _capture_tiles(page, screenshot_path: Path) -> list[str]:
+    """Write viewport-width tiles of the full page next to the screenshot.
+
+    Returns tile filenames (``<stem>-tile-NN.png``). Tiling is skipped when
+    the page fits in two tiles or fewer — the full shot is readable as-is.
+    """
+    page_height = page.evaluate(
+        "() => Math.max(document.body.scrollHeight, document.documentElement.scrollHeight)"
+    )
+    viewport_width = page.viewport_size["width"]
+    if not page_height or page_height <= 2 * TILE_HEIGHT:
+        return []
+
+    tiles: list[str] = []
+    tile_index = 0
+    for top in range(0, page_height, TILE_HEIGHT):
+        height = min(TILE_HEIGHT, page_height - top)
+        tile_path = screenshot_path.with_name(
+            f"{screenshot_path.stem}-tile-{tile_index:02d}.png"
+        )
+        page.screenshot(
+            path=str(tile_path),
+            full_page=True,
+            clip={"x": 0, "y": top, "width": viewport_width, "height": height},
+        )
+        tiles.append(tile_path.name)
+        tile_index += 1
+    return tiles
+
+
 def _capture_one(page, url: str, screenshot_path: Path, timeout_ms: int) -> dict:
     """Navigate, settle, screenshot. Returns status/text metrics and warnings."""
     from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
@@ -159,6 +195,7 @@ def _capture_one(page, url: str, screenshot_path: Path, timeout_ms: int) -> dict
 
     _settle(page, timeout_ms)
     page.screenshot(path=str(screenshot_path), full_page=True)
+    tiles = _capture_tiles(page, screenshot_path)
 
     status = response.status if response else 0
     body_text = page.evaluate("() => document.body ? document.body.innerText : ''")
@@ -173,6 +210,7 @@ def _capture_one(page, url: str, screenshot_path: Path, timeout_ms: int) -> dict
     return {
         "status": status,
         "text_length": len(body_text),
+        "tiles": tiles,
         "warnings": warnings,
     }
 
@@ -269,13 +307,13 @@ def run_capture(
                     page, entry["source_url"], source_file, timeout_ms
                 )
             except Exception as exc:  # noqa: BLE001 — per-page isolation: one bad page must not kill the run
-                source_result = {"status": 0, "text_length": 0, "warnings": [f"capture failed: {exc}"]}
+                source_result = {"status": 0, "text_length": 0, "tiles": [], "warnings": [f"capture failed: {exc}"]}
             try:
                 vanjaro_result = _capture_one(
                     page, entry["vanjaro_url"], vanjaro_file, timeout_ms
                 )
             except Exception as exc:  # noqa: BLE001
-                vanjaro_result = {"status": 0, "text_length": 0, "warnings": [f"capture failed: {exc}"]}
+                vanjaro_result = {"status": 0, "text_length": 0, "tiles": [], "warnings": [f"capture failed: {exc}"]}
 
             if vanjaro_file.exists():
                 digest = hashlib.sha256(vanjaro_file.read_bytes()).hexdigest()
@@ -289,6 +327,8 @@ def run_capture(
                     "vanjaro_status": vanjaro_result["status"],
                     "source_text_length": source_result["text_length"],
                     "vanjaro_text_length": vanjaro_result["text_length"],
+                    "source_tiles": source_result["tiles"],
+                    "vanjaro_tiles": vanjaro_result["tiles"],
                     "warnings": source_result["warnings"] + vanjaro_result["warnings"],
                 }
             )
