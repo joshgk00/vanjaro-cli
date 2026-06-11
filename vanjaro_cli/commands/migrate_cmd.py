@@ -116,11 +116,38 @@ def crawl(
         if not as_json:
             click.echo(f"warning: {message}", err=True)
 
+    # Stand the browser up before discovery: WAF-protected sites reset the
+    # plain HTTP client, so rendered crawls must discover links through the
+    # browser too, not just render content pages.
+    rendered_stack = ExitStack()
+    browser_page = None
+    render_page_html = None
+    if rendered:
+        from vanjaro_cli.migration.visual import (
+            VisualCaptureError,
+            render_page_html as _render_page_html,
+            rendered_page_session,
+        )
+
+        render_page_html = _render_page_html
+        try:
+            browser_page = rendered_stack.enter_context(rendered_page_session())
+        except VisualCaptureError as exc:
+            exit_error(str(exc), as_json)
+
+    discovery_fetch = (
+        (lambda target: render_page_html(browser_page, target))
+        if browser_page is not None
+        else None
+    )
+
     try:
         page_urls, homepage_html = discover_pages(
-            url, max_pages, include_paths, exclude_paths, on_warning=_warn
+            url, max_pages, include_paths, exclude_paths,
+            on_warning=_warn, fetch=discovery_fetch,
         )
     except CrawlError as exc:
+        rendered_stack.close()
         exit_error(str(exc), as_json)
 
     pages_summary: list[dict] = []
@@ -135,26 +162,14 @@ def crawl(
     pages_root = destination / "pages"
     pages_root.mkdir(exist_ok=True)
 
-    rendered_stack = ExitStack()
-    browser_page = None
-    if rendered:
-        from vanjaro_cli.migration.visual import (
-            VisualCaptureError,
-            render_page_html,
-            rendered_page_session,
-        )
-
-        try:
-            browser_page = rendered_stack.enter_context(rendered_page_session())
-        except VisualCaptureError as exc:
-            exit_error(str(exc), as_json)
-
     for page_url in page_urls:
         try:
-            if browser_page is not None:
+            if page_url == page_urls[0]:
+                html = homepage_html  # already fetched/rendered during discovery
+            elif browser_page is not None:
                 html = render_page_html(browser_page, page_url)
             else:
-                html = homepage_html if page_url == page_urls[0] else fetch_url_text(page_url)
+                html = fetch_url_text(page_url)
         except CrawlError as exc:
             _warn(str(exc))
             continue

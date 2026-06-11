@@ -243,13 +243,21 @@ def discover_pages(
     include_patterns: tuple[str, ...],
     exclude_patterns: tuple[str, ...],
     on_warning: Callable[[str], None] | None = None,
+    fetch: Callable[[str], str] | None = None,
 ) -> tuple[list[str], str]:
     """Discover page URLs starting from `start_url`.
 
     Returns (ordered_unique_urls, homepage_html). The homepage is always first.
     Sitemap fetch failures other than 404 are reported via `on_warning`.
+
+    ``fetch`` overrides how the homepage is retrieved (defaults to a plain
+    HTTP GET). Rendered crawls pass a browser-backed fetcher so sites behind a
+    WAF that resets non-browser clients can still be discovered. The sitemap
+    always uses the plain fetch — a browser renders XML into an HTML tree view
+    that the parser can't read — and degrades gracefully when it fails.
     """
     validate_http_url(start_url)
+    fetch_homepage = fetch or fetch_url_text
 
     # Normalize the start URL so it matches what shows up in discovered links.
     # A bare domain like "https://example.com" must become "https://example.com/"
@@ -259,7 +267,7 @@ def discover_pages(
         parsed_start = parsed_start._replace(path="/")
     normalized_start = parsed_start._replace(fragment="").geturl()
 
-    homepage_html = fetch_url_text(normalized_start)
+    homepage_html = fetch_homepage(normalized_start)
     discovered: list[str] = []
     seen: set[str] = set()
 
