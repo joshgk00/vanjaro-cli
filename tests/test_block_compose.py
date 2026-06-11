@@ -480,7 +480,8 @@ def test_check_overflow_returns_unmatched_keys():
         "heading_2": "Dropped",
         "image_5_src": "also-dropped.jpg",
     })
-    assert unused == ["heading_2", "image_5_src"]
+    # image_5_src is absorbed by image slot expansion, not overflow
+    assert unused == ["heading_2"]
 
 
 def test_check_overflow_with_footer_excess_items():
@@ -576,8 +577,79 @@ def test_no_expansion_when_overrides_fit():
 
 
 def test_check_overflow_ignores_absorbable_text_keys():
-    overrides = {"text_5": "Deep paragraph", "image_9_src": "/nope.jpg"}
+    overrides = {"text_5": "Deep paragraph", "image_9_src": "/nope.jpg", "button_7": "x"}
 
     overflow = check_overflow(make_two_text_template(), overrides)
 
-    assert overflow == ["image_9_src"]
+    # text and image keys are absorbed by slot expansion; buttons are not
+    assert overflow == ["button_7"]
+
+
+# ---------------------------------------------------------------------------
+# expand_image_slots
+# ---------------------------------------------------------------------------
+
+
+def make_one_image_template() -> dict:
+    return {
+        "name": "Gallery (1-up)",
+        "category": "Cards",
+        "template": {
+            "type": "section",
+            "attributes": {"id": "tpl-g-s1"},
+            "components": [
+                {
+                    "type": "column",
+                    "attributes": {"id": "tpl-g-c1"},
+                    "components": [
+                        {"type": "image", "attributes": {"id": "tpl-g-i1", "src": "", "alt": ""}},
+                    ],
+                }
+            ],
+        },
+    }
+
+
+def test_image_slots_expand_by_cloning():
+    overrides = {f"image_{n}_src": f"/img/{n}.jpg" for n in range(1, 5)}
+
+    result = apply_overrides(make_one_image_template(), overrides)
+
+    column = result["template"]["components"][0]
+    images = [c for c in column["components"] if c["type"] == "image"]
+    assert [i["attributes"]["src"] for i in images] == [f"/img/{n}.jpg" for n in range(1, 5)]
+    ids = [i["attributes"]["id"] for i in images]
+    assert len(set(ids)) == 4
+
+
+def test_imageless_template_gains_image_components():
+    """Rich Text Block has no image slots — page imagery must not be dropped."""
+    overrides = {
+        "heading_1": "Post Title",
+        "text_1": "Body",
+        "image_1_src": "/img/featured.jpg",
+        "image_1_alt": "Featured",
+    }
+
+    result = apply_overrides(make_two_text_template(), overrides)
+
+    column = result["template"]["components"][0]
+    images = [c for c in column["components"] if c["type"] == "image"]
+    assert len(images) == 1
+    assert images[0]["attributes"]["src"] == "/img/featured.jpg"
+    assert images[0]["attributes"]["alt"] == "Featured"
+
+
+def test_empty_image_src_overrides_do_not_expand():
+    result = apply_overrides(make_two_text_template(), {"image_1_src": "", "text_1": "x"})
+
+    column = result["template"]["components"][0]
+    assert not [c for c in column["components"] if c["type"] == "image"]
+
+
+def test_check_overflow_ignores_absorbable_image_keys():
+    overrides = {"image_3_src": "/img/3.jpg", "image_3_alt": "x", "button_9": "Nope"}
+
+    overflow = check_overflow(make_one_image_template(), overrides)
+
+    assert overflow == ["button_9"]

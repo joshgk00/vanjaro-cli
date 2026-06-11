@@ -204,6 +204,17 @@ def _section_like_child_count(element: Tag) -> int:
 _DOMINANT_TEXT_SHARE = 0.6
 
 
+def _is_banner_image_section(content: dict) -> bool:
+    """A leading section that is just imagery — no headings, no real text."""
+    images = content.get("images") or []
+    if not images or not images[0].get("src"):
+        return False
+    if content.get("headings") or content.get("buttons"):
+        return False
+    text_length = sum(len(p) for p in content.get("paragraphs") or [])
+    return text_length < 40
+
+
 def _is_chrome_like(element: Tag) -> bool:
     """Cheap pre-classification of header/footer/nav elements.
 
@@ -930,7 +941,14 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
         # tag/class check also drops offcanvas menus the classifier misses.
         if _is_chrome_like(element):
             continue
-        section_type = _classify_section(element, content, is_first=not sections)
+        if not sections and _is_banner_image_section(content):
+            # A leading image-only pane is the page's hero banner; promote the
+            # image to a section background so hero templates can render it
+            # full-width instead of dropping it into a text template.
+            content["background_image"] = content["images"][0]["src"]
+            section_type = "hero"
+        else:
+            section_type = _classify_section(element, content, is_first=not sections)
         if section_type in ("header", "footer"):
             continue
         if section_type in _CARD_LIKE_TYPES:

@@ -14,6 +14,7 @@ __all__ = [
     "apply_overrides",
     "check_overflow",
     "enumerate_slots",
+    "expand_image_slots",
     "expand_text_slots",
     "find_template",
     "get_templates_dir",
@@ -122,6 +123,7 @@ def enumerate_slots(template_component: dict) -> list[dict]:
 
 
 _TEXT_OVERRIDE_KEY = re.compile(r"^text_(\d+)$")
+_IMAGE_SRC_OVERRIDE_KEY = re.compile(r"^image_(\d+)_src$")
 
 
 def _max_requested_text_slot(overrides: dict[str, str]) -> int:
@@ -129,6 +131,15 @@ def _max_requested_text_slot(overrides: dict[str, str]) -> int:
         int(match.group(1))
         for key in overrides
         if (match := _TEXT_OVERRIDE_KEY.match(key))
+    ]
+    return max(indices, default=0)
+
+
+def _max_requested_image_slot(overrides: dict[str, str]) -> int:
+    indices = [
+        int(match.group(1))
+        for key in overrides
+        if (match := _IMAGE_SRC_OVERRIDE_KEY.match(key)) and overrides[key]
     ]
     return max(indices, default=0)
 
@@ -186,16 +197,63 @@ def expand_text_slots(template_data: dict, overrides: dict[str, str]) -> dict:
     return result
 
 
+def expand_image_slots(template_data: dict, overrides: dict[str, str]) -> dict:
+    """Make room for every ``image_N_src`` override.
+
+    Clones the template's last image component in place when slots run out.
+    Templates with no image component at all (e.g. Rich Text Block) get a
+    plain responsive image appended next to their last text component —
+    dropping page imagery on the floor is worse than a generic placement.
+    """
+    requested = _max_requested_image_slot(overrides)
+    if requested == 0:
+        return template_data
+
+    existing = sum(
+        1 for _, comp_type, _ in _walk_overridable(template_data["template"])
+        if comp_type == "image"
+    )
+    if 0 < existing >= requested:
+        return template_data
+
+    result = copy.deepcopy(template_data)
+    located = _find_last_of_type(result["template"], "image")
+    if located is not None and located[1] is not None:
+        last_image, parent = located
+        insert_at = parent["components"].index(last_image) + 1
+        for clone_number in range(requested - existing):
+            clone = copy.deepcopy(last_image)
+            _rewrite_component_ids(clone, f"-x{clone_number + 2}")
+            parent["components"].insert(insert_at + clone_number, clone)
+        return result
+
+    anchor = _find_last_of_type(result["template"], "text") or _find_last_of_type(
+        result["template"], "heading"
+    )
+    if anchor is None or anchor[1] is None:
+        return template_data
+    _, parent = anchor
+    for slot_number in range(1, requested + 1):
+        parent["components"].append({
+            "type": "image",
+            "tagName": "img",
+            "classes": [{"name": "img-fluid", "active": False}],
+            "attributes": {"id": f"tpl-auto-img{slot_number}", "src": "", "alt": ""},
+        })
+    return result
+
+
 def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
     """Deep-copy a template and apply content overrides to matching slots.
 
-    Text slots are expanded first so paragraph counts beyond the template's
-    capacity are absorbed instead of silently dropped.
+    Text and image slots are expanded first so content beyond the template's
+    capacity is absorbed instead of silently dropped.
 
     Returns the full template dict (name, category, description, template, styles)
     with the component tree modified according to the overrides.
     """
-    result = copy.deepcopy(expand_text_slots(template_data, overrides))
+    expanded = expand_image_slots(expand_text_slots(template_data, overrides), overrides)
+    result = copy.deepcopy(expanded)
     for comp, comp_type, n in _walk_overridable(result["template"]):
         content_key = f"{comp_type}_{n}"
         if content_key in overrides and comp_type in CONTENT_TYPES:
@@ -215,6 +273,6 @@ def check_overflow(template_data: dict, overrides: dict[str, str]) -> list[str]:
     to a 3-up card template). Text overflow doesn't count — apply_overrides
     expands text slots to absorb it.
     """
-    expanded = expand_text_slots(template_data, overrides)
+    expanded = expand_image_slots(expand_text_slots(template_data, overrides), overrides)
     available_keys = {slot["key"] for slot in enumerate_slots(expanded["template"])}
     return sorted(key for key in overrides if key not in available_keys)
