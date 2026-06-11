@@ -1660,3 +1660,21 @@ def test_global_element_carries_band_colors():
     assert result is not None
     assert result["content"]["background_color"] == "rgb(20, 20, 20)"
     assert result["content"]["text_color"] == "rgb(255, 255, 255)"
+
+
+def test_multi_element_text_keeps_separators():
+    """Stacked spans/lines inside one element must not concatenate run-on."""
+    html = _wrap(
+        """
+        <section>
+          <h2><span>NEED TO TALK TO SOMEONE?</span><span>GIVE US A CALL</span></h2>
+          <p><strong>What is the newest update?</strong>Google Chrome flags HTTP pages.</p>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    content = sections[0]["content"]
+    assert content["headings"][0] == "NEED TO TALK TO SOMEONE? GIVE US A CALL"
+    assert content["paragraphs"][0] == "What is the newest update? Google Chrome flags HTTP pages."

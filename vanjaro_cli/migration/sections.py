@@ -38,12 +38,12 @@ TEMPLATE_MAP: dict[str, str] = {
 def extract_page_title(soup: BeautifulSoup) -> str:
     """Return the page title from <title> or the first <h1>."""
     if soup.title:
-        text = soup.title.get_text(strip=True)
+        text = soup.title.get_text(separator=" ", strip=True)
         if text:
             return text
     first_h1 = soup.find("h1")
     if first_h1:
-        return first_h1.get_text(strip=True)
+        return first_h1.get_text(separator=" ", strip=True)
     return ""
 
 
@@ -146,11 +146,11 @@ def _section_background(element: Tag) -> tuple[str | None, str | None]:
             return background, _color_from_declaration(fg_match.group(1)) if fg_match else None
 
     candidates = [element]
-    section_text = len(element.get_text(strip=True)) or 1
+    section_text = len(element.get_text(separator=" ", strip=True)) or 1
     for descendant in element.find_all(
         ("div", "section", "article"), attrs={BACKGROUND_ATTR: True}, limit=8
     ):
-        if len(descendant.get_text(strip=True)) / section_text >= 0.5:
+        if len(descendant.get_text(separator=" ", strip=True)) / section_text >= 0.5:
             candidates.append(descendant)
     for candidate in candidates:
         background = candidate.get(BACKGROUND_ATTR)
@@ -162,11 +162,11 @@ def _section_background(element: Tag) -> tuple[str | None, str | None]:
 def _section_background_image(element: Tag, base_url: str) -> str | None:
     """Return the section's background image URL, if one was annotated."""
     candidates = [element]
-    section_text = len(element.get_text(strip=True)) or 1
+    section_text = len(element.get_text(separator=" ", strip=True)) or 1
     for descendant in element.find_all(
         ("div", "section", "article"), attrs={BACKGROUND_IMAGE_ATTR: True}, limit=8
     ):
-        if len(descendant.get_text(strip=True)) / section_text >= 0.5:
+        if len(descendant.get_text(separator=" ", strip=True)) / section_text >= 0.5:
             candidates.append(descendant)
     for candidate in candidates:
         image_url = candidate.get(BACKGROUND_IMAGE_ATTR)
@@ -192,7 +192,7 @@ def _chrome_background(element: Tag) -> tuple[str | None, str | None]:
         if background and not _is_default_background(background):
             # A zero-text overlay's computed color is meaningless — leave
             # text color unset so dark bands get the auto-white fallback.
-            has_text = bool(descendant.get_text(strip=True))
+            has_text = bool(descendant.get_text(separator=" ", strip=True))
             return background, descendant.get(TEXT_COLOR_ATTR) if has_text else None
     return None, None
 
@@ -216,7 +216,7 @@ def _structural_children(element: Tag) -> list[Tag]:
 
 
 def _has_visible_content(element: Tag) -> bool:
-    return bool(element.get_text(strip=True)) or element.find("img") is not None
+    return bool(element.get_text(separator=" ", strip=True)) or element.find("img") is not None
 
 
 def _visible_children(element: Tag) -> list[Tag]:
@@ -339,7 +339,7 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
             # a page-level layout row.
             break
         total_text = sum(
-            len(s.get_text(strip=True)) for s in sections if not _is_chrome_like(s)
+            len(s.get_text(separator=" ", strip=True)) for s in sections if not _is_chrome_like(s)
         ) or 1
         expanded: list[Tag] = []
         did_expand = False
@@ -347,7 +347,7 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
             if _is_chrome_like(section):
                 expanded.append(section)
                 continue
-            text_share = len(section.get_text(strip=True)) / total_text
+            text_share = len(section.get_text(separator=" ", strip=True)) / total_text
             inner = _visible_children(section)
             if (
                 text_share > _DOMINANT_TEXT_SHARE
@@ -413,14 +413,14 @@ def _extract_content(element: Tag, base_url: str) -> dict:
     headings: list[str] = []
     for level in ("h1", "h2", "h3", "h4"):
         for tag in element.find_all(level):
-            text = tag.get_text(strip=True)
+            text = tag.get_text(separator=" ", strip=True)
             if text:
                 headings.append(text)
 
     paragraphs = [
-        tag.get_text(strip=True)
+        tag.get_text(separator=" ", strip=True)
         for tag in element.find_all("p")
-        if tag.get_text(strip=True)
+        if tag.get_text(separator=" ", strip=True)
     ]
 
     images: list[dict] = []
@@ -467,13 +467,13 @@ def _extract_content(element: Tag, base_url: str) -> dict:
 
     buttons: list[dict] = []
     for btn in element.find_all("button"):
-        text = btn.get_text(strip=True)
+        text = btn.get_text(separator=" ", strip=True)
         if text:
             buttons.append({"text": text, "href": ""})
     for anchor in element.find_all("a"):
         if not _is_button_styled(anchor):
             continue
-        text = anchor.get_text(strip=True)
+        text = anchor.get_text(separator=" ", strip=True)
         raw_href = (anchor.get("href") or "").strip()
         if not text or not raw_href:
             continue
@@ -483,24 +483,24 @@ def _extract_content(element: Tag, base_url: str) -> dict:
     for anchor in element.find_all("a", href=True):
         if _is_button_styled(anchor):
             continue
-        text = anchor.get_text(strip=True)
+        text = anchor.get_text(separator=" ", strip=True)
         if text:
             links.append({"text": text, "href": urljoin(base_url, anchor["href"])})
 
     list_items: list[str] = []
     for list_tag in element.find_all(["ul", "ol"]):
         for li in list_tag.find_all("li", recursive=False):
-            text = li.get_text(strip=True)
+            text = li.get_text(separator=" ", strip=True)
             if text:
                 list_items.append(text)
 
     blockquotes: list[dict] = []
     for bq in element.find_all("blockquote"):
-        text = bq.get_text(strip=True)
+        text = bq.get_text(separator=" ", strip=True)
         if not text:
             continue
         citation_tag = bq.find(["cite", "footer"])
-        citation = citation_tag.get_text(strip=True) if citation_tag else ""
+        citation = citation_tag.get_text(separator=" ", strip=True) if citation_tag else ""
         quote_text = text
         if citation and quote_text.endswith(citation):
             quote_text = quote_text[: -len(citation)].strip(" \u2014\u2013-")
@@ -511,7 +511,7 @@ def _extract_content(element: Tag, base_url: str) -> dict:
         rows: list[list[str]] = []
         for tr in table.find_all("tr"):
             cells = [
-                cell.get_text(strip=True)
+                cell.get_text(separator=" ", strip=True)
                 for cell in tr.find_all(["th", "td"])
             ]
             if any(cells):
@@ -534,7 +534,7 @@ def _extract_content(element: Tag, base_url: str) -> dict:
 
     for figure in element.find_all("figure"):
         figcaption = figure.find("figcaption")
-        caption = figcaption.get_text(strip=True) if figcaption else ""
+        caption = figcaption.get_text(separator=" ", strip=True) if figcaption else ""
         img = figure.find("img")
         if img and img.get("src"):
             # Find the matching image entry and add the caption
@@ -728,7 +728,7 @@ def _looks_like_blog_cards(element: Tag) -> bool:
         if not child.find(["h2", "h3", "h4"]):
             continue
         link_texts = " ".join(
-            (a.get_text(strip=True) or "").lower() for a in child.find_all("a")
+            (a.get_text(separator=" ", strip=True) or "").lower() for a in child.find_all("a")
         )
         if "read more" in link_texts or "continue reading" in link_texts:
             blog_like += 1
@@ -843,7 +843,7 @@ def _looks_like_stats(element: Tag) -> bool:
     stat_count = 0
     for child in child_blocks:
         for tag in child.find_all(["h1", "h2", "h3", "h4", "span", "strong", "b"]):
-            text = tag.get_text(strip=True)
+            text = tag.get_text(separator=" ", strip=True)
             if text and _DIGITS_PATTERN.match(text):
                 stat_count += 1
                 break
@@ -932,7 +932,7 @@ def _first_card_button(card: Tag, base_url: str) -> dict | None:
     for anchor in card.find_all("a"):
         if not _is_button_styled(anchor):
             continue
-        text = anchor.get_text(strip=True)
+        text = anchor.get_text(separator=" ", strip=True)
         href = (anchor.get("href") or "").strip()
         if text and href:
             return {"text": text, "href": urljoin(base_url, href)}
@@ -944,7 +944,7 @@ def _first_card_link(card: Tag, base_url: str) -> dict | None:
     for anchor in card.find_all("a", href=True):
         if _is_button_styled(anchor):
             continue
-        text = anchor.get_text(strip=True)
+        text = anchor.get_text(separator=" ", strip=True)
         href = anchor.get("href", "").strip()
         if text and href:
             return {"text": text, "href": urljoin(base_url, href)}
@@ -990,14 +990,14 @@ def _rescope_content_to_cards(
     for card in cards:
         heading_tag = card.find(_HEADING_TAGS)
         image_entry = _first_image_entry(card, base_url)
-        heading_text = heading_tag.get_text(strip=True) if heading_tag else ""
+        heading_text = heading_tag.get_text(separator=" ", strip=True) if heading_tag else ""
         if not heading_text and image_entry["alt"]:
             heading_text = image_entry["alt"]
         headings.append(heading_text)
         images.append(image_entry)
 
         paragraph_tag = card.find("p")
-        paragraphs.append(paragraph_tag.get_text(strip=True) if paragraph_tag else "")
+        paragraphs.append(paragraph_tag.get_text(separator=" ", strip=True) if paragraph_tag else "")
 
         buttons.append(_first_card_button(card, base_url))
         links.append(_first_card_link(card, base_url))
@@ -1106,7 +1106,7 @@ def _walk_nav_items(list_element: Tag, base_url: str) -> list[dict]:
         href = anchor.get("href", "").strip()
         if not _is_real_page_href(href):
             continue
-        label = anchor.get_text(strip=True)
+        label = anchor.get_text(separator=" ", strip=True)
         if not label:
             continue
 
