@@ -944,8 +944,10 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
         if not sections and _is_banner_image_section(content):
             # A leading image-only pane is the page's hero banner; promote the
             # image to a section background so hero templates can render it
-            # full-width instead of dropping it into a text template.
+            # full-width instead of dropping it into a text template. Remove
+            # it from the inline image list — it must not render twice.
             content["background_image"] = content["images"][0]["src"]
+            content["images"] = content["images"][1:]
             section_type = "hero"
         else:
             section_type = _classify_section(element, content, is_first=not sections)

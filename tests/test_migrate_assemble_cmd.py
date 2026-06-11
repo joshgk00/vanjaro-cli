@@ -711,3 +711,32 @@ def test_assemble_background_image_and_rgb_dark_color(runner, tmp_path, monkeypa
     assert "background-size:cover" in style
     # rgb() dark band still gets auto-white text
     assert "color:#ffffff;" in style
+
+
+def test_crawler_sections_blank_unfilled_placeholder_slots(runner, tmp_path, monkeypatch):
+    """Template placeholder copy must not leak when crawled content lacks a slot."""
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, HERO_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = _write_json(
+        tmp_path / "banner.json",
+        {
+            "type": "hero",
+            "template": "Centered Hero",
+            "content": {
+                "background_image": "https://src.test/banner.jpg",
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    rendered = json.dumps(json.loads(output_file.read_text()))
+    for placeholder in ("Your Headline Here", "Get Started", "Hero heading"):
+        assert placeholder not in rendered

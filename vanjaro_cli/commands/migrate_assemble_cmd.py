@@ -16,6 +16,7 @@ from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
     apply_overrides,
     check_overflow,
+    enumerate_slots,
     find_template,
 )
 
@@ -181,6 +182,23 @@ def _apply_section_background(section: dict, content: dict) -> None:
     attributes["style"] = f"{existing.rstrip(';')};{style}".lstrip(";") if existing else style
 
 
+def _blank_unfilled_content_slots(
+    template_name: str,
+    overrides: dict[str, str],
+    as_json: bool,
+) -> dict[str, str]:
+    """Blank every content slot the crawled overrides don't fill."""
+    try:
+        template_data = find_template(template_name)
+    except TemplateNotFoundError:
+        return overrides  # the compose step reports this with full context
+    filled = dict(overrides)
+    for slot in enumerate_slots(template_data["template"]):
+        if slot["field"] == "content" and slot["key"] not in filled:
+            filled[slot["key"]] = ""
+    return filled
+
+
 def _classify_and_resolve(
     section_data: dict,
     source_file: Path,
@@ -210,6 +228,10 @@ def _classify_and_resolve(
                     as_json,
                 )
             overrides = crawl_content_to_overrides(content_block)
+            # Crawled content is the complete source of truth for the section:
+            # any template slot it doesn't fill must render empty, not leak
+            # the template's placeholder copy ("Your Headline Here").
+            overrides = _blank_unfilled_content_slots(template_name, overrides, as_json)
         elif raw_overrides is None:
             overrides = {}
         elif isinstance(raw_overrides, dict):
