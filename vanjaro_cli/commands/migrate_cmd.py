@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+from contextlib import ExitStack
 from datetime import datetime, timezone
 from pathlib import Path
 from urllib.parse import urlparse
@@ -77,6 +78,15 @@ def _write_json(path: Path, data: object) -> None:
     help="Glob pattern (repeatable) — skip matching paths.",
 )
 @click.option("--skip-assets", is_flag=True, help="Don't download images.")
+@click.option(
+    "--rendered",
+    is_flag=True,
+    help=(
+        "Fetch pages with a real browser (Playwright): captures JS-rendered "
+        "sections (sliders, carousels) and computed section backgrounds that "
+        "static fetching misses. Requires the [visual] extra."
+    ),
+)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
 def crawl(
     url: str,
@@ -85,6 +95,7 @@ def crawl(
     include_paths: tuple[str, ...],
     exclude_paths: tuple[str, ...],
     skip_assets: bool,
+    rendered: bool,
     as_json: bool,
 ) -> None:
     """Crawl a site at URL and write migration artifacts to OUTPUT_DIR."""
@@ -124,11 +135,31 @@ def crawl(
     pages_root = destination / "pages"
     pages_root.mkdir(exist_ok=True)
 
+    rendered_stack = ExitStack()
+    browser_page = None
+    if rendered:
+        from vanjaro_cli.migration.visual import (
+            VisualCaptureError,
+            render_page_html,
+            rendered_page_session,
+        )
+
+        try:
+            browser_page = rendered_stack.enter_context(rendered_page_session())
+        except VisualCaptureError as exc:
+            exit_error(str(exc), as_json)
+
     for page_url in page_urls:
         try:
-            html = homepage_html if page_url == page_urls[0] else fetch_url_text(page_url)
+            if browser_page is not None:
+                html = render_page_html(browser_page, page_url)
+            else:
+                html = homepage_html if page_url == page_urls[0] else fetch_url_text(page_url)
         except CrawlError as exc:
             _warn(str(exc))
+            continue
+        except Exception as exc:  # noqa: BLE001 — playwright raises many navigation error types
+            _warn(f"Rendered fetch failed for {page_url}: {exc}")
             continue
 
         soup = BeautifulSoup(html, "html.parser")
@@ -171,6 +202,8 @@ def crawl(
                 seen_images.add(image_url)
                 all_image_urls.append(image_url)
 
+    rendered_stack.close()
+
     infer_page_hierarchy(pages_summary)
 
     global_dir = destination / "global"
@@ -190,10 +223,18 @@ def crawl(
     tokens = extract_design_tokens(homepage_html, url, on_warning=_warn)
     _write_json(destination / "design-tokens.json", tokens)
 
+    assets_dir = destination / "assets"
+    assets_dir.mkdir(exist_ok=True)
     if skip_assets:
-        (destination / "assets").mkdir(exist_ok=True)
         asset_manifest: list[dict] = []
     else:
+        # Clear files from previous crawls — collision-suffixed duplicates
+        # accumulate across runs and `assets upload-dir` scans the directory,
+        # so strays balloon the manifest and the upload batch. Upload state
+        # survives via the manifest merge keyed on source_url.
+        for stale in assets_dir.iterdir():
+            if stale.is_file() and stale.name != "manifest.json":
+                stale.unlink()
         asset_manifest = download_assets(all_image_urls, destination, _warn)
 
     _write_json(destination / "assets" / "manifest.json", asset_manifest)

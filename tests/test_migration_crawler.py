@@ -140,3 +140,10 @@ def test_infer_hierarchy_self_is_not_its_own_parent():
 
 def test_infer_hierarchy_empty_inventory_returns_empty():
     assert infer_page_hierarchy([]) == []
+
+
+def test_cdn_cgi_urls_are_not_pages():
+    from vanjaro_cli.migration.crawler import _is_page_url
+
+    assert not _is_page_url("https://site.test/cdn-cgi/l/email-protection")
+    assert _is_page_url("https://site.test/contact-us")

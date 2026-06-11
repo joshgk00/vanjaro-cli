@@ -677,3 +677,37 @@ def test_assemble_light_background_keeps_default_text_color(runner, tmp_path, mo
     style = json.loads(output_file.read_text())["components"][0]["attributes"]["style"]
     assert "background-color:#e8e8e8;" in style
     assert "color:" not in style.replace("background-color:", "")
+
+
+def test_assemble_background_image_and_rgb_dark_color(runner, tmp_path, monkeypatch):
+    """Rendered-crawl rgb() colors and background images carry into the style."""
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, HERO_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = _write_json(
+        tmp_path / "band.json",
+        {
+            "type": "content",
+            "template": "Centered Hero",
+            "content": {
+                "headings": ["Each Website Includes"],
+                "background_color": "rgb(100, 15, 13)",
+                "background_image": "https://source.test/blueprint.jpg",
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    style = json.loads(output_file.read_text())["components"][0]["attributes"]["style"]
+    assert "background-color:rgb(100, 15, 13);" in style
+    assert "background-image:url(https://source.test/blueprint.jpg);" in style
+    assert "background-size:cover" in style
+    # rgb() dark band still gets auto-white text
+    assert "color:#ffffff;" in style

@@ -8,6 +8,7 @@ points at the original site.
 
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass, field
 from urllib.parse import urlparse
 
@@ -194,11 +195,44 @@ def _walk(
             _rewrite_src(attributes, asset_lookup, report)
         if _is_link_component(node):
             _rewrite_href(attributes, page_lookup, report)
+        _rewrite_style_urls(attributes, asset_lookup, report)
 
     children = node.get("components")
     if isinstance(children, list):
         for child in children:
             _walk(child, asset_lookup, page_lookup, report)
+
+
+_STYLE_URL = re.compile(r"url\(\s*['\"]?([^'\")]+)['\"]?\s*\)")
+
+
+def _rewrite_style_urls(
+    attributes: dict,
+    asset_lookup: dict[str, str],
+    report: RewriteReport,
+) -> None:
+    """Rewrite url(...) references in inline style attributes.
+
+    Section background images land as ``background-image:url(...)`` in the
+    style attribute, outside the src/href fields the component walk covers.
+    """
+    style = attributes.get("style")
+    if not isinstance(style, str) or "url(" not in style:
+        return
+
+    def _substitute(match: re.Match) -> str:
+        original = match.group(1)
+        replacement = _lookup_url(original, asset_lookup)
+        if replacement is None:
+            report.record_missing_asset(original)
+            return match.group(0)
+        if replacement != original:
+            report.images_rewritten += 1
+        else:
+            report.images_unchanged += 1
+        return f"url({replacement})"
+
+    attributes["style"] = _STYLE_URL.sub(_substitute, style)
 
 
 def _is_image_component(node: dict) -> bool:

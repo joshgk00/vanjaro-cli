@@ -10,6 +10,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from contextlib import contextmanager
 from pathlib import Path
 from urllib.parse import urldefrag, urljoin, urlparse
 
@@ -17,6 +18,8 @@ __all__ = [
     "VisualCaptureError",
     "build_capture_plan",
     "parse_viewport",
+    "render_page_html",
+    "rendered_page_session",
     "run_capture",
 ]
 
@@ -38,6 +41,28 @@ SETTLE_DISABLE_ANIMATIONS_CSS = (
 
 class VisualCaptureError(Exception):
     pass
+
+
+# Stamps computed backgrounds onto elements as the same data-migrate-*
+# attributes that sections.annotate_section_styles produces from static CSS,
+# so the section extractor consumes rendered DOM with no downstream changes.
+COMPUTED_STYLE_STAMP_JS = """() => {
+    const candidates = document.querySelectorAll(
+        'div, section, article, header, footer, main, aside'
+    );
+    for (const el of candidates) {
+        const cs = getComputedStyle(el);
+        const bg = cs.backgroundColor;
+        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+            el.setAttribute('data-migrate-bg', bg);
+            el.setAttribute('data-migrate-color', cs.color);
+        }
+        const match = (cs.backgroundImage || '').match(/url\\(["']?([^"')]+)["']?\\)/);
+        if (match && !match[1].startsWith('data:')) {
+            el.setAttribute('data-migrate-bg-image', match[1]);
+        }
+    }
+}"""
 
 
 def parse_viewport(value: str) -> tuple[int, int]:
@@ -143,6 +168,47 @@ def _capture_one(page, url: str, screenshot_path: Path, timeout_ms: int) -> dict
         "text_length": len(body_text),
         "warnings": warnings,
     }
+
+
+@contextmanager
+def rendered_page_session(viewport: tuple[int, int] = (1280, 800)):
+    """Yield a Playwright page for rendered crawling; closes the browser after."""
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        raise VisualCaptureError(
+            "Playwright is not installed. Run `pip install playwright` then "
+            "`python -m playwright install chromium` to enable rendered crawling."
+        )
+
+    with sync_playwright() as playwright:
+        browser = playwright.chromium.launch()
+        context = browser.new_context(
+            viewport={"width": viewport[0], "height": viewport[1]}
+        )
+        try:
+            yield context.new_page()
+        finally:
+            browser.close()
+
+
+def render_page_html(page, url: str, timeout_seconds: int = 45) -> str:
+    """Load ``url`` and return the post-JS DOM with computed styles stamped.
+
+    Captures what a static fetch can't: JS-rendered sections (sliders,
+    carousels) and effective backgrounds painted via descendant selectors or
+    background images.
+    """
+    from playwright.sync_api import TimeoutError as PlaywrightTimeoutError
+
+    timeout_ms = timeout_seconds * 1000
+    try:
+        page.goto(url, wait_until="networkidle", timeout=timeout_ms)
+    except PlaywrightTimeoutError:
+        page.goto(url, wait_until="load", timeout=timeout_ms)
+    _settle(page, timeout_ms)
+    page.evaluate(COMPUTED_STYLE_STAMP_JS)
+    return page.content()
 
 
 def run_capture(

@@ -660,3 +660,36 @@ def test_cli_invalid_json_reports_clear_error(runner, tmp_path):
 
     assert result.exit_code != 0
     assert "Invalid JSON" in result.output
+
+
+def test_rewrite_style_url_backgrounds(runner, tmp_path):
+    """background-image url(...) in style attributes must be rewritten."""
+    content_file = tmp_path / "content.json"
+    content_file.write_text(json.dumps({
+        "components": [{
+            "type": "section",
+            "attributes": {
+                "id": "s1",
+                "style": "background-image:url(https://source.test/band.jpg);background-size:cover;",
+            },
+            "components": [],
+        }],
+        "styles": [],
+    }))
+    manifest_file = tmp_path / "manifest.json"
+    manifest_file.write_text(json.dumps([
+        {"source_url": "https://source.test/band.jpg",
+         "vanjaro_url": "/Portals/0/Images/band.jpg"},
+    ]))
+
+    result = runner.invoke(rewrite_urls, [
+        "--content", str(content_file),
+        "--asset-manifest", str(manifest_file),
+        "--json",
+    ])
+
+    assert result.exit_code == 0, result.output
+    data = json.loads(content_file.read_text())
+    style = data["components"][0]["attributes"]["style"]
+    assert "url(/Portals/0/Images/band.jpg)" in style
+    assert "source.test" not in style

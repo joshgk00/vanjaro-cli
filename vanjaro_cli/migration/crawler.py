@@ -57,6 +57,9 @@ def _is_page_url(url: str) -> bool:
     binaries and parsing them as HTML.
     """
     path = urlparse(url).path.lower()
+    # Cloudflare's email-obfuscation endpoint masquerades as an internal link
+    if path.startswith("/cdn-cgi/"):
+        return False
     last_segment = path.rsplit("/", 1)[-1]
     if "." not in last_segment:
         return True

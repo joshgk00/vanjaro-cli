@@ -49,6 +49,7 @@ def extract_page_title(soup: BeautifulSoup) -> str:
 
 BACKGROUND_ATTR = "data-migrate-bg"
 TEXT_COLOR_ATTR = "data-migrate-color"
+BACKGROUND_IMAGE_ATTR = "data-migrate-bg-image"
 
 _CSS_RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
 _CSS_BG_DECL = re.compile(r"(?:^|;)\s*background(?:-color)?\s*:\s*([^;}]+)", re.IGNORECASE)
@@ -94,12 +95,22 @@ def annotate_section_styles(soup: BeautifulSoup, css_text: str) -> None:
                     element[TEXT_COLOR_ATTR] = text_color
 
 
-_DEFAULT_BACKGROUNDS = frozenset({"#fff", "#ffffff", "white", "transparent", "none"})
+_DEFAULT_BACKGROUNDS = frozenset({
+    "#fff",
+    "#ffffff",
+    "white",
+    "transparent",
+    "none",
+    # Computed-style forms from rendered crawls
+    "rgb(255,255,255)",
+    "rgba(255,255,255,1)",
+    "rgba(0,0,0,0)",
+})
 
 
 def _is_default_background(value: str) -> bool:
     """White/transparent is the page default — carrying it adds style noise."""
-    return value.strip().lower() in _DEFAULT_BACKGROUNDS
+    return value.strip().lower().replace(" ", "") in _DEFAULT_BACKGROUNDS
 
 
 def _section_background(element: Tag) -> tuple[str | None, str | None]:
@@ -130,6 +141,22 @@ def _section_background(element: Tag) -> tuple[str | None, str | None]:
         if background:
             return background, candidate.get(TEXT_COLOR_ATTR)
     return None, None
+
+
+def _section_background_image(element: Tag, base_url: str) -> str | None:
+    """Return the section's background image URL, if one was annotated."""
+    candidates = [element]
+    section_text = len(element.get_text(strip=True)) or 1
+    for descendant in element.find_all(
+        ("div", "section", "article"), attrs={BACKGROUND_IMAGE_ATTR: True}, limit=8
+    ):
+        if len(descendant.get_text(strip=True)) / section_text >= 0.5:
+            candidates.append(descendant)
+    for candidate in candidates:
+        image_url = candidate.get(BACKGROUND_IMAGE_ATTR)
+        if image_url and not image_url.startswith("data:"):
+            return urljoin(base_url, image_url)
+    return None
 
 
 _NON_STRUCTURAL_TAGS = ("script", "style", "noscript", "input", "link", "meta", "template")
@@ -175,6 +202,19 @@ def _section_like_child_count(element: Tag) -> int:
 
 
 _DOMINANT_TEXT_SHARE = 0.6
+
+
+def _is_chrome_like(element: Tag) -> bool:
+    """Cheap pre-classification of header/footer/nav elements.
+
+    Used to keep chrome text out of the dominance denominator — rendered
+    DOMs carry full nav text in mobile menus, which otherwise dilutes the
+    content pane's share below the expansion threshold.
+    """
+    if element.name in ("header", "footer", "nav"):
+        return True
+    classes = " ".join(element.get("class", [])).lower()
+    return "header" in classes or "footer" in classes or "menu" in classes
 
 
 def _children_look_like_cards(element: Tag) -> bool:
@@ -226,17 +266,40 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
             # expansion only applies when chrome siblings prove this level is
             # a page-level layout row.
             break
-        total_text = sum(len(s.get_text(strip=True)) for s in sections) or 1
+        total_text = sum(
+            len(s.get_text(strip=True)) for s in sections if not _is_chrome_like(s)
+        ) or 1
         expanded: list[Tag] = []
         did_expand = False
         for section in sections:
+            if _is_chrome_like(section):
+                expanded.append(section)
+                continue
             text_share = len(section.get_text(strip=True)) / total_text
+            inner = _visible_children(section)
             if (
+                text_share > _DOMINANT_TEXT_SHARE
+                and section.name in _WRAPPER_TAGS
+                and len(inner) == 1
+            ):
+                # Dominant single-child wrapper: unwrap and keep descending.
+                # JS-injected body siblings (offcanvas menus, overlays) defeat
+                # the single-wrapper chain pass, so it must also happen here.
+                expanded.append(inner[0])
+                did_expand = True
+            elif text_share > _DOMINANT_TEXT_SHARE and any(
+                _is_chrome_like(child) for child in inner
+            ):
+                # Content sections never contain headers/footers/menus — an
+                # element wrapping chrome is a page-level layout wrapper.
+                expanded.extend(inner)
+                did_expand = True
+            elif (
                 text_share > _DOMINANT_TEXT_SHARE
                 and _section_like_child_count(section) >= 2
                 and not _children_look_like_cards(section)
             ):
-                expanded.extend(_visible_children(section))
+                expanded.extend(inner)
                 did_expand = True
             else:
                 expanded.append(section)
@@ -857,11 +920,17 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
             content["background_color"] = background
             if text_color:
                 content["text_color"] = text_color
+        background_image = _section_background_image(element, base_url)
+        if background_image:
+            content["background_image"] = background_image
         # First *kept* section is hero-eligible — skipped chrome (headers)
         # and empty wrappers shouldn't cost the real first section its slot.
-        section_type = _classify_section(element, content, is_first=not sections)
         # Page chrome is supplied by global header/footer block wrapping at
-        # assemble time; keeping these sections would double-render it.
+        # assemble time; keeping these sections would double-render it. The
+        # tag/class check also drops offcanvas menus the classifier misses.
+        if _is_chrome_like(element):
+            continue
+        section_type = _classify_section(element, content, is_first=not sections)
         if section_type in ("header", "footer"):
             continue
         if section_type in _CARD_LIKE_TYPES:
@@ -977,8 +1046,10 @@ def collect_image_urls(page_sections: list[dict]) -> list[str]:
             ordered.append(url)
 
     for section in page_sections:
-        for image in section.get("content", {}).get("images", []):
+        content = section.get("content", {})
+        for image in content.get("images", []):
             _add(image.get("src", ""))
             for srcset_url in image.get("srcset_urls", []):
                 _add(srcset_url)
+        _add(content.get("background_image", ""))
     return ordered

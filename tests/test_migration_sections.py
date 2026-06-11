@@ -1363,3 +1363,91 @@ def test_white_and_transparent_backgrounds_are_dropped():
 
     for section in sections:
         assert "background_color" not in section["content"]
+
+
+def test_rendered_dom_attributes_resolve_backgrounds_and_image():
+    """Rendered crawls stamp data-migrate-* attrs directly — no CSS needed."""
+    html = _wrap(
+        """
+        <section data-migrate-bg="rgb(100, 15, 13)" data-migrate-color="rgb(255, 255, 255)"
+                 data-migrate-bg-image="/images/blueprint.jpg">
+          <h2>Each Website Includes</h2><p>Checklist content here.</p>
+        </section>
+        <section data-migrate-bg="rgb(255, 255, 255)">
+          <h2>White Section</h2><p>Default background must be dropped.</p>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["content"]["background_color"] == "rgb(100, 15, 13)"
+    assert sections[0]["content"]["text_color"] == "rgb(255, 255, 255)"
+    assert sections[0]["content"]["background_image"] == "https://example.com/images/blueprint.jpg"
+    assert "background_color" not in sections[1]["content"]
+
+
+def test_collect_image_urls_includes_background_images():
+    sections = [
+        {"content": {"images": [{"src": "https://example.com/a.jpg"}],
+                     "background_image": "https://example.com/band.jpg"}},
+    ]
+
+    urls = collect_image_urls(sections)
+
+    assert "https://example.com/band.jpg" in urls
+
+
+def test_dominance_ignores_chrome_text_in_denominator():
+    """Rendered DOMs duplicate nav text in mobile menus; chrome text must not
+    keep the content pane below the expansion threshold."""
+    nav_links = "".join(f'<a href="/p{i}">Menu Item Number {i}</a>' for i in range(20))
+    html = (
+        "<!doctype html><html><body><div><div>"
+        f'<header class="header_bg"><img src="/logo.png" alt="L"><nav>{nav_links}</nav></header>'
+        f'<div class="mobile_header visible-xs">{nav_links}</div>'
+        '<section id="dnn_content">'
+        '<div class="TopOutPane"><h1>Welcome Headline</h1><p>Intro paragraph text.</p>'
+        '<a class="btn" href="/go">Go</a></div>'
+        '<div class="dnn_layout clearfix"><h2>Second Band</h2><p>More content text.</p></div>'
+        "</section>"
+        '<footer class="footer_box"><p>© 2026</p></footer>'
+        "</div></div></body></html>"
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    types = [s["type"] for s in sections]
+    assert "header" not in types and "footer" not in types
+    assert len(sections) == 2
+    assert "Welcome Headline" in sections[0]["content"]["headings"]
+    assert "Second Band" in sections[1]["content"]["headings"]
+
+
+def test_js_injected_body_siblings_do_not_block_descent():
+    """Offcanvas menus injected at body level defeat the single-wrapper chain;
+    the dominant form must still unwrap down to the real sections."""
+    html = (
+        "<!doctype html><html><body>"
+        '<div class="mobile_menu mm-menu"><a href="/a">A</a><a href="/b">B</a></div>'
+        '<form id="Form" class="mm-page">'
+        '<div class="dnngo-main"><div id="dnn_wrapper">'
+        '<header class="header_bg"><img src="/logo.png" alt="L"></header>'
+        '<section id="dnn_content">'
+        '<div class="TopOutPane"><h1>Main Headline</h1><p>Intro text here.</p>'
+        '<a class="btn" href="/go">Go</a></div>'
+        '<div class="dnn_layout clearfix"><h2>Second Band</h2><p>Band content text.</p></div>'
+        "</section>"
+        '<footer class="footer_box"><p>© 2026</p></footer>'
+        "</div></div></form>"
+        '<div id="overlay_right">x</div>'
+        "</body></html>"
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    headings = [h for s in sections for h in s["content"].get("headings", [])]
+    assert "Main Headline" in headings
+    assert "Second Band" in headings
+    types = [s["type"] for s in sections]
+    assert "header" not in types and "footer" not in types

@@ -296,3 +296,23 @@ def test_crawl_removes_stale_section_files(runner, tmp_path: Path):
     assert result.exit_code == 0
     assert not stale.exists()
     assert list((output / "pages" / "home").glob("section-*.json"))
+
+
+@responses.activate
+def test_crawl_clears_stale_asset_files(runner, tmp_path: Path):
+    """Collision-suffixed duplicates from earlier crawls must not accumulate."""
+    _register_site(responses.mock)
+    output = tmp_path / "out"
+    stale = output / "assets" / "hero-99.jpg"
+    stale.parent.mkdir(parents=True)
+    stale.write_bytes(b"old")
+
+    result = runner.invoke(
+        cli,
+        ["migrate", "crawl", SOURCE_URL, "--output-dir", str(output)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert not stale.exists()
+    manifest = json.loads((output / "assets" / "manifest.json").read_text())
+    assert len(manifest) == 4
