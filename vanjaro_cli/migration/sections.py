@@ -1198,6 +1198,116 @@ def _rescope_testimonial(content: dict) -> dict:
     return {**content, "paragraphs": quotes, "headings": names, "images": []}
 
 
+SPLIT_MEDIA_TEMPLATE = "Split Media"
+SPLIT_MEDIA_REVERSE_TEMPLATE = "Split Media Reverse"
+
+
+def _is_grid_column(tag: Tag) -> bool:
+    """Return True for a Bootstrap-style column div (``col`` / ``col-md-6`` / ...)."""
+    return tag.name == "div" and any(
+        token == "col" or token.startswith("col-") for token in tag.get("class", [])
+    )
+
+
+def _has_push_pull(column: Tag) -> bool:
+    """Return True when a column carries a Bootstrap push/pull order-swap class."""
+    return any("push" in token or "pull" in token for token in column.get("class", []))
+
+
+def _classify_split_columns(columns: list[Tag]) -> tuple[Tag, Tag] | None:
+    """Split a two-column row into (image_column, text_column).
+
+    A media column holds an image and almost no text; a text column holds a
+    heading or paragraph and no image. Returns ``None`` when the pair isn't a
+    clean image-beside-text split (so ordinary multi-column rows are ignored).
+    """
+    media: Tag | None = None
+    text: Tag | None = None
+    for column in columns:
+        has_image = column.find("img") is not None
+        has_heading = column.find(_HEADING_TAGS) is not None
+        has_paragraph = any(p.get_text(strip=True) for p in column.find_all("p"))
+        own_text_length = len(column.get_text(" ", strip=True))
+        if has_image and not has_heading and own_text_length < 40:
+            media = column
+        elif (has_heading or has_paragraph) and not has_image:
+            text = column
+    if media is not None and text is not None:
+        return media, text
+    return None
+
+
+def _visual_image_on_left(row: Tag, media: Tag, text: Tag) -> bool:
+    """Decide whether the image renders left of the text after push/pull swaps.
+
+    Bootstrap's ``col-*-push-N`` / ``col-*-pull-N`` reverse a column pair's
+    visual order without changing DOM order, so the source markup encodes an
+    alternating layout the document order alone would miss.
+    """
+    children = [child for child in row.find_all(recursive=False) if isinstance(child, Tag)]
+    try:
+        media_first = children.index(media) < children.index(text)
+    except ValueError:
+        media_first = True
+    swapped = _has_push_pull(media) or _has_push_pull(text)
+    return media_first != swapped
+
+
+def _find_split_media_rows(element: Tag) -> list[tuple[Tag, Tag, bool]]:
+    """Find image-beside-text rows inside a section.
+
+    Each result is ``(media_column, text_column, image_on_left)`` for a
+    ``div.row`` that holds exactly two columns — one image, one text.
+    """
+    rows: list[tuple[Tag, Tag, bool]] = []
+    for row in element.find_all("div"):
+        if "row" not in row.get("class", []):
+            continue
+        columns = [
+            child for child in row.find_all(recursive=False)
+            if isinstance(child, Tag) and _is_grid_column(child)
+        ]
+        if len(columns) != 2:
+            continue
+        pair = _classify_split_columns(columns)
+        if pair is None:
+            continue
+        media, text = pair
+        rows.append((media, text, _visual_image_on_left(row, media, text)))
+    return rows
+
+
+def _split_media_sections(element: Tag, content: dict, base_url: str) -> list[dict] | None:
+    """Split alternating image-beside-text rows into one section each.
+
+    edca-style "how we work" pages stack several two-column rows (image left /
+    text right, then text left / image right) inside one section; the flat
+    extraction collapses them into a single Rich Text Block with every image
+    dropped to a background. Each row instead becomes its own Split Media
+    section, alternating the template so the image side matches the source.
+    Returns ``None`` when the section has fewer than two such rows (a lone
+    split row is already handled by the Bio template).
+    """
+    rows = _find_split_media_rows(element)
+    if len(rows) < 2:
+        return None
+
+    inherited = {
+        key: content[key]
+        for key in ("background_color", "text_color")
+        if key in content
+    }
+
+    sections: list[dict] = []
+    for media, text, image_on_left in rows:
+        row_content = _extract_content(text, base_url)
+        row_content["images"] = [_first_image_entry(media, base_url)]
+        row_content.update(inherited)
+        template = SPLIT_MEDIA_TEMPLATE if image_on_left else SPLIT_MEDIA_REVERSE_TEMPLATE
+        sections.append({"type": "split", "template": template, "content": row_content})
+    return sections
+
+
 def extract_sections(html: str, base_url: str, css_text: str | None = None) -> list[dict]:
     """
     Extract sections from a page's HTML.
@@ -1242,6 +1352,15 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
             content["images"] = content["images"][1:]
             section_type = "hero"
         else:
+            # Alternating image-beside-text rows split into one Split Media
+            # section each. Checked before classification: the separate
+            # image-only/text-only columns are structurally distinct from a
+            # feature-card grid (where each card holds its own image + text),
+            # so a real card grid never yields two such rows.
+            split_sections = _split_media_sections(element, content, base_url)
+            if split_sections:
+                sections.extend(split_sections)
+                continue
             section_type = _classify_section(element, content, is_first=not sections)
         if section_type in ("header", "footer"):
             continue
@@ -1249,7 +1368,7 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
             content = _rescope_content_to_cards(element, section_type, base_url, content)
         elif section_type == "testimonial":
             content = _rescope_testimonial(content)
-        elif section_type == "content":
+        if section_type == "content":
             plan_sections = _split_pricing_plans(element, content, base_url)
             if plan_sections:
                 sections.extend(plan_sections)

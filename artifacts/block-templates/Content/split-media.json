@@ -1,0 +1,90 @@
+{
+  "name": "Split Media",
+  "category": "Content",
+  "description": "Two-column row with a rectangular image on the left and heading + text on the right",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-split-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-split-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "align-items-center", "active": false},
+              {"name": "g-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-split-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-split-c1"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "rounded", "active": false}
+                    ],
+                    "attributes": {
+                      "id": "tpl-split-i1",
+                      "src": "https://placehold.co/600x400",
+                      "alt": "Section image"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-split-c2"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Section Heading",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-split-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A paragraph describing this part of the page. Pair it with the image alongside to explain a feature, service, or idea.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-split-t1"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

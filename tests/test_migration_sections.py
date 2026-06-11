@@ -2049,3 +2049,98 @@ def test_anchor_image_gallery_without_excerpts_stays_gallery():
 
     sections = extract_sections(html, BASE_URL)
     assert sections[0]["type"] == "gallery"
+
+
+# -- Alternating two-column (Split Media) sections --
+
+
+def _split_row(text_col: str, image_col: str, swap: bool = False) -> str:
+    """Build a Bootstrap two-column row of a text column and an image column.
+
+    When ``swap`` is set the columns carry push/pull classes (the source
+    encodes an image-on-the-left row by visually swapping DOM order), mirroring
+    edca's ``col-sm-push-6`` / ``col-sm-pull-6`` markup.
+    """
+    text_classes = "col col-sm-6 col-sm-push-6" if swap else "col col-sm-6"
+    image_classes = "col col-sm-6 col-sm-pull-6" if swap else "col col-sm-6"
+    return (
+        '<div class="row">'
+        f'<div class="{text_classes}">{text_col}</div>'
+        f'<div class="{image_classes}">{image_col}</div>'
+        "</div>"
+    )
+
+
+def test_alternating_two_column_rows_split_into_one_section_each():
+    """A section of alternating image+text rows becomes one Split Media section per row."""
+    rows = (
+        _split_row("<h3>Patented Technology</h3><p>Controlled gasification.</p>",
+                   '<img src="/wte-1.jpg">', swap=True)
+        + _split_row("<h3>Large Scale Plants</h3><p>Up to 2000 tons per day.</p>",
+                     '<img src="/wte-2.jpg">', swap=False)
+        + _split_row("<h3>Mitigate Emissions</h3><p>Scrubbers neutralize acid gases.</p>",
+                     '<img src="/wte-3.jpg">', swap=True)
+    )
+    html = _wrap(f"<section>{rows}</section>")
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert [s["type"] for s in sections] == ["split", "split", "split"]
+    assert sections[0]["content"]["headings"] == ["Patented Technology"]
+    assert sections[0]["content"]["images"][0]["src"] == "https://example.com/wte-1.jpg"
+
+
+def test_split_media_alternates_image_side_via_push_pull():
+    """Push/pull rows render image-left; plain rows render image-right."""
+    rows = (
+        _split_row("<h3>Left image</h3><p>Body one.</p>", '<img src="/a.jpg">', swap=True)
+        + _split_row("<h3>Right image</h3><p>Body two.</p>", '<img src="/b.jpg">', swap=False)
+    )
+    html = _wrap(f"<section>{rows}</section>")
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["template"] == "Split Media"
+    assert sections[1]["template"] == "Split Media Reverse"
+
+
+def test_split_media_carries_all_paragraphs_per_row():
+    """Every paragraph in a row's text column survives onto its section."""
+    rows = (
+        _split_row("<h3>One</h3><p>First.</p><p>Second.</p><p>Third.</p>",
+                   '<img src="/a.jpg">', swap=False)
+        + _split_row("<h3>Two</h3><p>Alpha.</p>", '<img src="/b.jpg">', swap=True)
+    )
+    html = _wrap(f"<section>{rows}</section>")
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["content"]["paragraphs"] == ["First.", "Second.", "Third."]
+
+
+def test_single_split_row_is_not_treated_as_split_media():
+    """A lone image+text row stays on the Bio path, not the multi-row splitter."""
+    html = _wrap(
+        "<section>"
+        + _split_row("<h3>About</h3><p>One paragraph.</p><p>Another.</p>",
+                     '<img src="/solo.jpg">', swap=False)
+        + "</section>"
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert all(s["type"] != "split" for s in sections)
+
+
+def test_split_media_inherits_section_background():
+    """Split rows carry the parent section's resolved background/text color."""
+    rows = (
+        _split_row("<h3>One</h3><p>Body.</p>", '<img src="/a.jpg">', swap=False)
+        + _split_row("<h3>Two</h3><p>Body.</p>", '<img src="/b.jpg">', swap=True)
+    )
+    html = _wrap(f'<section style="background-color: #f4f4f4">{rows}</section>')
+    css = "section { color: rgb(102, 102, 102); }"
+
+    sections = extract_sections(html, BASE_URL, css_text=css)
+
+    assert sections[0]["content"]["background_color"] == "#f4f4f4"
