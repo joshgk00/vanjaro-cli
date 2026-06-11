@@ -879,3 +879,59 @@ def test_light_band_without_captured_text_stays_default():
 
     # only background-color is set — no standalone text color directive
     assert section["attributes"]["style"].count("color:") == 1
+
+
+# ---------------------------------------------------------------------------
+# _balance_card_rows — even per-row column counts
+# ---------------------------------------------------------------------------
+
+
+def _grid_template(n_cards: int) -> dict:
+    cols = [
+        {
+            "type": "column",
+            "classes": [{"name": "col-md-4", "active": False}],
+            "attributes": {"id": f"c{i}"},
+            "components": [{"type": "image", "tagName": "img",
+                           "attributes": {"id": f"i{i}", "src": "", "alt": ""}}],
+        }
+        for i in range(1, n_cards + 1)
+    ]
+    return {
+        "name": "Grid", "category": "Cards",
+        "template": {"type": "section", "attributes": {"id": "s1"},
+                     "components": [{"type": "row", "attributes": {"id": "r1"}, "components": cols}]},
+        "styles": [],
+    }
+
+
+def _md_widths(template: dict) -> list[str]:
+    widths = []
+    def walk(c):
+        if c.get("type") == "column":
+            widths.extend(cl["name"] for cl in c.get("classes", []) if cl["name"].startswith("col-md"))
+        for ch in c.get("components", []):
+            walk(ch)
+    walk(template["template"])
+    return widths
+
+
+def test_four_card_row_balances_to_four_across():
+    composed = apply_overrides(_grid_template(4), {f"image_{i}_src": f"/{i}.jpg" for i in range(1, 5)})
+    assert _md_widths(composed) == ["col-md-3"] * 4
+
+
+def test_six_card_row_stays_three_across():
+    composed = apply_overrides(_grid_template(6), {f"image_{i}_src": f"/{i}.jpg" for i in range(1, 7)})
+    assert _md_widths(composed) == ["col-md-4"] * 6
+
+
+def test_seven_cards_fall_back_to_three_across():
+    composed = apply_overrides(_grid_template(7), {f"image_{i}_src": f"/{i}.jpg" for i in range(1, 8)})
+    assert _md_widths(composed) == ["col-md-4"] * 7
+
+
+def test_small_grid_is_left_untouched():
+    composed = apply_overrides(_grid_template(3), {f"image_{i}_src": f"/{i}.jpg" for i in range(1, 4)})
+    # 3 columns < 4 — below the rebalance threshold, template default kept
+    assert _md_widths(composed) == ["col-md-4"] * 3

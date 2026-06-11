@@ -461,7 +461,51 @@ def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
             attr_key = f"{comp_type}_{n}_{suffix}"
             if attr_key in overrides:
                 comp.setdefault("attributes", {})[attr_name] = overrides[attr_key]
+    _balance_card_rows(result["template"])
     return result
+
+
+_COL_WIDTH_CLASS = re.compile(r"^col-(?:sm|md|lg|xl)-\d+$")
+
+
+def _columns_per_row_for(count: int) -> int:
+    """Pick a per-row column count that divides ``count`` evenly when possible.
+
+    Prefers wider rows (4 → 3 → 2) so a grid balances instead of orphaning a
+    trailing item (4 images at 3-per-row = 3 + 1). Falls back to 3 when no
+    small divisor fits (e.g. 7, 35), matching the templates' default.
+    """
+    for per_row in (4, 3, 2):
+        if count % per_row == 0:
+            return per_row
+    return 3
+
+
+def _balance_card_rows(component: dict) -> None:
+    """Rebalance a row of ≥4 uniform card columns to an even per-row count.
+
+    Column expansion clones the template's card column to fit the content, but
+    the cloned width (e.g. col-md-4 = 3 per row) can leave an orphan when the
+    final count doesn't divide by 3. Rewrites every column's responsive width
+    so rows divide evenly; leaves small/odd grids on the template default.
+    """
+    for child in component.get("components", []):
+        _balance_card_rows(child)
+
+    columns = [c for c in component.get("components", []) if c.get("type") == "column"]
+    if len(columns) < 4:
+        return
+    per_row = _columns_per_row_for(len(columns))
+    width = 12 // per_row
+    for column in columns:
+        kept = [
+            cls for cls in column.get("classes", [])
+            if not _COL_WIDTH_CLASS.match(cls.get("name", ""))
+        ]
+        kept.append({"name": f"col-md-{width}", "active": False})
+        kept.append({"name": "col-sm-6", "active": False})
+        kept.append({"name": "col-12", "active": False})
+        column["classes"] = kept
 
 
 _HEX_COLOR = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
