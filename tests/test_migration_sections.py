@@ -1967,3 +1967,54 @@ def test_testimonial_maps_quotes_and_names_to_card_slots():
     assert content["headings"] == ["Carlos S.", "Bernard W.", "Dr. Myra F."]
     # raw avatar images are dropped (template has no image slot)
     assert content["images"] == []
+
+
+def test_two_plan_pricing_splits_into_per_plan_sections():
+    """Each pricing plan becomes its own section so both plans + lists render."""
+    html = _wrap(
+        """
+        <section>
+          <div class="row">
+            <div class="col-md-6 plan">
+              <h3>Website Only</h3>
+              <div class="price_holder"><span>$</span><span class="price">99.95</span><span>/month</span></div>
+              <ul><li>Unlimited Pages</li><li>Hosting</li><li>SEO Friendly</li></ul>
+            </div>
+            <div class="col-md-6 plan">
+              <h3>Branding Package</h3>
+              <div class="price_holder"><span>$</span><span class="price">249.95</span><span>/month</span></div>
+              <ul><li>Everything in Website Only</li><li>Logo Design</li><li>Business Cards</li></ul>
+            </div>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    headings = [s["content"]["headings"][0] for s in sections if s["content"].get("headings")]
+    assert "Website Only — $99.95/month" in headings
+    assert "Branding Package — $249.95/month" in headings
+    plan1 = next(s for s in sections if s["content"]["headings"][:1] == ["Website Only — $99.95/month"])
+    plan2 = next(s for s in sections if s["content"]["headings"][:1] == ["Branding Package — $249.95/month"])
+    assert "Hosting" in plan1["content"]["list_items"]
+    assert "Logo Design" in plan2["content"]["list_items"]
+    assert "Logo Design" not in plan1["content"]["list_items"]
+
+
+def test_single_priced_block_does_not_split():
+    """One plan (or a non-pricing list) stays a single section."""
+    html = _wrap(
+        """
+        <section>
+          <div class="col-md-6"><h3>Only Plan</h3>
+            <div class="price"><span>$</span><span class="price">10</span></div>
+            <ul><li>Feature A</li><li>Feature B</li></ul>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    priced = [s for s in sections if s["content"].get("headings") and "Only Plan" in s["content"]["headings"][0]]
+    assert len(priced) == 1

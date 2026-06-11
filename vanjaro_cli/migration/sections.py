@@ -1244,6 +1244,10 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
         elif section_type == "testimonial":
             content = _rescope_testimonial(content)
         elif section_type == "content":
+            plan_sections = _split_pricing_plans(element, content, base_url)
+            if plan_sections:
+                sections.extend(plan_sections)
+                continue
             # Blog post bodies carry their byline in date/label elements that
             # paragraph extraction misses; surface it as the leading line.
             meta_line = _extract_post_meta(element)
@@ -1255,6 +1259,67 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
             "content": content,
         })
     return sections
+
+
+def _find_pricing_plan_cards(element: Tag) -> list[Tag]:
+    """Find the largest group of sibling blocks that each price a plan.
+
+    A plan card carries a heading, a feature list, and a currency amount.
+    The cards nest several wrappers below the section (CMS columns), so this
+    groups same-tag siblings at any depth and returns the largest qualifying
+    group — without requiring the matching class signatures a uniform card
+    grid would (pricing columns often differ: a red plan vs a dark plan).
+    """
+    best: list[Tag] = []
+    for container in element.find_all(["div", "section", "ul", "ol"]):
+        members = [
+            child for child in container.find_all(recursive=False)
+            if isinstance(child, Tag)
+            and child.name in ("div", "article", "li")
+            and child.find(_HEADING_TAGS) is not None
+            and child.find("li") is not None
+            and _PRICE_AMOUNT.search(child.get_text(" ", strip=True))
+        ]
+        if len(members) >= 2 and len(members) > len(best):
+            best = members
+    return best
+
+
+def _split_pricing_plans(element: Tag, content: dict, base_url: str) -> list[dict] | None:
+    """Split a multi-plan pricing section into one content section per plan.
+
+    Two or three plan cards (each a heading + a price + its own feature list)
+    share one section, so the single-heading Rich Text Block shows only the
+    first plan. The flat-positional override system can't partition the
+    combined feature list per card, so each plan instead becomes its own
+    content section: name+price heading and that plan's features. Returns
+    ``None`` when the section isn't a multi-plan pricing block.
+    """
+    plan_cards = _find_pricing_plan_cards(element)
+    if len(plan_cards) < 2:
+        return None
+
+    plans: list[dict] = []
+    for card in plan_cards:
+        heading_tag = card.find(_HEADING_TAGS)
+        name = heading_tag.get_text(" ", strip=True) if heading_tag else ""
+        price = _price_for_heading(heading_tag) if heading_tag else ""
+        list_items = [
+            li.get_text(" ", strip=True)
+            for li in card.find_all("li")
+            if li.get_text(" ", strip=True)
+        ]
+        plan_content = {
+            **{k: [] for k in content},
+            "headings": [f"{name} — {price}" if price else name],
+            "list_items": list_items,
+        }
+        plans.append({
+            "type": "content",
+            "template": TEMPLATE_MAP["content"],
+            "content": plan_content,
+        })
+    return plans
 
 
 def _is_real_page_href(href: str) -> bool:
