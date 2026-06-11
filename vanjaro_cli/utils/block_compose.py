@@ -341,6 +341,31 @@ def expand_image_slots(template_data: dict, overrides: dict[str, str]) -> dict:
             parent["components"].insert(insert_at + clone_number, clone)
         return result
 
+    # A single synthesized image is an article's featured image: float it
+    # right of the first text block so the body wraps around it, the way the
+    # source lays it out. Appending at the end (the multi-image gallery case)
+    # would strand it full-width below the article.
+    if requested == 1:
+        heading = _find_last_of_type(result["template"], "heading")
+        text = _find_last_of_type(result["template"], "text")
+        anchor = text or heading
+        if anchor is None or anchor[1] is None:
+            return template_data
+        anchor_component, parent = (heading or text)
+        insert_at = parent["components"].index(anchor_component) + 1
+        parent["components"].insert(insert_at, {
+            "type": "image",
+            "tagName": "img",
+            "classes": [{"name": "img-fluid", "active": False}],
+            "attributes": {
+                "id": "tpl-auto-img1",
+                "src": "",
+                "alt": "",
+                "style": "float:right;max-width:42%;margin:0 0 1rem 1.5rem;",
+            },
+        })
+        return result
+
     anchor = _find_last_of_type(result["template"], "text") or _find_last_of_type(
         result["template"], "heading"
     )

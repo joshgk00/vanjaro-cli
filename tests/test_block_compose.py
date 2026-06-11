@@ -635,6 +635,27 @@ def test_imageless_template_gains_image_components():
     assert len(images) == 1
     assert images[0]["attributes"]["src"] == "/img/featured.jpg"
     assert images[0]["attributes"]["alt"] == "Featured"
+    # A lone featured image floats right of the body instead of stranding
+    # full-width at the end of the article.
+    assert "float:right" in images[0]["attributes"]["style"]
+    assert column["components"].index(images[0]) < len(column["components"]) - 1
+
+
+def test_multiple_synthesized_images_append_without_float():
+    overrides = {
+        "heading_1": "Gallery",
+        "text_1": "Body",
+        "image_1_src": "/img/1.jpg",
+        "image_2_src": "/img/2.jpg",
+        "image_3_src": "/img/3.jpg",
+    }
+
+    result = apply_overrides(make_two_text_template(), overrides)
+
+    column = result["template"]["components"][0]
+    images = [c for c in column["components"] if c["type"] == "image"]
+    assert len(images) == 3
+    assert all("style" not in i["attributes"] for i in images)
 
 
 def test_empty_image_src_overrides_do_not_expand():
