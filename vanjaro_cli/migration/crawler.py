@@ -115,9 +115,20 @@ def fetch_url_text(url: str, timeout: int = DEFAULT_TIMEOUT) -> str:
     return b"".join(chunks).decode(encoding, errors="replace")
 
 
+def _registrable_host(netloc: str) -> str:
+    """Lowercase host without a leading ``www.`` and without a port."""
+    host = netloc.lower().rsplit(":", 1)[0] if ":" in netloc else netloc.lower()
+    return host[4:] if host.startswith("www.") else host
+
+
 def same_domain(url: str, base_url: str) -> bool:
-    """Return True if `url` is on the same host as `base_url`."""
-    return urlparse(url).netloc == urlparse(base_url).netloc
+    """Return True if `url` is on the same site as `base_url`.
+
+    Treats the apex and ``www.`` host as one site — sites commonly link with
+    ``www`` while the crawl starts from the apex (or vice versa), and an exact
+    netloc match would drop every internal link.
+    """
+    return _registrable_host(urlparse(url).netloc) == _registrable_host(urlparse(base_url).netloc)
 
 
 def path_matches(
