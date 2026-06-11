@@ -105,7 +105,7 @@ def test_migrate_crawl_writes_inventory_and_sections(runner, tmp_path: Path):
     assert hero_file.exists()
     hero = json.loads(hero_file.read_text())
     assert hero["type"] == "hero"
-    assert hero["template"] == "Hero (Centered)"
+    assert hero["template"] == "Centered Hero"
     assert "Welcome to Source" in hero["content"]["headings"]
     assert hero["content"]["buttons"][0]["text"] == "Sign Up"
 

@@ -18,9 +18,9 @@ __all__ = [
 ]
 
 TEMPLATE_MAP: dict[str, str] = {
-    "hero": "Hero (Centered)",
+    "hero": "Centered Hero",
     "cards": "Feature Cards (3-up)",
-    "testimonial": "Testimonial (Single)",
+    "testimonial": "Testimonial Cards (3-up)",
     "cta": "CTA Banner",
     "header": "Site Header",
     "footer": "Site Footer",
@@ -47,28 +47,117 @@ def extract_page_title(soup: BeautifulSoup) -> str:
     return ""
 
 
+_NON_STRUCTURAL_TAGS = ("script", "style", "noscript", "input", "link", "meta", "template")
+
+# Tags that commonly wrap an entire page body without contributing structure.
+# ``form`` matters for ASP.NET WebForms/DNN sites, where <body> holds a single
+# page-wide <form> and every real section lives inside it.
+_WRAPPER_TAGS = ("div", "article", "form", "main")
+
+_MAX_WRAPPER_DESCENT = 6
+
+
+def _structural_children(element: Tag) -> list[Tag]:
+    return [
+        child
+        for child in element.find_all(recursive=False)
+        if isinstance(child, Tag) and child.name not in _NON_STRUCTURAL_TAGS
+    ]
+
+
+def _has_visible_content(element: Tag) -> bool:
+    return bool(element.get_text(strip=True)) or element.find("img") is not None
+
+
+def _visible_children(element: Tag) -> list[Tag]:
+    """Structural children that render something (skips hidden-input wrappers
+    like ASP.NET's ``div.aspNetHidden`` and empty layout panes)."""
+    return [c for c in _structural_children(element) if _has_visible_content(c)]
+
+
+def _section_like_child_count(element: Tag) -> int:
+    """Count children that look like sections of their own (carry a heading
+    somewhere inside, or are sectioning tags). A leaf section whose direct
+    children are a bare heading plus content scores 0 here, which protects
+    it from being split apart."""
+    count = 0
+    for child in _visible_children(element):
+        if child.name in ("section", "article") or child.find(
+            ("h1", "h2", "h3", "h4", "h5", "h6")
+        ):
+            count += 1
+    return count
+
+
+_DOMINANT_TEXT_SHARE = 0.6
+
+
+def _children_look_like_cards(element: Tag) -> bool:
+    """True when a majority of visible children share one tag+class signature.
+
+    Card grids repeat one child shape (3x ``article``, Nx ``div.col-md-4``);
+    page-level layout containers (DNN panes, theme rows) mix shapes. Uniform
+    children mean the element is a leaf section that must not be split.
+    """
+    children = _visible_children(element)
+    if len(children) < 2:
+        return False
+    signatures = [
+        (child.name, tuple(sorted(child.get("class", [])))) for child in children
+    ]
+    most_common_count = max(signatures.count(sig) for sig in set(signatures))
+    return most_common_count >= 2 and most_common_count / len(children) >= 0.5
+
+
 def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
-    """Return the top-level structural children of <main> or <body>."""
+    """Return one element per visual section of the page.
+
+    Two passes deal with wrapper-heavy markup (ASP.NET WebForms/DNN pages
+    wrap everything in <form>; themes add chains of layout divs):
+
+    1. Collapse chains of single visible wrappers (div/article/form/main).
+    2. Expand a *dominant content container* in place: when one child holds
+       most of the page text and contains multiple section-like children
+       (e.g. DNN's content pane sitting next to header/footer chrome), its
+       children replace it in document order. Chrome siblings stay put.
+    """
     container = soup.find("main") or soup.body
     if not container:
         return []
 
-    sections: list[Tag] = []
-    for child in container.find_all(recursive=False):
-        if not isinstance(child, Tag):
-            continue
-        if child.name in ("script", "style", "noscript"):
-            continue
-        sections.append(child)
+    sections = _visible_children(container)
+    for _ in range(_MAX_WRAPPER_DESCENT):
+        if len(sections) != 1 or sections[0].name not in _WRAPPER_TAGS:
+            break
+        inner = _visible_children(sections[0])
+        if not inner:
+            break
+        sections = inner
 
-    # If the top level is thin (e.g., one wrapper div), descend one level
-    if len(sections) == 1 and sections[0].name in ("div", "article"):
-        inner = [
-            c for c in sections[0].find_all(recursive=False)
-            if isinstance(c, Tag) and c.name not in ("script", "style", "noscript")
-        ]
-        if len(inner) > 1:
-            sections = inner
+    for _ in range(_MAX_WRAPPER_DESCENT):
+        if len(sections) < 2:
+            # A single node is a section, not a container — expanding it would
+            # shred card grids (every card carries its own heading). Dominant
+            # expansion only applies when chrome siblings prove this level is
+            # a page-level layout row.
+            break
+        total_text = sum(len(s.get_text(strip=True)) for s in sections) or 1
+        expanded: list[Tag] = []
+        did_expand = False
+        for section in sections:
+            text_share = len(section.get_text(strip=True)) / total_text
+            if (
+                text_share > _DOMINANT_TEXT_SHARE
+                and _section_like_child_count(section) >= 2
+                and not _children_look_like_cards(section)
+            ):
+                expanded.extend(_visible_children(section))
+                did_expand = True
+            else:
+                expanded.append(section)
+        sections = expanded
+        if not did_expand:
+            break
 
     return sections
 
@@ -669,12 +758,18 @@ def extract_sections(html: str, base_url: str) -> list[dict]:
     top_level = _top_level_sections(soup)
 
     sections: list[dict] = []
-    for index, element in enumerate(top_level):
+    for element in top_level:
         content = _extract_content(element, base_url)
         # Skip empty wrappers
         if not any(content.values()):
             continue
-        section_type = _classify_section(element, content, is_first=index == 0)
+        # First *kept* section is hero-eligible — skipped chrome (headers)
+        # and empty wrappers shouldn't cost the real first section its slot.
+        section_type = _classify_section(element, content, is_first=not sections)
+        # Page chrome is supplied by global header/footer block wrapping at
+        # assemble time; keeping these sections would double-render it.
+        if section_type in ("header", "footer"):
+            continue
         if section_type in _CARD_LIKE_TYPES:
             content = _rescope_content_to_cards(element, section_type, base_url, content)
         sections.append({

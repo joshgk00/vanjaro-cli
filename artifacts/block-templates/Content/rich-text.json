@@ -1,0 +1,75 @@
+{
+  "name": "Rich Text Block",
+  "category": "Content",
+  "description": "Generic content section — heading plus paragraphs. Fallback template for sections with no specific layout.",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-rtx-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-rtx-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false}
+            ],
+            "attributes": {"id": "tpl-rtx-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-rtx-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "classes": [
+                      {"name": "mb-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-rtx-h1"},
+                    "content": ""
+                  },
+                  {
+                    "type": "text",
+                    "tagName": "p",
+                    "attributes": {"id": "tpl-rtx-t1"},
+                    "content": ""
+                  },
+                  {
+                    "type": "text",
+                    "tagName": "p",
+                    "attributes": {"id": "tpl-rtx-t2"},
+                    "content": ""
+                  },
+                  {
+                    "type": "text",
+                    "tagName": "p",
+                    "attributes": {"id": "tpl-rtx-t3"},
+                    "content": ""
+                  },
+                  {
+                    "type": "text",
+                    "tagName": "p",
+                    "attributes": {"id": "tpl-rtx-t4"},
+                    "content": ""
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

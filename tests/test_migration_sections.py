@@ -1176,3 +1176,95 @@ def test_blog_cards_without_per_card_buttons_preserve_alignment():
         "href": "https://example.com/post/2",
     }
     assert buttons[2] is None
+
+
+# ---------------------------------------------------------------------------
+# Wrapper descent (_top_level_sections via extract_sections)
+# ---------------------------------------------------------------------------
+
+
+def test_webforms_form_wrapper_yields_per_section_output():
+    """ASP.NET pages wrap the whole body in <form>; sections must still split."""
+    html = (
+        "<!doctype html><html><body>"
+        '<form id="Form" method="post">'
+        '<input type="hidden" name="__VIEWSTATE" value="x">'
+        '<div class="page-wrap">'
+        "<section><h1>Big Welcome</h1><p>Intro paragraph.</p>"
+        '<a class="btn" href="/start">Start</a></section>'
+        "<section><h2>Get In Touch</h2><form><input type=\"text\" name=\"name\">"
+        '<input type="email" name="email"><textarea name="m"></textarea>'
+        "<button type=\"submit\">Send</button></form></section>"
+        "</div></form></body></html>"
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 2
+    assert sections[0]["type"] == "hero"
+    assert sections[1]["type"] == "contact"
+
+
+def test_deep_single_wrapper_chain_descends_to_content():
+    """div > div > main chains collapse to the real section list."""
+    html = (
+        "<!doctype html><html><body><div><div>"
+        "<section><h1>Hello There</h1><p>One.</p><a class=\"btn\" href=\"/go\">Go</a></section>"
+        "<section><h2>Stats</h2><p>10+ years</p><p>200 clients</p><p>99% uptime</p></section>"
+        "</div></div></body></html>"
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) >= 2
+    assert sections[0]["type"] == "hero"
+
+
+def test_page_header_and_footer_sections_are_excluded():
+    """In-page chrome is supplied by global block wrapping — never as sections."""
+    html = _wrap(
+        """
+        <header><img src="/logo.png" alt="Logo"><nav><a href="/a">A</a></nav></header>
+        <section><h1>Main Headline</h1><p>Body text here.</p>
+        <a class="btn" href="/cta">CTA</a></section>
+        <footer><p>© 2026 Example</p><a href="/privacy">Privacy</a></footer>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert sections[0]["type"] == "hero"
+
+
+def test_dnn_chrome_siblings_with_dominant_content_pane():
+    """DNN layout: header/footer siblings + one content pane holding all the
+    real sections. The pane must split; chrome must be excluded."""
+    html = (
+        "<!doctype html><html><body>"
+        '<form id="Form"><div class="aspNetHidden">'
+        '<input type="hidden" name="__VIEWSTATE" value="x"></div>'
+        '<div class="dnngo-main"><div id="dnn_wrapper">'
+        '<header class="header_bg"><img src="/logo.png" alt="Logo">'
+        '<nav><a href="/a">A</a><a href="/b">B</a></nav></header>'
+        '<section id="dnn_content">'
+        '<div class="TopOutPane"><h1>Welcome to the Site</h1>'
+        "<p>We build great websites for you.</p>"
+        '<a class="btn" href="/start">Get Started</a></div>'
+        '<div class="dnn_layout clearfix"><h2>Our Prices</h2>'
+        "<p>$99 Website Only plan with hosting.</p>"
+        "<p>$249 Branding Package with logo design.</p>"
+        "<p>$10 monthly maintenance plan included.</p></div>"
+        "</section>"
+        '<footer class="footer_box"><p>© 2026 Example Co</p></footer>'
+        "</div></div></form></body></html>"
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    types = [s["type"] for s in sections]
+    assert "header" not in types and "footer" not in types
+    assert len(sections) == 2
+    assert sections[0]["type"] == "hero"
+    assert "Welcome to the Site" in sections[0]["content"]["headings"]
+    assert "Our Prices" in sections[1]["content"]["headings"]
