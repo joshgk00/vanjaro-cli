@@ -13,7 +13,7 @@ import re
 
 import requests
 
-from vanjaro_cli.config import Config, derive_profile_name, save_config
+from vanjaro_cli.config import Config, derive_profile_name, get_profile_data, save_config
 
 __all__ = ["AuthError", "login", "logout"]
 
@@ -117,8 +117,16 @@ def login(base_url: str, username: str, password: str, profile_name: str | None 
             "This may be a server configuration issue."
         )
 
-    config = Config(base_url=base_url, cookies=all_cookies)
     resolved_profile = profile_name or derive_profile_name(base_url)
+    # save_config replaces the whole profile, so carry over settings that
+    # logging in again must not destroy (API key, portal selection).
+    existing = get_profile_data(resolved_profile)
+    config = Config(
+        base_url=base_url,
+        cookies=all_cookies,
+        api_key=existing.get("api_key"),
+        portal_id=existing.get("portal_id", 0),
+    )
     save_config(config, resolved_profile)
     return config
 

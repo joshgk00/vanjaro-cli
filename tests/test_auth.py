@@ -91,6 +91,44 @@ def test_login_sends_correct_payload(runner, tmp_path):
 
 
 @responses.activate
+def test_login_preserves_existing_api_key_and_portal(runner, tmp_path):
+    """Re-login must refresh cookies without wiping the profile's API key."""
+    _mock_login_success()
+
+    config_dir = tmp_path / ".vanjaro-cli"
+    config_dir.mkdir()
+    config_file = config_dir / "config.json"
+    profile_name = "example-vanjaro-com"
+    config_file.write_text(json.dumps({
+        "active_profile": profile_name,
+        "profiles": {
+            profile_name: {
+                "base_url": BASE_URL,
+                "cookies": {".DOTNETNUKE": "stale-expired-cookie"},
+                "api_key": "existing-api-key",
+                "portal_id": 2,
+            }
+        },
+    }))
+
+    with (
+        patch("vanjaro_cli.config.CONFIG_DIR", config_dir),
+        patch("vanjaro_cli.config.CONFIG_FILE", config_file),
+    ):
+        result = runner.invoke(
+            cli,
+            ["auth", "login", "--url", BASE_URL, "-u", "admin", "-p", "secret"],
+        )
+
+    assert result.exit_code == 0
+    saved = json.loads(config_file.read_text())
+    profile_data = saved["profiles"][profile_name]
+    assert profile_data["api_key"] == "existing-api-key"
+    assert profile_data["portal_id"] == 2
+    assert profile_data["cookies"][".DOTNETNUKE"] == "authed-cookie-value"
+
+
+@responses.activate
 def test_login_json_output(runner, tmp_path):
     _mock_login_success()
 

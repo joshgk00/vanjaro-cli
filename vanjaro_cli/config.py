@@ -16,6 +16,7 @@ __all__ = [
     "Config",
     "ConfigError",
     "derive_profile_name",
+    "get_profile_data",
     "load_config",
     "save_config",
     "clear_session",
@@ -116,6 +117,12 @@ def load_config(profile_name: str | None = None) -> Config:
         api_key=profile_data.get("api_key"),
         portal_id=int(portal_id),
     )
+
+
+def get_profile_data(profile_name: str) -> dict:
+    """Return the raw stored profile dict, or an empty dict if missing."""
+    raw = _read_raw_config()
+    return raw.get("profiles", {}).get(profile_name, {})
 
 
 def save_config(config: Config, profile_name: str | None = None) -> None:
