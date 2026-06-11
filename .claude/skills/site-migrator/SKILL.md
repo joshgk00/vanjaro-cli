@@ -36,6 +36,9 @@ Source Site (live URL)
                                            update command auto-generates the
                                            contentHtml string Vanjaro needs)
   → vanjaro migrate verify-all           (Stage 6 — page-by-page verification)
+  → vanjaro migrate visual-capture       (Stage 6.4 — screenshot pairs; then
+                                           /skill migration-visual-report for
+                                           the vision score gate: ship at ≥85)
 ```
 
 **Why the wrapping and contentHtml matter:** The Vanjaro AIPage backend stores
@@ -822,7 +825,35 @@ For each gap the user wants fixed:
 3. Re-run `vanjaro migrate verify` for that page
 4. Move to the next gap
 
-### 6.4 Final Report
+### 6.4 Visual QA Gate (REQUIRED — text verification alone is not enough)
+
+`verify-all` compares stored content, not what visitors see. Pages can pass
+text verification while rendering blank, showing wrong sections, or wearing
+the default theme. Every migration must pass the visual gate before it is
+declared done:
+
+```bash
+vanjaro migrate visual-capture --dir artifacts/migration/{site-slug} --json
+```
+
+This screenshots every source/migrated page pair (anonymous, so screenshots
+show what visitors see) into `{dir}/visual-report/` with a `manifest.json`.
+Treat its warnings as findings: HTTP errors, error-page markers, and migrated
+pages that render identically (empty-content signal).
+
+Then run the vision comparison and fix loop:
+
+1. `/skill migration-visual-report artifacts/migration/{site-slug}` — reads
+   the screenshot pairs with Claude Vision, writes
+   `visual-report/vision-report.json` with per-page scores and systemic
+   findings mapped to pipeline code.
+2. If `overall_score < 85` or any high-severity systemic finding exists, run
+   `/skill migration-visual-fix artifacts/migration/{site-slug}` to iterate.
+
+**The migration is shippable at overall_score ≥ 85 with no high-severity
+systemic findings.** Include the final score in the migration report.
+
+### 6.5 Final Report
 
 ```
 Migration Complete
@@ -838,6 +869,7 @@ Custom blocks:      8 in editor sidebar
 Global blocks:      2 (header + footer)
 
 Verify report: artifacts/migration/example-com/verify-report.json
+Visual score:  91/100 (visual-report/vision-report.json)
 
 Known gaps:
   - Contact form needs DNN module setup
@@ -854,6 +886,7 @@ Artifacts:
     pages/                   — per-page section + content JSON
     global/                  — header/footer content
     verify-report.json       — verification gap report
+    visual-report/           — screenshot pairs + manifest + vision-report.json
 ```
 
 ## Resuming Interrupted Work
