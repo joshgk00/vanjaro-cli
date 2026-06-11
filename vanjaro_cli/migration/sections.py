@@ -700,11 +700,14 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
     if _looks_like_contact_form(element, classes):
         return "contact"
 
-    if _looks_like_gallery(element):
-        return "gallery"
-
+    # Blog post grids are checked before galleries: their thumbnails are
+    # anchor-wrapped (so the gallery detector would claim them) but they also
+    # carry per-post excerpts the gallery template would drop.
     if _looks_like_blog_cards(element):
         return "blog_cards"
+
+    if _looks_like_gallery(element):
+        return "gallery"
 
     if _looks_like_faq(element):
         return "faq"
@@ -801,38 +804,41 @@ def _looks_like_gallery(element: Tag) -> bool:
     return False
 
 
-def _looks_like_blog_cards(element: Tag) -> bool:
-    """Detect a blog post grid: ≥3 children each with image + heading + ``Read More``.
+_BLOG_POST_CLASS = re.compile(r"\b(?:list-post|blog-post|post-item|article)\b", re.IGNORECASE)
 
-    Blog post grids look superficially like the existing ``cards`` detector
-    but distinguish themselves by having a "Read More" / "Continue reading"
-    link in each card. Catching them earlier than ``cards`` lets the
-    crawler suggest the right template (Blog Post Cards 3-up vs Feature Cards).
+
+def _looks_like_blog_cards(element: Tag) -> bool:
+    """Detect a blog post grid: ≥3 post cards with image + heading + excerpt.
+
+    A post card is an ``<article>``, a ``post``-classed block, or any card
+    carrying a "Read More"/"Continue reading" link — each with an image, a
+    heading, and an excerpt paragraph. Catching these before galleries (whose
+    anchor-wrapped thumbnails would otherwise claim them) and feature cards
+    routes them to the Blog Post Cards template, which keeps the excerpt the
+    gallery template drops. Cards nest under module wrappers, so the search
+    walks any depth.
     """
-    candidates = [
-        c for c in element.find_all(recursive=False)
-        if isinstance(c, Tag) and c.name in ("div", "article", "li")
-    ]
-    if len(candidates) == 1 and candidates[0].name in ("div", "ul", "ol"):
-        candidates = [
-            c for c in candidates[0].find_all(recursive=False)
-            if isinstance(c, Tag)
-        ]
+    cards = _find_cards_by_heading(element)
+    if len(cards) < 3:
+        cards = _find_sibling_card_group(element)
+    if len(cards) < 3:
+        return False
 
     blog_like = 0
-    for child in candidates:
-        if not child.find("img"):
+    for card in cards:
+        if card.find("img") is None or card.find(_HEADING_TAGS) is None:
             continue
-        if not child.find(["h2", "h3", "h4"]):
-            continue
-        link_texts = " ".join(
-            (a.get_text(separator=" ", strip=True) or "").lower() for a in child.find_all("a")
+        has_excerpt = any(
+            len(p.get_text(" ", strip=True)) >= 40 for p in card.find_all("p")
         )
-        if "read more" in link_texts or "continue reading" in link_texts:
+        link_texts = " ".join(
+            (a.get_text(" ", strip=True) or "").lower() for a in card.find_all("a")
+        )
+        has_read_more = "read more" in link_texts or "continue reading" in link_texts
+        is_post = card.name == "article" or _BLOG_POST_CLASS.search(" ".join(card.get("class", [])))
+        if has_read_more or (has_excerpt and is_post):
             blog_like += 1
-            if blog_like >= 3:
-                return True
-    return False
+    return blog_like >= 3
 
 
 def _looks_like_bio(element: Tag, content: dict) -> bool:

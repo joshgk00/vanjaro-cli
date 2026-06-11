@@ -2018,3 +2018,34 @@ def test_single_priced_block_does_not_split():
     sections = extract_sections(html, BASE_URL)
     priced = [s for s in sections if s["content"].get("headings") and "Only Plan" in s["content"]["headings"][0]]
     assert len(priced) == 1
+
+
+def test_blog_listing_with_article_excerpts_classifies_as_blog_cards():
+    """Anchor-thumbnail post cards with excerpts route to blog_cards, not gallery."""
+    posts = "".join(
+        f'<article class="list-post"><a href="/p{n}"><img src="/t{n}.jpg" alt=""></a>'
+        f"<h2>Post {n} Title</h2>"
+        f"<p>An excerpt for post {n} that is clearly long enough to read as a teaser.</p>"
+        f'<a href="/p{n}">CMW Team</a></article>"
+        for n in range(1, 5)
+    )
+    html = _wrap(f'<section><div class="blog-timeline">{posts}</div></section>')
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["type"] == "blog_cards"
+    content = sections[0]["content"]
+    assert len(content["headings"]) == 4
+    assert any("excerpt for post 1" in p for p in content["paragraphs"])
+
+
+def test_anchor_image_gallery_without_excerpts_stays_gallery():
+    """Plain anchor-wrapped thumbnails (no excerpts/articles) are still galleries."""
+    imgs = "".join(
+        f'<a href="/full{n}.jpg"><img src="/t{n}.jpg" alt="Shot {n}"></a>'
+        for n in range(1, 5)
+    )
+    html = _wrap(f"<section><h2>Portfolio</h2>{imgs}</section>")
+
+    sections = extract_sections(html, BASE_URL)
+    assert sections[0]["type"] == "gallery"
