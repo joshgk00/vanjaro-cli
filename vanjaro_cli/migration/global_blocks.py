@@ -233,6 +233,14 @@ def build_footer_block(content: dict, base_url: str = "") -> dict:
             _row(image_cols, extra_classes=["mt-4", "justify-content-center", "align-items-center"])
         )
 
+    social_row = _footer_social_row(content)
+    if social_row is not None:
+        container_children.append(social_row)
+
+    copyright_row = _footer_copyright_row(content)
+    if copyright_row is not None:
+        container_children.append(copyright_row)
+
     # Bootstrap's bg-light carries !important and would beat the inline band
     # style, so the fallback class only ships when no band color was crawled.
     has_band = bool(content.get("background_color") or content.get("background_image"))
@@ -242,6 +250,59 @@ def build_footer_block(content: dict, base_url: str = "") -> dict:
     )
     apply_section_background(section, content)
     return _wrap(section)
+
+
+def _footer_social_row(content: dict) -> dict | None:
+    """One centered row of social profile links (icon-only anchors get labels)."""
+    social_links = content.get("social_links") or []
+    links = [
+        _component(
+            "link",
+            tag_name="a",
+            content=item["label"],
+            classes=["mx-2"],
+            attributes={"href": item["href"], "target": "_blank"},
+        )
+        for item in social_links
+        if isinstance(item, dict) and item.get("label") and item.get("href")
+    ]
+    if not links:
+        return None
+    return _row(
+        [_col(links, size_classes=["col-12"])],
+        extra_classes=["mt-4", "text-center"],
+    )
+
+
+def _footer_copyright_row(content: dict) -> dict | None:
+    """Bottom bar: copyright line plus any Privacy/Terms links from the crawl."""
+    copyright_text = content.get("copyright_text")
+    legal_links = [
+        link for link in (content.get("links") or [])
+        if isinstance(link, dict)
+        and isinstance(link.get("text"), str)
+        and link["text"].strip().lower() in ("privacy statement", "privacy policy", "terms of use", "terms of service")
+    ]
+    if not copyright_text and not legal_links:
+        return None
+
+    parts: list[dict] = []
+    if copyright_text:
+        parts.append(_text(copyright_text, extra_classes=["d-inline", "me-3"]))
+    for link in legal_links:
+        parts.append(
+            _component(
+                "link",
+                tag_name="a",
+                content=link["text"],
+                classes=["mx-2"],
+                attributes={"href": link["href"]},
+            )
+        )
+    return _row(
+        [_col(parts, size_classes=["col-12"])],
+        extra_classes=["mt-4", "pt-3", "border-top", "text-center"],
+    )
 
 
 def _footer_link_columns(content: dict) -> list[dict]:

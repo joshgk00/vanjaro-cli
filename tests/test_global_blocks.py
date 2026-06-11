@@ -486,3 +486,41 @@ def test_blocks_without_band_colors_have_no_style():
     block = build_footer_block({"paragraphs": ["Copyright"]})
 
     assert "style" not in block["components"][0].get("attributes", {})
+
+
+def test_footer_block_includes_social_and_copyright_rows():
+    from vanjaro_cli.migration.global_blocks import build_footer_block
+
+    content = {
+        "paragraphs": ["We make websites."],
+        "social_links": [
+            {"label": "Facebook", "href": "https://facebook.com/cmw"},
+            {"label": "Twitter", "href": "https://twitter.com/cmw"},
+        ],
+        "copyright_text": "Copyright 2026 by Clicks & Mortar Websites",
+        "links": [
+            {"text": "Privacy Statement", "href": "https://example.com/privacy"},
+            {"text": "Terms Of Use", "href": "https://example.com/terms"},
+            {"text": "Home", "href": "/"},
+        ],
+    }
+
+    block = build_footer_block(content)
+
+    rendered = str(block)
+    assert "Facebook" in rendered
+    assert "https://twitter.com/cmw" in rendered
+    assert "Copyright 2026 by Clicks & Mortar Websites" in rendered
+    assert "Privacy Statement" in rendered
+    assert "Terms Of Use" in rendered
+    assert "'Home'" not in rendered.replace('"', "'").split("copyright")[-1]
+
+
+def test_footer_block_without_social_or_copyright_has_no_extra_rows():
+    from vanjaro_cli.migration.global_blocks import build_footer_block
+
+    block = build_footer_block({"paragraphs": ["Copyright-free blurb"]})
+
+    rendered = str(block)
+    assert "border-top" not in rendered
+    assert "target" not in rendered

@@ -1160,11 +1160,55 @@ def extract_global_element(html: str, base_url: str, element_name: str) -> dict 
     background_image = _section_background_image(element, base_url)
     if background_image:
         content["background_image"] = background_image
+    if element_name == "footer":
+        social_links = _extract_social_links(element)
+        if social_links:
+            content["social_links"] = social_links
+        copyright_text = _extract_copyright_text(element)
+        if copyright_text:
+            content["copyright_text"] = copyright_text
     return {
         "type": element_name,
         "template": TEMPLATE_MAP.get(element_name, TEMPLATE_MAP["content"]),
         "content": content,
     }
+
+
+_SOCIAL_DOMAINS = {
+    "facebook.com": "Facebook",
+    "twitter.com": "Twitter",
+    "x.com": "X",
+    "instagram.com": "Instagram",
+    "linkedin.com": "LinkedIn",
+    "youtube.com": "YouTube",
+    "plus.google.com": "Google+",
+    "pinterest.com": "Pinterest",
+}
+
+_COPYRIGHT_PATTERN = re.compile(r"copyright|©", re.IGNORECASE)
+
+
+def _extract_social_links(element: Tag) -> list[dict]:
+    """Collect social profile links — usually icon-only anchors with no text."""
+    found: list[dict] = []
+    seen: set[str] = set()
+    for anchor in element.find_all("a", href=True):
+        href = anchor["href"].strip()
+        for domain, label in _SOCIAL_DOMAINS.items():
+            if domain in href and href not in seen:
+                seen.add(href)
+                found.append({"label": label, "href": href})
+                break
+    return found
+
+
+def _extract_copyright_text(element: Tag) -> str:
+    """Find the copyright line — often a bare <span>, invisible to <p> extraction."""
+    for text_node in element.find_all(string=_COPYRIGHT_PATTERN):
+        text = text_node.strip()
+        if text and len(text) < 160:
+            return text
+    return ""
 
 
 def collect_image_urls(page_sections: list[dict]) -> list[str]:

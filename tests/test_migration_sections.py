@@ -1700,3 +1700,23 @@ def test_article_body_with_featured_image_is_not_bio():
     sections = extract_sections(html, BASE_URL)
 
     assert sections[0]["type"] == "content"
+
+
+def test_footer_extraction_captures_social_and_copyright():
+    html = (
+        "<!doctype html><html><body><main><section><h1>Body</h1><p>Text</p></section></main>"
+        '<footer class="footer_box">'
+        '<a href="https://www.facebook.com/cmw"><i class="fa-facebook"></i></a>'
+        '<a href="https://twitter.com/cmw"><i class="fa-twitter"></i></a>'
+        '<span class="footer">Copyright 2026 by Clicks &amp; Mortar Websites</span>'
+        "</footer></body></html>"
+    )
+
+    result = extract_global_element(html, BASE_URL, "footer")
+
+    content = result["content"]
+    assert content["social_links"] == [
+        {"label": "Facebook", "href": "https://www.facebook.com/cmw"},
+        {"label": "Twitter", "href": "https://twitter.com/cmw"},
+    ]
+    assert content["copyright_text"] == "Copyright 2026 by Clicks & Mortar Websites"
