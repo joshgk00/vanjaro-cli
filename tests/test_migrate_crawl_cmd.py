@@ -277,3 +277,22 @@ def test_migrate_crawl_skips_direct_asset_links(runner, tmp_path: Path):
     assert not any("shot-1" in slug or "shot-2" in slug for slug in slugs)
     assert not any("brochure" in slug for slug in slugs)
     assert not any("archive" in slug for slug in slugs)
+
+
+@responses.activate
+def test_crawl_removes_stale_section_files(runner, tmp_path: Path):
+    """Re-crawls must not leave old section files for assemble globs to pick up."""
+    _register_site(responses.mock, with_assets=False)
+    output = tmp_path / "out"
+    stale = output / "pages" / "home" / "section-009-gallery.json"
+    stale.parent.mkdir(parents=True)
+    stale.write_text("{}")
+
+    result = runner.invoke(
+        cli,
+        ["migrate", "crawl", SOURCE_URL, "--output-dir", str(output), "--skip-assets", "--json"],
+    )
+
+    assert result.exit_code == 0
+    assert not stale.exists()
+    assert list((output / "pages" / "home").glob("section-*.json"))

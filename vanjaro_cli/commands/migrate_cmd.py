@@ -136,6 +136,12 @@ def crawl(
         page_dir = pages_root / slug
         page_dir.mkdir(exist_ok=True)
 
+        # Remove sections from previous crawls — extraction changes shift the
+        # numbering/types, and downstream assemble globs section-*.json, so a
+        # stale file would silently merge old content into the new page.
+        for stale in page_dir.glob("section-*.json"):
+            stale.unlink()
+
         section_entries: list[dict] = []
         for index, section in enumerate(sections, start=1):
             file_name = f"section-{index:03d}-{section['type']}.json"
