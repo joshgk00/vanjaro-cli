@@ -1753,3 +1753,38 @@ def test_sections_without_byline_markup_are_unchanged():
     sections = extract_sections(html, BASE_URL)
 
     assert sections[0]["content"]["paragraphs"][0] == "First paragraph."
+
+
+def test_bold_only_paragraphs_keep_emphasis_markup():
+    """Pseudo-subheadings (<p><strong>) keep <strong> so hierarchy survives."""
+    body = (
+        "<p><strong>What is the newest update?</strong></p>"
+        "<p>Google Chrome now flags HTTP pages as insecure for all users.</p>"
+        "<p><strong>What does that mean for you?</strong></p>"
+        "<p>Visitors will see a warning, which erodes trust in your brand.</p>"
+        "<p>One more paragraph so the section is clearly an article body.</p>"
+    )
+    html = _wrap(f"<section><h1>Security</h1>{body}</section>")
+
+    sections = extract_sections(html, BASE_URL)
+
+    paragraphs = sections[0]["content"]["paragraphs"]
+    assert "<strong>What is the newest update?</strong>" in paragraphs
+    assert "<strong>What does that mean for you?</strong>" in paragraphs
+    assert "Google Chrome now flags HTTP pages as insecure for all users." in paragraphs
+
+
+def test_paragraph_with_inline_bold_is_not_wrapped():
+    """A paragraph that merely contains a bold word stays plain."""
+    html = _wrap(
+        "<section><h2>Note</h2>"
+        "<p>This is <strong>very</strong> important to remember always.</p>"
+        "<p>Second paragraph for body length and to avoid bio classification.</p>"
+        "<p>Third paragraph keeps this section out of the bio path entirely.</p>"
+        "</section>"
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    paragraphs = sections[0]["content"]["paragraphs"]
+    assert paragraphs[0] == "This is very important to remember always."

@@ -408,6 +408,16 @@ def _is_button_styled(anchor: Tag) -> bool:
     return "btn" in classes or "button" in classes
 
 
+def _is_bold_only_paragraph(tag: Tag) -> bool:
+    """True when a <p>'s entire visible text comes from a single bold run."""
+    bold = tag.find(["strong", "b"])
+    if bold is None:
+        return False
+    bold_text = bold.get_text(separator=" ", strip=True)
+    para_text = tag.get_text(separator=" ", strip=True)
+    return bool(bold_text) and bold_text == para_text
+
+
 def _extract_content(element: Tag, base_url: str) -> dict:
     """Pull structured content from an HTML element for migration."""
     headings: list[str] = []
@@ -417,11 +427,19 @@ def _extract_content(element: Tag, base_url: str) -> dict:
             if text:
                 headings.append(text)
 
-    paragraphs = [
-        tag.get_text(separator=" ", strip=True)
-        for tag in element.find_all("p")
-        if tag.get_text(separator=" ", strip=True)
-    ]
+    paragraphs = []
+    for tag in element.find_all("p"):
+        text = tag.get_text(separator=" ", strip=True)
+        if not text:
+            continue
+        # A paragraph that is wholly one bold run is a pseudo-subheading (the
+        # CMW post bodies use <p><strong>...</strong></p> for section breaks);
+        # keep the emphasis so the hierarchy survives. Text components emit
+        # their content as raw HTML, so the wrapper renders.
+        if _is_bold_only_paragraph(tag):
+            paragraphs.append(f"<strong>{text}</strong>")
+        else:
+            paragraphs.append(text)
 
     images: list[dict] = []
     for img in element.find_all("img"):
