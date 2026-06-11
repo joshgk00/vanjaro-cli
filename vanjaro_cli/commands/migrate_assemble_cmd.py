@@ -187,13 +187,19 @@ def _blank_unfilled_content_slots(
     overrides: dict[str, str],
     as_json: bool,
 ) -> dict[str, str]:
-    """Blank every content slot the crawled overrides don't fill."""
+    """Blank every content slot the crawled overrides don't fill.
+
+    Slots are enumerated from the EXPANDED template (column units and
+    text/image slots cloned to fit the overrides) — cloned units carry the
+    template's placeholder copy, which must never ship either.
+    """
     try:
         template_data = find_template(template_name)
     except TemplateNotFoundError:
         return overrides  # the compose step reports this with full context
+    expanded = apply_overrides(template_data, overrides)
     filled = dict(overrides)
-    for slot in enumerate_slots(template_data["template"]):
+    for slot in enumerate_slots(expanded["template"]):
         if slot["field"] == "content" and slot["key"] not in filled:
             filled[slot["key"]] = ""
     return filled

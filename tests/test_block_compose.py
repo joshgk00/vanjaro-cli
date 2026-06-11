@@ -653,3 +653,120 @@ def test_check_overflow_ignores_absorbable_image_keys():
     overflow = check_overflow(make_one_image_template(), overrides)
 
     assert overflow == ["button_9"]
+
+
+# ---------------------------------------------------------------------------
+# expand_column_units
+# ---------------------------------------------------------------------------
+
+
+def make_image_grid_template() -> dict:
+    return {
+        "name": "Gallery (2-up)",
+        "category": "Cards",
+        "template": {
+            "type": "section",
+            "attributes": {"id": "tpl-ig-s1"},
+            "components": [{
+                "type": "row",
+                "attributes": {"id": "tpl-ig-r1"},
+                "components": [
+                    {
+                        "type": "column",
+                        "attributes": {"id": "tpl-ig-c1"},
+                        "components": [
+                            {"type": "image", "attributes": {"id": "tpl-ig-i1", "src": "", "alt": ""}},
+                        ],
+                    },
+                    {
+                        "type": "column",
+                        "attributes": {"id": "tpl-ig-c2"},
+                        "components": [
+                            {"type": "image", "attributes": {"id": "tpl-ig-i2", "src": "", "alt": ""}},
+                        ],
+                    },
+                ],
+            }],
+        },
+    }
+
+
+def _cards_row(composed: dict) -> list[dict]:
+    return composed["template"]["components"][0]["components"][0]["components"]
+
+
+def test_card_overflow_clones_column_units():
+    overrides = {}
+    for n in range(1, 6):
+        overrides[f"heading_{n}"] = f"Card {n}"
+        overrides[f"text_{n}"] = f"Description {n}."
+
+    composed = apply_overrides(CARDS_TEMPLATE, overrides)
+
+    row = _cards_row(composed)
+    assert len(row) == 5
+    assert all(col["type"] == "column" for col in row)
+    for index, column in enumerate(row, start=1):
+        assert column["components"][0]["content"] == f"Card {index}"
+        assert column["components"][1]["content"] == f"Description {index}."
+
+
+def test_cloned_column_units_get_unique_ids():
+    overrides = {f"heading_{n}": f"Card {n}" for n in range(1, 6)}
+
+    composed = apply_overrides(CARDS_TEMPLATE, overrides)
+
+    row = _cards_row(composed)
+    all_ids = []
+    for column in row:
+        all_ids.append(column["attributes"]["id"])
+        all_ids.extend(c["attributes"]["id"] for c in column["components"])
+    assert len(all_ids) == len(set(all_ids))
+
+
+def test_image_grid_overflow_clones_columns_not_leaves():
+    overrides = {f"image_{n}_src": f"/img/{n}.jpg" for n in range(1, 7)}
+
+    composed = apply_overrides(make_image_grid_template(), overrides)
+
+    row = composed["template"]["components"][0]["components"]
+    assert len(row) == 6
+    for index, column in enumerate(row, start=1):
+        images = [c for c in column["components"] if c["type"] == "image"]
+        assert len(images) == 1
+        assert images[0]["attributes"]["src"] == f"/img/{index}.jpg"
+
+
+def test_no_unit_expansion_when_overrides_fit():
+    overrides = {"heading_1": "One", "heading_2": "Two", "text_1": "A", "text_2": "B"}
+
+    composed = apply_overrides(CARDS_TEMPLATE, overrides)
+
+    assert len(_cards_row(composed)) == 2
+
+
+def test_empty_override_values_do_not_trigger_unit_expansion():
+    overrides = {"heading_1": "One", "heading_5": "", "text_9": ""}
+
+    composed = apply_overrides(CARDS_TEMPLATE, overrides)
+
+    assert len(_cards_row(composed)) == 2
+
+
+def test_unit_expansion_does_not_mutate_original():
+    template = make_image_grid_template()
+    overrides = {f"image_{n}_src": f"/img/{n}.jpg" for n in range(1, 5)}
+
+    apply_overrides(template, overrides)
+
+    assert len(template["template"]["components"][0]["components"]) == 2
+
+
+def test_check_overflow_absorbs_card_unit_overflow():
+    overrides = {f"heading_{n}": f"Card {n}" for n in range(1, 6)}
+    overrides["button_9"] = "No home for this"
+
+    overflow = check_overflow(CARDS_TEMPLATE, overrides)
+
+    # heading_3..5 land in cloned columns; the cards carry no buttons anywhere
+    assert overflow == ["button_9"]

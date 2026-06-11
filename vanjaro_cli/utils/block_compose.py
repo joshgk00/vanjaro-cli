@@ -14,6 +14,7 @@ __all__ = [
     "apply_overrides",
     "check_overflow",
     "enumerate_slots",
+    "expand_column_units",
     "expand_image_slots",
     "expand_text_slots",
     "find_template",
@@ -164,6 +165,107 @@ def _find_last_of_type(
     return found
 
 
+_CONTENT_OVERRIDE_KEY = re.compile(r"^([a-z-]+)_(\d+)$")
+
+
+def _requested_slot_counts(overrides: dict[str, str]) -> dict[str, int]:
+    """Max requested slot index per component type, counting non-empty values only."""
+    requested: dict[str, int] = {}
+    for key, value in overrides.items():
+        if not value:
+            continue
+        if match := _IMAGE_SRC_OVERRIDE_KEY.match(key):
+            comp_type, index = "image", int(match.group(1))
+        elif (match := _CONTENT_OVERRIDE_KEY.match(key)) and match.group(1) in CONTENT_TYPES:
+            comp_type, index = match.group(1), int(match.group(2))
+        else:
+            continue
+        requested[comp_type] = max(requested.get(comp_type, 0), index)
+    return requested
+
+
+def _leaf_slot_counts(component: dict) -> dict[str, int]:
+    """Count overridable components by type within a subtree."""
+    counts: dict[str, int] = {}
+    for _, comp_type, _ in _walk_overridable(component):
+        counts[comp_type] = counts.get(comp_type, 0) + 1
+    return counts
+
+
+def _find_repeating_groups(
+    component: dict, depth: int = 0
+) -> Generator[tuple[dict, list[dict], dict[str, int], int], None, None]:
+    """Yield (parent, members, per_unit_counts, depth) for repeating wrapper groups.
+
+    A group is two or more sibling wrapper components (not overridable leaves
+    themselves) with the same type and the same overridable-leaf makeup —
+    the structural shape of a card grid's columns.
+    """
+    groups: dict[tuple, list[dict]] = {}
+    for child in component.get("components", []):
+        child_type = child.get("type", "")
+        if child_type in CONTENT_TYPES or child_type in ATTRIBUTE_SLOTS:
+            continue
+        leaf_counts = _leaf_slot_counts(child)
+        if not leaf_counts:
+            continue
+        signature = (child_type, tuple(sorted(leaf_counts.items())))
+        groups.setdefault(signature, []).append(child)
+
+    for (_, leaf_items), members in groups.items():
+        if len(members) >= 2:
+            yield component, members, dict(leaf_items), depth
+
+    for child in component.get("components", []):
+        yield from _find_repeating_groups(child, depth + 1)
+
+
+def expand_column_units(template_data: dict, overrides: dict[str, str]) -> dict:
+    """Clone whole column/card units when overrides exceed template capacity.
+
+    A 3-up card template fed 9 cards' worth of overrides must grow by cloning
+    the repeating COLUMN unit inside the row — cloning text/image leaves
+    collapses the grid into one stacked column. Runs before leaf expansion;
+    leaf expansion then absorbs any residue the units don't cover.
+    """
+    requested = _requested_slot_counts(overrides)
+    if not requested:
+        return template_data
+
+    existing = _leaf_slot_counts(template_data["template"])
+    deficits = {
+        comp_type: count - existing.get(comp_type, 0)
+        for comp_type, count in requested.items()
+        if count > existing.get(comp_type, 0)
+    }
+    if not deficits:
+        return template_data
+
+    result = copy.deepcopy(template_data)
+    best: tuple[tuple[int, int], dict, list[dict], dict[str, int], list[str]] | None = None
+    for parent, members, unit_counts, depth in _find_repeating_groups(result["template"]):
+        covered = [t for t in deficits if unit_counts.get(t)]
+        if not covered:
+            continue
+        rank = (len(covered), depth)
+        if best is None or rank > best[0]:
+            best = (rank, parent, members, unit_counts, covered)
+    if best is None:
+        return template_data
+
+    _, parent, members, unit_counts, covered = best
+    units_needed = max(
+        (deficits[t] + unit_counts[t] - 1) // unit_counts[t] for t in covered
+    )
+    last_unit = members[-1]
+    insert_at = parent["components"].index(last_unit) + 1
+    for clone_number in range(units_needed):
+        clone = copy.deepcopy(last_unit)
+        _rewrite_component_ids(clone, f"-u{clone_number + 2}")
+        parent["components"].insert(insert_at + clone_number, clone)
+    return result
+
+
 def expand_text_slots(template_data: dict, overrides: dict[str, str]) -> dict:
     """Clone the last text slot until every ``text_N`` override has a home.
 
@@ -243,16 +345,22 @@ def expand_image_slots(template_data: dict, overrides: dict[str, str]) -> dict:
     return result
 
 
+def _expand_slots(template_data: dict, overrides: dict[str, str]) -> dict:
+    """Run unit expansion, then leaf expansion for any residue units don't cover."""
+    expanded = expand_column_units(template_data, overrides)
+    return expand_image_slots(expand_text_slots(expanded, overrides), overrides)
+
+
 def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
     """Deep-copy a template and apply content overrides to matching slots.
 
-    Text and image slots are expanded first so content beyond the template's
-    capacity is absorbed instead of silently dropped.
+    Column units, then text and image slots, are expanded first so content
+    beyond the template's capacity is absorbed instead of silently dropped.
 
     Returns the full template dict (name, category, description, template, styles)
     with the component tree modified according to the overrides.
     """
-    expanded = expand_image_slots(expand_text_slots(template_data, overrides), overrides)
+    expanded = _expand_slots(template_data, overrides)
     result = copy.deepcopy(expanded)
     for comp, comp_type, n in _walk_overridable(result["template"]):
         content_key = f"{comp_type}_{n}"
@@ -270,9 +378,9 @@ def check_overflow(template_data: dict, overrides: dict[str, str]) -> list[str]:
 
     Useful for detecting silent data loss when a migration plan has more
     content items than a template can hold (e.g. 11 portfolio items mapped
-    to a 3-up card template). Text overflow doesn't count — apply_overrides
-    expands text slots to absorb it.
+    to a 3-up card template). Overflow that slot expansion absorbs (column
+    units, text, images) doesn't count.
     """
-    expanded = expand_image_slots(expand_text_slots(template_data, overrides), overrides)
+    expanded = _expand_slots(template_data, overrides)
     available_keys = {slot["key"] for slot in enumerate_slots(expanded["template"])}
     return sorted(key for key in overrides if key not in available_keys)

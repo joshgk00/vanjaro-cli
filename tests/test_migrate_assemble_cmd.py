@@ -740,3 +740,65 @@ def test_crawler_sections_blank_unfilled_placeholder_slots(runner, tmp_path, mon
     rendered = json.dumps(json.loads(output_file.read_text()))
     for placeholder in ("Your Headline Here", "Get Started", "Hero heading"):
         assert placeholder not in rendered
+
+
+def test_cloned_column_units_do_not_leak_placeholder_copy(runner, tmp_path, monkeypatch):
+    """Slots in cloned column units must be blanked when overrides don't fill them."""
+    cards_template = {
+        "name": "Feature Cards",
+        "category": "Cards",
+        "description": "Two feature cards",
+        "template": {
+            "type": "section",
+            "attributes": {"id": "tpl-fc-s1"},
+            "components": [{
+                "type": "row",
+                "attributes": {"id": "tpl-fc-r1"},
+                "components": [
+                    {
+                        "type": "column", "attributes": {"id": "tpl-fc-c1"},
+                        "components": [
+                            {"type": "heading", "content": "Project Title", "attributes": {"id": "tpl-fc-h1"}},
+                            {"type": "image", "attributes": {"id": "tpl-fc-i1", "src": "", "alt": ""}},
+                        ],
+                    },
+                    {
+                        "type": "column", "attributes": {"id": "tpl-fc-c2"},
+                        "components": [
+                            {"type": "heading", "content": "Project Title", "attributes": {"id": "tpl-fc-h2"}},
+                            {"type": "image", "attributes": {"id": "tpl-fc-i2", "src": "", "alt": ""}},
+                        ],
+                    },
+                ],
+            }],
+        },
+        "styles": [],
+    }
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, cards_template)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    # 5 images but only 2 headings: 3 cloned columns gain placeholder headings
+    section_file = _write_json(
+        tmp_path / "cards.json",
+        {
+            "type": "gallery",
+            "template": "Feature Cards",
+            "content": {
+                "headings": ["One", "Two"],
+                "images": [{"src": f"/img/{n}.jpg", "alt": ""} for n in range(1, 6)],
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    rendered = json.loads(output_file.read_text())
+    row = rendered["components"][0]["components"][0]
+    assert len(row["components"]) == 5
+    assert "Project Title" not in json.dumps(rendered)
