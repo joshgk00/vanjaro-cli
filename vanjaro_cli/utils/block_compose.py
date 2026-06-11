@@ -465,7 +465,7 @@ def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
     return result
 
 
-_COL_WIDTH_CLASS = re.compile(r"^col-(?:sm|md|lg|xl)-\d+$")
+_COL_WIDTH_CLASS = re.compile(r"^col(?:-(?:sm|md|lg|xl))?-\d+$")
 
 
 def _columns_per_row_for(count: int) -> int:
