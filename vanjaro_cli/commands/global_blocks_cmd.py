@@ -178,13 +178,23 @@ def update_block(guid: str, file_path: str, as_json: bool) -> None:
     except (json.JSONDecodeError, OSError) as exc:
         exit_error(f"Cannot read {file_path}: {exc}", as_json)
 
-    content_json = raw.get("content_json") or raw.get("contentJSON", [])
-    style_json = raw.get("style_json") or raw.get("styleJSON", [])
+    content_json = raw.get("content_json") or raw.get("contentJSON") or raw.get("components", [])
+    style_json = raw.get("style_json") or raw.get("styleJSON") or raw.get("styles", [])
 
+    # Wrapper expansion renders the block's stored Html, and the server keeps
+    # the existing Html when the request omits it — without re-rendering here,
+    # content updates would never reach the live pages.
+    html = raw.get("html")
+    if not isinstance(html, str):
+        html = render_components(content_json) if isinstance(content_json, list) else ""
+
+    # AIGlobalBlock/Update binds contentJSON/styleJSON as strings — sending
+    # raw arrays fails model binding with HTTP 500.
     payload = {
         "guid": guid,
-        "contentJSON": content_json,
-        "styleJSON": style_json,
+        "contentJSON": json.dumps(content_json) if isinstance(content_json, (list, dict)) else content_json,
+        "styleJSON": json.dumps(style_json) if isinstance(style_json, (list, dict)) else style_json,
+        "html": html,
     }
 
     try:

@@ -336,8 +336,34 @@ def test_global_blocks_update(runner, mock_config, tmp_path):
 
     request_body = json.loads(responses.calls[-1].request.body)
     assert request_body["guid"] == "20020077-89f8-468f-a488-017421ce5a0b"
-    assert request_body["contentJSON"] == [{"type": "section", "components": []}]
-    assert request_body["styleJSON"] == [{"selectors": [".header"], "style": {"color": "red"}}]
+    # AIGlobalBlock/Update binds these as strings; raw arrays cause HTTP 500
+    assert json.loads(request_body["contentJSON"]) == [{"type": "section", "components": []}]
+    assert json.loads(request_body["styleJSON"]) == [{"selectors": [".header"], "style": {"color": "red"}}]
+
+
+@responses.activate
+def test_global_blocks_update_accepts_components_shape(runner, mock_config, tmp_path):
+    """build-global emits {components, styles} — update must accept it."""
+    mock_homepage()
+    responses.add(responses.POST, UPDATE_URL, json={"status": "ok"}, status=200)
+
+    block_file = tmp_path / "block.json"
+    block_file.write_text(json.dumps({
+        "components": [{"type": "section", "components": []}],
+        "styles": [],
+    }))
+
+    result = runner.invoke(cli, [
+        "global-blocks", "update", "20020077-89f8-468f-a488-017421ce5a0b",
+        "--file", str(block_file),
+    ])
+
+    assert result.exit_code == 0
+    request_body = json.loads(responses.calls[-1].request.body)
+    assert json.loads(request_body["contentJSON"]) == [{"type": "section", "components": []}]
+    # Wrapper expansion renders stored Html — update must re-render it or the
+    # server keeps the stale version and live pages never change
+    assert "<section" in request_body["html"]
 
 
 @responses.activate
