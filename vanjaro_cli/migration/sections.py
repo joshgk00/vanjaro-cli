@@ -242,6 +242,27 @@ def _section_like_child_count(element: Tag) -> int:
 _DOMINANT_TEXT_SHARE = 0.6
 
 
+def _is_section_like(child: Tag) -> bool:
+    """A ``<section>``/``<article>`` tag or a ``vj-section``-classed div."""
+    return child.name in ("section", "article") or "vj-section" in child.get("class", [])
+
+
+def _wraps_distinct_sections(children: list[Tag]) -> bool:
+    """True when ``children`` hold 2+ section-like blocks of differing shape.
+
+    A page-level container nests sections of different purposes (a hero beside
+    a feature grid beside footer chrome), so their tag+class signatures differ.
+    A uniform card grid repeats one signature (3x ``article.card``) — that's a
+    leaf section, not a container, and must stay whole.
+    """
+    signatures = {
+        (child.name, tuple(sorted(child.get("class", []))))
+        for child in children
+        if _is_section_like(child)
+    }
+    return len(signatures) >= 2
+
+
 def _is_banner_image_section(content: dict) -> bool:
     """A leading section that is just imagery — no headings, no real text."""
     images = content.get("images") or []
@@ -345,12 +366,25 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
 
     sections = _visible_children(container)
     for _ in range(_MAX_WRAPPER_DESCENT):
-        if len(sections) != 1 or sections[0].name not in _WRAPPER_TAGS:
+        if len(sections) != 1:
             break
-        inner = _visible_children(sections[0])
+        node = sections[0]
+        inner = _visible_children(node)
         if not inner:
             break
-        sections = inner
+        if node.name in _WRAPPER_TAGS:
+            sections = inner
+            continue
+        # A single <section>/<article> that wraps multiple nested sections is a
+        # page-level container, not a leaf — modern CMS pages (Vanjaro itself
+        # included) nest the whole body in one outer vj-section. Descend so the
+        # real hero/feature/footer sections surface instead of collapsing to one.
+        # A uniform card grid (3x <article>) is a leaf, not a container, so it
+        # stays whole; only descend when the nested sections differ in shape.
+        if node.name in ("section", "article") and _wraps_distinct_sections(inner):
+            sections = inner
+            continue
+        break
 
     for _ in range(_MAX_WRAPPER_DESCENT):
         if len(sections) < 2:

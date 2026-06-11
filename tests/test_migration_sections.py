@@ -2144,3 +2144,45 @@ def test_split_media_inherits_section_background():
     sections = extract_sections(html, BASE_URL, css_text=css)
 
     assert sections[0]["content"]["background_color"] == "#f4f4f4"
+
+
+# -- Nested-section container descent (modern CMS / Vanjaro-built sources) --
+
+
+def test_descends_into_outer_section_wrapping_distinct_sections():
+    """A page nested in one outer <section> surfaces its real child sections."""
+    html = _wrap(
+        """
+        <section class="vj-section">
+          <section class="vj-section hero">
+            <h1>A Full Service Company</h1>
+            <p>Call us any time.</p>
+          </section>
+          <section class="vj-section grid">
+            <h2>Why Choose Us</h2>
+            <p>Trusted for decades.</p>
+          </section>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 2
+    assert sections[0]["content"]["headings"] == ["A Full Service Company"]
+    assert sections[1]["content"]["headings"] == ["Why Choose Us"]
+
+
+def test_outer_section_with_uniform_card_grid_stays_whole():
+    """An outer <section> whose children are a uniform card grid is not split."""
+    cards = "".join(
+        f'<article class="card"><h3>Service {n}</h3><img src="/s{n}.jpg">'
+        f"<p>Description {n}.</p></article>"
+        for n in range(1, 4)
+    )
+    html = _wrap(f'<section class="vj-section">{cards}</section>')
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert sections[0]["type"] == "cards"
