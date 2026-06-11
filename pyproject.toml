@@ -21,6 +21,9 @@ dev = [
     "responses>=0.25",
     "pytest-mock>=3.12",
 ]
+visual = [
+    "playwright>=1.40",
+]
 
 [project.scripts]
 vanjaro = "vanjaro_cli.cli:cli"
