@@ -468,7 +468,8 @@ _HEX_COLOR = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
 _RGB_COLOR = re.compile(r"^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)")
 
 
-def _is_dark_color(value: str) -> bool:
+def _luminance(value: str) -> float | None:
+    """Perceptual luminance (0–255) of a hex/rgb color, or None if unparsable."""
     value = value.strip()
     rgb_match = _RGB_COLOR.match(value)
     if rgb_match:
@@ -476,12 +477,24 @@ def _is_dark_color(value: str) -> bool:
     else:
         hex_match = _HEX_COLOR.match(value)
         if not hex_match:
-            return False
+            return None
         hex_part = hex_match.group(1)
         if len(hex_part) == 3:
             hex_part = "".join(c * 2 for c in hex_part)
         red, green, blue = (int(hex_part[i : i + 2], 16) for i in (0, 2, 4))
-    return (0.299 * red + 0.587 * green + 0.114 * blue) < 128
+    return 0.299 * red + 0.587 * green + 0.114 * blue
+
+
+def _is_dark_color(value: str) -> bool:
+    luminance = _luminance(value)
+    return luminance is not None and luminance < 128
+
+
+# Minimum luminance gap between text and band for the text to stay legible.
+# Source-captured text colors are designed for the element's *own* background,
+# which often differs from the band color the crawl pairs it with (e.g. gray
+# nav text meant for a white area landing on an olive band).
+_MIN_CONTRAST = 80
 
 
 def apply_section_background(section: dict, content: dict) -> None:
@@ -509,12 +522,29 @@ def apply_section_background(section: dict, content: dict) -> None:
 
     text_color = content.get("text_color")
     if not isinstance(text_color, str) or not text_color:
-        # Dark bands (or image-backed bands, usually dark photos) need light
-        # text to stay readable; explicit source colors always win.
-        if (has_color and _is_dark_color(background)) or (has_image and not has_color):
-            text_color = "#ffffff"
-        else:
-            text_color = None
+        text_color = None
+
+    # A captured text color designed for a different background can land on
+    # this band with too little contrast (gray nav text on an olive band).
+    # When the gap is too small — or no color was captured at all — pick
+    # white/black against the band so the text stays legible.
+    band_luminance = _luminance(background) if has_color else None
+    captured_luminance = _luminance(text_color) if text_color else None
+    poor_contrast = (
+        band_luminance is not None
+        and captured_luminance is not None
+        and abs(band_luminance - captured_luminance) < _MIN_CONTRAST
+    )
+    if poor_contrast:
+        # Captured text is illegible on this band — flip to the readable
+        # extreme for the band's brightness.
+        text_color = "#111111" if band_luminance >= 128 else "#ffffff"
+    elif text_color is None and (
+        (has_color and _is_dark_color(background)) or (has_image and not has_color)
+    ):
+        # Dark/image bands with no captured color need light text; light bands
+        # keep the page default (already dark on light).
+        text_color = "#ffffff"
     if text_color:
         style += f"color:{text_color};"
 

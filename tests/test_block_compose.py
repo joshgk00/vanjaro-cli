@@ -832,3 +832,50 @@ def test_check_overflow_absorbs_card_unit_overflow():
 
     # heading_3..5 land in cloned columns; the cards carry no buttons anywhere
     assert overflow == ["button_9"]
+
+
+# ---------------------------------------------------------------------------
+# apply_section_background — band/text contrast
+# ---------------------------------------------------------------------------
+
+
+def test_low_contrast_captured_text_flips_to_readable():
+    """Gray text captured onto an olive band (same luminance) flips to white."""
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {}
+    apply_section_background(
+        section, {"background_color": "rgb(106, 103, 71)", "text_color": "rgb(102, 102, 102)"}
+    )
+
+    style = section["attributes"]["style"]
+    assert "background-color:rgb(106, 103, 71);" in style
+    assert "color:#ffffff;" in style
+
+
+def test_low_contrast_on_light_band_flips_to_dark():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {}
+    apply_section_background(section, {"background_color": "#f5f5f5", "text_color": "#eeeeee"})
+
+    assert "color:#111111;" in section["attributes"]["style"]
+
+
+def test_good_contrast_captured_text_is_kept():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {}
+    apply_section_background(section, {"background_color": "#1a1a1a", "text_color": "#eeeeee"})
+
+    assert "color:#eeeeee;" in section["attributes"]["style"]
+
+
+def test_light_band_without_captured_text_stays_default():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {}
+    apply_section_background(section, {"background_color": "#ffffff"})
+
+    # only background-color is set — no standalone text color directive
+    assert section["attributes"]["style"].count("color:") == 1
