@@ -5,6 +5,7 @@ from __future__ import annotations
 import copy
 import json
 import os
+import re
 from pathlib import Path
 from typing import Generator
 
@@ -13,6 +14,7 @@ __all__ = [
     "apply_overrides",
     "check_overflow",
     "enumerate_slots",
+    "expand_text_slots",
     "find_template",
     "get_templates_dir",
 ]
@@ -119,13 +121,81 @@ def enumerate_slots(template_component: dict) -> list[dict]:
     return slots
 
 
+_TEXT_OVERRIDE_KEY = re.compile(r"^text_(\d+)$")
+
+
+def _max_requested_text_slot(overrides: dict[str, str]) -> int:
+    indices = [
+        int(match.group(1))
+        for key in overrides
+        if (match := _TEXT_OVERRIDE_KEY.match(key))
+    ]
+    return max(indices, default=0)
+
+
+def _rewrite_component_ids(component: dict, suffix: str) -> None:
+    attributes = component.get("attributes")
+    if attributes and attributes.get("id"):
+        attributes["id"] = f"{attributes['id']}{suffix}"
+    for child in component.get("components", []):
+        _rewrite_component_ids(child, suffix)
+
+
+def _find_last_of_type(
+    component: dict, comp_type: str, parent: dict | None = None
+) -> tuple[dict, dict] | None:
+    """Return (component, parent) for the last component of ``comp_type``."""
+    found = (component, parent) if component.get("type") == comp_type else None
+    for child in component.get("components", []):
+        child_found = _find_last_of_type(child, comp_type, component)
+        if child_found is not None:
+            found = child_found
+    return found
+
+
+def expand_text_slots(template_data: dict, overrides: dict[str, str]) -> dict:
+    """Clone the last text slot until every ``text_N`` override has a home.
+
+    Crawled pages routinely carry more paragraphs than a template ships slots
+    for (a blog post body vs. Rich Text Block's four). Clones land directly
+    after the template's last text component — same parent, so they inherit
+    its column/styling — with ``-xN`` id suffixes to keep ids unique.
+    """
+    requested = _max_requested_text_slot(overrides)
+    if requested == 0:
+        return template_data
+
+    existing = sum(
+        1 for _, comp_type, _ in _walk_overridable(template_data["template"])
+        if comp_type == "text"
+    )
+    if existing == 0 or requested <= existing:
+        return template_data
+
+    result = copy.deepcopy(template_data)
+    located = _find_last_of_type(result["template"], "text")
+    if located is None or located[1] is None:
+        return template_data
+    last_text, parent = located
+
+    insert_at = parent["components"].index(last_text) + 1
+    for clone_number in range(requested - existing):
+        clone = copy.deepcopy(last_text)
+        _rewrite_component_ids(clone, f"-x{clone_number + 2}")
+        parent["components"].insert(insert_at + clone_number, clone)
+    return result
+
+
 def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
     """Deep-copy a template and apply content overrides to matching slots.
+
+    Text slots are expanded first so paragraph counts beyond the template's
+    capacity are absorbed instead of silently dropped.
 
     Returns the full template dict (name, category, description, template, styles)
     with the component tree modified according to the overrides.
     """
-    result = copy.deepcopy(template_data)
+    result = copy.deepcopy(expand_text_slots(template_data, overrides))
     for comp, comp_type, n in _walk_overridable(result["template"]):
         content_key = f"{comp_type}_{n}"
         if content_key in overrides and comp_type in CONTENT_TYPES:
@@ -142,7 +212,9 @@ def check_overflow(template_data: dict, overrides: dict[str, str]) -> list[str]:
 
     Useful for detecting silent data loss when a migration plan has more
     content items than a template can hold (e.g. 11 portfolio items mapped
-    to a 3-up card template).
+    to a 3-up card template). Text overflow doesn't count — apply_overrides
+    expands text slots to absorb it.
     """
-    available_keys = {slot["key"] for slot in enumerate_slots(template_data["template"])}
+    expanded = expand_text_slots(template_data, overrides)
+    available_keys = {slot["key"] for slot in enumerate_slots(expanded["template"])}
     return sorted(key for key in overrides if key not in available_keys)

@@ -515,3 +515,69 @@ def test_compose_warns_on_overflow(runner, tmp_path, monkeypatch):
 
     assert result.exit_code == 0
     assert "heading_99" in result.output
+
+
+# ---------------------------------------------------------------------------
+# expand_text_slots
+# ---------------------------------------------------------------------------
+
+
+def make_two_text_template() -> dict:
+    return {
+        "name": "Rich Text Block",
+        "category": "Content",
+        "template": {
+            "type": "section",
+            "attributes": {"id": "tpl-s1"},
+            "components": [
+                {
+                    "type": "column",
+                    "attributes": {"id": "tpl-c1"},
+                    "components": [
+                        {"type": "heading", "attributes": {"id": "tpl-h1"}, "content": ""},
+                        {"type": "text", "attributes": {"id": "tpl-t1"}, "content": ""},
+                        {"type": "text", "attributes": {"id": "tpl-t2"}, "content": ""},
+                    ],
+                }
+            ],
+        },
+    }
+
+
+def test_apply_overrides_expands_text_slots_for_long_content():
+    overrides = {f"text_{n}": f"Paragraph {n}" for n in range(1, 6)}
+    overrides["heading_1"] = "Post Title"
+
+    result = apply_overrides(make_two_text_template(), overrides)
+
+    column = result["template"]["components"][0]
+    texts = [c for c in column["components"] if c["type"] == "text"]
+    assert [t["content"] for t in texts] == [f"Paragraph {n}" for n in range(1, 6)]
+
+
+def test_expanded_clones_get_unique_ids():
+    overrides = {f"text_{n}": f"P{n}" for n in range(1, 5)}
+
+    result = apply_overrides(make_two_text_template(), overrides)
+
+    column = result["template"]["components"][0]
+    ids = [c["attributes"]["id"] for c in column["components"] if c["type"] == "text"]
+    assert len(ids) == len(set(ids)) == 4
+
+
+def test_no_expansion_when_overrides_fit():
+    template = make_two_text_template()
+
+    result = apply_overrides(template, {"text_1": "Only one"})
+
+    column = result["template"]["components"][0]
+    texts = [c for c in column["components"] if c["type"] == "text"]
+    assert len(texts) == 2
+
+
+def test_check_overflow_ignores_absorbable_text_keys():
+    overrides = {"text_5": "Deep paragraph", "image_9_src": "/nope.jpg"}
+
+    overflow = check_overflow(make_two_text_template(), overrides)
+
+    assert overflow == ["image_9_src"]
