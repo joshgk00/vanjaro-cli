@@ -2026,7 +2026,7 @@ def test_blog_listing_with_article_excerpts_classifies_as_blog_cards():
         f'<article class="list-post"><a href="/p{n}"><img src="/t{n}.jpg" alt=""></a>'
         f"<h2>Post {n} Title</h2>"
         f"<p>An excerpt for post {n} that is clearly long enough to read as a teaser.</p>"
-        f'<a href="/p{n}">CMW Team</a></article>"
+        f'<a href="/p{n}">CMW Team</a></article>'
         for n in range(1, 5)
     )
     html = _wrap(f'<section><div class="blog-timeline">{posts}</div></section>')
