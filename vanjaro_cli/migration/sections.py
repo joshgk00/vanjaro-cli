@@ -1166,6 +1166,32 @@ def _rescope_content_to_cards(
     }
 
 
+def _rescope_testimonial(content: dict) -> dict:
+    """Align a testimonial section's content with quote+name card slots.
+
+    Testimonial quotes live in ``<blockquote>`` elements and the speaker's
+    name is usually the avatar image's alt text (citations are often empty),
+    so the flat extraction leaves the Testimonial Cards template's quote/name
+    slots blank and dumps the raw avatars instead. Maps each quote to a text
+    slot and its name to a heading slot (citation first, else the matching
+    image alt), and drops the inline avatars the template has no slot for.
+    """
+    blockquotes = content.get("blockquotes") or []
+    quotes = [bq.get("text", "") for bq in blockquotes if isinstance(bq, dict) and bq.get("text")]
+    if len(quotes) < 1:
+        return content
+
+    images = content.get("images") or []
+    names: list[str] = []
+    for index, blockquote in enumerate(bq for bq in blockquotes if isinstance(bq, dict) and bq.get("text")):
+        name = blockquote.get("citation") or ""
+        if not name and index < len(images) and isinstance(images[index], dict):
+            name = images[index].get("alt", "")
+        names.append(name)
+
+    return {**content, "paragraphs": quotes, "headings": names, "images": []}
+
+
 def extract_sections(html: str, base_url: str, css_text: str | None = None) -> list[dict]:
     """
     Extract sections from a page's HTML.
@@ -1215,6 +1241,8 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
             continue
         if section_type in _CARD_LIKE_TYPES:
             content = _rescope_content_to_cards(element, section_type, base_url, content)
+        elif section_type == "testimonial":
+            content = _rescope_testimonial(content)
         elif section_type == "content":
             # Blog post bodies carry their byline in date/label elements that
             # paragraph extraction misses; surface it as the leading line.

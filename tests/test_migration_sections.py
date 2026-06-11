@@ -1913,7 +1913,11 @@ def test_feature_cards_keep_full_text():
 
 
 def test_heading_inside_blockquote_is_not_a_section_heading():
-    """A pull-quote's <h3> inside a <blockquote> must not become a heading."""
+    """A pull-quote's <h3> inside a <blockquote> must not become a heading.
+
+    Uses a gallery section (images present) — a lone quote with no gallery is
+    a testimonial and takes a different path.
+    """
     html = _wrap(
         """
         <section>
@@ -1923,13 +1927,43 @@ def test_heading_inside_blockquote_is_not_a_section_heading():
             <h3>I believe a leaf of grass is no less than the journey-work of the stars</h3>
             <footer><cite>Walt Whitman</cite></footer>
           </blockquote>
-          <p>Second paragraph keeps this out of the bio path entirely for sure.</p>
+          <a href="/1.jpg"><img src="/t1.jpg" alt="one"></a>
+          <a href="/2.jpg"><img src="/t2.jpg" alt="two"></a>
+          <a href="/3.jpg"><img src="/t3.jpg" alt="three"></a>
         </section>
         """
     )
 
     sections = extract_sections(html, BASE_URL)
 
+    assert sections[0]["type"] == "gallery"
     headings = sections[0]["content"]["headings"]
     assert "Lighting" in headings
     assert not any("leaf of grass" in h for h in headings)
+
+
+def test_testimonial_maps_quotes_and_names_to_card_slots():
+    """Blockquote quotes -> text slots, avatar alts -> name headings."""
+    html = _wrap(
+        """
+        <section class="testimonials">
+          <h2>What Clients Say</h2>
+          <div class="t"><img src="/a1.jpg" alt="Carlos S."><blockquote><p>They were great to work with.</p></blockquote></div>
+          <div class="t"><img src="/a2.jpg" alt="Bernard W."><blockquote><p>Highly recommended team.</p></blockquote></div>
+          <div class="t"><img src="/a3.jpg" alt="Dr. Myra F."><blockquote><p>A genuine pleasure throughout.</p></blockquote></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["type"] == "testimonial"
+    content = sections[0]["content"]
+    assert content["paragraphs"] == [
+        "They were great to work with.",
+        "Highly recommended team.",
+        "A genuine pleasure throughout.",
+    ]
+    assert content["headings"] == ["Carlos S.", "Bernard W.", "Dr. Myra F."]
+    # raw avatar images are dropped (template has no image slot)
+    assert content["images"] == []
