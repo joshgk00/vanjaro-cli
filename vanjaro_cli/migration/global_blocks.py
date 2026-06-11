@@ -211,10 +211,6 @@ def build_footer_block(content: dict, base_url: str = "") -> dict:
 
     if link_columns:
         container_children.append(_row(link_columns))
-    elif not (about_text or badge_images):
-        container_children.append(
-            _row([_col([_text("(migrated footer — no content captured)")], size_classes=["col-12"])])
-        )
 
     if about_text:
         container_children.append(
@@ -240,6 +236,13 @@ def build_footer_block(content: dict, base_url: str = "") -> dict:
     copyright_row = _footer_copyright_row(content)
     if copyright_row is not None:
         container_children.append(copyright_row)
+
+    # Only when nothing at all was captured — links, about, badges, social,
+    # or copyright — does the placeholder stand in for an empty block.
+    if not container_children:
+        container_children.append(
+            _row([_col([_text("(migrated footer — no content captured)")], size_classes=["col-12"])])
+        )
 
     # Bootstrap's bg-light carries !important and would beat the inline band
     # style, so the fallback class only ships when no band color was crawled.

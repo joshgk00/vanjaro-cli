@@ -524,3 +524,26 @@ def test_footer_block_without_social_or_copyright_has_no_extra_rows():
     rendered = str(block)
     assert "border-top" not in rendered
     assert "target" not in rendered
+
+
+def test_footer_with_only_copyright_has_no_placeholder():
+    """A footer that has just a copyright line must not show the empty placeholder."""
+    from vanjaro_cli.migration.global_blocks import build_footer_block
+
+    block = build_footer_block({
+        "copyright_text": "Copyright 2026 by Oasis Advisors",
+        "links": [{"text": "Privacy Statement", "href": "/privacy"}],
+        "background_color": "rgb(34, 44, 54)",
+    })
+
+    rendered = str(block)
+    assert "no content captured" not in rendered
+    assert "Copyright 2026 by Oasis Advisors" in rendered
+
+
+def test_truly_empty_footer_still_gets_placeholder():
+    from vanjaro_cli.migration.global_blocks import build_footer_block
+
+    block = build_footer_block({})
+
+    assert "no content captured" in str(block)
