@@ -489,6 +489,12 @@ def _extract_content(element: Tag, base_url: str) -> dict:
     headings: list[str] = []
     for level in ("h1", "h2", "h3", "h4"):
         for tag in element.find_all(level):
+            # A heading inside a <blockquote> is the quote's own text, not a
+            # section/card heading; it's captured separately in blockquotes.
+            # Left in the heading list it lands in a card-title slot and
+            # renders link-styled (Oasis Advisors' pull-quotes).
+            if tag.find_parent("blockquote") is not None:
+                continue
             text = tag.get_text(separator=" ", strip=True)
             if text:
                 price = _price_for_heading(tag)

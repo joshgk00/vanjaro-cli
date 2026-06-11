@@ -1910,3 +1910,26 @@ def test_feature_cards_keep_full_text():
 
     assert sections[0]["type"] == "cards"
     assert sections[0]["content"]["paragraphs"][0] == body
+
+
+def test_heading_inside_blockquote_is_not_a_section_heading():
+    """A pull-quote's <h3> inside a <blockquote> must not become a heading."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Lighting</h2>
+          <p>Landscape lighting changes how people see your property at night here.</p>
+          <blockquote class="dg-blockquote">
+            <h3>I believe a leaf of grass is no less than the journey-work of the stars</h3>
+            <footer><cite>Walt Whitman</cite></footer>
+          </blockquote>
+          <p>Second paragraph keeps this out of the bio path entirely for sure.</p>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    headings = sections[0]["content"]["headings"]
+    assert "Lighting" in headings
+    assert not any("leaf of grass" in h for h in headings)
