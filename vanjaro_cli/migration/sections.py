@@ -681,7 +681,14 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
     if tag_name == "footer" or role == "contentinfo" or "footer" in classes:
         return "footer"
 
-    if element.find("blockquote") or "testimonial" in classes or "quote" in classes:
+    if "testimonial" in classes or "quote" in classes:
+        return "testimonial"
+    # A blockquote only signals a testimonial section when quotes are the
+    # point: several of them, or a lone quote with no competing gallery/cards.
+    # One decorative pull-quote inside a service page (description + image
+    # gallery) must not hijack the whole section's classification.
+    blockquotes = element.find_all("blockquote")
+    if len(blockquotes) >= 2 or (blockquotes and element.find("img") is None):
         return "testimonial"
 
     if _looks_like_contact_form(element, classes):
