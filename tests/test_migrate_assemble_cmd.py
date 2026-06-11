@@ -454,7 +454,8 @@ FOOTER_TEMPLATE = {
 }
 
 
-def test_assemble_warns_on_overflow(runner, tmp_path, monkeypatch):
+def test_assemble_expands_excess_list_items(runner, tmp_path, monkeypatch):
+    """List items beyond the template's slot count ship via list expansion."""
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, FOOTER_TEMPLATE)
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
@@ -480,9 +481,12 @@ def test_assemble_warns_on_overflow(runner, tmp_path, monkeypatch):
     )
 
     assert result.exit_code == 0, result.output
-    assert "list-item_3" in result.output or "list-item_3" in (result.stderr or "")
+    assert "exceed template" not in result.output
     data = json.loads(output_file.read_text())
     assert len(data["components"]) == 1
+    rendered = json.dumps(data)
+    for item in ("Services", "Portfolio", "Contact"):
+        assert item in rendered
 
 
 def test_assemble_no_warning_when_content_fits(runner, tmp_path, monkeypatch):

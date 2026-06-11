@@ -484,15 +484,12 @@ def test_check_overflow_returns_unmatched_keys():
     assert unused == ["heading_2"]
 
 
-def test_check_overflow_with_footer_excess_items():
+def test_check_overflow_absorbs_excess_list_items():
     overrides = {f"list-item_{i}": f"Link {i}" for i in range(1, 8)}
     unused = check_overflow(FOOTER_TEMPLATE, overrides)
 
-    assert "list-item_1" not in unused
-    assert "list-item_3" not in unused
-    assert "list-item_4" in unused
-    assert "list-item_7" in unused
-    assert len(unused) == 4
+    # list-item_4..7 are absorbed by list slot expansion, not dropped
+    assert unused == []
 
 
 def test_check_overflow_empty_overrides():
@@ -760,6 +757,50 @@ def test_unit_expansion_does_not_mutate_original():
     apply_overrides(template, overrides)
 
     assert len(template["template"]["components"][0]["components"]) == 2
+
+
+# ---------------------------------------------------------------------------
+# expand_list_slots
+# ---------------------------------------------------------------------------
+
+
+def test_list_slots_expand_by_cloning():
+    overrides = {f"list-item_{n}": f"Feature {n}" for n in range(1, 7)}
+
+    result = apply_overrides(FOOTER_TEMPLATE, overrides)
+
+    list_comp = result["template"]["components"][0]["components"][0]["components"][0]["components"][1]
+    items = list_comp["components"]
+    assert [i["content"] for i in items] == [f"Feature {n}" for n in range(1, 7)]
+    ids = [i["attributes"]["id"] for i in items]
+    assert len(ids) == len(set(ids)) == 6
+
+
+def test_listless_template_gains_synthesized_list():
+    """Checklist content fed to a template with no list must not be dropped."""
+    overrides = {
+        "heading_1": "Each Website Includes",
+        "text_1": "Intro",
+        "list-item_1": "Hosting for your website",
+        "list-item_2": "Professional design",
+        "list-item_3": "Mobile-friendly website",
+    }
+
+    result = apply_overrides(make_two_text_template(), overrides)
+
+    column = result["template"]["components"][0]
+    lists = [c for c in column["components"] if c["type"] == "list"]
+    assert len(lists) == 1
+    assert [i["content"] for i in lists[0]["components"]] == [
+        "Hosting for your website", "Professional design", "Mobile-friendly website",
+    ]
+
+
+def test_empty_list_item_overrides_do_not_synthesize():
+    result = apply_overrides(make_two_text_template(), {"list-item_1": "", "text_1": "x"})
+
+    column = result["template"]["components"][0]
+    assert not [c for c in column["components"] if c["type"] == "list"]
 
 
 def test_check_overflow_absorbs_card_unit_overflow():
