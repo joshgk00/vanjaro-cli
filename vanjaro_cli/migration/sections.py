@@ -175,6 +175,28 @@ def _section_background_image(element: Tag, base_url: str) -> str | None:
     return None
 
 
+def _chrome_background(element: Tag) -> tuple[str | None, str | None]:
+    """Resolve the band color for a header/footer element.
+
+    Chrome carries almost no text, so the text-share gate in
+    :func:`_section_background` never matches its stamped descendants —
+    header/footer bands typically live on zero-text overlay divs
+    (``div.shade``, ``footer_bottom_bg``). Take the element's own stamp,
+    else the first stamped descendant whose color isn't the default white.
+    """
+    own = element.get(BACKGROUND_ATTR)
+    if own and not _is_default_background(own):
+        return own, element.get(TEXT_COLOR_ATTR)
+    for descendant in element.find_all(attrs={BACKGROUND_ATTR: True}, limit=12):
+        background = descendant.get(BACKGROUND_ATTR)
+        if background and not _is_default_background(background):
+            # A zero-text overlay's computed color is meaningless — leave
+            # text color unset so dark bands get the auto-white fallback.
+            has_text = bool(descendant.get_text(strip=True))
+            return background, descendant.get(TEXT_COLOR_ATTR) if has_text else None
+    return None, None
+
+
 _NON_STRUCTURAL_TAGS = ("script", "style", "noscript", "input", "link", "meta", "template")
 
 # Tags that commonly wrap an entire page body without contributing structure.
@@ -1129,6 +1151,14 @@ def extract_global_element(html: str, base_url: str, element_name: str) -> dict 
     content = _extract_content(element, base_url)
     if element_name == "header":
         content["nav_items"] = _extract_nav_structure(element, base_url)
+    background, text_color = _chrome_background(element)
+    if background:
+        content["background_color"] = background
+        if text_color:
+            content["text_color"] = text_color
+    background_image = _section_background_image(element, base_url)
+    if background_image:
+        content["background_image"] = background_image
     return {
         "type": element_name,
         "template": TEMPLATE_MAP.get(element_name, TEMPLATE_MAP["content"]),

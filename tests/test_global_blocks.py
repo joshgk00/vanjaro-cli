@@ -446,3 +446,43 @@ def test_global_blocks_delete_json(runner, mock_config):
     data = json.loads(result.output)
     assert data["status"] == "deleted"
     assert data["guid"] == "20020077-89f8-468f-a488-017421ce5a0b"
+
+
+def test_header_block_applies_band_colors():
+    from vanjaro_cli.migration.global_blocks import build_header_block
+
+    content = {
+        "images": [{"src": "/logo.png", "alt": "Logo"}],
+        "list_items": ["Home", "About"],
+        "background_color": "rgb(20, 20, 20)",
+        "text_color": "rgb(255, 255, 255)",
+    }
+
+    block = build_header_block(content)
+
+    style = block["components"][0]["attributes"]["style"]
+    assert "background-color:rgb(20, 20, 20);" in style
+    assert "color:rgb(255, 255, 255);" in style
+
+
+def test_footer_block_dark_band_gets_white_text():
+    from vanjaro_cli.migration.global_blocks import build_footer_block
+
+    content = {
+        "paragraphs": ["Copyright 2026"],
+        "background_color": "#1a1a1a",
+    }
+
+    block = build_footer_block(content)
+
+    style = block["components"][0]["attributes"]["style"]
+    assert "background-color:#1a1a1a;" in style
+    assert "color:#ffffff;" in style
+
+
+def test_blocks_without_band_colors_have_no_style():
+    from vanjaro_cli.migration.global_blocks import build_footer_block
+
+    block = build_footer_block({"paragraphs": ["Copyright"]})
+
+    assert "style" not in block["components"][0].get("attributes", {})

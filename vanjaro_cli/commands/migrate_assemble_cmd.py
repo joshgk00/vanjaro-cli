@@ -15,6 +15,7 @@ from vanjaro_cli.migration.overrides import crawl_content_to_overrides
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
     apply_overrides,
+    apply_section_background,
     check_overflow,
     enumerate_slots,
     find_template,
@@ -123,65 +124,6 @@ def _compose_template_section(
     return section, styles
 
 
-_HEX_COLOR = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
-_RGB_COLOR = re.compile(r"^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)")
-
-
-def _is_dark_color(value: str) -> bool:
-    value = value.strip()
-    rgb_match = _RGB_COLOR.match(value)
-    if rgb_match:
-        red, green, blue = (int(rgb_match.group(i)) for i in (1, 2, 3))
-    else:
-        hex_match = _HEX_COLOR.match(value)
-        if not hex_match:
-            return False
-        hex_part = hex_match.group(1)
-        if len(hex_part) == 3:
-            hex_part = "".join(c * 2 for c in hex_part)
-        red, green, blue = (int(hex_part[i : i + 2], 16) for i in (0, 2, 4))
-    return (0.299 * red + 0.587 * green + 0.114 * blue) < 128
-
-
-def _apply_section_background(section: dict, content: dict) -> None:
-    """Carry the crawled section background onto the composed component.
-
-    Templates ship unstyled; without this the source's full-width color bands
-    all render white. Dark backgrounds with no explicit text color get white
-    text so the band stays readable.
-    """
-    background = content.get("background_color")
-    background_image = content.get("background_image")
-    has_color = isinstance(background, str) and background
-    has_image = isinstance(background_image, str) and background_image
-    if not has_color and not has_image:
-        return
-
-    style = ""
-    if has_color:
-        style += f"background-color:{background};"
-    if has_image:
-        style += (
-            f"background-image:url({background_image});"
-            "background-size:cover;background-position:center;"
-        )
-
-    text_color = content.get("text_color")
-    if not isinstance(text_color, str) or not text_color:
-        # Dark bands (or image-backed bands, usually dark photos) need light
-        # text to stay readable; explicit source colors always win.
-        if (has_color and _is_dark_color(background)) or (has_image and not has_color):
-            text_color = "#ffffff"
-        else:
-            text_color = None
-    if text_color:
-        style += f"color:{text_color};"
-
-    attributes = section.setdefault("attributes", {})
-    existing = attributes.get("style", "")
-    attributes["style"] = f"{existing.rstrip(';')};{style}".lstrip(";") if existing else style
-
-
 def _blank_unfilled_content_slots(
     template_name: str,
     overrides: dict[str, str],
@@ -253,7 +195,7 @@ def _classify_and_resolve(
         )
         content_block = section_data.get("content")
         if isinstance(content_block, dict):
-            _apply_section_background(section, content_block)
+            apply_section_background(section, content_block)
         return section, styles
 
     exit_error(

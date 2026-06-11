@@ -20,6 +20,8 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
+from vanjaro_cli.utils.block_compose import apply_section_background
+
 __all__ = [
     "build_header_block",
     "build_footer_block",
@@ -134,16 +136,16 @@ def build_header_block(content: dict, base_url: str = "") -> dict:
         # is still a valid GrapesJS tree and the caller can fill it in.
         row_cols = [_col([_text("(migrated header — no content captured)")], size_classes=["col-12"])]
 
-    return _wrap(
-        _section(
-            extra_classes=["py-3"],
-            children=[
-                _container([
-                    _row(row_cols, extra_classes=["align-items-center"]),
-                ]),
-            ],
-        )
+    section = _section(
+        extra_classes=["py-3"],
+        children=[
+            _container([
+                _row(row_cols, extra_classes=["align-items-center"]),
+            ]),
+        ],
     )
+    apply_section_background(section, content)
+    return _wrap(section)
 
 
 def _header_logo(content: dict) -> dict | None:
@@ -231,12 +233,15 @@ def build_footer_block(content: dict, base_url: str = "") -> dict:
             _row(image_cols, extra_classes=["mt-4", "justify-content-center", "align-items-center"])
         )
 
-    return _wrap(
-        _section(
-            extra_classes=["py-5", "bg-light"],
-            children=[_container(container_children)],
-        )
+    # Bootstrap's bg-light carries !important and would beat the inline band
+    # style, so the fallback class only ships when no band color was crawled.
+    has_band = bool(content.get("background_color") or content.get("background_image"))
+    section = _section(
+        extra_classes=["py-5"] if has_band else ["py-5", "bg-light"],
+        children=[_container(container_children)],
     )
+    apply_section_background(section, content)
+    return _wrap(section)
 
 
 def _footer_link_columns(content: dict) -> list[dict]:

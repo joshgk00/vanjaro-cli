@@ -1642,3 +1642,21 @@ def test_aria_hidden_subtrees_are_dropped():
     content = sections[0]["content"]
     assert content["headings"] == ["Recent Posts", "Post One"]
     assert content["paragraphs"] == ["Excerpt one."]
+
+
+def test_global_element_carries_band_colors():
+    """Header/footer extraction picks up rendered-crawl background stamps."""
+    html = (
+        "<!doctype html><html><body>"
+        '<header class="header_bg" data-migrate-bg="rgb(20, 20, 20)" data-migrate-color="rgb(255, 255, 255)">'
+        '<img src="/logo.png" alt="Logo"><ul><li><a href="/">Home</a></li></ul>'
+        "</header>"
+        "<main><section><h1>Body</h1><p>Text</p></section></main>"
+        "</body></html>"
+    )
+
+    result = extract_global_element(html, BASE_URL, "header")
+
+    assert result is not None
+    assert result["content"]["background_color"] == "rgb(20, 20, 20)"
+    assert result["content"]["text_color"] == "rgb(255, 255, 255)"
