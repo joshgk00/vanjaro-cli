@@ -1678,3 +1678,25 @@ def test_multi_element_text_keeps_separators():
     content = sections[0]["content"]
     assert content["headings"][0] == "NEED TO TALK TO SOMEONE? GIVE US A CALL"
     assert content["paragraphs"][0] == "What is the newest update? Google Chrome flags HTTP pages."
+
+
+def test_article_body_with_featured_image_is_not_bio():
+    """A full article (1 image + many long paragraphs) must stay content."""
+    paragraphs = "".join(
+        f"<p>Paragraph {n} of the article body, long enough that the page is "
+        f"clearly a written article and not a short about-us blurb at all.</p>"
+        for n in range(1, 9)
+    )
+    html = _wrap(
+        f"""
+        <section>
+          <h1>It's Time to Get Serious About Security</h1>
+          <img src="/security-promo.jpg" alt="Security">
+          {paragraphs}
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["type"] == "content"

@@ -742,21 +742,22 @@ def _looks_like_bio(element: Tag, content: dict) -> bool:
 
     The Bio / About template is a two-column image-on-one-side, text-on-the-
     other-side layout. Heuristic: the section contains exactly one or two
-    images, at least one heading, and at least two paragraphs of text. We
-    use the extracted ``content`` dict (which already de-duplicates and
-    filters empty values) to avoid re-walking the tree.
+    images, at least one heading, and at least two paragraphs of SHORT text.
+    The length cap keeps full article bodies (blog posts routinely carry one
+    featured image + many paragraphs) out of the Bio template, whose image
+    column floats and circle-crops the image.
     """
     image_count = len(content.get("images", []))
     heading_count = len(content.get("headings", []))
-    paragraph_count = len(content.get("paragraphs", []))
+    paragraphs = content.get("paragraphs", [])
 
     if image_count not in (1, 2):
         return False
     if heading_count < 1:
         return False
-    if paragraph_count < 2:
+    if len(paragraphs) < 2:
         return False
-    return True
+    return sum(len(p) for p in paragraphs) <= 800
 
 
 def _direct_child_blocks(element: Tag) -> list[Tag]:
