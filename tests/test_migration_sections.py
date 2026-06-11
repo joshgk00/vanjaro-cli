@@ -1451,3 +1451,94 @@ def test_js_injected_body_siblings_do_not_block_descent():
     assert "Second Band" in headings
     types = [s["type"] for s in sections]
     assert "header" not in types and "footer" not in types
+
+
+# ---------------------------------------------------------------------------
+# _find_sibling_card_group: deep card grids under CMS wrapper markup
+# ---------------------------------------------------------------------------
+
+
+def test_deeply_nested_image_heading_grid_classifies_as_gallery():
+    """Same-class sibling blocks with img + heading buried under module chrome."""
+    items = "".join(
+        f'<div class="element sc-element"><img src="/work/{n}.jpg" alt="">'
+        f"<h4>Project {n}</h4></div>"
+        for n in range(1, 5)
+    )
+    html = _wrap(
+        f"""
+        <section>
+          <div class="DnnModule"><div class="contentpane">
+            <div class="portfolio-grid">{items}</div>
+          </div></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert sections[0]["type"] == "gallery"
+    content = sections[0]["content"]
+    assert content["headings"] == [f"Project {n}" for n in range(1, 5)]
+    assert [i["src"] for i in content["images"]] == [
+        f"{BASE_URL}work/{n}.jpg" for n in range(1, 5)
+    ]
+
+
+def test_imageless_icon_card_row_classifies_as_cards():
+    """Icon-font feature columns (heading + text, no <img>) are still cards."""
+    cols = "".join(
+        f'<div class="col-sm-4 sc-elem"><i class="icon-star"></i>'
+        f"<h3>Benefit {n}</h3><p>Why benefit {n} matters.</p></div>"
+        for n in range(1, 4)
+    )
+    html = _wrap(
+        f"""
+        <section>
+          <div class="container"><div class="row">{cols}</div></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert sections[0]["type"] == "cards"
+    content = sections[0]["content"]
+    assert content["headings"] == ["Benefit 1", "Benefit 2", "Benefit 3"]
+    assert content["paragraphs"] == [f"Why benefit {n} matters." for n in range(1, 4)]
+
+
+def test_headingless_image_strip_does_not_classify_as_cards():
+    """Badge/logo rows (images only, no headings) must not become galleries."""
+    badges = "".join(
+        f'<div class="col col-sm-4"><img src="/badge{n}.png" alt=""></div>'
+        for n in range(1, 4)
+    )
+    html = _wrap(
+        f"""
+        <section>
+          <div class="wrap"><div class="row">{badges}</div></div>
+          <p>Proud members of these organizations.</p>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert sections[0]["type"] not in ("cards", "gallery")
+
+
+def test_article_body_with_repeated_headings_stays_content():
+    """Free-flowing article markup (headings not wrapped in sibling cards)."""
+    body = "".join(
+        f"<h2>Subhead {n}</h2><p>Paragraph for subhead {n}.</p>" for n in range(1, 5)
+    )
+    html = _wrap(f'<section><div class="article-body">{body}</div></section>')
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert sections[0]["type"] == "content"

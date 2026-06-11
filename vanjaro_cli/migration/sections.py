@@ -579,6 +579,18 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
     if len(repeated) >= 3:
         return "cards"
 
+    # Card grids buried under wrapper markup (CMS module chrome): a group of
+    # same-class sibling blocks each carrying its own heading is a card row
+    # no matter how deep it nests. Image-rich, text-poor groups are galleries
+    # (portfolio thumbnail grids); the rest are feature cards.
+    group = _find_sibling_card_group(element)
+    if group:
+        with_image = sum(1 for member in group if member.find("img"))
+        with_text = sum(1 for member in group if member.find("p"))
+        if with_image >= len(group) // 2 and with_image > with_text:
+            return "gallery"
+        return "cards"
+
     # CTA: short (one heading + one button) with little else
     if (
         len(content["headings"]) <= 1
@@ -812,6 +824,33 @@ def _find_gallery_anchors(element: Tag) -> list[Tag]:
     return [anchor for anchor in element.find_all("a") if anchor.find("img")]
 
 
+def _find_sibling_card_group(element: Tag) -> list[Tag]:
+    """Find the largest group of same-class sibling blocks that each own a heading.
+
+    Card grids on CMS-built sites nest the repeating unit several wrapper
+    levels below the section element (module chrome, content panes), so
+    direct-children checks miss them. Walks every container in the subtree
+    and groups its direct ``div``/``article``/``li`` children by tag + class
+    signature; a group of 3+ members where every member carries a heading is
+    a card row. Requiring headings keeps image-only strips (badge rows,
+    testimonial avatars) and free-flowing article bodies out.
+    """
+    best: list[Tag] = []
+    for container in element.find_all(["div", "section", "ul", "ol"]):
+        groups: dict[tuple[str, str], list[Tag]] = {}
+        for child in container.find_all(recursive=False):
+            if not isinstance(child, Tag) or child.name not in ("div", "article", "li"):
+                continue
+            signature = (child.name, " ".join(child.get("class", [])))
+            groups.setdefault(signature, []).append(child)
+        for members in groups.values():
+            if len(members) < 3 or len(members) <= len(best):
+                continue
+            if all(member.find(_HEADING_TAGS) for member in members):
+                best = members
+    return best
+
+
 def _first_image_entry(card: Tag, base_url: str) -> dict:
     """Extract a single ``{src, alt}`` entry from the first ``<img>`` inside ``card``.
 
@@ -869,6 +908,11 @@ def _rescope_content_to_cards(
     extraction is better than an empty realigned result.
     """
     cards = _find_cards_by_heading(element)
+    if len(cards) < 3:
+        # Cards without images (icon-font feature rows) never match the
+        # heading-walker, but the sibling-group detector that classified the
+        # section can still hand us the per-card wrappers.
+        cards = _find_sibling_card_group(element)
     if len(cards) < 3 and section_type == "gallery":
         # Pure anchor-wrapped image grids (e.g. portfolio thumbnail lightboxes)
         # have no per-card headings, so fall back to ``<a>`` elements as cards.
