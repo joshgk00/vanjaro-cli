@@ -1826,3 +1826,55 @@ def test_heading_without_price_is_unchanged():
     sections = extract_sections(html, BASE_URL)
 
     assert sections[0]["content"]["headings"][0] == "Plain Heading"
+
+
+def test_stacked_modules_in_one_pane_split_into_sections():
+    """A feature band stacked above a portfolio grid in one pane = two sections."""
+    features = "".join(
+        f'<div class="infobox infobox0{n} fadeInLeft delay{n}"><h3>Feature {n}</h3>'
+        f"<p>Why feature {n} matters to you.</p></div>"
+        for n in range(1, 5)
+    )
+    portfolio = "".join(
+        f'<div class="work-item"><img src="/work/{n}.jpg" alt=""><h4>Project {n}</h4></div>'
+        for n in range(1, 5)
+    )
+    html = _wrap(
+        f"""
+        <header class="header_bg"><img src="/logo.png" alt="l"></header>
+        <div class="Full_Screen_Pane">
+          <div class="DnnModule feature-mod"><div class="band">{features}</div></div>
+          <div class="DnnModule portfolio-mod"><div class="grid">{portfolio}</div></div>
+        </div>
+        <footer class="footer_box"><p>c</p></footer>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    feature_headings = [
+        h for s in sections for h in s["content"]["headings"] if h.startswith("Feature")
+    ]
+    project_headings = [
+        h for s in sections for h in s["content"]["headings"] if h.startswith("Project")
+    ]
+    assert feature_headings == ["Feature 1", "Feature 2", "Feature 3", "Feature 4"]
+    assert len(project_headings) == 4
+    # the two groups must land in different sections, not one swallowing the other
+    feature_section = next(s for s in sections if "Feature 1" in s["content"]["headings"])
+    assert "Project 1" not in feature_section["content"]["headings"]
+
+
+def test_animated_card_grid_groups_despite_varying_classes():
+    """Per-card animation/index class variation still groups as one card row."""
+    cards = "".join(
+        f'<div class="infobox infobox0{n} animation_item fadeInRight delay{n}">'
+        f"<h3>Benefit {n}</h3><p>Detail {n}.</p></div>"
+        for n in range(1, 4)
+    )
+    html = _wrap(f'<section><div class="row">{cards}</div></section>')
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["type"] == "cards"
+    assert sections[0]["content"]["headings"] == ["Benefit 1", "Benefit 2", "Benefit 3"]

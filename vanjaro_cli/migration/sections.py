@@ -306,6 +306,27 @@ def _children_look_like_cards(element: Tag) -> bool:
     return most_common_count >= 2 and most_common_count / len(children) >= 0.5
 
 
+def _is_multi_module_pane(section: Tag, inner: list[Tag]) -> bool:
+    """True when a pane stacks two or more self-contained content modules.
+
+    Each child must own a heading and carry real body content (text or
+    images), and the children must not form a uniform card grid. This
+    separates genuinely distinct stacked sections (a feature band above a
+    portfolio grid) from a single section whose layout happens to nest a
+    couple of headed sub-blocks.
+    """
+    if _is_chrome_like(section) or len(inner) < 2:
+        return False
+    if _children_look_like_cards(section):
+        return False
+    for child in inner:
+        if child.find(_HEADING_TAGS) is None:
+            return False
+        if not (child.find("p") or child.find("img")):
+            return False
+    return True
+
+
 def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
     """Return one element per visual section of the page.
 
@@ -371,6 +392,15 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
                 and _section_like_child_count(section) >= 2
                 and not _children_look_like_cards(section)
             ):
+                expanded.extend(inner)
+                did_expand = True
+            elif _is_multi_module_pane(section, inner):
+                # Two or more stacked content modules sharing one pane — each
+                # carries its own heading and isn't part of a uniform card
+                # grid. They're distinct sections regardless of how much of
+                # the page's text this pane holds; without splitting, the
+                # dominant module's card grid swallows the others at rescope
+                # time (e.g. home's feature band lost behind the portfolio).
                 expanded.extend(inner)
                 did_expand = True
             else:
@@ -941,16 +971,44 @@ def _find_gallery_anchors(element: Tag) -> list[Tag]:
     return [anchor for anchor in element.find_all("a") if anchor.find("img")]
 
 
+# Animation / scroll-reveal / state tokens that vary per card (so the same
+# card grid carries different class strings: infobox01+fadeInLeft+delay1 vs
+# infobox02+fadeInRight+delay2). Stripped before grouping siblings.
+_DECORATIVE_CLASS_TOKENS = frozenset({
+    "animation", "animation_item", "animated", "wow", "aos",
+    "fadein", "fadeinleft", "fadeinright", "fadeinup", "fadeindown",
+    "slideup", "slidedown", "slideinleft", "slideinright",
+    "scaleup", "zoomin", "bounce", "active",
+})
+_TRAILING_DIGITS = re.compile(r"\d+$")
+
+
+def _normalized_class_signature(child: Tag) -> str:
+    """A class signature that ignores per-card animation and index variation.
+
+    Drops scroll-reveal/state tokens and the trailing digits CMS themes append
+    to enumerate cards (``infobox01`` -> ``infobox``, ``delay2`` -> ``delay``),
+    so a uniform card grid groups even when each card's class string differs.
+    """
+    tokens = set()
+    for raw in child.get("class", []):
+        token = _TRAILING_DIGITS.sub("", raw.lower())
+        if token and token not in _DECORATIVE_CLASS_TOKENS:
+            tokens.add(token)
+    return " ".join(sorted(tokens))
+
+
 def _find_sibling_card_group(element: Tag) -> list[Tag]:
     """Find the largest group of same-class sibling blocks that each own a heading.
 
     Card grids on CMS-built sites nest the repeating unit several wrapper
     levels below the section element (module chrome, content panes), so
     direct-children checks miss them. Walks every container in the subtree
-    and groups its direct ``div``/``article``/``li`` children by tag + class
-    signature; a group of 3+ members where every member carries a heading is
-    a card row. Requiring headings keeps image-only strips (badge rows,
-    testimonial avatars) and free-flowing article bodies out.
+    and groups its direct ``div``/``article``/``li`` children by tag + a
+    normalized class signature (animation/index tokens stripped); a group of
+    3+ members where every member carries a heading is a card row. Requiring
+    headings keeps image-only strips (badge rows, testimonial avatars) and
+    free-flowing article bodies out.
     """
     best: list[Tag] = []
     for container in element.find_all(["div", "section", "ul", "ol"]):
@@ -958,7 +1016,9 @@ def _find_sibling_card_group(element: Tag) -> list[Tag]:
         for child in container.find_all(recursive=False):
             if not isinstance(child, Tag) or child.name not in ("div", "article", "li"):
                 continue
-            signature = (child.name, " ".join(child.get("class", [])))
+            signature = (child.name, _normalized_class_signature(child))
+            if not signature[1]:
+                continue
             groups.setdefault(signature, []).append(child)
         for members in groups.values():
             if len(members) < 3 or len(members) <= len(best):
