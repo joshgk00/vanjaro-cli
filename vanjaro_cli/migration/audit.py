@@ -165,11 +165,15 @@ def check_global_blocks(
     """Evaluate global-block hygiene across all audited pages.
 
     (a) Header + footer presence: each page should have at least one
-        div[data-guid][published] wrapper. Bonus if the same GUID appears on
-        every page (indicating a proper global block).
+        div[data-guid] wrapper. Bonus if the same GUID appears on every page
+        (indicating a proper global block).
     (b) Duplicate-section detection: top-level sections whose normalized
         markup appears on 2+ pages without a data-guid wrapper should be
         global blocks.
+
+    Note: Vanjaro renders global-block wrappers as ``<div data-guid="...">``
+    with no ``published`` attribute in the page HTML — the attribute is only
+    present in the Vanjaro editor UI. Detection relies on ``data-guid`` alone.
     """
     details: list[str] = []
 
@@ -185,7 +189,7 @@ def check_global_blocks(
         guids = [
             el.get("data-guid")
             for el in editor.find_all(True)
-            if isinstance(el, Tag) and el.get("data-guid") and el.get("published")
+            if isinstance(el, Tag) and el.get("data-guid")
         ]
         if not guids:
             pages_missing_globals.append(url)
@@ -232,14 +236,22 @@ def check_global_blocks(
     if duplicate_sections:
         score = max(0, score - 10 * len(duplicate_sections))
 
-    return {
-        "check": "global-blocks",
-        "score": score,
-        "summary": (
+    if not guid_pages:
+        summary = (
+            f"No global-block wrappers found on any page; "
+            f"{len(duplicate_sections)} duplicate section(s) without global wrapping"
+        )
+    else:
+        summary = (
             f"{len(sitewide_guids)} sitewide global block(s); "
             f"{len(pages_missing_globals)} page(s) missing wrappers; "
             f"{len(duplicate_sections)} duplicate section(s) without global wrapping"
-        ),
+        )
+
+    return {
+        "check": "global-blocks",
+        "score": score,
+        "summary": summary,
         "details": details,
     }
 

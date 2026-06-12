@@ -17,6 +17,34 @@ from vanjaro_cli.migration.crawler import DEFAULT_TIMEOUT, USER_AGENT
 
 __all__ = ["audit_structure"]
 
+# DNN ships these pages on every install. The `isspecial` API field covers
+# Activity-Feed and Signin; Search Results and 404 Error Page have
+# `isspecial: false` in the PersonaBar API, so they must be matched by tabpath.
+_DNN_SYSTEM_TABPATHS: frozenset[str] = frozenset(
+    {"/SearchResults", "/404ErrorPage"}
+)
+
+
+def _is_system_page(page: dict) -> bool:
+    """Return True when a page is a DNN system/admin page, not migrated content.
+
+    Detection uses two complementary signals from the PersonaBar GetPageList
+    response:
+    - ``isspecial: true`` — set by DNN on Activity-Feed, Signin, and similar
+      framework pages. The portal home page is also ``isspecial`` but has
+      ``parentId == -1`` and a bare ``/`` URL, so we leave it through; in
+      practice the home page is always a content page worth auditing.
+    - tabpath in ``_DNN_SYSTEM_TABPATHS`` — catches Search Results and 404
+      Error Page, which DNN does not mark ``isspecial``.
+    """
+    if page.get("isspecial"):
+        url = page.get("url") or ""
+        parsed_path = urlparse(url).path
+        if parsed_path not in ("", "/"):
+            return True
+    tabpath = page.get("tabpath") or ""
+    return tabpath in _DNN_SYSTEM_TABPATHS
+
 
 def _fetch_rendered_html(base_url: str, path: str) -> str:
     """Fetch a published Vanjaro page as anonymous HTML — no auth required."""
@@ -31,8 +59,12 @@ def _fetch_rendered_html(base_url: str, path: str) -> str:
     return response.text
 
 
-def _discover_page_paths(as_json: bool) -> list[str]:
-    """Return published page paths from the Vanjaro API."""
+def _discover_page_paths(as_json: bool, include_system: bool = False) -> list[str]:
+    """Return published page paths from the Vanjaro API.
+
+    DNN system pages (Activity-Feed, Signin, Search Results, 404 Error Page)
+    are excluded by default; pass ``include_system=True`` to keep them.
+    """
     try:
         client, _ = get_client()
     except ConfigError as exc:
@@ -47,6 +79,8 @@ def _discover_page_paths(as_json: bool) -> list[str]:
     paths: list[str] = []
     for page in raw_pages:
         if not isinstance(page, dict):
+            continue
+        if not include_system and _is_system_page(page):
             continue
         url = page.get("url") or page.get("tabpath") or ""
         if url:
@@ -121,6 +155,12 @@ def _print_report(report: dict, base_url: str) -> None:
     help="Discover and audit all published pages via the API.",
 )
 @click.option(
+    "--include-system",
+    "include_system",
+    is_flag=True,
+    help="Include DNN system pages (Activity-Feed, Signin, Search Results, 404) in --all discovery.",
+)
+@click.option(
     "--json",
     "output_json_path",
     default=None,
@@ -131,6 +171,7 @@ def _print_report(report: dict, base_url: str) -> None:
 def audit_structure(
     page_paths: tuple[str, ...],
     audit_all: bool,
+    include_system: bool,
     output_json_path: str | None,
     as_json: bool,
 ) -> None:
@@ -152,7 +193,7 @@ def audit_structure(
 
     paths: list[str] = []
     if audit_all:
-        paths = _discover_page_paths(as_json)
+        paths = _discover_page_paths(as_json, include_system=include_system)
         if not paths:
             exit_error("No published pages found via API.", as_json)
     else:

@@ -462,3 +462,71 @@ def test_audit_site_composite_score_blends_page_and_site_checks():
     gb_score = report["site_checks"]["global-blocks"]["score"]
     expected = (page_score + gb_score) / 2
     assert abs(report["score"] - expected) < 0.5
+
+
+# ---------------------------------------------------------------------------
+# check_global_blocks — live-site regression (Task B)
+# ---------------------------------------------------------------------------
+#
+# Vanjaro renders global-block wrappers as bare <div data-guid="..."> with no
+# ``published`` attribute in the page HTML. The previous implementation
+# required el.get("published") to be truthy, which caused every page to be
+# reported as "missing wrappers" on a real Vanjaro site.
+#
+# Verbatim snippet from http://vanjarocli.local/ (fetched 2026-06-12):
+#   <div data-guid="74b54357-6b87-4eee-b0c3-5ec10a3dcfbb" id="323b9">
+#   <div data-guid="3131d4cd-123d-41a6-af56-e951785cdfdc" id="a1a67">
+
+
+def _make_live_site_page_html(guid_1: str, guid_2: str) -> str:
+    """HTML that mirrors the actual Vanjaro rendered output — no published attribute."""
+    return (
+        "<html><body>"
+        "<div id='dnn_ContentPane'><div class='vj-wrapper'>"
+        "<div id='vjEditor'>"
+        f"<div data-guid='{guid_1}' id='323b9'><nav>Header nav</nav></div>"
+        "<section id='tpl-hero-s1' class='vj-section py-5'>"
+        "<h1 class='vj-heading head-style-1'>Welcome</h1>"
+        "</section>"
+        "<section id='tpl-fc3-s1' class='vj-section py-5'>"
+        "<p class='vj-text paragraph-style-1'>Content block</p>"
+        "</section>"
+        f"<div data-guid='{guid_2}' id='a1a67'><footer>Footer</footer></div>"
+        "</div>"
+        "</div></div>"
+        "</body></html>"
+    )
+
+
+def test_global_blocks_detects_guid_without_published_attribute():
+    """data-guid wrappers must be detected even when the published attribute is absent."""
+    guid_1 = "74b54357-6b87-4eee-b0c3-5ec10a3dcfbb"
+    guid_2 = "3131d4cd-123d-41a6-af56-e951785cdfdc"
+    html = _make_live_site_page_html(guid_1, guid_2)
+    pages = [_make_soup_pair("http://site.com/", html)]
+    finding = check_global_blocks(pages)
+    assert not any("missing" in d.lower() for d in finding["details"])
+    assert finding["score"] > 0
+
+
+def test_global_blocks_sitewide_guid_detected_without_published_attribute():
+    """Sitewide GUIDs are identified correctly without published attribute."""
+    guid_header = "35665768-28e6-4cfe-9c91-0a1f40db5cf5"
+    guid_footer = "064e9f13-9b23-4a4d-9a17-a61fe1a47bf3"
+    html_contact = _make_live_site_page_html(guid_header, guid_footer)
+    html_lighting = _make_live_site_page_html(guid_header, guid_footer)
+    pages = [
+        _make_soup_pair("http://site.com/contact", html_contact),
+        _make_soup_pair("http://site.com/lighting", html_lighting),
+    ]
+    finding = check_global_blocks(pages)
+    assert any("Sitewide global blocks" in d for d in finding["details"])
+    assert not any("missing" in d.lower() for d in finding["details"])
+
+
+def test_global_blocks_no_wrappers_summary_distinguishes_zero_case():
+    """When no data-guid wrappers exist on any page, the summary says so explicitly."""
+    html = _wrap_in_editor("<section><p>No global blocks</p></section>")
+    pages = [_make_soup_pair("http://site.com/page1", html)]
+    finding = check_global_blocks(pages)
+    assert "No global-block wrappers found" in finding["summary"]

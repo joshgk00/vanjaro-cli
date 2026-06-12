@@ -59,7 +59,14 @@ def _make_pages_response(pages: list[dict]) -> dict:
     return {"pages": pages}
 
 
-def _make_page_item(tab_id: int, name: str, url: str, child_count: int = 0) -> dict:
+def _make_page_item(
+    tab_id: int,
+    name: str,
+    url: str,
+    child_count: int = 0,
+    isspecial: bool = False,
+    tabpath: str | None = None,
+) -> dict:
     return {
         "id": tab_id,
         "name": name,
@@ -69,8 +76,8 @@ def _make_page_item(tab_id: int, name: str, url: str, child_count: int = 0) -> d
         "status": "Visible",
         "publishStatus": "Published",
         "childCount": child_count,
-        "tabpath": url,
-        "isspecial": False,
+        "tabpath": tabpath if tabpath is not None else url,
+        "isspecial": isspecial,
         "pageType": "normal",
     }
 
@@ -317,3 +324,72 @@ def test_json_report_schema_contract(runner, mock_config):
     assert isinstance(gb["score"], int)
     assert isinstance(gb["summary"], str)
     assert isinstance(gb["details"], list)
+
+
+# ---------------------------------------------------------------------------
+# System-page filtering (Task A)
+# ---------------------------------------------------------------------------
+
+
+@responses.activate
+def test_audit_structure_all_excludes_system_pages_by_default(runner, mock_config):
+    """DNN system pages (isspecial=true, known DNN tabpaths) are filtered from --all."""
+    mock_homepage(None)
+    responses.add(
+        responses.GET,
+        GET_PAGES_URL,
+        json=_make_pages_response([
+            _make_page_item(1, "Home", "/", isspecial=True, tabpath="/Home"),
+            _make_page_item(2, "About", "/about"),
+            _make_page_item(3, "Signin", f"{BASE_URL}/Signin", isspecial=True, tabpath="/Signin"),
+            _make_page_item(4, "Search Results", f"{BASE_URL}/Search-Results", isspecial=False, tabpath="/SearchResults"),
+            _make_page_item(5, "404 Error Page", f"{BASE_URL}/404-Error-Page", isspecial=False, tabpath="/404ErrorPage"),
+        ]),
+        status=200,
+    )
+    responses.add(responses.GET, HOME_URL, body=_make_clean_page_html(), status=200)
+    responses.add(responses.GET, f"{BASE_URL}/about", body=_make_clean_page_html("bbbb-2222"), status=200)
+
+    result = runner.invoke(cli, ["migrate", "audit-structure", "--all", "--as-json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    audited_urls = [p["url"] for p in data["pages"]]
+    assert len(audited_urls) == 2
+    assert not any("Signin" in u or "Search-Results" in u or "404" in u for u in audited_urls)
+
+
+@responses.activate
+def test_audit_structure_all_include_system_flag_keeps_system_pages(runner, mock_config):
+    """--include-system overrides the default filter and includes DNN system pages."""
+    mock_homepage(None)
+    responses.add(
+        responses.GET,
+        GET_PAGES_URL,
+        json=_make_pages_response([
+            _make_page_item(1, "Home", "/", isspecial=True, tabpath="/Home"),
+            _make_page_item(2, "Signin", f"{BASE_URL}/Signin", isspecial=True, tabpath="/Signin"),
+        ]),
+        status=200,
+    )
+    responses.add(responses.GET, HOME_URL, body=_make_clean_page_html(), status=200)
+    responses.add(responses.GET, f"{BASE_URL}/Signin", body=_make_clean_page_html("sig-1"), status=200)
+
+    result = runner.invoke(cli, ["migrate", "audit-structure", "--all", "--include-system", "--as-json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert len(data["pages"]) == 2
+
+
+@responses.activate
+def test_audit_structure_page_flag_never_filtered(runner, mock_config):
+    """Explicit --page paths are never filtered, even if they are system pages."""
+    mock_homepage(None)
+    responses.add(responses.GET, f"{BASE_URL}/Signin", body=_make_clean_page_html("sig-1"), status=200)
+
+    result = runner.invoke(cli, ["migrate", "audit-structure", "--page", "/Signin", "--as-json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    assert len(data["pages"]) == 1
