@@ -34,35 +34,53 @@
                   {
                     "type": "heading",
                     "tagName": "h2",
+                    "content": "Heading Text",
                     "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false},
                       {"name": "mb-4", "active": false}
                     ],
-                    "attributes": {"id": "tpl-rtx-h1"},
-                    "content": ""
+                    "attributes": {"id": "tpl-rtx-h1"}
                   },
                   {
                     "type": "text",
                     "tagName": "p",
-                    "attributes": {"id": "tpl-rtx-t1"},
-                    "content": ""
+                    "content": "Paragraph of text content.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-rtx-t1"}
                   },
                   {
                     "type": "text",
                     "tagName": "p",
-                    "attributes": {"id": "tpl-rtx-t2"},
-                    "content": ""
+                    "content": "Paragraph of text content.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-rtx-t2"}
                   },
                   {
                     "type": "text",
                     "tagName": "p",
-                    "attributes": {"id": "tpl-rtx-t3"},
-                    "content": ""
+                    "content": "Paragraph of text content.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-rtx-t3"}
                   },
                   {
                     "type": "text",
                     "tagName": "p",
-                    "attributes": {"id": "tpl-rtx-t4"},
-                    "content": ""
+                    "content": "Paragraph of text content.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-rtx-t4"}
                   }
                 ]
               }
@@ -71,5 +89,6 @@
         ]
       }
     ]
-  }
+  },
+  "styles": []
 }
