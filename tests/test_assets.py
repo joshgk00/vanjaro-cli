@@ -278,6 +278,35 @@ def test_assets_upload_dir_happy_path(runner, mock_config, tmp_path):
 
 
 @responses.activate
+def test_assets_upload_dir_captures_variants(runner, mock_config, tmp_path):
+    mock_homepage()
+    hero_response = {
+        "fileId": 10,
+        "fileName": "hero.jpg",
+        "url": "/Portals/0/Images/hero.jpg",
+        "variants": [
+            {"url": "/Portals/0/Images/.versions/hero_360w.jpg", "width": 360, "type": "image"},
+            {"url": "/Portals/0/Images/.versions/hero_360w.webp", "width": 360, "type": "webp"},
+        ],
+    }
+    responses.add(responses.POST, UPLOAD_URL, json=hero_response, status=200)
+    responses.add(responses.POST, UPLOAD_URL, json=_upload_response(11, "icon.svg"), status=200)
+    responses.add(responses.POST, UPLOAD_URL, json=_upload_response(12, "photo.png"), status=200)
+
+    source = _make_upload_dir(tmp_path)
+
+    result = runner.invoke(cli, ["assets", "upload-dir", str(source)])
+
+    assert result.exit_code == 0, result.output
+
+    manifest = json.loads((source / "manifest.json").read_text())
+    by_name = {entry["local_file"]: entry for entry in manifest}
+    assert by_name["hero.jpg"]["variants"] == hero_response["variants"]
+    # An upload response with no variants array records an empty list.
+    assert by_name["icon.svg"]["variants"] == []
+
+
+@responses.activate
 def test_assets_upload_dir_skip_existing(runner, mock_config, tmp_path):
     mock_homepage()
     responses.add(responses.POST, UPLOAD_URL, json=_upload_response(21, "icon.svg"), status=200)

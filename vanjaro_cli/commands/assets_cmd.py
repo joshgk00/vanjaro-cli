@@ -230,6 +230,7 @@ def _build_entry(local_file: str, filename: str, size_bytes: int) -> dict[str, A
         "content_type": _guess_content_type(filename),
         "vanjaro_url": None,
         "vanjaro_file_id": None,
+        "variants": [],
         "uploaded": False,
     }
 
@@ -321,6 +322,8 @@ def upload_dir(
         body = response.json() if response.content else {}
         entry["vanjaro_url"] = body.get("url") or body.get("Url")
         entry["vanjaro_file_id"] = body.get("fileId") or body.get("FileId")
+        variants = body.get("variants") or body.get("Variants")
+        entry["variants"] = variants if isinstance(variants, list) else []
         entry["uploaded"] = True
         uploaded += 1
         _save_manifest(manifest_path, entries)

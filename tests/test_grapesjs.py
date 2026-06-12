@@ -335,6 +335,54 @@ class TestRenderComponents:
         component = {"type": "image", "attributes": {"id": "i", "src": "/a.png", "alt": "Alt"}}
         assert render_component(component) == '<img id="i" src="/a.png" alt="Alt">'
 
+    def test_picture_box_tree_renders_picture_markup(self) -> None:
+        component = {
+            "type": "image-box",
+            "components": [
+                {
+                    "type": "image-frame",
+                    "classes": [{"name": "image-frame", "active": False}],
+                    "components": [
+                        {
+                            "tagName": "picture",
+                            "type": "picture-box",
+                            "classes": [{"name": "picture-box", "active": False}],
+                            "components": [
+                                {
+                                    "type": "source",
+                                    "attributes": {
+                                        "type": "image/webp",
+                                        "srcset": "/x_360w.webp 360w",
+                                        "sizes": "100vw",
+                                    },
+                                },
+                                {
+                                    "type": "image",
+                                    "classes": [{"name": "img-fluid", "active": False}],
+                                    "attributes": {"loading": "lazy", "src": "/x.png"},
+                                },
+                            ],
+                        }
+                    ],
+                }
+            ],
+        }
+        result = render_component(component)
+        assert result == (
+            '<div><span class="image-frame"><picture class="picture-box">'
+            '<source type="image/webp" srcset="/x_360w.webp 360w" sizes="100vw">'
+            '<img loading="lazy" src="/x.png" class="img-fluid"></picture></span></div>'
+        )
+
+    def test_source_is_a_void_element_with_no_closing_tag(self) -> None:
+        component = {
+            "type": "source",
+            "attributes": {"type": "image/webp", "srcset": "/x_360w.webp 360w"},
+        }
+        result = render_component(component)
+        assert result == '<source type="image/webp" srcset="/x_360w.webp 360w">'
+        assert "</source>" not in result
+
     def test_globalblockwrapper_renders_as_empty_div(self) -> None:
         """Vanjaro expands these server-side by their data-guid reference."""
         component = {

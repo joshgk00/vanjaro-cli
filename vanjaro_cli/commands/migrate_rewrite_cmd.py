@@ -12,6 +12,7 @@ from vanjaro_cli.migration.url_rewrite import (
     RewriteError,
     build_asset_lookup,
     build_page_lookup,
+    build_variant_lookup,
     rewrite_tree,
 )
 
@@ -136,6 +137,7 @@ def rewrite_urls(
 
     try:
         asset_lookup = build_asset_lookup(manifest_data)
+        variant_lookup = build_variant_lookup(manifest_data)
     except RewriteError as exc:
         exit_error(f"{manifest_path}: {exc}", as_json)
     try:
@@ -144,7 +146,7 @@ def rewrite_urls(
         label = page_map_path if page_map_path else "page map"
         exit_error(f"{label}: {exc}", as_json)
     try:
-        rewrite_report = rewrite_tree(content, asset_lookup, page_lookup)
+        rewrite_report = rewrite_tree(content, asset_lookup, page_lookup, variant_lookup)
     except RewriteError as exc:
         exit_error(f"{content_path}: {exc}", as_json)
 
@@ -159,12 +161,14 @@ def rewrite_urls(
     report_data = rewrite_report.as_dict()
     human_lines = [
         f"Rewrote {rewrite_report.images_rewritten} image(s) and "
-        f"{rewrite_report.links_rewritten} link(s) -> {output_path}"
+        f"{rewrite_report.links_rewritten} link(s) "
+        f"({rewrite_report.images_wrapped} wrapped as <picture>) -> {output_path}"
     ]
     if report:
         human_lines.append(
             f"  images: {rewrite_report.images_rewritten} rewritten, "
             f"{rewrite_report.images_unchanged} unchanged, "
+            f"{rewrite_report.images_wrapped} wrapped, "
             f"{rewrite_report.missing_asset_count} missing"
         )
         human_lines.append(

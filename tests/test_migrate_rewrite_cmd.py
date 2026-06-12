@@ -12,6 +12,7 @@ from vanjaro_cli.migration.url_rewrite import (
     RewriteError,
     build_asset_lookup,
     build_page_lookup,
+    build_variant_lookup,
     rewrite_tree,
 )
 
@@ -660,6 +661,169 @@ def test_cli_invalid_json_reports_clear_error(runner, tmp_path):
 
     assert result.exit_code != 0
     assert "Invalid JSON" in result.output
+
+
+def _variants(stem: str) -> list[dict]:
+    return [
+        {"url": f"/Portals/0/Images/.versions/{stem}_360w.jpg", "width": 360, "type": "image"},
+        {"url": f"/Portals/0/Images/.versions/{stem}_360w.webp", "width": 360, "type": "webp"},
+        {"url": f"/Portals/0/Images/.versions/{stem}_720w.jpg", "width": 720, "type": "image"},
+        {"url": f"/Portals/0/Images/.versions/{stem}_720w.webp", "width": 720, "type": "webp"},
+    ]
+
+
+def _manifest_with_variants() -> list[dict]:
+    return [
+        {
+            "source_url": "https://example.com/images/hero.jpg",
+            "local_file": "hero.jpg",
+            "vanjaro_url": "/Portals/0/Images/Migration/hero.jpg",
+            "vanjaro_file_id": 42,
+            "variants": _variants("hero"),
+            "uploaded": True,
+        }
+    ]
+
+
+# -- build_variant_lookup --
+
+
+def test_build_variant_lookup_keys_by_vanjaro_url():
+    lookup = build_variant_lookup(_manifest_with_variants())
+    assert "/Portals/0/Images/Migration/hero.jpg" in lookup
+    assert len(lookup["/Portals/0/Images/Migration/hero.jpg"]) == 4
+
+
+def test_build_variant_lookup_keys_query_stripped_form():
+    manifest = [
+        {
+            "source_url": "https://example.com/images/hero.jpg",
+            "vanjaro_url": "/Portals/0/Images/hero.jpg?ver=99",
+            "variants": _variants("hero"),
+        }
+    ]
+    lookup = build_variant_lookup(manifest)
+    assert "/Portals/0/Images/hero.jpg?ver=99" in lookup
+    assert "/Portals/0/Images/hero.jpg" in lookup
+
+
+def test_build_variant_lookup_omits_entries_without_variants():
+    lookup = build_variant_lookup(_basic_manifest())
+    assert lookup == {}
+
+
+# -- rewrite_tree: picture wrapping --
+
+
+def test_rewrite_tree_wraps_image_with_variants_into_picture_box():
+    content = {
+        "components": [_section(_image("https://example.com/images/hero.jpg"))],
+    }
+    manifest = _manifest_with_variants()
+
+    report = rewrite_tree(
+        content,
+        build_asset_lookup(manifest),
+        {},
+        build_variant_lookup(manifest),
+    )
+
+    wrapper = content["components"][0]["components"][0]
+    assert wrapper["type"] == "image-box"
+    picture = wrapper["components"][0]["components"][0]
+    assert picture["type"] == "picture-box"
+    inner = picture["components"][-1]
+    assert inner["attributes"]["src"] == "/Portals/0/Images/Migration/hero.jpg"
+    assert report.images_rewritten == 1
+    assert report.images_wrapped == 1
+
+
+def test_rewrite_tree_leaves_image_without_variants_as_plain_img():
+    content = {
+        "components": [_section(_image("https://example.com/images/team.jpg"))],
+    }
+    # team.jpg is in the basic manifest with a vanjaro_url but no variants.
+    manifest = _basic_manifest()
+
+    report = rewrite_tree(
+        content,
+        build_asset_lookup(manifest),
+        {},
+        build_variant_lookup(manifest),
+    )
+
+    node = content["components"][0]["components"][0]
+    assert node["type"] == "image"
+    assert node["attributes"]["src"] == "/Portals/0/Images/Migration/team.jpg"
+    assert report.images_wrapped == 0
+
+
+def test_rewrite_tree_does_not_double_wrap_existing_picture_box():
+    manifest = _manifest_with_variants()
+    # First pass wraps the image.
+    content = {
+        "components": [_section(_image("https://example.com/images/hero.jpg"))],
+    }
+    rewrite_tree(content, build_asset_lookup(manifest), {}, build_variant_lookup(manifest))
+
+    # Second pass over already-wrapped content must not wrap again.
+    report = rewrite_tree(
+        content, build_asset_lookup(manifest), {}, build_variant_lookup(manifest)
+    )
+
+    wrapper = content["components"][0]["components"][0]
+    assert wrapper["type"] == "image-box"
+    assert wrapper["components"][0]["type"] == "image-frame"
+    assert report.images_wrapped == 0
+
+
+def test_rewrite_tree_wraps_top_level_image():
+    content = {
+        "components": [_image("https://example.com/images/hero.jpg")],
+    }
+    manifest = _manifest_with_variants()
+
+    rewrite_tree(
+        content, build_asset_lookup(manifest), {}, build_variant_lookup(manifest)
+    )
+
+    assert content["components"][0]["type"] == "image-box"
+
+
+def test_rewrite_tree_without_variant_lookup_keeps_plain_images():
+    content = {
+        "components": [_section(_image("https://example.com/images/hero.jpg"))],
+    }
+    manifest = _manifest_with_variants()
+
+    rewrite_tree(content, build_asset_lookup(manifest), {})
+
+    assert content["components"][0]["components"][0]["type"] == "image"
+
+
+def test_cli_wraps_images_with_variants(runner, tmp_path):
+    content = {
+        "components": [_section(_image("https://example.com/images/hero.jpg"))],
+    }
+    content_file = _write_json(tmp_path / "page.json", content)
+    manifest_file = _write_json(tmp_path / "manifest.json", _manifest_with_variants())
+
+    result = runner.invoke(
+        rewrite_urls,
+        [
+            "--content", str(content_file),
+            "--asset-manifest", str(manifest_file),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["report"]["images"]["wrapped"] == 1
+
+    written = json.loads(content_file.read_text())
+    wrapper = written["components"][0]["components"][0]
+    assert wrapper["type"] == "image-box"
 
 
 def test_rewrite_style_url_backgrounds(runner, tmp_path):
