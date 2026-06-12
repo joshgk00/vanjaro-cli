@@ -161,7 +161,20 @@ styling, decorative fonts):
 vanjaro theme css update --file artifacts/custom.css
 ```
 
-### 2.5 Stage 2 Gate
+### 2.5 Export the Theme Palette
+
+After all theme controls are saved, export the palette for downstream use:
+
+```bash
+vanjaro theme palette-export --output artifacts/theme-palette.json
+```
+
+This writes a `{slot: hex}` JSON file with the ten Bootstrap palette slots.
+Pass it to `blocks compose` / `build-library` via `--theme-palette` so
+section band colors are rendered as `bg-primary`, `bg-secondary`, etc. rather
+than inline `style="background-color:..."` attributes that break re-theming.
+
+### 2.6 Stage 2 Gate
 
 ```bash
 vanjaro theme get --modified --json | jq '.total'
@@ -181,6 +194,7 @@ Stage 2: Theme ✓
   - Fonts registered: Lora, Lato
   - Custom CSS: 45 lines (gradients, hover effects)
   - Colors: primary=#C75B8E, secondary=#7EBEC5
+  - Palette: exported to artifacts/theme-palette.json
   
 Proceeding to Stage 3: Block Library
 ```
@@ -336,9 +350,32 @@ Stage 4: Pages & Content ✓
   - SEO: set for all pages
 ```
 
+## Stage 5: Quality Gate — Structural Audit
+
+After pages are published, run the structural audit to verify the site meets
+Vanjaro best practices before declaring the build complete:
+
+```bash
+vanjaro migrate audit-structure --all \
+  --json artifacts/audit-report.json
+```
+
+The audit fetches every published page as an anonymous visitor and scores each
+one across four checks:
+
+- **inline-styles** — are section bands using theme classes instead of baked-in hex colors?
+- **theme-classes** — are Bootstrap/Vanjaro utility classes used for text and backgrounds?
+- **responsive-images** — are images wrapped in responsive containers?
+- **composition** — is the DOM depth and component nesting reasonable?
+
+A site composite score of 80+ is a reasonable bar for a fresh build. Lower
+scores usually mean theme controls weren't applied before blocks were composed,
+or palette mapping was skipped. Fix by re-applying the theme, re-exporting the
+palette, and re-composing affected blocks with `--theme-palette`.
+
 ## Final Report
 
-After all four stages, present a summary:
+After all stages, present a summary:
 
 ```
 Site Build Complete
@@ -428,6 +465,8 @@ vanjaro theme get --modified --json | jq '.total'
 - Never re-apply theme controls that are already set — check with `theme get --modified` first.
 - Never re-register blocks that already exist — check `custom-blocks list` first.
 - Custom blocks are the default. Only use global blocks for header and footer.
+- Export the theme palette (Stage 2.5) before composing blocks — sections composed without `--theme-palette` bake inline colors that resist re-theming.
+- Run `audit-structure --all` (Stage 5) after publishing. A score below 80 signals a structural problem worth fixing before handing the site to the user.
 - Always dry-run the block library plan before registering.
 - Create content snapshots before pushing major changes to existing pages.
 - Write all artifacts to `artifacts/` — don't scatter files across the project.

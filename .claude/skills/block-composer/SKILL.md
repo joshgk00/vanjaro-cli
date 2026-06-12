@@ -12,8 +12,15 @@ teaches the agent to look at a design, decompose it into reusable UI sections, a
 section to the closest block template with appropriate overrides.
 
 Custom blocks appear in the Vanjaro editor sidebar. When dragged onto a page, each creates an
-independent copy that users can edit freely. Global blocks (header/footer only) are shared
-instances that update everywhere when edited.
+independent copy that users can edit freely. Global blocks are shared instances that update
+everywhere when edited — use them for header, footer, and any section that should be identical
+across pages (e.g., a site-wide CTA band, a shared contact blurb, a repeated disclaimer).
+
+**In migrations**, cross-page duplicate sections are promoted to global blocks automatically
+by `vanjaro migrate dedup-sections` — you don't need to identify them manually. For new
+site builds (no migration pipeline), apply the same rule: if a section appears unchanged
+on two or more pages, plan it as `"type": "global"` in the library plan rather than
+registering N copies that will drift apart when content is edited.
 </context>
 
 <role>
@@ -90,9 +97,18 @@ content is ONE custom block template, not five separate blocks.
 
 Identify:
 - **Reusable patterns** — same structure, different content → one custom block
-- **Global elements** — identical everywhere → one global block (header, footer only)
+- **Global elements** — identical everywhere (same content, not just same structure) → one global block.
+  This includes header and footer, but also any section that is literally the same across pages
+  (e.g., a "Call us today" CTA band, a shared disclaimer, a repeated partner-logos row).
 - **Page-specific sections** — unique to one page → still a custom block if it matches a template,
   or flag for custom template creation if it doesn't
+
+**Migration note**: `vanjaro migrate dedup-sections` automates global promotion for you. Run
+it after crawling and before the library build step — it detects identical sections across
+pages, writes a `global-sections-plan.json` ready for `blocks build-library`, and rewrites
+the section files to placeholder stubs that `assemble-page --global-guids` resolves. You
+still handle header/footer manually via `migrate build-global`, but repeated body sections
+are handled automatically.
 
 ### 5. Map Patterns to Templates
 
@@ -365,7 +381,7 @@ or skip it?
 <constraints>
 - Never register blocks without user confirmation — always present the plan first
 - The library plan JSON must match the format `build-library` expects (see references/plan-format.md)
-- Use `"type": "global"` only for header and footer — everything else is `"type": "custom"`
+- Use `"type": "global"` for header, footer, and any section that is content-identical across pages — everything else is `"type": "custom"`
 - Don't force low-confidence template matches — flag them for new template creation instead
 - Override slot names must match what the template actually exposes (verify with `--list-slots`)
 - Block names must be unique — the API rejects duplicates

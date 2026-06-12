@@ -18,10 +18,19 @@ Source Site (live URL)
                                            download assets, extract design tokens,
                                            write global/header.json + footer.json)
   → site-builder theme application       (Stage 3.2)
+  → vanjaro theme palette-export         (Stage 3.2a — export live theme palette
+                                           for color-class mapping in later stages)
+  → vanjaro migrate dedup-sections       (Stage 3.3 — detect sections identical
+                                           across pages, write global-sections-plan.json,
+                                           rewrite member files to {{global:KEY}} stubs)
+  → vanjaro blocks build-library         (Stage 3.4 — register content blocks AND
+                                           dedup'd global sections; --guids-out writes
+                                           the key→GUID manifest for Stage 5.1)
   → vanjaro migrate build-global         (Stage 3.5 — build site-specific
                                            GrapesJS header and footer trees
                                            directly from the crawl — no prefab
-                                           template required)
+                                           template required; embeds live Menu
+                                           block by default)
   → vanjaro global-blocks create         (Stage 3.5 — register Site Header and
                                            Site Footer as new global blocks and
                                            capture their GUIDs in block-guids.json)
@@ -29,16 +38,22 @@ Source Site (live URL)
                                            hierarchy, collision detection, and
                                            write page-id-map.json)
   → vanjaro migrate assemble-page        (Stage 5.1 — merge sections with
-                                           --header-block-guid / --footer-block-guid
-                                           pointing at the Stage 3.5 blocks)
+                                           --header-block-guid / --footer-block-guid,
+                                           --global-guids for dedup placeholders,
+                                           --theme-palette for color-class mapping)
   → vanjaro migrate rewrite-urls         (Stage 5.1 — rewrite image + link URLs)
   → vanjaro content update/publish       (Stage 5.2 — push and publish; the
                                            update command auto-generates the
                                            contentHtml string Vanjaro needs)
-  → vanjaro migrate verify-all           (Stage 6 — page-by-page verification)
+  → vanjaro migrate verify-all           (Stage 6 — page-by-page verification;
+                                           use --output to persist JSON for gap-report)
+  → vanjaro migrate audit-structure      (Stage 6 — structural best-practice lint
+                                           against the live rendered site)
   → vanjaro migrate visual-capture       (Stage 6.4 — screenshot pairs; then
                                            /skill migration-visual-report for
                                            the vision score gate: ship at ≥85)
+  → vanjaro migrate gap-report           (Stage 6.5 — consolidated punch list
+                                           merging verify, audit, and visual findings)
 ```
 
 **Why the wrapping and contentHtml matter:** The Vanjaro AIPage backend stores
@@ -129,10 +144,11 @@ The migration has 6 stages:
 │  Gate: library-plan.json ready                          │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 3: SET UP VANJARO TARGET                         │
-│  Auth → branding → theme → assets → block library →     │
-│  create site-specific Site Header + Site Footer global  │
-│  blocks from crawled header.json/footer.json            │
-│  Gate: theme applied, assets uploaded, blocks registered,│
+│  Auth → branding → theme → palette-export → assets →   │
+│  dedup-sections → block library (incl. global-sections) │
+│  → create site-specific Site Header + Site Footer blocks│
+│  Gate: theme applied, palette exported, assets uploaded,│
+│        blocks registered, global-guids.json written,    │
 │        block-guids.json written with Site Header/Footer  │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 4: CREATE PAGES                                  │
@@ -140,12 +156,14 @@ The migration has 6 stages:
 │  Gate: all pages created, page-id-map.json written      │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 5: MIGRATE CONTENT                               │
-│  assemble-page → rewrite-urls → content update/publish  │
+│  assemble-page (--global-guids + --theme-palette) →     │
+│  rewrite-urls → content update/publish                  │
 │  Gate: all pages populated with source content          │
 ├─────────────────────────────────────────────────────────┤
 │  STAGE 6: VERIFY                                        │
-│  vanjaro migrate verify-all → fix gaps → final publish  │
-│  Gate: user confirms migration is acceptable            │
+│  verify-all (--output) → audit-structure → visual QA → │
+│  gap-report                                             │
+│  Gate: gap-report.md delivered; user accepts gaps       │
 └─────────────────────────────────────────────────────────┘
 ```
 
@@ -396,6 +414,30 @@ Using `design-tokens.json` from Stage 1:
 
 Follow `.claude/skills/theme-apply/SKILL.md` for exact commands and order.
 
+### 3.2a Export the Theme Palette
+
+After the theme is applied, export the live palette so later stages can emit
+theme classes instead of inline colors:
+
+```bash
+vanjaro theme palette-export \
+  --output artifacts/migration/example-com/theme-palette.json
+```
+
+This reads the ten Bootstrap palette slots (primary, secondary, tertiary, …)
+from the live theme settings and writes a `{slot: hex}` JSON file. Two
+downstream commands consume it:
+
+- `migrate assemble-page --theme-palette <file>` — maps matching section
+  background colors to `bg-primary`, `bg-secondary`, etc. rather than baking
+  in `style="background-color:#..."` inline rules.
+- `migrate build-global --theme-palette <file>` — does the same for header
+  and footer band colors.
+
+The palette must be exported **after** `theme set-bulk` / `theme apply`
+completes, because it reads the currently saved theme values. If the theme
+changes later (e.g., a color tweak), re-export and re-run assemble-page.
+
 ### 3.3 Upload Assets and Update the Manifest
 
 The crawler writes `assets/manifest.json` with one entry per downloaded file.
@@ -428,15 +470,58 @@ the canonical bulk path and handles the manifest accounting for you.
 Stage 5 (`vanjaro migrate rewrite-urls`) reads the patched manifest to rewrite
 image `src` attributes in the migrated content.
 
+### 3.3a Detect and Collapse Cross-Page Duplicate Sections
+
+Before registering the block library, run the dedup pass. Sections that are
+identical across two or more pages get promoted to global blocks automatically
+— one registered block, updated everywhere:
+
+```bash
+# Dry run to preview groups before committing
+vanjaro migrate dedup-sections artifacts/migration/example-com --dry-run
+
+# Write global-sections-plan.json and rewrite member section files to stubs
+vanjaro migrate dedup-sections artifacts/migration/example-com --json
+```
+
+What this does:
+
+- Scans every `pages/*/section-*.json` file and identifies groups with
+  identical normalized content across two or more distinct pages.
+- Writes `global-sections-plan.json` at the migration root — a build-library
+  plan where each entry has `"type": "global"` and `"category": "Global Sections"`.
+- Rewrites each duplicate section file **in place** to a stub containing a
+  `{{global:KEY}}` placeholder. The original content is preserved under
+  `"original_backup"` in the same file so the rewrite is reversible.
+
+If the command reports "No cross-page duplicate sections found", skip 3.4a and
+proceed normally — there's nothing to dedup.
+
 ### 3.4 Register Block Library
 
 ```bash
 # Dry run
 vanjaro blocks build-library --plan artifacts/migration/example-com/library-plan.json --dry-run
 
-# Register
+# Register content blocks
 vanjaro blocks build-library --plan artifacts/migration/example-com/library-plan.json
 ```
+
+### 3.4a Register Global Sections and Write the GUID Manifest
+
+If dedup-sections produced a `global-sections-plan.json`, register those global
+blocks separately and capture the key→GUID manifest that Stage 5.1 needs:
+
+```bash
+vanjaro blocks build-library \
+  --plan artifacts/migration/example-com/global-sections-plan.json \
+  --guids-out artifacts/migration/example-com/global-guids.json
+```
+
+`--guids-out` writes a `{key: guid}` JSON file. Stage 5.1's `assemble-page
+--global-guids` reads this file to swap `{{global:KEY}}` stubs in the rewritten
+section files for the real registered GUIDs. Without this file, assemble-page
+will error when it encounters a stub with an unresolved placeholder.
 
 ### 3.5 Create Site-Specific Global Header and Footer Blocks
 
@@ -471,10 +556,13 @@ JSON ready for ``global-blocks create --file``:
 cat artifacts/migration/example-com/global/header.json
 cat artifacts/migration/example-com/global/footer.json
 
-# Build the header (section > container > row with logo column + nav column)
+# Build the header — embeds Vanjaro's live Menu block by default so the nav
+# reflects the actual DNN page tree at render time.
+# Pass --theme-palette to emit bg-*/text-* classes instead of inline colors.
 vanjaro migrate build-global \
   --source artifacts/migration/example-com/global/header.json \
   --kind header \
+  --theme-palette artifacts/migration/example-com/theme-palette.json \
   --output artifacts/migration/example-com/global/header-built.json \
   --json
 
@@ -483,8 +571,29 @@ vanjaro migrate build-global \
 vanjaro migrate build-global \
   --source artifacts/migration/example-com/global/footer.json \
   --kind footer \
+  --theme-palette artifacts/migration/example-com/theme-palette.json \
   --output artifacts/migration/example-com/global/footer-built.json \
   --json
+```
+
+**Live Menu vs. static nav**: By default `build-global` embeds Vanjaro's
+native Menu blockwrapper in the header — the nav items shown to visitors are
+pulled live from the DNN page tree at render time, not from the crawled
+`nav_items`. This means the pages you create in Stage 4 will appear in the nav
+automatically. Because the Menu renders real page data, **create pages (Stage 4)
+before the header renders meaningfully** for the first time.
+
+If the DNN page tree doesn't match the source site's intended navigation (e.g.,
+you want to preserve a specific link order or include external links that DNN
+won't manage), pass `--static-nav` to bake the crawled nav entries as a static
+list instead:
+
+```bash
+vanjaro migrate build-global \
+  --source artifacts/migration/example-com/global/header.json \
+  --kind header \
+  --static-nav \
+  --output artifacts/migration/example-com/global/header-built.json
 ```
 
 **Layout produced**:
@@ -548,7 +657,10 @@ vanjaro theme get --modified --json | jq '.total'
 vanjaro custom-blocks list --json
 vanjaro assets list --json
 vanjaro global-blocks list --json | jq '.[] | {name, guid}'  # Site Header + Site Footer present
-cat artifacts/migration/example-com/global/block-guids.json   # guids saved
+cat artifacts/migration/example-com/global/block-guids.json   # header + footer guids saved
+cat artifacts/migration/example-com/theme-palette.json        # palette exported
+# If dedup ran:
+cat artifacts/migration/example-com/global-guids.json         # dedup key→guid manifest
 ```
 
 ## Stage 4: Create Pages
@@ -667,12 +779,16 @@ has no site chrome to emit around page content.
 For each page, two commands do the heavy lifting:
 
 ```bash
-# 1. Merge the per-section files and wrap with global header/footer
+# 1. Merge the per-section files and wrap with global header/footer.
+#    --global-guids resolves {{global:KEY}} stubs from dedup-sections.
+#    --theme-palette maps matching band colors to bg-*/text-* theme classes.
 vanjaro migrate assemble-page \
   --sections "artifacts/migration/example-com/pages/home/section-*.json" \
   --output artifacts/migration/example-com/pages/home/content.json \
   --header-block-guid "$HEADER_GUID" \
   --footer-block-guid "$FOOTER_GUID" \
+  --global-guids artifacts/migration/example-com/global-guids.json \
+  --theme-palette artifacts/migration/example-com/theme-palette.json \
   --json
 
 # 2. Rewrite image + internal link URLs to Vanjaro paths
@@ -793,6 +909,10 @@ vanjaro migrate verify-all \
   --json
 ```
 
+**Important**: always pass `--output` to persist the JSON report to disk.
+`gap-report` (Stage 6.5) reads it via `--verify-json`. Without `--output`,
+the JSON is only printed to stdout and cannot be passed downstream.
+
 `verify-all` checks, per page:
 - **Text match** — paragraphs and headings against the source, scored against `--threshold`
 - **Structure** — section counts and types
@@ -804,7 +924,31 @@ For single-page verification use `vanjaro migrate verify` with
 `--source-url`, `--page-id`, and optional `--header-block-name` /
 `--footer-block-name` to also check global blocks.
 
-### 6.2 Report Gaps
+### 6.2 Audit Structure
+
+After content verification passes, run the structural audit against the live
+rendered site. This checks things `verify-all` can't see — whether the migrated
+pages use theme classes rather than inline styles, whether global blocks are
+referenced correctly, and whether images have responsive wrappers:
+
+```bash
+# Audit all published pages at once
+vanjaro migrate audit-structure --all \
+  --json artifacts/migration/example-com/audit-report.json
+
+# Or target specific paths
+vanjaro migrate audit-structure \
+  --page /home --page /about \
+  --json artifacts/migration/example-com/audit-report.json
+```
+
+The audit scores each page 0–100 across four checks: `inline-styles`,
+`theme-classes`, `responsive-images`, and `composition`. A site composite score
+is also emitted. Findings in the console report call out the worst offenders.
+
+Save the JSON output — Stage 6.5 (`gap-report`) reads it via `--audit-json`.
+
+### 6.3 Report Gaps
 
 Review the verify report. Common gaps to expect:
 
@@ -817,7 +961,7 @@ Review the verify report. Common gaps to expect:
 | Video embeds | Different embed format | Re-embed using Vanjaro video block |
 | Maps | API key differs | Re-embed with new API key |
 
-### 6.3 Fix Loop
+### 6.4 Fix Loop
 
 For each gap the user wants fixed:
 1. Identify the fix approach
@@ -825,7 +969,7 @@ For each gap the user wants fixed:
 3. Re-run `vanjaro migrate verify` for that page
 4. Move to the next gap
 
-### 6.4 Visual QA Gate (REQUIRED — text verification alone is not enough)
+### 6.5 Visual QA Gate (REQUIRED — text verification alone is not enough)
 
 `verify-all` compares stored content, not what visitors see. Pages can pass
 text verification while rendering blank, showing wrong sections, or wearing
@@ -853,7 +997,33 @@ Then run the vision comparison and fix loop:
 **The migration is shippable at overall_score ≥ 85 with no high-severity
 systemic findings.** Include the final score in the migration report.
 
-### 6.5 Final Report
+### 6.6 Gap Report — the Human Deliverable
+
+After visual QA, merge all three verification sources into a single
+severity-sorted punch list. This is the artifact you hand to the user that
+describes what manual work remains:
+
+```bash
+vanjaro migrate gap-report artifacts/migration/example-com \
+  --verify-json artifacts/migration/example-com/verify-report.json \
+  --audit-json artifacts/migration/example-com/audit-report.json \
+  --visual-report artifacts/migration/example-com/visual-report/vision-report.md \
+  --output artifacts/migration/example-com/gap-report.md \
+  --json artifacts/migration/example-com/gaps.json
+```
+
+Flags:
+- `--verify-json` — path to the `verify-all --output` JSON (required for content gaps)
+- `--audit-json` — path to the `audit-structure --json` report (required for structural gaps)
+- `--visual-report` — optional path to the visual report markdown from `/skill migration-visual-report`
+- `--output` — where to write the markdown punch list (defaults to `{root}/gap-report.md`)
+- `--json` — also write a machine-readable JSON with severity counts
+
+At least one of `--verify-json` or `--audit-json` is required. The output is a
+human-readable markdown file sorted by severity (high → medium → low) with a
+suggested action for each item.
+
+### 6.7 Final Report
 
 ```
 Migration Complete
@@ -868,8 +1038,10 @@ Theme controls:     108 applied
 Custom blocks:      8 in editor sidebar
 Global blocks:      2 (header + footer)
 
-Verify report: artifacts/migration/example-com/verify-report.json
-Visual score:  91/100 (visual-report/vision-report.json)
+Verify report:  artifacts/migration/example-com/verify-report.json
+Audit score:    87/100 (artifacts/migration/example-com/audit-report.json)
+Visual score:   91/100 (visual-report/vision-report.json)
+Gap report:     artifacts/migration/example-com/gap-report.md
 
 Known gaps:
   - Contact form needs DNN module setup
@@ -885,8 +1057,13 @@ Artifacts:
     assets/manifest.json     — image upload mapping
     pages/                   — per-page section + content JSON
     global/                  — header/footer content
+    theme-palette.json       — exported palette slot→hex mapping
+    global-sections-plan.json — dedup'd sections plan (if any)
+    global-guids.json        — dedup key→GUID manifest (if any)
     verify-report.json       — verification gap report
+    audit-report.json        — structural best-practice audit
     visual-report/           — screenshot pairs + manifest + vision-report.json
+    gap-report.md            — consolidated human-readable punch list
 ```
 
 ## Resuming Interrupted Work
@@ -927,6 +1104,19 @@ Each stage's artifacts are self-contained. Resume from the last incomplete stage
   manual content edits outside the migration flow, the same wrapping rule
   applies — make sure the top-level components include the `globalblockwrapper`
   entries.
+- **Don't skip dedup-sections when sections repeat across pages.** If the same
+  CTA band, contact section, or "About" blurb appears on multiple pages, it
+  should be one registered global block — not N identical custom blocks that
+  drift apart when content is edited. `migrate dedup-sections` handles this
+  automatically. The resulting `global-sections-plan.json` feeds into
+  `blocks build-library --guids-out` and `assemble-page --global-guids`.
+- **Don't assemble pages before exporting the theme palette.** Running
+  `assemble-page` without `--theme-palette` bakes section band colors as inline
+  `style="background-color:#..."` attributes. Those inline styles override theme
+  classes and break re-theming. Export the palette after theme application and
+  pass it to both `assemble-page` and `build-global`.
+- **Don't skip `--output` on `verify-all`.** The JSON report is required by
+  `gap-report --verify-json`. Printing to stdout only means the data is lost.
 - **Don't wrap with the default install's ``Header``/``Footer`` guids.**
   Those are generic Vanjaro chrome — they have nothing to do with the
   source site. Using them gives you the source's page content sandwiched
