@@ -46,6 +46,9 @@ def _validate_plan(entries: list) -> list[str]:
         overrides = entry.get("overrides")
         if overrides is not None and not isinstance(overrides, dict):
             errors.append(f"Entry {i}: 'overrides' must be an object")
+        key = entry.get("key")
+        if key is not None and not isinstance(key, str):
+            errors.append(f"Entry {i}: 'key' must be a string")
     return errors
 
 
@@ -145,17 +148,26 @@ def _register_global_block(
     default=None,
     help="Write composed JSON files to this directory instead of registering.",
 )
+@click.option(
+    "--guids-out",
+    type=click.Path(),
+    default=None,
+    help="After registration, write a {block-key-or-name -> GUID} manifest to this path.",
+)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
 def build_library(
     plan_file: str,
     dry_run: bool,
     output_dir: str | None,
+    guids_out: str | None,
     as_json: bool,
 ) -> None:
     """Batch compose and register blocks from a plan file.
 
     Each entry in the plan specifies a template name, block name, optional
-    category, block type (custom/global), and content overrides.
+    category, block type (custom/global), content overrides, and an optional
+    stable ``key`` (used as the GUID-manifest key when ``--guids-out`` is set,
+    falling back to ``name``).
 
     \b
     Plan file format:
@@ -200,9 +212,11 @@ def build_library(
             exit_error("Authentication required to register blocks. Run `vanjaro auth login` first.", as_json)
 
     results: list[dict] = []
+    guid_manifest: dict[str, str] = {}
 
     for entry in plan:
         name = entry["name"]
+        manifest_key = entry.get("key") or name
         template_name = entry["template"]
         category = entry.get("category")
         block_type = entry.get("type", "custom")
@@ -269,6 +283,8 @@ def build_library(
                 if unused:
                     reg_result["dropped_overrides"] = unused
                 results.append(reg_result)
+                if guid:
+                    guid_manifest[manifest_key] = guid
                 if not as_json:
                     label = f" [{guid[:8]}...]" if guid else ""
                     click.echo(f"  OK    {name}{label}")
@@ -276,6 +292,14 @@ def build_library(
                 results.append({"name": name, "status": "error", "message": str(exc)})
                 if not as_json:
                     click.echo(f"  FAIL  {name}: {exc}", err=True)
+
+    if guids_out and not dry_run and not output_dir:
+        try:
+            Path(guids_out).write_text(json.dumps(guid_manifest, indent=2), encoding="utf-8")
+        except OSError as exc:
+            exit_error(f"Cannot write GUID manifest to {guids_out}: {exc}", as_json)
+        if not as_json:
+            click.echo(f"  Wrote GUID manifest -> {guids_out} ({len(guid_manifest)} entr{'y' if len(guid_manifest) == 1 else 'ies'})")
 
     # Summary
     created = sum(1 for r in results if r["status"] in ("created", "written"))

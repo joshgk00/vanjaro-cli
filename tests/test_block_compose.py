@@ -882,6 +882,132 @@ def test_light_band_without_captured_text_stays_default():
 
 
 # ---------------------------------------------------------------------------
+# apply_section_background — palette mode (theme classes instead of inline)
+# ---------------------------------------------------------------------------
+
+
+PALETTE = {
+    "primary": (0, 170, 85),
+    "secondary": (74, 80, 87),
+    "light": (248, 249, 250),
+    "dark": (52, 58, 64),
+}
+
+
+def _class_names(component: dict) -> list[str]:
+    return [c["name"] for c in component.get("classes", [])]
+
+
+def test_palette_matching_bg_emits_class_not_inline():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {"attributes": {"id": "sec1"}}
+    styles: list = []
+    apply_section_background(
+        section, {"background_color": "#00aa55"}, palette=PALETTE, styles=styles
+    )
+
+    assert "bg-primary" in _class_names(section)
+    assert "style" not in section["attributes"]
+    assert styles == []
+
+
+def test_palette_dark_band_emits_light_text_class():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {"attributes": {"id": "sec1"}}
+    styles: list = []
+    apply_section_background(
+        section, {"background_color": "#00aa55"}, palette=PALETTE, styles=styles
+    )
+
+    # Dark band -> derived light text -> text-light (reference sites' choice).
+    assert "text-light" in _class_names(section)
+
+
+def test_palette_captured_dark_text_emits_text_dark_class():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {"attributes": {"id": "sec1"}}
+    styles: list = []
+    apply_section_background(
+        section,
+        {"background_color": "#f8f9fa", "text_color": "#111111"},
+        palette=PALETTE,
+        styles=styles,
+    )
+
+    assert "bg-light" in _class_names(section)
+    assert "text-dark" in _class_names(section)
+    assert styles == []
+
+
+def test_palette_unmatched_bg_color_emits_per_id_style_rule():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {"attributes": {"id": "sec-band"}}
+    styles: list = []
+    apply_section_background(
+        section, {"background_color": "#7b1fa2"}, palette=PALETTE, styles=styles
+    )
+
+    assert "style" not in section["attributes"]
+    # The unmatched band color goes to a per-id rule; the dark band still gets
+    # a readable text class (derived white -> text-light), not an inline color.
+    assert "bg-" not in " ".join(_class_names(section))
+    assert len(styles) == 1
+    rule = styles[0]
+    assert rule["selectors"][0]["name"] == "sec-band"
+    assert rule["selectors"][0]["type"] == 2
+    assert rule["style"]["background-color"] == "#7b1fa2"
+    assert "color" not in rule["style"]
+
+
+def test_palette_background_image_emits_per_id_style_rule():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {"attributes": {"id": "sec-img"}}
+    styles: list = []
+    apply_section_background(
+        section,
+        {"background_image": "https://src.test/bg.jpg"},
+        palette=PALETTE,
+        styles=styles,
+    )
+
+    assert "style" not in section["attributes"]
+    rule = styles[0]
+    assert rule["style"]["background-image"] == "url(https://src.test/bg.jpg)"
+    assert rule["style"]["background-size"] == "cover"
+    assert rule["style"]["background-position"] == "center"
+
+
+def test_palette_generates_id_when_section_lacks_one():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section: dict = {}
+    styles: list = []
+    apply_section_background(
+        section, {"background_color": "#7b1fa2"}, palette=PALETTE, styles=styles
+    )
+
+    generated_id = section["attributes"]["id"]
+    assert generated_id
+    assert styles[0]["selectors"][0]["name"] == generated_id
+
+
+def test_palette_none_keeps_exact_inline_behavior():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {"attributes": {"id": "sec1"}}
+    apply_section_background(section, {"background_color": "#00aa55"})
+
+    # No palette -> the original inline style string, no classes, no styles list.
+    assert section["attributes"]["style"] == "background-color:#00aa55;color:#ffffff;"
+    assert "classes" not in section
+
+
+# ---------------------------------------------------------------------------
 # _balance_card_rows — even per-row column counts
 # ---------------------------------------------------------------------------
 

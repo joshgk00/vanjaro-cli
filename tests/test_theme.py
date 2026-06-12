@@ -588,3 +588,76 @@ def test_css_append_to_empty(runner, mock_config, tmp_path):
     post_call = [c for c in responses.calls if "CustomCSS" in c.request.url][0]
     sent_body = json.loads(post_call.request.body)
     assert ".card-hover" in sent_body
+
+
+# ---------------------------------------------------------------------------
+# palette-export
+# ---------------------------------------------------------------------------
+
+PALETTE_CONTROLS = [
+    {"lessVariable": "$primarycolor", "currentValue": "rgb(38, 35, 35)", "categoryGuid": "c"},
+    {"lessVariable": "$secondarycolor", "currentValue": "#4A5057", "categoryGuid": "c"},
+    {"lessVariable": "$successcolor", "currentValue": "#28a745", "categoryGuid": "c"},
+    {"lessVariable": "$infocolor", "currentValue": "#17a2b8", "categoryGuid": "c"},
+    {"lessVariable": "$warningcolor", "currentValue": "#ffc107", "categoryGuid": "c"},
+    {"lessVariable": "$dangercolor", "currentValue": "#dc3545", "categoryGuid": "c"},
+    {"lessVariable": "$lightcolor", "currentValue": "#f8f9fa", "categoryGuid": "c"},
+    {"lessVariable": "$darkcolor", "currentValue": "#343a40", "categoryGuid": "c"},
+    # tertiary indirection: references another palette variable, resolved one level.
+    {"lessVariable": "$tertiary", "currentValue": "$secondarycolor", "categoryGuid": "c"},
+    # quaternary points at a non-palette variable not in the payload -> unresolved, skipped.
+    {"lessVariable": "$quaternary", "currentValue": "$mysterycolor", "categoryGuid": "c"},
+]
+
+PALETTE_SETTINGS = {"themeName": "Basic", "controls": PALETTE_CONTROLS}
+
+
+@responses.activate
+def test_theme_palette_export(runner, mock_config, tmp_path):
+    mock_homepage()
+    responses.add(responses.GET, GET_URL, json=PALETTE_SETTINGS, status=200)
+
+    output_path = tmp_path / "theme-palette.json"
+    result = runner.invoke(
+        cli, ["theme", "palette-export", "--output", str(output_path)]
+    )
+
+    assert result.exit_code == 0, result.output
+    palette = json.loads(output_path.read_text())
+    assert palette["primary"] == "rgb(38, 35, 35)"
+    assert palette["secondary"] == "#4A5057"
+    assert palette["light"] == "#f8f9fa"
+    # One-level indirection resolved to the referenced hex.
+    assert palette["tertiary"] == "#4A5057"
+    # Unresolvable indirection is skipped, with a warning on stderr.
+    assert "quaternary" not in palette
+    assert "quaternary" in result.output
+
+
+@responses.activate
+def test_theme_palette_export_json_output(runner, mock_config, tmp_path):
+    mock_homepage()
+    responses.add(responses.GET, GET_URL, json=PALETTE_SETTINGS, status=200)
+
+    output_path = tmp_path / "theme-palette.json"
+    result = runner.invoke(
+        cli, ["theme", "palette-export", "--output", str(output_path), "--json"]
+    )
+
+    assert result.exit_code == 0, result.output
+    written = json.loads(output_path.read_text())
+    assert written["primary"] == "rgb(38, 35, 35)"
+    assert written["tertiary"] == "#4A5057"
+
+
+@responses.activate
+def test_theme_palette_export_no_slots_errors(runner, mock_config):
+    mock_homepage()
+    responses.add(
+        responses.GET, GET_URL, json={"themeName": "Basic", "controls": []}, status=200
+    )
+
+    result = runner.invoke(cli, ["theme", "palette-export"])
+
+    assert result.exit_code != 0
+    assert "No palette slots resolved" in result.output

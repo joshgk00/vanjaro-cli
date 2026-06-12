@@ -320,6 +320,112 @@ def list_fonts(as_json: bool) -> None:
     )
 
 
+# LESS palette variable -> palette slot name. These ten slots are the theme's
+# Bootstrap-style color palette; their bg-{slot}/text-{slot} classes are what
+# hand-built sections use so a theme change cascades.
+_PALETTE_VARIABLE_TO_SLOT = {
+    "$primarycolor": "primary",
+    "$secondarycolor": "secondary",
+    "$tertiary": "tertiary",
+    "$quaternary": "quaternary",
+    "$successcolor": "success",
+    "$infocolor": "info",
+    "$warningcolor": "warning",
+    "$dangercolor": "danger",
+    "$lightcolor": "light",
+    "$darkcolor": "dark",
+}
+
+
+def _value_by_variable(controls: list[dict]) -> dict[str, str]:
+    """Map every control's lessVariable to its currentValue string."""
+    values: dict[str, str] = {}
+    for control in controls:
+        variable = control.get("lessVariable")
+        value = control.get("currentValue")
+        if isinstance(variable, str) and isinstance(value, str):
+            values[variable] = value
+    return values
+
+
+def _resolve_palette_value(value: str, by_variable: dict[str, str]) -> str | None:
+    """Resolve a palette currentValue to a concrete color.
+
+    A slot can reference another LESS variable instead of a hex (e.g.
+    ``$headcolor`` -> ``$secondarycolor``). Resolve one level of indirection;
+    return None for anything still not a concrete color so the caller can warn.
+    """
+    if value.startswith("$"):
+        value = by_variable.get(value, value)
+    if value.startswith("$"):
+        return None
+    return value
+
+
+@theme.command("palette-export")
+@click.option(
+    "--output",
+    "-o",
+    default="theme-palette.json",
+    help="Destination path for the palette JSON.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def palette_export(output: str, as_json: bool) -> None:
+    """Export the theme's color palette as a {slot: hex} JSON file.
+
+    Reads the live theme settings and writes the ten palette slots (primary,
+    secondary, tertiary, quaternary, success, info, warning, danger, light,
+    dark). Feed the file to `vanjaro migrate assemble-page --theme-palette` so
+    migrated section bands wear theme classes instead of inline colors.
+    """
+    client, _ = get_client()
+
+    try:
+        settings = _load_settings(client)
+    except (ApiError, ConfigError) as exc:
+        exit_error(str(exc), as_json)
+
+    controls = settings.get("controls", [])
+    by_variable = _value_by_variable(controls)
+
+    palette: dict[str, str] = {}
+    unresolved: list[str] = []
+    for variable, slot in _PALETTE_VARIABLE_TO_SLOT.items():
+        raw = by_variable.get(variable)
+        if raw is None:
+            continue
+        resolved = _resolve_palette_value(raw, by_variable)
+        if resolved is None:
+            unresolved.append(f"{slot} ({variable}={raw})")
+            continue
+        palette[slot] = resolved
+
+    if not palette:
+        exit_error(
+            "No palette slots resolved from theme settings — is the theme applied?",
+            as_json,
+        )
+
+    for note in unresolved:
+        click.echo(f"Warning: skipped unresolved palette slot {note}", err=True)
+
+    output_path = Path(output)
+    try:
+        output_path.parent.mkdir(parents=True, exist_ok=True)
+        output_path.write_text(json.dumps(palette, indent=2), encoding="utf-8")
+    except OSError as exc:
+        exit_error(f"Cannot write {output}: {exc}", as_json)
+
+    output_result(
+        as_json,
+        status="ok",
+        human_message=f"Exported {len(palette)} palette slot(s) -> {output}",
+        output=str(output_path),
+        slots=len(palette),
+        palette=palette,
+    )
+
+
 @theme.command("reset")
 @click.option("--force", is_flag=True, help="Skip confirmation prompt.")
 @click.option("--json", "as_json", is_flag=True)

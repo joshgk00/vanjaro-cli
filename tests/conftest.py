@@ -55,6 +55,18 @@ def runner() -> CliRunner:
 
 
 @pytest.fixture
+def write_json():
+    """Return a helper that writes ``data`` as JSON to ``path`` and returns it."""
+
+    def _write(path: Path, data: object) -> Path:
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(json.dumps(data), encoding="utf-8")
+        return path
+
+    return _write
+
+
+@pytest.fixture
 def mock_config(tmp_path: Path) -> Generator[Path, None, None]:
     """Patch the config dir to a temp directory so tests don't touch ~/.vanjaro-cli."""
     config_dir = tmp_path / ".vanjaro-cli"

@@ -6,8 +6,12 @@ import copy
 import json
 import os
 import re
+import uuid
 from pathlib import Path
 from typing import Generator
+
+from vanjaro_cli.utils.color import parse_color
+from vanjaro_cli.utils.theme_palette import nearest_palette_slot
 
 __all__ = [
     "TemplateNotFoundError",
@@ -21,6 +25,7 @@ __all__ = [
     "expand_text_slots",
     "find_template",
     "get_templates_dir",
+    "parse_color",
 ]
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -508,24 +513,12 @@ def _balance_card_rows(component: dict) -> None:
         column["classes"] = kept
 
 
-_HEX_COLOR = re.compile(r"^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$")
-_RGB_COLOR = re.compile(r"^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)")
-
-
 def _luminance(value: str) -> float | None:
     """Perceptual luminance (0–255) of a hex/rgb color, or None if unparsable."""
-    value = value.strip()
-    rgb_match = _RGB_COLOR.match(value)
-    if rgb_match:
-        red, green, blue = (int(rgb_match.group(i)) for i in (1, 2, 3))
-    else:
-        hex_match = _HEX_COLOR.match(value)
-        if not hex_match:
-            return None
-        hex_part = hex_match.group(1)
-        if len(hex_part) == 3:
-            hex_part = "".join(c * 2 for c in hex_part)
-        red, green, blue = (int(hex_part[i : i + 2], 16) for i in (0, 2, 4))
+    rgb = parse_color(value)
+    if rgb is None:
+        return None
+    red, green, blue = rgb
     return 0.299 * red + 0.587 * green + 0.114 * blue
 
 
@@ -541,12 +534,48 @@ def _is_dark_color(value: str) -> bool:
 _MIN_CONTRAST = 80
 
 
-def apply_section_background(section: dict, content: dict) -> None:
-    """Carry crawled band colors onto a composed component as inline style.
+def _resolve_band_text_color(
+    background: str, has_color: bool, has_image: bool, captured: str | None
+) -> str | None:
+    """Pick the text color a band should aim for given any captured color.
 
-    Templates and block builders ship unstyled; without this the source's
-    full-width color bands all render white. Dark backgrounds with no
-    explicit text color get white text so the band stays readable.
+    A captured text color designed for a different background can land on this
+    band with too little contrast (gray nav text on an olive band). When the
+    gap is too small — or no color was captured at all — fall to the readable
+    extreme for the band's brightness. Light bands with no capture keep the
+    page default (already dark on light), so this can still return None.
+    """
+    band_luminance = _luminance(background) if has_color else None
+    captured_luminance = _luminance(captured) if captured else None
+    poor_contrast = (
+        band_luminance is not None
+        and captured_luminance is not None
+        and abs(band_luminance - captured_luminance) < _MIN_CONTRAST
+    )
+    if poor_contrast:
+        return "#111111" if band_luminance >= 128 else "#ffffff"
+    if captured is None and (
+        (has_color and _is_dark_color(background)) or (has_image and not has_color)
+    ):
+        return "#ffffff"
+    return captured
+
+
+def apply_section_background(
+    section: dict,
+    content: dict,
+    palette: dict[str, tuple[int, int, int]] | None = None,
+    styles: list | None = None,
+) -> None:
+    """Carry crawled band colors onto a composed component.
+
+    Without a ``palette`` the colors are written as one inline ``style``
+    string — the original behaviour. With a ``palette`` (slot -> rgb) the
+    background and text colors that match a theme slot become ``bg-{slot}`` /
+    ``text-{slot}`` classes so a theme change cascades through them; colors
+    that match no slot, and background images, fall to a per-id rule appended
+    to ``styles`` (the composed block's styles array). Dark backgrounds with
+    no explicit text color get light text so the band stays readable.
     """
     background = content.get("background_color")
     background_image = content.get("background_image")
@@ -555,6 +584,28 @@ def apply_section_background(section: dict, content: dict) -> None:
     if not has_color and not has_image:
         return
 
+    captured = content.get("text_color")
+    if not isinstance(captured, str) or not captured:
+        captured = None
+    text_color = _resolve_band_text_color(background, has_color, has_image, captured)
+
+    if palette is None:
+        _apply_inline_background(section, background, background_image, has_color, has_image, text_color)
+        return
+
+    _apply_palette_background(
+        section, background, background_image, has_color, has_image, text_color, palette, styles
+    )
+
+
+def _apply_inline_background(
+    section: dict,
+    background: str,
+    background_image: str,
+    has_color: bool,
+    has_image: bool,
+    text_color: str | None,
+) -> None:
     style = ""
     if has_color:
         style += f"background-color:{background};"
@@ -563,38 +614,116 @@ def apply_section_background(section: dict, content: dict) -> None:
             f"background-image:url({background_image});"
             "background-size:cover;background-position:center;"
         )
-
-    text_color = content.get("text_color")
-    if not isinstance(text_color, str) or not text_color:
-        text_color = None
-
-    # A captured text color designed for a different background can land on
-    # this band with too little contrast (gray nav text on an olive band).
-    # When the gap is too small — or no color was captured at all — pick
-    # white/black against the band so the text stays legible.
-    band_luminance = _luminance(background) if has_color else None
-    captured_luminance = _luminance(text_color) if text_color else None
-    poor_contrast = (
-        band_luminance is not None
-        and captured_luminance is not None
-        and abs(band_luminance - captured_luminance) < _MIN_CONTRAST
-    )
-    if poor_contrast:
-        # Captured text is illegible on this band — flip to the readable
-        # extreme for the band's brightness.
-        text_color = "#111111" if band_luminance >= 128 else "#ffffff"
-    elif text_color is None and (
-        (has_color and _is_dark_color(background)) or (has_image and not has_color)
-    ):
-        # Dark/image bands with no captured color need light text; light bands
-        # keep the page default (already dark on light).
-        text_color = "#ffffff"
     if text_color:
         style += f"color:{text_color};"
 
     attributes = section.setdefault("attributes", {})
     existing = attributes.get("style", "")
     attributes["style"] = f"{existing.rstrip(';')};{style}".lstrip(";") if existing else style
+
+
+# Slot a near-white captured/derived text color resolves to. Reference sites
+# use text-light for light text on dark bands rather than text-white.
+_LIGHT_TEXT_SLOT = "light"
+_DARK_TEXT_SLOT = "dark"
+_NEAR_WHITE_LUMINANCE = 230
+_NEAR_BLACK_LUMINANCE = 40
+
+
+def _text_color_slot(
+    text_color: str, palette: dict[str, tuple[int, int, int]]
+) -> str | None:
+    """Map a text color to a ``text-{slot}`` slot name, or None to inline it.
+
+    Near-white text maps to ``light`` and near-black to ``dark`` (the slots
+    reference sites use for band text) regardless of the exact palette hex;
+    anything else falls back to nearest-slot matching.
+    """
+    luminance = _luminance(text_color)
+    if luminance is not None and luminance >= _NEAR_WHITE_LUMINANCE:
+        return _LIGHT_TEXT_SLOT
+    if luminance is not None and luminance <= _NEAR_BLACK_LUMINANCE:
+        return _DARK_TEXT_SLOT
+    return nearest_palette_slot(text_color, palette)
+
+
+def _apply_palette_background(
+    section: dict,
+    background: str,
+    background_image: str,
+    has_color: bool,
+    has_image: bool,
+    text_color: str | None,
+    palette: dict[str, tuple[int, int, int]],
+    styles: list | None,
+) -> None:
+    inline_rule: dict[str, str] = {}
+
+    if has_color:
+        slot = nearest_palette_slot(background, palette)
+        if slot:
+            _add_class(section, f"bg-{slot}")
+        else:
+            inline_rule["background-color"] = background
+
+    if has_image:
+        inline_rule["background-image"] = f"url({background_image})"
+        inline_rule["background-size"] = "cover"
+        inline_rule["background-position"] = "center"
+
+    if text_color:
+        slot = _text_color_slot(text_color, palette)
+        if slot:
+            _add_class(section, f"text-{slot}")
+        else:
+            inline_rule["color"] = text_color
+
+    if inline_rule and styles is not None:
+        section_id = _ensure_section_id(section)
+        styles.append(_id_style_rule(section_id, inline_rule))
+
+
+def _add_class(component: dict, class_name: str) -> None:
+    """Add a class in {name, active: false} form, skipping duplicates."""
+    classes = component.setdefault("classes", [])
+    if any(isinstance(c, dict) and c.get("name") == class_name for c in classes):
+        return
+    classes.append({"name": class_name, "active": False})
+
+
+def _ensure_section_id(component: dict) -> str:
+    """Return the component's id attribute, generating a stable one if absent.
+
+    Matches the ``i``-prefixed short-hex id shape templates and assemble use,
+    so the per-id style rule's selector lines up with what the editor expects.
+    """
+    attributes = component.setdefault("attributes", {})
+    section_id = attributes.get("id")
+    if not section_id:
+        section_id = f"i{uuid.uuid4().hex[:8]}"
+        attributes["id"] = section_id
+    return section_id
+
+
+def _id_style_rule(section_id: str, style: dict[str, str]) -> dict:
+    """Build a GrapesJS style rule targeting a component by its id attribute.
+
+    Vanjaro serializes a per-element rule with a single class-type selector
+    whose name equals the element's id (see the composed-page styles array).
+    """
+    return {
+        "selectors": [
+            {
+                "name": section_id,
+                "label": section_id,
+                "type": 2,
+                "active": True,
+                "private": True,
+                "protected": False,
+            }
+        ],
+        "style": style,
+    }
 
 
 def check_overflow(template_data: dict, overrides: dict[str, str]) -> list[str]:

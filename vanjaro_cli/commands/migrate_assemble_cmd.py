@@ -5,12 +5,13 @@ from __future__ import annotations
 import glob
 import json
 import re
-import uuid
 from pathlib import Path
 
 import click
 
 from vanjaro_cli.commands.helpers import exit_error, output_result, read_json_file
+from vanjaro_cli.migration.dedup import parse_global_placeholder
+from vanjaro_cli.migration.global_blocks import make_global_block_wrapper
 from vanjaro_cli.migration.overrides import crawl_content_to_overrides
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
@@ -20,14 +21,9 @@ from vanjaro_cli.utils.block_compose import (
     enumerate_slots,
     find_template,
 )
+from vanjaro_cli.utils.theme_palette import PaletteError, load_palette
 
 __all__ = ["assemble_page"]
-
-# The globalblockwrapper component type is registered in Vanjaro's core
-# GrapesJS schema. Its ``data-block-guid`` is a fixed identifier for the
-# wrapper TYPE itself — the ``data-guid`` attribute points at the specific
-# global block instance the wrapper references.
-GLOBAL_BLOCK_WRAPPER_TYPE_GUID = "7a4be0f2-56ab-410a-9422-6bc91b488150"
 
 
 def _natural_sort_key(value: str) -> list:
@@ -151,6 +147,7 @@ def _classify_and_resolve(
     section_data: dict,
     source_file: Path,
     as_json: bool,
+    palette: dict[str, tuple[int, int, int]] | None = None,
 ) -> tuple[dict, list]:
     """Return (section_component, styles) for a single section file."""
     if "components" in section_data and "template" not in section_data:
@@ -195,7 +192,7 @@ def _classify_and_resolve(
         )
         content_block = section_data.get("content")
         if isinstance(content_block, dict):
-            apply_section_background(section, content_block)
+            apply_section_background(section, content_block, palette=palette, styles=styles)
         return section, styles
 
     exit_error(
@@ -245,25 +242,75 @@ def _merge_styles(existing: list, additions: list) -> list:
     return existing
 
 
-def _make_global_block_wrapper(name: str, block_guid: str) -> dict:
-    """Build a ``globalblockwrapper`` component referencing a global block.
+def _load_global_guids(manifest_path: str | None, as_json: bool) -> dict[str, str]:
+    """Load a {dedup-key -> GUID} manifest, or return an empty mapping."""
+    if not manifest_path:
+        return {}
+    data = read_json_file(Path(manifest_path), "Global GUID manifest", as_json)
+    if not isinstance(data, dict):
+        exit_error(f"Global GUID manifest {manifest_path} must be a JSON object.", as_json)
+    return {str(key): str(value) for key, value in data.items()}
 
-    Vanjaro renders these as empty divs at save time and expands them
-    server-side by looking up the ``data-guid``, so the wrapper's nested
-    ``components`` array is intentionally empty.
+
+def _resolve_global_placeholders(
+    component: dict,
+    guid_manifest: dict[str, str],
+    source_file: Path,
+    as_json: bool,
+) -> None:
+    """Swap ``{{global:KEY}}`` data-guid placeholders for manifest GUIDs in place.
+
+    Recurses the composed component tree. A placeholder with no manifest entry
+    is a hard error — assembling a page with an unresolved global reference
+    would emit a wrapper Vanjaro can't expand.
     """
-    return {
-        "type": "globalblockwrapper",
-        "name": name,
-        "content": "",
-        "attributes": {
-            "data-block-type": "global",
-            "data-block-guid": GLOBAL_BLOCK_WRAPPER_TYPE_GUID,
-            "data-guid": block_guid,
-            "id": uuid.uuid4().hex[:5],
-        },
-        "components": [],
-    }
+    attributes = component.get("attributes")
+    if isinstance(attributes, dict):
+        data_guid = attributes.get("data-guid")
+        if isinstance(data_guid, str):
+            key = parse_global_placeholder(data_guid)
+            if key is not None:
+                guid = guid_manifest.get(key)
+                if not guid:
+                    exit_error(
+                        f"Section file {source_file} references global block '{key}' "
+                        "but no matching entry exists in the --global-guids manifest. "
+                        "Run `vanjaro blocks build-library --guids-out` on the dedup plan first.",
+                        as_json,
+                    )
+                attributes["data-guid"] = guid
+
+    nested = component.get("components")
+    if isinstance(nested, list):
+        for child in nested:
+            if isinstance(child, dict):
+                _resolve_global_placeholders(child, guid_manifest, source_file, as_json)
+
+
+def _resolve_global_stub(
+    stub: dict,
+    guid_manifest: dict[str, str],
+    source_file: Path,
+    as_json: bool,
+) -> tuple[list[dict], list]:
+    """Extract a dedup stub's wrapper components with placeholders resolved.
+
+    The stub's helper keys (``global_key``, ``original_backup``) never reach
+    output — only the wrapper components inside its ``components`` array do.
+    """
+    wrappers = stub.get("components")
+    if not isinstance(wrappers, list) or not wrappers:
+        exit_error(
+            f"Global stub {source_file} has no 'components' wrapper to assemble.",
+            as_json,
+        )
+    for wrapper in wrappers:
+        if isinstance(wrapper, dict):
+            _resolve_global_placeholders(wrapper, guid_manifest, source_file, as_json)
+    styles = stub.get("styles") or []
+    if not isinstance(styles, list):
+        styles = []
+    return [wrapper for wrapper in wrappers if isinstance(wrapper, dict)], styles
 
 
 @click.command("assemble-page")
@@ -293,12 +340,31 @@ def _make_global_block_wrapper(name: str, block_guid: str) -> dict:
     default=None,
     help="Global block GUID to wrap the page with as a top-level footer.",
 )
+@click.option(
+    "--global-guids",
+    "global_guids_file",
+    type=click.Path(),
+    default=None,
+    help="Manifest mapping dedup keys to registered global block GUIDs. "
+    "Resolves {{global:KEY}} placeholders left by `migrate dedup-sections`.",
+)
+@click.option(
+    "--theme-palette",
+    "theme_palette_file",
+    type=click.Path(),
+    default=None,
+    help="Palette JSON (from `vanjaro theme palette-export`). Maps section band "
+    "colors to theme classes (bg-primary, text-light, ...) instead of inline "
+    "color, so re-theming the site cascades through migrated sections.",
+)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
 def assemble_page(
     section_patterns: tuple[str, ...],
     output_file: str,
     header_block_guid: str | None,
     footer_block_guid: str | None,
+    global_guids_file: str | None,
+    theme_palette_file: str | None,
     as_json: bool,
 ) -> None:
     """Merge per-section JSON files into a single page content JSON.
@@ -310,6 +376,9 @@ def assemble_page(
       1. Raw component tree with top-level "components".
       2. Template reference: {"template": "Name", "overrides": {...}}
          or the crawler shape: {"template": "Name", "content": {...}}.
+      3. Dedup stub (from `migrate dedup-sections`): a "global_key" plus a
+         globalblockwrapper whose data-guid is a {{global:KEY}} placeholder,
+         resolved against the --global-guids manifest.
 
     When ``--header-block-guid`` and/or ``--footer-block-guid`` are provided,
     the merged components are wrapped with ``globalblockwrapper`` entries
@@ -328,22 +397,36 @@ def assemble_page(
         exit_error("At least one --sections value is required.", as_json)
 
     section_files = _expand_sections(section_patterns, as_json)
+    guid_manifest = _load_global_guids(global_guids_file, as_json)
+
+    palette: dict[str, tuple[int, int, int]] | None = None
+    if theme_palette_file:
+        try:
+            palette = load_palette(theme_palette_file)
+        except PaletteError as exc:
+            exit_error(str(exc), as_json)
 
     components: list[dict] = []
     styles: list = []
     for source_file in section_files:
         section_data = _read_section_file(source_file, as_json)
-        section_component, section_styles = _classify_and_resolve(
-            section_data, source_file, as_json
-        )
-        _validate_section_component(section_component, source_file, as_json)
-        components.append(section_component)
+        if section_data.get("global_key") is not None:
+            wrappers, section_styles = _resolve_global_stub(
+                section_data, guid_manifest, source_file, as_json
+            )
+            components.extend(wrappers)
+        else:
+            section_component, section_styles = _classify_and_resolve(
+                section_data, source_file, as_json, palette
+            )
+            _validate_section_component(section_component, source_file, as_json)
+            components.append(section_component)
         _merge_styles(styles, section_styles)
 
     if header_block_guid:
-        components.insert(0, _make_global_block_wrapper("Global: Header", header_block_guid))
+        components.insert(0, make_global_block_wrapper("Global: Header", header_block_guid))
     if footer_block_guid:
-        components.append(_make_global_block_wrapper("Global: Footer", footer_block_guid))
+        components.append(make_global_block_wrapper("Global: Footer", footer_block_guid))
 
     result = {"components": components, "styles": styles}
 

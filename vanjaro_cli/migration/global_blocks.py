@@ -25,7 +25,40 @@ from vanjaro_cli.utils.block_compose import apply_section_background
 __all__ = [
     "build_header_block",
     "build_footer_block",
+    "make_global_block_wrapper",
+    "GLOBAL_BLOCK_WRAPPER_TYPE_GUID",
+    "MENU_BLOCK_GUID",
 ]
+
+MENU_BLOCK_GUID = "3007ca5e-0c09-4824-ae81-0044f993c8f5"
+
+# The globalblockwrapper component type is registered in Vanjaro's core GrapesJS
+# schema. Its ``data-block-guid`` is a fixed identifier for the wrapper TYPE
+# itself — the ``data-guid`` attribute points at the specific global block
+# instance the wrapper references.
+GLOBAL_BLOCK_WRAPPER_TYPE_GUID = "7a4be0f2-56ab-410a-9422-6bc91b488150"
+
+
+def make_global_block_wrapper(name: str, block_guid: str) -> dict:
+    """Build a ``globalblockwrapper`` component referencing a global block.
+
+    Vanjaro renders these as empty divs at save time and expands them
+    server-side by looking up the ``data-guid``, so the wrapper's nested
+    ``components`` array is intentionally empty. ``block_guid`` may be a real
+    GUID or a ``{{global:KEY}}`` placeholder the assemble step resolves later.
+    """
+    return {
+        "type": "globalblockwrapper",
+        "name": name,
+        "content": "",
+        "attributes": {
+            "data-block-type": "global",
+            "data-block-guid": GLOBAL_BLOCK_WRAPPER_TYPE_GUID,
+            "data-guid": block_guid,
+            "id": uuid.uuid4().hex[:5],
+        },
+        "components": [],
+    }
 
 
 def _id() -> str:
@@ -100,36 +133,83 @@ def _list_item(text: str) -> dict:
     return _component("list-item", content=text)
 
 
-def _wrap(component: dict) -> dict:
+def _wrap(component: dict, styles: list | None = None) -> dict:
     """Wrap a top-level section in the file shape ``global-blocks create`` expects."""
-    return {"components": [component], "styles": []}
+    return {"components": [component], "styles": styles or []}
 
 
 # --- Header ---
 
 
-def build_header_block(content: dict, base_url: str = "") -> dict:
+def _menu_block() -> dict:
+    """Return the Vanjaro native Menu blockwrapper component.
+
+    This renders the live DNN page tree server-side via Block/RenderItem into
+    a Bootstrap navbar, so it stays current as pages are added or renamed.
+    The GUID is stable across Vanjaro installs.
+    """
+    return {
+        "type": "blockwrapper",
+        "name": "Menu",
+        "content": "",
+        "classes": [
+            {"name": "align-ib", "active": False},
+            {"name": "menu-style-1", "active": False},
+        ],
+        "attributes": {
+            "data-block-global": "true",
+            "data-block-type": "Menu",
+            "data-block-alignment": "true",
+            "data-block-styles": "true",
+            "data-block-resizable": "false",
+            "data-block-guid": MENU_BLOCK_GUID,
+            "data-block-template": "Default",
+            "data-block-nodeselector": "*",
+            "data-block-includehidden": "false",
+            "data-block-allow-customization": "true",
+            "data-block-category": "Design",
+            "id": _id(),
+            "alignment": "right",
+        },
+        "custom-name": "Menu",
+        "alignment": "none",
+    }
+
+
+def build_header_block(
+    content: dict,
+    base_url: str = "",
+    static_nav: bool = False,
+    palette: dict[str, tuple[int, int, int]] | None = None,
+) -> dict:
     """Build a header global-block tree from a crawled header content dict.
 
-    Layout: one row with the first image as a logo on the left and the nav
-    (preferred source: ``nav_items``, falling back to ``list_items``,
-    falling back to ``links``) as a horizontal list on the right.
+    By default the nav column uses Vanjaro's native Menu blockwrapper, which
+    renders the live DNN page tree server-side and stays current as pages are
+    added or renamed. Pass ``static_nav=True`` to instead embed a static list
+    built from the crawled nav entries (legacy behaviour).
 
-    Returns a dict with ``components`` (a list containing the top-level
-    section) and ``styles`` (empty). Ready to feed
-    ``vanjaro global-blocks create --file``.
+    Layout: one row with the first image as a logo on the left and the nav on
+    the right. Returns a dict with ``components`` and ``styles`` ready to feed
+    ``vanjaro global-blocks create --file``. With a ``palette``, band colors
+    become theme classes (and any per-id rules land in ``styles``).
     """
     logo = _header_logo(content)
-    nav_entries = _header_nav_entries(content)
 
     row_cols: list[dict] = []
     if logo is not None:
         row_cols.append(_col([logo], size_classes=["col-md-3", "col-6"]))
-    if nav_entries:
-        nav_classes = ["d-flex", "flex-wrap", "gap-3", "justify-content-md-end"]
-        nav_wrapper = _component("default", classes=nav_classes, children=nav_entries)
+
+    if static_nav:
+        nav_entries = _header_nav_entries(content)
+        if nav_entries:
+            nav_classes = ["d-flex", "flex-wrap", "gap-3", "justify-content-md-end"]
+            nav_wrapper = _component("default", classes=nav_classes, children=nav_entries)
+            nav_col_sizes = ["col-md-9", "col-6"] if logo is not None else ["col-12"]
+            row_cols.append(_col([nav_wrapper], size_classes=nav_col_sizes))
+    else:
         nav_col_sizes = ["col-md-9", "col-6"] if logo is not None else ["col-12"]
-        row_cols.append(_col([nav_wrapper], size_classes=nav_col_sizes))
+        row_cols.append(_col([_menu_block()], size_classes=nav_col_sizes))
 
     if not row_cols:
         # Empty content — produce a placeholder so the registered block
@@ -144,8 +224,9 @@ def build_header_block(content: dict, base_url: str = "") -> dict:
             ]),
         ],
     )
-    apply_section_background(section, content)
-    return _wrap(section)
+    styles: list = []
+    apply_section_background(section, content, palette=palette, styles=styles)
+    return _wrap(section, styles)
 
 
 def _header_logo(content: dict) -> dict | None:
@@ -192,7 +273,11 @@ def _has_text(item: Any) -> bool:
 # --- Footer ---
 
 
-def build_footer_block(content: dict, base_url: str = "") -> dict:
+def build_footer_block(
+    content: dict,
+    base_url: str = "",
+    palette: dict[str, tuple[int, int, int]] | None = None,
+) -> dict:
     """Build a footer global-block tree from a crawled footer content dict.
 
     Layout:
@@ -202,6 +287,9 @@ def build_footer_block(content: dict, base_url: str = "") -> dict:
       - Optional "about" row: the first paragraph centered as copyright/blurb.
       - Optional badges row: up to 6 images from the crawl (logos, chamber
         badges, etc.) centered in their own row.
+
+    With a ``palette``, band colors become theme classes (and any per-id rules
+    land in ``styles``).
     """
     link_columns = _footer_link_columns(content)
     about_text = _first_paragraph(content)
@@ -251,8 +339,9 @@ def build_footer_block(content: dict, base_url: str = "") -> dict:
         extra_classes=["py-5"] if has_band else ["py-5", "bg-light"],
         children=[_container(container_children)],
     )
-    apply_section_background(section, content)
-    return _wrap(section)
+    styles: list = []
+    apply_section_background(section, content, palette=palette, styles=styles)
+    return _wrap(section, styles)
 
 
 def _footer_social_row(content: dict) -> dict | None:

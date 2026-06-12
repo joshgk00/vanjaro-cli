@@ -432,3 +432,78 @@ def test_build_library_empty_plan_json(runner, tmp_path, monkeypatch):
     data = json.loads(result.output)
     assert data["status"] == "ok"
     assert data["summary"]["total"] == 0
+
+
+# -- guids-out manifest --
+
+
+@responses.activate
+def test_build_library_guids_out_writes_manifest_keyed_by_key(runner, mock_config, tmp_path, monkeypatch):
+    """The manifest keys on the plan entry's 'key' when present, else its name."""
+    templates_dir = _setup_templates(tmp_path)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    mock_homepage()
+    responses.add(
+        responses.POST,
+        GLOBAL_CREATE_URL,
+        json={"Status": "Success", "Guid": "global-guid-789"},
+        status=200,
+    )
+
+    plan_file = _write_plan(tmp_path, [
+        {"template": "Centered Hero", "name": "Global CTA", "type": "global",
+         "key": "global-cta-get-started"},
+    ])
+    manifest_path = tmp_path / "global-guids.json"
+
+    result = runner.invoke(cli, [
+        "blocks", "build-library",
+        "--plan", str(plan_file),
+        "--guids-out", str(manifest_path),
+    ])
+
+    assert result.exit_code == 0, result.output
+    manifest = json.loads(manifest_path.read_text())
+    assert manifest == {"global-cta-get-started": "global-guid-789"}
+
+
+@responses.activate
+def test_build_library_guids_out_falls_back_to_name(runner, mock_config, tmp_path, monkeypatch):
+    templates_dir = _setup_templates(tmp_path)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    mock_homepage()
+    responses.add(
+        responses.POST,
+        GLOBAL_CREATE_URL,
+        json={"Status": "Success", "Guid": "guid-named"},
+        status=200,
+    )
+
+    plan_file = _write_plan(tmp_path, [
+        {"template": "Centered Hero", "name": "Keyless Global", "type": "global"},
+    ])
+    manifest_path = tmp_path / "guids.json"
+
+    result = runner.invoke(cli, [
+        "blocks", "build-library",
+        "--plan", str(plan_file),
+        "--guids-out", str(manifest_path),
+    ])
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(manifest_path.read_text()) == {"Keyless Global": "guid-named"}
+
+
+def test_build_library_rejects_non_string_key(runner, tmp_path, monkeypatch):
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(tmp_path))
+
+    plan_file = _write_plan(tmp_path, [
+        {"template": "Hero", "name": "Test", "key": 123},
+    ])
+
+    result = runner.invoke(cli, ["blocks", "build-library", "--plan", str(plan_file), "--dry-run"])
+
+    assert result.exit_code == 1
+    assert "'key' must be a string" in result.output

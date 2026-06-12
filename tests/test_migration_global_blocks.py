@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from vanjaro_cli.migration.global_blocks import (
+    MENU_BLOCK_GUID,
     build_footer_block,
     build_header_block,
 )
@@ -77,6 +78,20 @@ def _first_component(built: dict) -> dict:
 # --- build_header_block ---
 
 
+def _find_all(tree: dict, predicate) -> list[dict]:
+    """Return every node in the tree (depth-first) that satisfies predicate."""
+    result: list[dict] = []
+    def _walk(node):
+        if not isinstance(node, dict):
+            return
+        if predicate(node):
+            result.append(node)
+        for child in node.get("components", []) or []:
+            _walk(child)
+    _walk(tree)
+    return result
+
+
 def test_header_wraps_output_in_components_styles_shape():
     """Builder output must match `vanjaro global-blocks create --file` input shape."""
     built = build_header_block({})
@@ -105,41 +120,113 @@ def test_header_skips_images_without_src():
     assert _image_srcs(_first_component(built)) == ["/real.png"]
 
 
-def test_header_prefers_nav_items_over_list_items():
+# --- Default (live Menu) path ---
+
+
+def test_header_default_embeds_menu_blockwrapper():
+    """Default build uses the Vanjaro Menu blockwrapper, not a static nav list."""
     built = build_header_block({
-        "nav_items": [
-            {"label": "Home", "href": "/"},
-            {"label": "About", "href": "/about"},
-        ],
-        "list_items": ["Something", "Else"],
+        "nav_items": [{"label": "Home", "href": "/"}, {"label": "About", "href": "/about"}],
     })
+    tree = _first_component(built)
+    menu_nodes = _find_all(tree, lambda n: n.get("type") == "blockwrapper")
+    assert len(menu_nodes) == 1
+    assert menu_nodes[0]["attributes"]["data-block-guid"] == MENU_BLOCK_GUID
+    assert menu_nodes[0]["attributes"]["data-block-type"] == "Menu"
+
+
+def test_header_default_menu_has_unique_id():
+    """Two calls produce two different component ids (short hex from uuid4)."""
+    built1 = build_header_block({})
+    built2 = build_header_block({})
+    tree1, tree2 = _first_component(built1), _first_component(built2)
+    menus1 = _find_all(tree1, lambda n: n.get("type") == "blockwrapper")
+    menus2 = _find_all(tree2, lambda n: n.get("type") == "blockwrapper")
+    assert menus1[0]["attributes"]["id"] != menus2[0]["attributes"]["id"]
+
+
+def test_header_default_does_not_contain_static_nav_list_items():
+    """Default build omits crawled nav_items — live Menu block replaces them."""
+    built = build_header_block({
+        "nav_items": [{"label": "Home", "href": "/"}, {"label": "About", "href": "/about"}],
+    })
+    types = _flatten_types(_first_component(built))
+    assert "list-item" not in types
+
+
+def test_header_default_empty_content_has_section_and_menu():
+    """Even with empty content the default build produces a valid section+menu."""
+    built = build_header_block({})
+    tree = _first_component(built)
+    assert tree["type"] == "section"
+    assert "vj-section" in _flatten_classes(tree)
+    menu_nodes = _find_all(tree, lambda n: n.get("type") == "blockwrapper")
+    assert len(menu_nodes) == 1
+
+
+def test_header_default_splits_logo_and_menu_into_two_columns():
+    built = build_header_block({
+        "images": [{"src": "/logo.png", "alt": "Logo"}],
+    })
+    row = _first_component(built)["components"][0]["components"][0]
+    assert row["type"] == "row"
+    columns = [c for c in row["components"] if c.get("type") == "column"]
+    assert len(columns) == 2
+
+
+def test_header_default_single_menu_column_when_no_logo():
+    """No logo — one full-width column containing the Menu block."""
+    built = build_header_block({})
+    row = _first_component(built)["components"][0]["components"][0]
+    columns = [c for c in row["components"] if c.get("type") == "column"]
+    assert len(columns) == 1
+    col_classes = [cls["name"] for cls in columns[0]["classes"]]
+    assert "col-12" in col_classes
+
+
+# --- Static nav path (static_nav=True) ---
+
+
+def test_header_static_nav_prefers_nav_items_over_list_items():
+    built = build_header_block(
+        {
+            "nav_items": [
+                {"label": "Home", "href": "/"},
+                {"label": "About", "href": "/about"},
+            ],
+            "list_items": ["Something", "Else"],
+        },
+        static_nav=True,
+    )
     contents = _flatten_content(_first_component(built))
     assert "Home" in contents
     assert "About" in contents
     assert "Something" not in contents
 
 
-def test_header_falls_back_to_list_items_when_nav_items_empty():
-    built = build_header_block({
-        "list_items": ["Home", "Services", "Contact"],
-    })
+def test_header_static_nav_falls_back_to_list_items_when_nav_items_empty():
+    built = build_header_block(
+        {"list_items": ["Home", "Services", "Contact"]},
+        static_nav=True,
+    )
     contents = _flatten_content(_first_component(built))
     assert "Home" in contents
     assert "Services" in contents
     assert "Contact" in contents
 
 
-def test_header_falls_back_to_links_when_nav_items_and_list_items_empty():
-    built = build_header_block({
-        "links": [{"text": "Link One", "href": "/one"}],
-    })
+def test_header_static_nav_falls_back_to_links_when_nav_items_and_list_items_empty():
+    built = build_header_block(
+        {"links": [{"text": "Link One", "href": "/one"}]},
+        static_nav=True,
+    )
     contents = _flatten_content(_first_component(built))
     assert "Link One" in contents
 
 
-def test_header_empty_content_produces_placeholder_row():
-    """Empty content still yields a valid tree so register doesn't error."""
-    built = build_header_block({})
+def test_header_static_nav_empty_content_produces_placeholder_row():
+    """Empty content + static_nav yields placeholder text (no nav entries available)."""
+    built = build_header_block({}, static_nav=True)
     tree = _first_component(built)
     assert tree["type"] == "section"
     assert "vj-section" in _flatten_classes(tree)
@@ -147,11 +234,14 @@ def test_header_empty_content_produces_placeholder_row():
     assert any("migrated header" in c.lower() for c in contents)
 
 
-def test_header_produces_section_container_row_hierarchy():
-    built = build_header_block({
-        "images": [{"src": "/logo.png", "alt": "Logo"}],
-        "nav_items": [{"label": "Home", "href": "/"}],
-    })
+def test_header_static_nav_produces_section_container_row_hierarchy():
+    built = build_header_block(
+        {
+            "images": [{"src": "/logo.png", "alt": "Logo"}],
+            "nav_items": [{"label": "Home", "href": "/"}],
+        },
+        static_nav=True,
+    )
     types = _flatten_types(_first_component(built))
     assert types[0] == "section"
     assert "grid" in types
@@ -161,21 +251,23 @@ def test_header_produces_section_container_row_hierarchy():
     assert "list-item" in types
 
 
-def test_header_layout_splits_logo_and_nav_into_two_columns():
-    built = build_header_block({
-        "images": [{"src": "/logo.png", "alt": "Logo"}],
-        "nav_items": [{"label": "Home", "href": "/"}, {"label": "About", "href": "/about"}],
-    })
-    # Find the row component and count its columns
+def test_header_static_nav_splits_logo_and_nav_into_two_columns():
+    built = build_header_block(
+        {
+            "images": [{"src": "/logo.png", "alt": "Logo"}],
+            "nav_items": [{"label": "Home", "href": "/"}, {"label": "About", "href": "/about"}],
+        },
+        static_nav=True,
+    )
     row = _first_component(built)["components"][0]["components"][0]
     assert row["type"] == "row"
     columns = [c for c in row["components"] if c.get("type") == "column"]
     assert len(columns) == 2
 
 
-def test_header_layout_uses_full_width_column_when_no_logo():
+def test_header_static_nav_uses_full_width_column_when_no_logo():
     """A header with nav but no logo should still produce a usable single column."""
-    built = build_header_block({"list_items": ["Home", "About"]})
+    built = build_header_block({"list_items": ["Home", "About"]}, static_nav=True)
     row = _first_component(built)["components"][0]["components"][0]
     columns = [c for c in row["components"] if c.get("type") == "column"]
     assert len(columns) == 1
@@ -293,8 +385,8 @@ def test_footer_combines_columns_about_and_badges():
 # --- Real-world data shape (reuses crawled e2e-cmw content) ---
 
 
-def test_header_handles_cmw_crawled_content_shape():
-    """Regression: run the builder against the shape the real crawler writes."""
+def test_header_handles_cmw_crawled_content_shape_default():
+    """Regression: default build embeds Menu block; logo still comes from crawl."""
     crawled_content = {
         "headings": [],
         "paragraphs": [],
@@ -314,9 +406,35 @@ def test_header_handles_cmw_crawled_content_shape():
     assert built["components"]
     tree = _first_component(built)
     srcs = _image_srcs(tree)
+    assert "https://www.clicksandmortarwebsites.com/Portals/0/logo.png" in srcs
+    menu_nodes = _find_all(tree, lambda n: n.get("type") == "blockwrapper")
+    assert len(menu_nodes) == 1
+    assert menu_nodes[0]["attributes"]["data-block-guid"] == MENU_BLOCK_GUID
+
+
+def test_header_handles_cmw_crawled_content_shape_static_nav():
+    """Regression (static_nav=True): crawled nav_items take precedence over list_items."""
+    crawled_content = {
+        "headings": [],
+        "paragraphs": [],
+        "images": [
+            {"src": "https://www.clicksandmortarwebsites.com/Portals/0/logo.png", "alt": "Clicks & Mortar"},
+        ],
+        "links": [],
+        "buttons": [],
+        "list_items": ["Home", "Who We Are", "What We Do", "What We Offer", "FAQs", "Blog", "Contact Us"],
+        "nav_items": [
+            {"label": "Home", "href": "https://www.clicksandmortarwebsites.com/", "children": []},
+            {"label": "Who We Are", "href": "https://www.clicksandmortarwebsites.com/who-we-are", "children": []},
+        ],
+    }
+
+    built = build_header_block(crawled_content, static_nav=True)
+    assert built["components"]
+    tree = _first_component(built)
+    srcs = _image_srcs(tree)
     contents = _flatten_content(tree)
     assert "https://www.clicksandmortarwebsites.com/Portals/0/logo.png" in srcs
-    # nav_items takes precedence
     assert "Home" in contents
     assert "Who We Are" in contents
 

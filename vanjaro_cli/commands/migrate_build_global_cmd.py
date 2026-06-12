@@ -22,6 +22,7 @@ from vanjaro_cli.migration.global_blocks import (
     build_footer_block,
     build_header_block,
 )
+from vanjaro_cli.utils.theme_palette import PaletteError, load_palette
 
 __all__ = ["build_global"]
 
@@ -51,11 +52,32 @@ __all__ = ["build_global"]
     "``vanjaro global-blocks create --file ...``.",
 )
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+@click.option(
+    "--static-nav",
+    "static_nav",
+    is_flag=True,
+    default=False,
+    help=(
+        "Header only: embed a static nav list from the crawled nav entries "
+        "instead of the live Vanjaro Menu block. Useful when the DNN page "
+        "tree doesn't match the source site's navigation."
+    ),
+)
+@click.option(
+    "--theme-palette",
+    "theme_palette_file",
+    type=click.Path(),
+    default=None,
+    help="Palette JSON (from `vanjaro theme palette-export`). Maps band colors "
+    "to theme classes (bg-primary, text-light, ...) instead of inline color.",
+)
 def build_global(
     source_file: str,
     kind: str,
     output_file: str,
     as_json: bool,
+    static_nav: bool,
+    theme_palette_file: str | None,
 ) -> None:
     """Build a site-specific global header/footer from a crawled global element.
 
@@ -84,10 +106,19 @@ def build_global(
 
     source_url = source.get("source_url") if isinstance(source.get("source_url"), str) else ""
 
+    palette: dict[str, tuple[int, int, int]] | None = None
+    if theme_palette_file:
+        try:
+            palette = load_palette(theme_palette_file)
+        except PaletteError as exc:
+            exit_error(str(exc), as_json)
+
     if kind == "header":
-        built = build_header_block(content, base_url=source_url)
+        built = build_header_block(
+            content, base_url=source_url, static_nav=static_nav, palette=palette
+        )
     else:
-        built = build_footer_block(content, base_url=source_url)
+        built = build_footer_block(content, base_url=source_url, palette=palette)
 
     output_path = Path(output_file)
     try:

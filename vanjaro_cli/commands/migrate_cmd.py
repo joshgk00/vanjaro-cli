@@ -16,7 +16,10 @@ from vanjaro_cli.commands.migrate_assemble_cmd import assemble_page
 from vanjaro_cli.commands.migrate_build_global_cmd import build_global
 from vanjaro_cli.commands.migrate_build_id_map_cmd import build_id_map
 from vanjaro_cli.commands.migrate_create_pages_cmd import create_pages
+from vanjaro_cli.commands.migrate_dedup_cmd import dedup_sections
 from vanjaro_cli.commands.migrate_rewrite_cmd import rewrite_urls
+from vanjaro_cli.commands.migrate_audit_cmd import audit_structure
+from vanjaro_cli.commands.migrate_gap_report_cmd import gap_report
 from vanjaro_cli.commands.migrate_verify_cmd import verify, verify_all
 from vanjaro_cli.commands.migrate_visual_cmd import visual_capture
 from vanjaro_cli.migration.assets import download_assets
@@ -44,9 +47,12 @@ def migrate() -> None:
 
 
 migrate.add_command(assemble_page)
+migrate.add_command(audit_structure)
 migrate.add_command(build_global)
+migrate.add_command(gap_report)
 migrate.add_command(build_id_map)
 migrate.add_command(create_pages)
+migrate.add_command(dedup_sections)
 migrate.add_command(rewrite_urls)
 migrate.add_command(verify)
 migrate.add_command(verify_all)

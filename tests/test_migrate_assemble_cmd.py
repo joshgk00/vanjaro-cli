@@ -46,12 +46,6 @@ def _write_template(templates_dir: Path, template: dict) -> None:
     (category_dir / filename).write_text(json.dumps(template))
 
 
-def _write_json(path: Path, data: dict) -> Path:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(data))
-    return path
-
-
 def _raw_section(section_id: str, heading_text: str) -> dict:
     return {
         "type": "section",
@@ -174,9 +168,9 @@ def test_crawl_section_ignores_non_string_entries():
 # -- CLI: Mode A (raw component trees) --
 
 
-def test_assemble_mode_a_two_raw_sections(runner, tmp_path):
-    section_one = _write_json(tmp_path / "section-1-hero.json", _raw_section("s1", "First"))
-    section_two = _write_json(tmp_path / "section-2-cards.json", _raw_section("s2", "Second"))
+def test_assemble_mode_a_two_raw_sections(runner, tmp_path, write_json):
+    section_one = write_json(tmp_path / "section-1-hero.json", _raw_section("s1", "First"))
+    section_two = write_json(tmp_path / "section-2-cards.json", _raw_section("s2", "Second"))
     output_file = tmp_path / "home.json"
 
     result = runner.invoke(
@@ -199,12 +193,12 @@ def test_assemble_mode_a_two_raw_sections(runner, tmp_path):
 # -- CLI: Mode B (template reference + explicit overrides) --
 
 
-def test_assemble_mode_b_template_reference(runner, tmp_path, monkeypatch):
+def test_assemble_mode_b_template_reference(runner, tmp_path, monkeypatch, write_json):
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, HERO_TEMPLATE)
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "hero.json",
         {
             "template": "Centered Hero",
@@ -235,12 +229,12 @@ def test_assemble_mode_b_template_reference(runner, tmp_path, monkeypatch):
 # -- CLI: crawler shape (template + content) --
 
 
-def test_assemble_crawler_shape_maps_content_to_overrides(runner, tmp_path, monkeypatch):
+def test_assemble_crawler_shape_maps_content_to_overrides(runner, tmp_path, monkeypatch, write_json):
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, HERO_TEMPLATE)
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "crawled.json",
         {
             "type": "hero",
@@ -271,11 +265,11 @@ def test_assemble_crawler_shape_maps_content_to_overrides(runner, tmp_path, monk
 # -- Glob expansion / ordering --
 
 
-def test_assemble_glob_expansion_sorts_lexically(runner, tmp_path):
+def test_assemble_glob_expansion_sorts_lexically(runner, tmp_path, write_json):
     # Deliberately write in reverse order
-    _write_json(tmp_path / "section-2-cards.json", _raw_section("s2", "Two"))
-    _write_json(tmp_path / "section-1-hero.json", _raw_section("s1", "One"))
-    _write_json(tmp_path / "section-3-cta.json", _raw_section("s3", "Three"))
+    write_json(tmp_path / "section-2-cards.json", _raw_section("s2", "Two"))
+    write_json(tmp_path / "section-1-hero.json", _raw_section("s1", "One"))
+    write_json(tmp_path / "section-3-cta.json", _raw_section("s3", "Three"))
 
     output_file = tmp_path / "home.json"
     pattern = str(tmp_path / "section-*.json")
@@ -291,9 +285,9 @@ def test_assemble_glob_expansion_sorts_lexically(runner, tmp_path):
     assert ids == ["s1", "s2", "s3"]
 
 
-def test_assemble_glob_deduplicates_with_explicit_path(runner, tmp_path):
-    section_one = _write_json(tmp_path / "section-1.json", _raw_section("s1", "One"))
-    _write_json(tmp_path / "section-2.json", _raw_section("s2", "Two"))
+def test_assemble_glob_deduplicates_with_explicit_path(runner, tmp_path, write_json):
+    section_one = write_json(tmp_path / "section-1.json", _raw_section("s1", "One"))
+    write_json(tmp_path / "section-2.json", _raw_section("s2", "Two"))
     output_file = tmp_path / "home.json"
     pattern = str(tmp_path / "section-*.json")
 
@@ -357,12 +351,12 @@ def test_assemble_invalid_json_reports_file(runner, tmp_path):
     assert "Invalid JSON" in result.output or "invalid json" in result.output.lower()
 
 
-def test_assemble_missing_template_reports_source_file(runner, tmp_path, monkeypatch):
+def test_assemble_missing_template_reports_source_file(runner, tmp_path, monkeypatch, write_json):
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, HERO_TEMPLATE)
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "bad-template.json",
         {"template": "Nonexistent Template", "overrides": {}},
     )
@@ -378,8 +372,8 @@ def test_assemble_missing_template_reports_source_file(runner, tmp_path, monkeyp
     assert "bad-template.json" in result.output
 
 
-def test_assemble_section_with_neither_components_nor_template_errors(runner, tmp_path):
-    bad_file = _write_json(tmp_path / "empty.json", {"foo": "bar"})
+def test_assemble_section_with_neither_components_nor_template_errors(runner, tmp_path, write_json):
+    bad_file = write_json(tmp_path / "empty.json", {"foo": "bar"})
     output_file = tmp_path / "home.json"
 
     result = runner.invoke(
@@ -394,9 +388,9 @@ def test_assemble_section_with_neither_components_nor_template_errors(runner, tm
 # -- --json output shape --
 
 
-def test_assemble_json_output_shape(runner, tmp_path):
-    section_one = _write_json(tmp_path / "a.json", _raw_section("s1", "First"))
-    section_two = _write_json(tmp_path / "b.json", _raw_section("s2", "Second"))
+def test_assemble_json_output_shape(runner, tmp_path, write_json):
+    section_one = write_json(tmp_path / "a.json", _raw_section("s1", "First"))
+    section_two = write_json(tmp_path / "b.json", _raw_section("s2", "Second"))
     output_file = tmp_path / "out.json"
 
     result = runner.invoke(
@@ -454,13 +448,13 @@ FOOTER_TEMPLATE = {
 }
 
 
-def test_assemble_expands_excess_list_items(runner, tmp_path, monkeypatch):
+def test_assemble_expands_excess_list_items(runner, tmp_path, monkeypatch, write_json):
     """List items beyond the template's slot count ship via list expansion."""
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, FOOTER_TEMPLATE)
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "footer.json",
         {
             "type": "footer",
@@ -489,12 +483,12 @@ def test_assemble_expands_excess_list_items(runner, tmp_path, monkeypatch):
         assert item in rendered
 
 
-def test_assemble_no_warning_when_content_fits(runner, tmp_path, monkeypatch):
+def test_assemble_no_warning_when_content_fits(runner, tmp_path, monkeypatch, write_json):
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, FOOTER_TEMPLATE)
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "footer.json",
         {
             "type": "footer",
@@ -522,8 +516,8 @@ def test_assemble_no_warning_when_content_fits(runner, tmp_path, monkeypatch):
 # --- Global block wrapping ---
 
 
-def test_assemble_wraps_with_header_and_footer_when_guids_provided(runner, tmp_path):
-    section_file = _write_json(
+def test_assemble_wraps_with_header_and_footer_when_guids_provided(runner, tmp_path, write_json):
+    section_file = write_json(
         tmp_path / "sections" / "s.json",
         _raw_section("s1", "Hello"),
     )
@@ -553,8 +547,8 @@ def test_assemble_wraps_with_header_and_footer_when_guids_provided(runner, tmp_p
     assert components[2]["attributes"]["data-guid"] == "fe37ff48-2c99-4201-85fc-913cac94914d"
 
 
-def test_assemble_wraps_only_header_when_footer_guid_omitted(runner, tmp_path):
-    section_file = _write_json(
+def test_assemble_wraps_only_header_when_footer_guid_omitted(runner, tmp_path, write_json):
+    section_file = write_json(
         tmp_path / "sections" / "s.json",
         _raw_section("s1", "Hello"),
     )
@@ -576,9 +570,9 @@ def test_assemble_wraps_only_header_when_footer_guid_omitted(runner, tmp_path):
     assert components[1]["type"] == "section"
 
 
-def test_assemble_does_not_wrap_when_no_guids_provided(runner, tmp_path):
+def test_assemble_does_not_wrap_when_no_guids_provided(runner, tmp_path, write_json):
     """Existing callers that don't opt in to wrapping must keep the old shape."""
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "sections" / "s.json",
         _raw_section("s1", "Hello"),
     )
@@ -596,9 +590,9 @@ def test_assemble_does_not_wrap_when_no_guids_provided(runner, tmp_path):
     assert not any(c.get("type") == "globalblockwrapper" for c in components)
 
 
-def test_assemble_wrapper_ids_are_unique(runner, tmp_path):
+def test_assemble_wrapper_ids_are_unique(runner, tmp_path, write_json):
     """Header and footer wrappers must get distinct auto-generated ids."""
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "sections" / "s.json",
         _raw_section("s1", "Hello"),
     )
@@ -622,13 +616,13 @@ def test_assemble_wrapper_ids_are_unique(runner, tmp_path):
     assert footer_id
 
 
-def test_assemble_applies_section_background_from_content(runner, tmp_path, monkeypatch):
+def test_assemble_applies_section_background_from_content(runner, tmp_path, monkeypatch, write_json):
     """Crawled background colors land as inline style on the composed section."""
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, HERO_TEMPLATE)
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "band.json",
         {
             "type": "cta",
@@ -654,12 +648,12 @@ def test_assemble_applies_section_background_from_content(runner, tmp_path, monk
     assert "color:#ffffff;" in style
 
 
-def test_assemble_light_background_keeps_default_text_color(runner, tmp_path, monkeypatch):
+def test_assemble_light_background_keeps_default_text_color(runner, tmp_path, monkeypatch, write_json):
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, HERO_TEMPLATE)
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "light.json",
         {
             "type": "content",
@@ -683,13 +677,13 @@ def test_assemble_light_background_keeps_default_text_color(runner, tmp_path, mo
     assert "color:" not in style.replace("background-color:", "")
 
 
-def test_assemble_background_image_and_rgb_dark_color(runner, tmp_path, monkeypatch):
+def test_assemble_background_image_and_rgb_dark_color(runner, tmp_path, monkeypatch, write_json):
     """Rendered-crawl rgb() colors and background images carry into the style."""
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, HERO_TEMPLATE)
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "band.json",
         {
             "type": "content",
@@ -717,13 +711,13 @@ def test_assemble_background_image_and_rgb_dark_color(runner, tmp_path, monkeypa
     assert "color:#ffffff;" in style
 
 
-def test_crawler_sections_blank_unfilled_placeholder_slots(runner, tmp_path, monkeypatch):
+def test_crawler_sections_blank_unfilled_placeholder_slots(runner, tmp_path, monkeypatch, write_json):
     """Template placeholder copy must not leak when crawled content lacks a slot."""
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, HERO_TEMPLATE)
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "banner.json",
         {
             "type": "hero",
@@ -746,7 +740,7 @@ def test_crawler_sections_blank_unfilled_placeholder_slots(runner, tmp_path, mon
         assert placeholder not in rendered
 
 
-def test_cloned_column_units_do_not_leak_placeholder_copy(runner, tmp_path, monkeypatch):
+def test_cloned_column_units_do_not_leak_placeholder_copy(runner, tmp_path, monkeypatch, write_json):
     """Slots in cloned column units must be blanked when overrides don't fill them."""
     cards_template = {
         "name": "Feature Cards",
@@ -783,7 +777,7 @@ def test_cloned_column_units_do_not_leak_placeholder_copy(runner, tmp_path, monk
     monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
 
     # 5 images but only 2 headings: 3 cloned columns gain placeholder headings
-    section_file = _write_json(
+    section_file = write_json(
         tmp_path / "cards.json",
         {
             "type": "gallery",
@@ -806,3 +800,201 @@ def test_cloned_column_units_do_not_leak_placeholder_copy(runner, tmp_path, monk
     row = rendered["components"][0]["components"][0]
     assert len(row["components"]) == 5
     assert "Project Title" not in json.dumps(rendered)
+
+
+# --- Global dedup stub resolution (--global-guids) ---
+
+
+def _dedup_stub(key: str) -> dict:
+    return {
+        "global_key": key,
+        "original_backup": {"type": "cta", "template": "CTA Strip", "content": {}},
+        "components": [
+            {
+                "type": "globalblockwrapper",
+                "name": "Global: CTA",
+                "content": "",
+                "attributes": {
+                    "data-block-type": "global",
+                    "data-guid": "{{global:%s}}" % key,
+                    "id": "abc12",
+                },
+                "components": [],
+            }
+        ],
+    }
+
+
+def test_assemble_resolves_global_placeholder_from_manifest(runner, tmp_path, write_json):
+    stub_file = write_json(tmp_path / "section-001-cta.json", _dedup_stub("global-cta"))
+    manifest = write_json(tmp_path / "guids.json", {"global-cta": "real-guid-123"})
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        [
+            "--sections", str(stub_file),
+            "--output", str(output_file),
+            "--global-guids", str(manifest),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    components = json.loads(output_file.read_text())["components"]
+    assert len(components) == 1
+    wrapper = components[0]
+    assert wrapper["type"] == "globalblockwrapper"
+    assert wrapper["attributes"]["data-guid"] == "real-guid-123"
+    # Helper keys must never reach the assembled output.
+    assert "global_key" not in wrapper
+    assert "original_backup" not in wrapper
+    assert "original_backup" not in output_file.read_text()
+
+
+def test_assemble_errors_when_global_placeholder_has_no_manifest_entry(runner, tmp_path, write_json):
+    stub_file = write_json(tmp_path / "section-001-cta.json", _dedup_stub("global-cta"))
+    manifest = write_json(tmp_path / "guids.json", {"some-other-key": "guid"})
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        [
+            "--sections", str(stub_file),
+            "--output", str(output_file),
+            "--global-guids", str(manifest),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "global-cta" in result.output
+    assert not output_file.exists()
+
+
+# -- assemble --theme-palette (band colors -> theme classes) --
+
+
+def test_assemble_theme_palette_maps_band_to_bg_class(runner, tmp_path, monkeypatch, write_json):
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, HERO_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    palette_file = write_json(
+        tmp_path / "palette.json", {"primary": "#00aa55", "light": "#f8f9fa"}
+    )
+    section_file = write_json(
+        tmp_path / "band.json",
+        {
+            "type": "cta",
+            "template": "Centered Hero",
+            "content": {"headings": ["Hello"], "background_color": "#00aa55"},
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        [
+            "--sections", str(section_file),
+            "--output", str(output_file),
+            "--theme-palette", str(palette_file),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    section = json.loads(output_file.read_text())["components"][0]
+    class_names = [c["name"] for c in section.get("classes", [])]
+    assert "bg-primary" in class_names
+    assert "text-light" in class_names
+    assert "style" not in section["attributes"]
+
+
+def test_assemble_theme_palette_unmatched_color_lands_in_styles(runner, tmp_path, monkeypatch, write_json):
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, HERO_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    palette_file = write_json(tmp_path / "palette.json", {"primary": "#00aa55"})
+    section_file = write_json(
+        tmp_path / "band.json",
+        {
+            "type": "content",
+            "template": "Centered Hero",
+            "content": {"headings": ["Hello"], "background_color": "#7b1fa2"},
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        [
+            "--sections", str(section_file),
+            "--output", str(output_file),
+            "--theme-palette", str(palette_file),
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    result_json = json.loads(output_file.read_text())
+    section = result_json["components"][0]
+    section_id = section["attributes"]["id"]
+    assert "style" not in section["attributes"]
+    def _targets(rule: dict) -> bool:
+        first = (rule.get("selectors") or [None])[0]
+        return isinstance(first, dict) and first.get("name") == section_id
+
+    band_rules = [
+        rule for rule in result_json["styles"]
+        if _targets(rule) and "background-color" in rule.get("style", {})
+    ]
+    assert len(band_rules) == 1
+    assert band_rules[0]["style"]["background-color"] == "#7b1fa2"
+
+
+def test_assemble_without_palette_keeps_inline_style(runner, tmp_path, monkeypatch, write_json):
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, HERO_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = write_json(
+        tmp_path / "band.json",
+        {
+            "type": "cta",
+            "template": "Centered Hero",
+            "content": {"headings": ["Hello"], "background_color": "#00aa55"},
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    section = json.loads(output_file.read_text())["components"][0]
+    assert "background-color:#00aa55;" in section["attributes"]["style"]
+    assert "classes" not in section
+
+
+def test_assemble_bad_palette_file_errors(runner, tmp_path, monkeypatch, write_json):
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, HERO_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = write_json(
+        tmp_path / "band.json",
+        {"type": "cta", "template": "Centered Hero", "content": {"headings": ["Hi"]}},
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        [
+            "--sections", str(section_file),
+            "--output", str(output_file),
+            "--theme-palette", str(tmp_path / "missing.json"),
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "Cannot read palette file" in result.output
