@@ -998,3 +998,26 @@ def test_assemble_bad_palette_file_errors(runner, tmp_path, monkeypatch, write_j
 
     assert result.exit_code != 0
     assert "Cannot read palette file" in result.output
+
+
+def test_crawl_section_index_offset_shifts_headings_and_text_only():
+    """Gallery-shaped templates lead with a section-title heading/text pair,
+    so per-item headings/texts shift by one while images stay put."""
+    content = {
+        "headings": ["Card A", "Card B"],
+        "paragraphs": ["First caption.", "Second caption."],
+        "images": [
+            {"src": "/a.jpg", "alt": "A"},
+            {"src": "/b.jpg", "alt": "B"},
+        ],
+    }
+
+    overrides = crawl_content_to_overrides(content, index_offset=1)
+
+    assert "heading_1" not in overrides
+    assert overrides["heading_2"] == "Card A"
+    assert overrides["heading_3"] == "Card B"
+    assert "text_1" not in overrides
+    assert overrides["text_2"] == "First caption."
+    assert overrides["image_1_src"] == "/a.jpg"
+    assert overrides["image_2_src"] == "/b.jpg"

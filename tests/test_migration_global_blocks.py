@@ -461,3 +461,37 @@ def test_footer_handles_cmw_crawled_content_shape():
     assert any("affordable websites" in c for c in contents)
     assert "/badge1.jpg" in srcs
     assert "/badge2.jpg" in srcs
+
+
+def test_header_first_paragraph_renders_as_business_name_label():
+    built = build_header_block({
+        "images": [{"src": "/logo.png", "alt": "logo"}],
+        "paragraphs": ["Ace's Three Plumbing & Heating"],
+    })
+    assert "Ace's Three Plumbing & Heating" in repr(built)
+
+
+def test_header_tel_link_becomes_phone_button():
+    built = build_header_block({
+        "links": [
+            {"text": "About", "href": "/about"},
+            {"text": "(405) 555-0100", "href": "tel:+14055550100"},
+        ],
+    })
+    text = repr(built)
+    assert "tel:+14055550100" in text
+    assert "(405) 555-0100" in text
+
+
+def test_footer_dedupes_repeated_links_and_list_items():
+    built = build_footer_block({
+        "copyright_text": "Copyright 2026",
+        "list_items": ["Home", "Home", "Gallery"],
+        "links": [
+            {"text": "Privacy Policy", "href": "/privacy"},
+            {"text": "Privacy Policy", "href": "/privacy"},
+        ],
+    })
+    text = repr(built)
+    assert text.count("Privacy Policy") == 1
+    assert text.count("'Home'") == 1
