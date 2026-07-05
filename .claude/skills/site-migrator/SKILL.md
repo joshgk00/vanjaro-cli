@@ -414,6 +414,12 @@ vanjaro api-key status --json
 vanjaro branding update --site-name "Site Name" --footer-text "Copyright..."
 ```
 
+**Branding and theme are PORTAL-WIDE singletons.** Like the theme (Stage 3.2),
+`branding update` changes the site name and footer text for every page on the
+portal — on a shared portal this restyles/renames other migrated sites. Check
+`vanjaro site info` first, and on a shared target call the blast radius out to
+the user before applying.
+
 ### 3.2 Apply Theme
 
 Using `design-tokens.json` from Stage 1:
