@@ -7,6 +7,7 @@ from vanjaro_cli.migration.gap_report import (
     GapReport,
     gaps_from_audit,
     gaps_from_verify,
+    gaps_from_vision_json,
     gaps_from_visual_report,
     merge_and_sort,
     render_markdown,
@@ -547,3 +548,43 @@ def test_render_markdown_scores_optional():
     md = render_markdown([])
     assert "verify" not in md.lower() or "score" not in md.lower()
     assert "audit" not in md.lower() or "score" not in md.lower()
+
+
+def test_gaps_from_vision_json_maps_systemic_and_page_findings():
+    payload = {
+        "overall_score": 64,
+        "systemic_findings": [
+            {
+                "id": "missing-section-color-bands",
+                "severity": "high",
+                "issue": "Colored background bands missing sitewide.",
+                "code_hint": "sections.py background resolution",
+            },
+        ],
+        "pages": [
+            {
+                "slug": "home",
+                "score": 42,
+                "findings": [
+                    {"severity": "high", "component": "Hero/Banner", "issue": "Hero section absent."},
+                    {"severity": "low", "issue": "Minor spacing difference."},
+                ],
+            },
+        ],
+    }
+
+    items = gaps_from_vision_json(payload)
+
+    assert len(items) == 3
+    sitewide = items[0]
+    assert sitewide.page == "(sitewide)"
+    assert sitewide.severity == "high"
+    assert sitewide.suggested_action == "sections.py background resolution"
+    hero = items[1]
+    assert hero.page == "home"
+    assert hero.description == "Hero/Banner: Hero section absent."
+    assert items[2].severity == "low"
+
+
+def test_gaps_from_vision_json_empty_payload():
+    assert gaps_from_vision_json({}) == []

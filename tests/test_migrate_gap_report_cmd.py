@@ -444,3 +444,56 @@ def test_markdown_per_page_punch_list_structure(runner, mock_config, tmp_path, w
     assert "### https://example.com/" in content
     assert "### https://example.com/about" in content
     assert "*Action*:" in content
+
+
+def test_gap_report_accepts_vision_report_json(runner, tmp_path: Path):
+    """--visual-report must consume the vision-report.json the
+    migration-visual-report skill actually produces, not only markdown."""
+    root = tmp_path / "migration"
+    root.mkdir()
+    verify_path = tmp_path / "verify.json"
+    verify_path.write_text(json.dumps(_make_verify_json()), encoding="utf-8")
+    vision_path = tmp_path / "vision-report.json"
+    vision_path.write_text(json.dumps({
+        "overall_score": 64,
+        "systemic_findings": [
+            {"id": "bands", "severity": "high", "issue": "Color bands missing."},
+        ],
+        "pages": [
+            {"slug": "home", "findings": [
+                {"severity": "high", "component": "Hero", "issue": "Hero absent."},
+            ]},
+        ],
+    }), encoding="utf-8")
+
+    result = runner.invoke(cli, [
+        "migrate", "gap-report", str(root),
+        "--verify-json", str(verify_path),
+        "--visual-report", str(vision_path),
+        "--as-json",
+    ])
+
+    assert result.exit_code == 0, result.output
+    markdown = (root / "gap-report.md").read_text(encoding="utf-8")
+    assert "Color bands missing." in markdown
+    assert "Hero absent." in markdown
+
+
+def test_gap_report_warns_when_visual_report_parses_to_nothing(runner, tmp_path: Path):
+    """A populated visual report yielding zero findings is a format mismatch,
+    not a clean bill of health — it must warn, not stay silent."""
+    root = tmp_path / "migration"
+    root.mkdir()
+    verify_path = tmp_path / "verify.json"
+    verify_path.write_text(json.dumps(_make_verify_json()), encoding="utf-8")
+    weird_path = tmp_path / "weird-format.txt"
+    weird_path.write_text("plain prose with no headings or bullets", encoding="utf-8")
+
+    result = runner.invoke(cli, [
+        "migrate", "gap-report", str(root),
+        "--verify-json", str(verify_path),
+        "--visual-report", str(weird_path),
+    ])
+
+    assert result.exit_code == 0, result.output
+    assert "yielded 0 visual gaps" in result.output

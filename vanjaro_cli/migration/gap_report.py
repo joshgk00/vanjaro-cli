@@ -20,6 +20,7 @@ __all__ = [
     "compute_verify_score",
     "gaps_from_audit",
     "gaps_from_verify",
+    "gaps_from_vision_json",
     "gaps_from_visual_report",
     "merge_and_sort",
     "render_markdown",
@@ -375,6 +376,69 @@ def gaps_from_audit(audit_json: dict) -> list[GapItem]:
                 "Review the site-wide audit finding and address manually.",
             ),
         ))
+
+    return items
+
+
+# ---------------------------------------------------------------------------
+# Gaps from vision-report.json (migration-visual-report skill output)
+# ---------------------------------------------------------------------------
+
+
+def _coerce_severity(value: object) -> Severity:
+    lowered = str(value).lower()
+    return lowered if lowered in _SEVERITY_ORDER else "medium"  # type: ignore[return-value]
+
+
+def gaps_from_vision_json(payload: dict) -> list[GapItem]:
+    """Derive GapItems from a ``vision-report.json`` payload.
+
+    The migration-visual-report skill writes JSON, not markdown:
+    ``systemic_findings[]`` ({id, severity, issue, code_hint}) plus
+    ``pages[]`` ({slug, findings[]: {severity, component, issue}}).
+    """
+    items: list[GapItem] = []
+
+    for finding in payload.get("systemic_findings") or []:
+        if not isinstance(finding, dict):
+            continue
+        issue = finding.get("issue") or finding.get("id") or ""
+        if not issue:
+            continue
+        items.append(GapItem(
+            page="(sitewide)",
+            category="visual",
+            severity=_coerce_severity(finding.get("severity")),
+            description=issue,
+            source="visual",
+            suggested_action=finding.get("code_hint") or (
+                "Compare the source screenshot against the migrated page and fix "
+                "layout, color, or content differences."
+            ),
+        ))
+
+    for page in payload.get("pages") or []:
+        if not isinstance(page, dict):
+            continue
+        slug = page.get("slug") or page.get("path") or "(unknown)"
+        for finding in page.get("findings") or []:
+            if not isinstance(finding, dict):
+                continue
+            issue = finding.get("issue") or ""
+            if not issue:
+                continue
+            component = finding.get("component")
+            items.append(GapItem(
+                page=slug,
+                category="visual",
+                severity=_coerce_severity(finding.get("severity")),
+                description=f"{component}: {issue}" if component else issue,
+                source="visual",
+                suggested_action=finding.get("code_hint") or (
+                    "Compare the source screenshot against the migrated page and fix "
+                    "layout, color, or content differences."
+                ),
+            ))
 
     return items
 

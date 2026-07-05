@@ -14,6 +14,7 @@ from vanjaro_cli.migration.gap_report import (
     compute_verify_score,
     gaps_from_audit,
     gaps_from_verify,
+    gaps_from_vision_json,
     gaps_from_visual_report,
     merge_and_sort,
     render_markdown,
@@ -52,8 +53,9 @@ __all__ = ["gap_report"]
     type=click.Path(exists=True, dir_okay=False),
     default=None,
     help=(
-        "Path to a visual discrepancy report markdown file produced by the "
-        "migration-visual-report skill. Optional."
+        "Path to the visual discrepancy report produced by the "
+        "migration-visual-report skill — either vision-report.json or a "
+        "per-page markdown report. Optional."
     ),
 )
 @click.option(
@@ -130,7 +132,24 @@ def gap_report(
             report_text = Path(visual_report_path).read_text(encoding="utf-8")
         except OSError as exc:
             exit_error(f"Cannot read visual report ({visual_report_path}): {exc}", as_json)
-        item_lists.append(gaps_from_visual_report(report_text))
+        if report_text.lstrip().startswith("{"):
+            try:
+                vision_payload = json.loads(report_text)
+            except json.JSONDecodeError as exc:
+                exit_error(f"Visual report {visual_report_path} is not valid JSON: {exc}", as_json)
+            visual_items = gaps_from_vision_json(vision_payload)
+        else:
+            visual_items = gaps_from_visual_report(report_text)
+        if not visual_items and report_text.strip():
+            # A populated report that parses to zero findings is far more
+            # likely a format mismatch than a flawless migration — surfacing
+            # nothing here once shipped a gap report missing every visual gap.
+            click.echo(
+                f"warning: {visual_report_path} yielded 0 visual gaps — expected "
+                "vision-report.json or per-page markdown bullets; verify the format",
+                err=True,
+            )
+        item_lists.append(visual_items)
 
     merged = merge_and_sort(item_lists)
     report = GapReport(items=merged)
