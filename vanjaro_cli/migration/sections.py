@@ -563,6 +563,31 @@ def _is_bold_only_paragraph(tag: Tag) -> bool:
     return bool(bold_text) and bold_text == para_text
 
 
+_LAZY_SRC_ATTRS = ("data-src", "data-lazy-src", "data-original")
+
+
+def _image_src(img: Tag) -> str:
+    """Real image URL, seeing through lazy-loading.
+
+    Lazy-loaded images carry the URL in ``data-src`` (Duda galleries omit
+    ``src`` entirely; other frameworks stub it with a placeholder data: URI),
+    so reading ``src`` alone migrates those images as blank boxes.
+    """
+    src = img.get("src", "")
+    if src and not src.startswith("data:"):
+        return src
+    for attr in _LAZY_SRC_ATTRS:
+        candidate = img.get(attr)
+        if candidate:
+            return candidate
+    srcset = img.get("srcset") or img.get("data-srcset")
+    if srcset:
+        parsed = _parse_srcset_urls(srcset, "")
+        if parsed:
+            return parsed[0]
+    return src
+
+
 def _find_all_with_self(element: Tag, name: str) -> list[Tag]:
     """``find_all`` excludes the element itself; a bare <h1>/<p>/<img>
     promoted to a top-level section by wrapper descent must still extract
@@ -606,7 +631,7 @@ def _extract_content(element: Tag, base_url: str) -> dict:
 
     images: list[dict] = []
     for img in _find_all_with_self(element, "img"):
-        src = img.get("src")
+        src = _image_src(img)
         if not src:
             continue
         entry: dict = {
@@ -1144,10 +1169,11 @@ def _first_image_entry(card: Tag, base_url: str) -> dict:
     alignment with sibling ``headings`` / ``paragraphs`` arrays is preserved.
     """
     img = card.find("img")
-    if img is None or not img.get("src"):
+    src = _image_src(img) if img is not None else ""
+    if not src:
         return {"src": "", "alt": ""}
     return {
-        "src": urljoin(base_url, img["src"]),
+        "src": urljoin(base_url, src),
         "alt": img.get("alt", ""),
     }
 

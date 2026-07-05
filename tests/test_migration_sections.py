@@ -2297,3 +2297,25 @@ def test_extract_global_element_falls_back_to_class_named_chrome():
     assert "Home" in labels and "Gallery" in labels
     assert footer is not None
     assert "Copyright 2026 Ace's Three" in footer["content"]["paragraphs"]
+
+
+def test_lazy_loaded_images_extract_from_data_src():
+    """Lazy-loading galleries carry the URL in data-src (Duda omits src
+    entirely) — those images must not migrate as blank boxes."""
+    html = _wrap(
+        """
+        <section class="gallery">
+          <h2>Bathroom Plumbing</h2>
+          <img data-src="/photos/bathroom.jpg" alt="Bathroom">
+          <img src="data:image/gif;base64,R0lGOD" data-src="/photos/kitchen.jpg" alt="Kitchen">
+          <img src="/photos/eager.jpg" alt="Eager">
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    srcs = [image["src"] for image in sections[0]["content"]["images"]]
+    assert f"{BASE_URL}photos/bathroom.jpg" in srcs
+    assert f"{BASE_URL}photos/kitchen.jpg" in srcs
+    assert f"{BASE_URL}photos/eager.jpg" in srcs

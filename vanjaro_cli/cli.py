@@ -43,3 +43,14 @@ cli.add_command(modules)
 cli.add_command(site)
 cli.add_command(templates)
 cli.add_command(theme)
+
+
+def main() -> None:
+    """Console-script entry point.
+
+    Click's Windows argv pre-expansion splinters a quoted glob argument
+    (``--sections "section-*.json"``) into stray positional args before
+    parsing; commands that accept globs expand them internally, so the
+    pre-expansion must be off.
+    """
+    cli(windows_expand_args=False)
