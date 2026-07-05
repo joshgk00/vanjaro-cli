@@ -207,6 +207,14 @@ def crawl(
                 "type": section["type"],
                 "template": section["template"],
             })
+        if not section_entries:
+            # A page with zero extracted sections means the extractor could
+            # not read this site's markup — a silent `status: ok` here sends
+            # the migration into Stages 2+ building a site out of nothing.
+            _warn(
+                f"page '{slug}' yielded 0 sections — extraction failed for "
+                f"{page_url}; the site's markup may be unsupported"
+            )
 
         pages_summary.append({
             "url": page_url,
@@ -240,6 +248,9 @@ def crawl(
                 if src and src not in seen_images:
                     seen_images.add(src)
                     all_image_urls.append(src)
+
+    if not global_manifest:
+        _warn("no global header or footer extracted from the homepage")
 
     tokens = extract_design_tokens(homepage_html, url, on_warning=_warn)
     _write_json(destination / "design-tokens.json", tokens)

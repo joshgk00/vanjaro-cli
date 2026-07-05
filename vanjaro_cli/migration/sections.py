@@ -287,6 +287,30 @@ def _is_chrome_like(element: Tag) -> bool:
     return "header" in classes or "footer" in classes or "menu" in classes
 
 
+def _nests_site_header(element: Tag) -> bool:
+    return element.find(
+        lambda tag: tag.name == "header"
+        or tag.get("role") == "banner"
+        or "header" in " ".join(tag.get("class", [])).lower()
+    ) is not None
+
+
+def _is_mislabeled_page_wrapper(element: Tag, text_share: float) -> bool:
+    """True when a chrome-named node is really the page-body wrapper.
+
+    Duda stamps 'standardHeaderLayout'/'dmFreeHeader' on the element wrapping
+    the ENTIRE page body; the substring chrome test then discards 100% of the
+    page. A real header/footer never dominates the page's text AND nests the
+    site header inside it — a page wrapper does both. Requiring both signals
+    keeps genuinely-chrome nodes chrome even when they dominate a sparse page
+    (a footer full of nav menus on an image-only gallery page) or nest nav
+    without dominating (DNN page-title banners).
+    """
+    if text_share <= _DOMINANT_TEXT_SHARE:
+        return False
+    return _nests_site_header(element)
+
+
 # Whole-class names that mark a child as theme/CMS layout plumbing rather
 # than a content card. Repeated ``div.dnn_layout`` bands must not read as a
 # "uniform card grid" — that blocks splitting a page's section bands apart.
@@ -393,13 +417,25 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
             # expansion only applies when chrome siblings prove this level is
             # a page-level layout row.
             break
+        page_total = sum(len(s.get_text(separator=" ", strip=True)) for s in sections) or 1
+        # A chrome-named node that is really the page wrapper must descend
+        # instead of being carried whole and discarded as chrome downstream.
+        chrome_flags = [
+            _is_chrome_like(s)
+            and not _is_mislabeled_page_wrapper(
+                s, len(s.get_text(separator=" ", strip=True)) / page_total
+            )
+            for s in sections
+        ]
         total_text = sum(
-            len(s.get_text(separator=" ", strip=True)) for s in sections if not _is_chrome_like(s)
+            len(s.get_text(separator=" ", strip=True))
+            for s, is_chrome in zip(sections, chrome_flags)
+            if not is_chrome
         ) or 1
         expanded: list[Tag] = []
         did_expand = False
-        for section in sections:
-            if _is_chrome_like(section):
+        for section, is_chrome in zip(sections, chrome_flags):
+            if is_chrome:
                 expanded.append(section)
                 continue
             text_share = len(section.get_text(separator=" ", strip=True)) / total_text
@@ -409,10 +445,19 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
                 and section.name in _WRAPPER_TAGS
                 and len(inner) == 1
             ):
-                # Dominant single-child wrapper: unwrap and keep descending.
-                # JS-injected body siblings (offcanvas menus, overlays) defeat
-                # the single-wrapper chain pass, so it must also happen here.
-                expanded.append(inner[0])
+                # Dominant single-child wrapper: unwrap the whole single-child
+                # chain and keep descending. JS-injected body siblings
+                # (offcanvas menus, overlays) defeat the single-wrapper chain
+                # pass, so it must also happen here — and builder markup (Duda,
+                # Elementor) nests chains deeper than the per-level iteration
+                # budget, so the chain collapses in one step like pass 1 does.
+                node = inner[0]
+                while node.name in _WRAPPER_TAGS:
+                    node_inner = _visible_children(node)
+                    if len(node_inner) != 1:
+                        break
+                    node = node_inner[0]
+                expanded.append(node)
                 did_expand = True
             elif text_share > _DOMINANT_TEXT_SHARE and any(
                 _is_chrome_like(child) for child in inner
@@ -518,11 +563,22 @@ def _is_bold_only_paragraph(tag: Tag) -> bool:
     return bool(bold_text) and bold_text == para_text
 
 
+def _find_all_with_self(element: Tag, name: str) -> list[Tag]:
+    """``find_all`` excludes the element itself; a bare <h1>/<p>/<img>
+    promoted to a top-level section by wrapper descent must still extract
+    its own content (Duda pages float the page heading as a direct child
+    of the body wrapper)."""
+    matches = element.find_all(name)
+    if element.name == name:
+        return [element, *matches]
+    return matches
+
+
 def _extract_content(element: Tag, base_url: str) -> dict:
     """Pull structured content from an HTML element for migration."""
     headings: list[str] = []
     for level in ("h1", "h2", "h3", "h4", "h5", "h6"):
-        for tag in element.find_all(level):
+        for tag in _find_all_with_self(element, level):
             # A heading inside a <blockquote> is the quote's own text, not a
             # section/card heading; it's captured separately in blockquotes.
             # Left in the heading list it lands in a card-title slot and
@@ -535,7 +591,7 @@ def _extract_content(element: Tag, base_url: str) -> dict:
                 headings.append(f"{text} — {price}" if price else text)
 
     paragraphs = []
-    for tag in element.find_all("p"):
+    for tag in _find_all_with_self(element, "p"):
         text = tag.get_text(separator=" ", strip=True)
         if not text:
             continue
@@ -549,7 +605,7 @@ def _extract_content(element: Tag, base_url: str) -> dict:
             paragraphs.append(text)
 
     images: list[dict] = []
-    for img in element.find_all("img"):
+    for img in _find_all_with_self(element, "img"):
         src = img.get("src")
         if not src:
             continue
@@ -1355,6 +1411,9 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
     if css_text:
         annotate_section_styles(soup, css_text)
     top_level = _top_level_sections(soup)
+    page_text_total = sum(
+        len(element.get_text(separator=" ", strip=True)) for element in top_level
+    ) or 1
 
     sections: list[dict] = []
     for element in top_level:
@@ -1375,7 +1434,11 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
         # Page chrome is supplied by global header/footer block wrapping at
         # assemble time; keeping these sections would double-render it. The
         # tag/class check also drops offcanvas menus the classifier misses.
-        if _is_chrome_like(element):
+        # A chrome-named node that is really the page wrapper must not be
+        # discarded — that loses the entire page.
+        if _is_chrome_like(element) and not _is_mislabeled_page_wrapper(
+            element, len(element.get_text(separator=" ", strip=True)) / page_text_total
+        ):
             continue
         if not sections and _is_banner_image_section(content):
             # A leading image-only pane is the page's hero banner; promote the
@@ -1553,11 +1616,34 @@ def _extract_nav_structure(element: Tag, base_url: str) -> list[dict]:
     return _walk_nav_items(top_list, base_url)
 
 
+def _find_chrome_container(soup: BeautifulSoup, element_name: str) -> Tag | None:
+    """Find a class-named header/footer when no semantic tag exists.
+
+    Builder markup (Duda) renders site chrome as ``div.dmHeaderContainer`` /
+    ``div.dmFooterContainer``, not <header>/<footer> tags. The first
+    class-matched element in document order is the outermost container —
+    except the page-body wrapper, which also carries chrome naming
+    ('standardHeaderLayout') but dominates the page's text.
+    """
+    role = "banner" if element_name == "header" else "contentinfo"
+    body = soup.body or soup
+    page_text = len(body.get_text(separator=" ", strip=True)) or 1
+    for candidate in body.find_all(True):
+        classes = " ".join(candidate.get("class", [])).lower()
+        if candidate.get("role") != role and element_name not in classes:
+            continue
+        text_share = len(candidate.get_text(separator=" ", strip=True)) / page_text
+        if text_share > _DOMINANT_TEXT_SHARE:
+            continue
+        return candidate
+    return None
+
+
 def extract_global_element(html: str, base_url: str, element_name: str) -> dict | None:
     """Extract the first <header> or <footer> from HTML as a section dict."""
     soup = BeautifulSoup(html, "html.parser")
     _strip_hidden_elements(soup)
-    element = soup.find(element_name)
+    element = soup.find(element_name) or _find_chrome_container(soup, element_name)
     if not element:
         return None
     content = _extract_content(element, base_url)

@@ -2206,3 +2206,94 @@ def test_extract_content_includes_h5_and_h6_headings():
     assert "Nation Wide Bonding" in headings
     assert "We Accept Collateral" in headings
     assert "Available 24/7" in headings
+
+
+def test_chrome_named_page_wrapper_descends_to_content_sections():
+    """A chrome-named wrapper holding the whole page body (Duda stamps
+    standardHeaderLayout/dmFreeHeader on it) must descend into real sections
+    instead of being discarded as chrome, which lost 100% of every page."""
+    html = """<!doctype html><html><body>
+      <div class="standardHeaderLayout dmFreeHeader">
+        <div><div><div><div><div><div><div>
+          <div class="dmHeaderContainer"><p>Logo</p></div>
+          <div class="dmBody">
+            <div>
+              <div class="dmRespRow"><h2>Residential Plumbing</h2>
+                <p>We fix leaks and install fixtures for homes across the city.</p></div>
+              <div class="dmRespRow"><h2>Commercial Plumbing</h2>
+                <p>Backflow testing and code compliance for businesses large and small.</p></div>
+            </div>
+          </div>
+          <div class="dmFooterContainer"><nav><a href="/">Home</a></nav>
+            <p>Phone: (405) 555-0100</p></div>
+        </div></div></div></div></div></div></div>
+      </div>
+      <div class="dmPopup"><p>x</p></div>
+    </body></html>"""
+
+    sections = extract_sections(html, BASE_URL)
+
+    headings = [h for s in sections for h in s["content"].get("headings", [])]
+    assert "Residential Plumbing" in headings
+    assert "Commercial Plumbing" in headings
+    paragraphs = " ".join(p for s in sections for p in s["content"].get("paragraphs", []))
+    assert "Phone:" not in paragraphs
+    assert "Logo" not in paragraphs
+
+
+def test_dominant_footer_on_sparse_page_stays_chrome():
+    """A footer that dominates a sparse page's text (image-heavy gallery
+    pages) is still chrome — dominance alone must not rescue it as content."""
+    html = """<!doctype html><html><body>
+      <div class="dmHeaderContainer"><p>Logo</p></div>
+      <h1>View Our Photos</h1>
+      <div class="dmFooterContainer">
+        <nav><a href="/">Home</a><a href="/gallery">Gallery</a></nav>
+        <p>Phone: (405) 555-0100 | Serving: Oklahoma City, OK | Hours: 24-Hour Emergency</p>
+        <p>Family owned and operated for over four decades serving the metro area.</p>
+      </div>
+    </body></html>"""
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert sections[0]["content"]["headings"] == ["View Our Photos"]
+
+
+def test_bare_heading_element_extracts_its_own_text():
+    """An element that IS a heading (promoted to top level by wrapper
+    descent) extracts its own text — find_all alone excludes self."""
+    html = _wrap("<h1>Standalone Heading</h1>")
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert sections[0]["content"]["headings"] == ["Standalone Heading"]
+
+
+def test_extract_global_element_falls_back_to_class_named_chrome():
+    """Builder markup (Duda) has no <header>/<footer> tags — globals come
+    from class-named containers, skipping the chrome-named page wrapper."""
+    html = """<!doctype html><html><body>
+      <div class="standardHeaderLayout dmFreeHeader">
+        <div class="dmHeaderContainer"><nav><ul>
+          <li><a href="/">Home</a></li><li><a href="/gallery">Gallery</a></li>
+        </ul></nav></div>
+        <div class="dmBody">
+          <h1>Welcome</h1>
+          <p>Plenty of body copy so the page wrapper dominates the text share
+          and the header container clearly does not. More copy to be safe.</p>
+        </div>
+        <div class="dmFooterContainer"><p>Copyright 2026 Ace's Three</p></div>
+      </div>
+    </body></html>"""
+
+    header = extract_global_element(html, BASE_URL, "header")
+    footer = extract_global_element(html, BASE_URL, "footer")
+
+    assert header is not None
+    assert header["type"] == "header"
+    labels = [item["label"] for item in header["content"]["nav_items"]]
+    assert "Home" in labels and "Gallery" in labels
+    assert footer is not None
+    assert "Copyright 2026 Ace's Three" in footer["content"]["paragraphs"]

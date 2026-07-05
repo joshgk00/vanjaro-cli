@@ -316,3 +316,32 @@ def test_crawl_clears_stale_asset_files(runner, tmp_path: Path):
     assert not stale.exists()
     manifest = json.loads((output / "assets" / "manifest.json").read_text())
     assert len(manifest) == 4
+
+
+CHROME_ONLY_HTML = """<!doctype html>
+<html>
+<head><title>Chrome Only</title></head>
+<body>
+  <header><nav><a href="/">Home</a></nav></header>
+  <footer><p>Copyright 2026</p></footer>
+</body>
+</html>
+"""
+
+
+@responses.activate
+def test_migrate_crawl_warns_when_page_extracts_zero_sections(runner, tmp_path: Path):
+    """A page yielding 0 sections must surface a warning — a silent
+    `status: ok` sends the migration into later stages with empty artifacts."""
+    responses.add(responses.GET, f"{SOURCE_URL}/", body=CHROME_ONLY_HTML, status=200)
+    responses.add(responses.GET, f"{SOURCE_URL}/sitemap.xml", status=404)
+    output = tmp_path / "artifacts"
+
+    result = runner.invoke(
+        cli,
+        ["migrate", "crawl", SOURCE_URL, "--output-dir", str(output), "--json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert any("0 sections" in warning for warning in payload["warnings"])
