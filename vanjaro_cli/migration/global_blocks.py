@@ -225,7 +225,7 @@ def build_header_block(
     if logo is not None:
         logo_children.append(logo)
     if business_name:
-        logo_children.append(_heading(business_name, tag="h5", extra_classes=["mb-0", "mt-2"]))
+        logo_children.append(_heading(business_name, tag="h5", extra_classes=["head-style-5", "mb-0", "mt-2"]))
 
     row_cols: list[dict] = []
     if logo_children:
@@ -297,7 +297,7 @@ def _header_phone_button(content: dict) -> dict | None:
                 "link",
                 tag_name="a",
                 content=text,
-                classes=["btn", "btn-primary", "header-phone-btn"],
+                classes=["btn", "btn-primary", "button-style-1", "header-phone-btn"],
                 attributes={"href": href},
             )
     return None
