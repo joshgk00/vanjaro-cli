@@ -116,7 +116,7 @@ Proceeding to Stage 2: Theme
 
 ### 2.1 Extract Design Tokens
 
-Follow the `theme-extract-tokens` skill workflow (documented in `skills/theme-extract-tokens.md`):
+Extract tokens from the design:
 
 1. Analyze the design for colors, fonts, weights, spacing, border radius
 2. Produce `artifacts/design-tokens.json`
@@ -138,7 +138,8 @@ Register fonts **before** applying controls — font family controls must refere
 
 ### 2.3 Apply Theme Controls
 
-Follow the `theme-apply` skill workflow (documented in `skills/theme-apply.md`).
+Follow `../site-migrator/references/theme-apply.md` for the variable-discovery
+workflow (`vanjaro theme get --json`) and set-bulk file format.
 
 Apply in this order — each step builds on the previous:
 
@@ -150,7 +151,8 @@ Apply in this order — each step builds on the previous:
 6. **Menu** — nav colors, font, size (5-15 controls)
 7. **Links** — font family per state (3-6 controls)
 
-Use `skills/theme-control-reference.md` to find exact LESS variable names.
+Find exact LESS variable names by filtering `vanjaro theme get --json` output
+by `category` (see `../site-migrator/references/theme-apply.md`).
 
 ### 2.4 Custom CSS
 

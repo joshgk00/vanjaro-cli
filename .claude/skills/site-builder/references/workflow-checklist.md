@@ -17,7 +17,7 @@ Use this as a progress tracker. Each phase has a verification step before moving
 - [ ] Produce `artifacts/design-tokens.json`
 - [ ] Note items in `custom_css_needed` for Phase 5
 
-**Skill reference**: `skills/theme-extract-tokens.md`
+**Reference**: design-token extraction (site-builder Stage 2.1)
 
 ## Phase 4: Theme — Apply Controls
 - [ ] Register custom fonts: `vanjaro theme register-font`
@@ -30,7 +30,7 @@ Use this as a progress tracker. Each phase has a verification step before moving
 - [ ] Apply link styling: `vanjaro theme set-bulk links.json`
 - [ ] Verify: `vanjaro theme get --modified --json | jq '.total'` — expect 100-130 controls
 
-**Skill reference**: `skills/theme-apply.md`
+**Reference**: `../../site-migrator/references/theme-apply.md`
 
 ## Phase 5: Theme — Custom CSS
 - [ ] Write CSS for items identified in `custom_css_needed`

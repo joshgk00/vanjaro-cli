@@ -189,8 +189,8 @@ vanjaro migrate crawl https://example.com \
   the section to the closest known block template.
 - **Extracts global elements** — writes `global/header.json` and `global/footer.json`
   from the homepage markup.
-- **Extracts design tokens** — writes `design-tokens.json` using the same format
-  as `theme-extract-tokens`.
+- **Extracts design tokens** — writes `design-tokens.json` (colors, fonts,
+  spacing; schema in `references/crawl-output-format.md`).
 - **Downloads assets** — writes `assets/manifest.json` (source URL → local file,
   plus placeholders for the Vanjaro URL that Stage 3 will populate).
 - **Writes the master inventory** — `site-inventory.json` with all pages, sections,
@@ -422,7 +422,9 @@ Using `design-tokens.json` from Stage 1:
 2. Apply colors, site globals, heading typography, paragraph typography, button styling, menu, links
 3. Apply custom CSS for anything beyond theme controls
 
-Follow `.claude/skills/theme-apply/SKILL.md` for exact commands and order.
+Follow `references/theme-apply.md` (in this skill) for the variable-discovery
+workflow (`vanjaro theme get --json`), the `Site`/`Styles:*` category map, and
+the set-bulk file format.
 
 ### 3.2a Export the Theme Palette
 
@@ -586,6 +588,20 @@ vanjaro migrate build-global \
   --json
 ```
 
+**Rewrite asset URLs in the built globals BEFORE registering.** `build-global`
+copies crawled image `src` values verbatim, so the header logo and footer
+badges still point at the SOURCE site's CDN. After assets are uploaded
+(manifest has `vanjaro_url` values), run the built files through rewrite-urls,
+then register the rewritten output:
+
+```bash
+vanjaro migrate rewrite-urls \
+  --content artifacts/migration/example-com/global/header-built.json \
+  --asset-manifest artifacts/migration/example-com/assets/manifest.json \
+  --json
+# repeat for footer-built.json, then global-blocks create --file <rewritten>
+```
+
 **Live Menu vs. static nav**: By default `build-global` embeds Vanjaro's
 native Menu blockwrapper in the header — the nav items shown to visitors are
 pulled live from the DNN page tree at render time, not from the crawled
@@ -593,10 +609,11 @@ pulled live from the DNN page tree at render time, not from the crawled
 automatically. Because the Menu renders real page data, **create pages (Stage 4)
 before the header renders meaningfully** for the first time.
 
-If the DNN page tree doesn't match the source site's intended navigation (e.g.,
-you want to preserve a specific link order or include external links that DNN
-won't manage), pass `--static-nav` to bake the crawled nav entries as a static
-list instead:
+**On a SHARED portal, `--static-nav` is the correct default, not the
+exception**: the live Menu renders the ENTIRE portal page tree, so a portal
+hosting multiple migrated sites puts every other site's pages in your nav.
+Also use `--static-nav` when the DNN page tree doesn't match the source site's
+intended navigation (specific link order, external links DNN won't manage):
 
 ```bash
 vanjaro migrate build-global \
@@ -942,7 +959,7 @@ pages use theme classes rather than inline styles, whether global blocks are
 referenced correctly, and whether images have responsive wrappers:
 
 ```bash
-# Audit all published pages at once
+# Audit all published pages at once (dedicated portal only)
 vanjaro migrate audit-structure --all \
   --json artifacts/migration/example-com/audit-report.json
 
@@ -951,6 +968,10 @@ vanjaro migrate audit-structure \
   --page /home --page /about \
   --json artifacts/migration/example-com/audit-report.json
 ```
+
+On a SHARED portal use `--page` targeting for this migration's pages only —
+`--all` audits every published page on the portal, so the report (and any
+gap-report built from it) gets polluted with other sites' findings.
 
 The audit scores each page 0–100 across four checks: `inline-styles`,
 `theme-classes`, `responsive-images`, and `composition`. A site composite score
