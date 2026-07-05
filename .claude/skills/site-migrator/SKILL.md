@@ -126,8 +126,10 @@ liveness check:
 vanjaro site health --json
 ```
 
-If that errors with "Session expired", ask the user to run `vanjaro auth login`
-themselves — it's interactive and cannot be driven from this session.
+If that errors with "Session expired", re-authenticate non-interactively with
+`vanjaro auth login --url <base-url> -u <user> -p <password> --profile <profile>`
+using credentials the user has provided (e.g. the repo `.env`). Only ask the
+user to log in themselves when no credentials are available to you.
 
 ## Overview
 
@@ -220,6 +222,14 @@ ls artifacts/migration/example-com/
 Open `site-inventory.json` and confirm the page list with the user before
 proceeding. They may want to re-run with tighter `--include-paths` or
 `--exclude-paths` to narrow scope.
+
+Check `warnings[]` in the crawl output — it is the extraction health signal.
+A "yielded 0 sections" warning means the extractor could not read that page's
+markup; "no global header or footer" means chrome extraction failed. Also
+sanity-check that every `pages/<slug>/` directory contains `section-*.json`
+files. If pages extract empty on a site that clearly has content, that is a
+CLI bug — report it rather than working around it, and do not proceed to
+Stage 2 with empty artifacts.
 
 **Report to the user:**
 ```
