@@ -15,7 +15,7 @@ from __future__ import annotations
 __all__ = ["crawl_content_to_overrides"]
 
 
-def crawl_content_to_overrides(content: dict) -> dict[str, str]:
+def crawl_content_to_overrides(content: dict, index_offset: int = 0) -> dict[str, str]:
     """Map a crawler-extracted content dict to block-template override keys.
 
     Maps all extracted content types to their template override slots:
@@ -28,12 +28,24 @@ def crawl_content_to_overrides(content: dict) -> dict[str, str]:
     Works for any section-shaped content dict: page sections from
     ``pages/{slug}/section-*.json`` and global elements from
     ``global/header.json`` / ``global/footer.json`` use the same shape.
+
+    ``index_offset`` shifts heading/text numbering only (not images, buttons,
+    or list items). Some templates (e.g. Gallery (3-up)/(6-up)) put a leading
+    section-title heading+text pair ahead of a repeating per-item group, so
+    heading_1/text_1 belong to the section title rather than item 1 — while
+    image_1 has no such leading counterpart. Content with no separate title
+    of its own (one heading/paragraph per image) needs its heading/text
+    indices shifted by 1 to land on the correct per-item slot instead of
+    overwriting the section title. Callers detect this via the target
+    template's slot shape; see ``_detect_heading_text_offset`` in
+    ``migrate_assemble_cmd.py``.
     """
     overrides: dict[str, str] = {}
 
     headings = content.get("headings") or []
     if isinstance(headings, list):
-        for index, heading in enumerate(headings, start=1):
+        for position, heading in enumerate(headings, start=1):
+            index = position + index_offset
             if isinstance(heading, str):
                 overrides[f"heading_{index}"] = heading
             elif isinstance(heading, dict) and isinstance(heading.get("text"), str):
@@ -41,7 +53,8 @@ def crawl_content_to_overrides(content: dict) -> dict[str, str]:
 
     paragraphs = content.get("paragraphs") or []
     if isinstance(paragraphs, list):
-        for index, paragraph in enumerate(paragraphs, start=1):
+        for position, paragraph in enumerate(paragraphs, start=1):
+            index = position + index_offset
             if isinstance(paragraph, str):
                 overrides[f"text_{index}"] = paragraph
 

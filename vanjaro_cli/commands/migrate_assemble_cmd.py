@@ -143,6 +143,41 @@ def _blank_unfilled_content_slots(
     return filled
 
 
+def _detect_heading_text_offset(slots: list[dict], content: dict) -> int:
+    """Detect whether a template's heading/text numbering is offset from its images.
+
+    Some templates (Gallery (3-up)/(6-up)) place a leading section-title
+    heading+text pair ahead of a repeating per-item group — the title
+    occupies heading_1/text_1 while image_1 belongs to item 1, so direct
+    index-for-index mapping puts item 1's heading in the title slot and
+    shifts every subsequent heading/text one position ahead of its sibling
+    image. Detected structurally (heading/text slot count is exactly one
+    more than image slot count) rather than by template name, so any
+    template with this shape benefits automatically.
+
+    Only apply the shift when the crawled content itself has no separate
+    title of its own — i.e. exactly one heading and one paragraph per image.
+    If the content already supplies an extra leading heading/paragraph,
+    direct mapping is already correct.
+    """
+    heading_slots = sum(1 for s in slots if s["type"] == "heading" and s["field"] == "content")
+    text_slots = sum(1 for s in slots if s["type"] == "text" and s["field"] == "content")
+    image_slots = sum(1 for s in slots if s["type"] == "image" and s["key"].endswith("_src"))
+
+    if image_slots == 0 or heading_slots != image_slots + 1 or text_slots != image_slots + 1:
+        return 0
+
+    headings = content.get("headings")
+    paragraphs = content.get("paragraphs")
+    images = content.get("images")
+    if not (isinstance(headings, list) and isinstance(paragraphs, list) and isinstance(images, list)):
+        return 0
+    if len(images) == 0 or len(headings) != len(images) or len(paragraphs) != len(images):
+        return 0
+
+    return 1
+
+
 def _classify_and_resolve(
     section_data: dict,
     source_file: Path,
@@ -172,7 +207,12 @@ def _classify_and_resolve(
                     f"Section file {source_file} has a 'content' key that is not an object.",
                     as_json,
                 )
-            overrides = crawl_content_to_overrides(content_block)
+            try:
+                template_slots = enumerate_slots(find_template(template_name)["template"])
+            except TemplateNotFoundError:
+                template_slots = []
+            offset = _detect_heading_text_offset(template_slots, content_block)
+            overrides = crawl_content_to_overrides(content_block, index_offset=offset)
             # Crawled content is the complete source of truth for the section:
             # any template slot it doesn't fill must render empty, not leak
             # the template's placeholder copy ("Your Headline Here").
