@@ -66,6 +66,29 @@ def _id() -> str:
     return uuid.uuid4().hex[:8]
 
 
+def _dedupe_preserve_order(items: list[str]) -> list[str]:
+    """Drop exact-duplicate strings, keeping the first occurrence's position."""
+    seen: set[str] = set()
+    result: list[str] = []
+    for item in items:
+        if item not in seen:
+            seen.add(item)
+            result.append(item)
+    return result
+
+
+def _dedupe_links_preserve_order(links: list[dict]) -> list[dict]:
+    """Drop links with a duplicate (text, href) pair, keeping first occurrence."""
+    seen: set[tuple[str, str]] = set()
+    result: list[dict] = []
+    for link in links:
+        key = (link.get("text", ""), link.get("href", ""))
+        if key not in seen:
+            seen.add(key)
+            result.append(link)
+    return result
+
+
 def _component(
     type: str,
     *,
@@ -195,21 +218,34 @@ def build_header_block(
     become theme classes (and any per-id rules land in ``styles``).
     """
     logo = _header_logo(content)
+    business_name = _header_business_name(content)
+    phone_button = _header_phone_button(content)
+
+    logo_children: list[dict] = []
+    if logo is not None:
+        logo_children.append(logo)
+    if business_name:
+        logo_children.append(_heading(business_name, tag="h5", extra_classes=["mb-0", "mt-2"]))
 
     row_cols: list[dict] = []
-    if logo is not None:
-        row_cols.append(_col([logo], size_classes=["col-md-3", "col-6"]))
+    if logo_children:
+        row_cols.append(_col(logo_children, size_classes=["col-md-3", "col-6"]))
 
+    nav_children: list[dict] = []
     if static_nav:
         nav_entries = _header_nav_entries(content)
         if nav_entries:
             nav_classes = ["d-flex", "flex-wrap", "gap-3", "justify-content-md-end"]
-            nav_wrapper = _component("default", classes=nav_classes, children=nav_entries)
-            nav_col_sizes = ["col-md-9", "col-6"] if logo is not None else ["col-12"]
-            row_cols.append(_col([nav_wrapper], size_classes=nav_col_sizes))
+            nav_children.append(_component("default", classes=nav_classes, children=nav_entries))
     else:
-        nav_col_sizes = ["col-md-9", "col-6"] if logo is not None else ["col-12"]
-        row_cols.append(_col([_menu_block()], size_classes=nav_col_sizes))
+        nav_children.append(_menu_block())
+    if phone_button is not None:
+        nav_children.append(phone_button)
+
+    if nav_children:
+        nav_col_sizes = ["col-md-9", "col-6"] if logo_children else ["col-12"]
+        nav_wrapper_classes = ["d-flex", "flex-wrap", "align-items-center", "gap-3", "justify-content-md-end"]
+        row_cols.append(_col([_component("default", classes=nav_wrapper_classes, children=nav_children)], size_classes=nav_col_sizes))
 
     if not row_cols:
         # Empty content — produce a placeholder so the registered block
@@ -238,6 +274,32 @@ def _header_logo(content: dict) -> dict | None:
         if isinstance(src, str) and src:
             alt = image.get("alt") if isinstance(image.get("alt"), str) else "Logo"
             return _image(src, alt, extra_classes=["header-logo"])
+    return None
+
+
+def _header_business_name(content: dict) -> str | None:
+    """Return the first non-empty paragraph as the business name label, if any."""
+    for paragraph in content.get("paragraphs") or []:
+        if isinstance(paragraph, str) and paragraph.strip():
+            return paragraph.strip()
+    return None
+
+
+def _header_phone_button(content: dict) -> dict | None:
+    """Return a CTA button component for the first tel: link in the crawled content."""
+    for link in content.get("links") or []:
+        if not isinstance(link, dict):
+            continue
+        href = link.get("href")
+        text = link.get("text")
+        if isinstance(href, str) and href.startswith("tel:") and isinstance(text, str) and text:
+            return _component(
+                "link",
+                tag_name="a",
+                content=text,
+                classes=["btn", "btn-primary", "header-phone-btn"],
+                attributes={"href": href},
+            )
     return None
 
 
@@ -369,12 +431,12 @@ def _footer_social_row(content: dict) -> dict | None:
 def _footer_copyright_row(content: dict) -> dict | None:
     """Bottom bar: copyright line plus any Privacy/Terms links from the crawl."""
     copyright_text = content.get("copyright_text")
-    legal_links = [
+    legal_links = _dedupe_links_preserve_order([
         link for link in (content.get("links") or [])
         if isinstance(link, dict)
         and isinstance(link.get("text"), str)
         and link["text"].strip().lower() in ("privacy statement", "privacy policy", "terms of use", "terms of service")
-    ]
+    ])
     if not copyright_text and not legal_links:
         return None
 
@@ -404,8 +466,8 @@ def _footer_link_columns(content: dict) -> list[dict]:
     across them. If no headings, all list items go in one column with the
     page's full width.
     """
-    headings = [h for h in (content.get("headings") or []) if isinstance(h, str) and h]
-    list_items = [item for item in (content.get("list_items") or []) if isinstance(item, str) and item]
+    headings = _dedupe_preserve_order([h for h in (content.get("headings") or []) if isinstance(h, str) and h])
+    list_items = _dedupe_preserve_order([item for item in (content.get("list_items") or []) if isinstance(item, str) and item])
 
     if not headings and not list_items:
         return []
