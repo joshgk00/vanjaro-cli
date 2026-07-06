@@ -725,6 +725,15 @@ def _extract_content(element: Tag, base_url: str) -> dict:
                 "role": "picture_source",
             })
 
+    form_fields: list[dict] = []
+    form_action = ""
+    form = element.find("form")
+    if form is not None:
+        form_fields = _extract_form_fields(form)
+        raw_action = (form.get("action") or "").strip()
+        if form_fields and raw_action and not raw_action.startswith(("#", "javascript:")):
+            form_action = urljoin(base_url, raw_action)
+
     buttons: list[dict] = []
     for btn in element.find_all("button"):
         text = btn.get_text(separator=" ", strip=True)
@@ -837,6 +846,8 @@ def _extract_content(element: Tag, base_url: str) -> dict:
         "blockquotes": blockquotes,
         "tables": tables,
         "videos": videos,
+        "form_fields": form_fields,
+        "form_action": form_action,
     }
 
 
@@ -934,6 +945,45 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
         return "bio"
 
     return "content"
+
+
+_NON_DATA_INPUT_TYPES = frozenset({"hidden", "submit", "button", "image", "reset"})
+
+
+def _extract_form_fields(form: Tag) -> list[dict]:
+    """Field inventory of a real HTML form: name, type, label, required.
+
+    Labels resolve from ``<label for>``, then aria-label, then placeholder,
+    then a title-cased field name. Non-data inputs (hidden, submit) are
+    control plumbing, not fields the visitor fills in.
+    """
+    fields: list[dict] = []
+    for control in form.find_all(["input", "textarea", "select"]):
+        if control.name == "input":
+            field_type = (control.get("type") or "text").lower()
+            if field_type in _NON_DATA_INPUT_TYPES:
+                continue
+        else:
+            field_type = control.name
+        name = control.get("name") or control.get("id") or ""
+        label = ""
+        control_id = control.get("id")
+        if control_id:
+            label_tag = form.find("label", attrs={"for": control_id})
+            if label_tag is not None:
+                label = label_tag.get_text(separator=" ", strip=True)
+        if not label:
+            label = control.get("aria-label") or control.get("placeholder") or ""
+        if not label and name:
+            label = name.replace("_", " ").replace("-", " ").title()
+        fields.append({
+            "name": name,
+            "type": field_type,
+            "label": label,
+            "placeholder": control.get("placeholder") or "",
+            "required": control.has_attr("required"),
+        })
+    return fields
 
 
 def _looks_like_contact_form(element: Tag, classes: str) -> bool:

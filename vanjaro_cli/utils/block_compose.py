@@ -17,6 +17,7 @@ __all__ = [
     "TemplateNotFoundError",
     "apply_overrides",
     "apply_section_background",
+    "attach_form",
     "check_overflow",
     "enumerate_slots",
     "expand_button_slots",
@@ -506,6 +507,105 @@ def expand_button_slots(template_data: dict, overrides: dict[str, str]) -> dict:
             "attributes": {"id": f"tpl-auto-btn{slot_number}", "role": "button", "href": "#"},
         })
     return result
+
+
+def attach_form(section: dict, fields: list[dict], action: str = "") -> None:
+    """Append a real form component tree to a composed section, in place.
+
+    Renders as genuine ``<form>``/``<input>`` markup through the component
+    renderer (an explicit ``tagName`` beats the type lookup, and ``input``
+    is a void element), so the migrated page keeps the source form's shape:
+    field names, types, labels, and required flags all survive. Submission
+    is NOT wired — no form handler exists in this stack — so the source
+    ``action`` is carried only when it was a real URL, and hooking up a
+    working backend stays a documented post-migration step.
+    """
+    if not fields:
+        return
+    located = _find_last_of_type(section, "text") or _find_last_of_type(section, "heading")
+    parent = located[1] if located is not None and located[1] is not None else section
+
+    children: list[dict] = []
+    for index, field in enumerate(fields, start=1):
+        if not isinstance(field, dict):
+            continue
+        field_type = str(field.get("type") or "text")
+        name = str(field.get("name") or f"field-{index}")
+        label = str(field.get("label") or "")
+        control_id = f"tpl-auto-ff{index}"
+
+        group: list[dict] = []
+        if label:
+            group.append({
+                "type": "default",
+                "tagName": "label",
+                "content": label,
+                "classes": [{"name": "form-label", "active": False}],
+                "attributes": {"id": f"{control_id}-label", "for": control_id},
+            })
+        attributes: dict = {"id": control_id, "name": name}
+        placeholder = str(field.get("placeholder") or "")
+        if placeholder:
+            attributes["placeholder"] = placeholder
+        if field.get("required"):
+            attributes["required"] = "required"
+        if field_type == "textarea":
+            control = {
+                "type": "default",
+                "tagName": "textarea",
+                "classes": [{"name": "form-control", "active": False}],
+                "attributes": {**attributes, "rows": "4"},
+            }
+        elif field_type == "select":
+            control = {
+                "type": "default",
+                "tagName": "select",
+                "classes": [{"name": "form-select", "active": False}],
+                "attributes": attributes,
+                "components": [{
+                    "type": "default",
+                    "tagName": "option",
+                    "content": label or name,
+                    "attributes": {"id": f"{control_id}-opt"},
+                }],
+            }
+        else:
+            control = {
+                "type": "default",
+                "tagName": "input",
+                "classes": [{"name": "form-control", "active": False}],
+                "attributes": {**attributes, "type": field_type},
+            }
+        children.append({
+            "type": "default",
+            "tagName": "div",
+            "classes": [{"name": "mb-3", "active": False}],
+            "attributes": {"id": f"{control_id}-group"},
+            "components": [*group, control],
+        })
+
+    children.append({
+        "type": "button",
+        "tagName": "button",
+        "content": "Send Message",
+        "classes": [
+            {"name": "btn", "active": False},
+            {"name": "btn-primary", "active": False},
+            {"name": "button-style-1", "active": False},
+        ],
+        "attributes": {"id": "tpl-auto-form-submit", "type": "submit"},
+    })
+
+    form_attributes: dict = {"id": "tpl-auto-form", "method": "post"}
+    if action:
+        form_attributes["action"] = action
+    parent.setdefault("components", []).append({
+        "type": "default",
+        "tagName": "form",
+        "classes": [{"name": "migrated-form", "active": False}],
+        "attributes": form_attributes,
+        "components": children,
+    })
 
 
 def _expand_slots(template_data: dict, overrides: dict[str, str]) -> dict:

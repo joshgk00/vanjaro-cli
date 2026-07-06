@@ -17,6 +17,7 @@ from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
     apply_overrides,
     apply_section_background,
+    attach_form,
     check_overflow,
     enumerate_slots,
     find_template,
@@ -232,6 +233,11 @@ def _classify_and_resolve(
         )
         content_block = section_data.get("content")
         if isinstance(content_block, dict):
+            form_fields = content_block.get("form_fields")
+            if isinstance(form_fields, list) and form_fields:
+                attach_form(
+                    section, form_fields, str(content_block.get("form_action") or "")
+                )
             apply_section_background(section, content_block, palette=palette, styles=styles)
         return section, styles
 

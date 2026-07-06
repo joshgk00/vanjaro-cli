@@ -1109,3 +1109,39 @@ def test_sparse_high_button_index_does_not_synthesize():
 
     column = result["template"]["components"][0]
     assert not [c for c in column["components"] if c["type"] == "button"]
+
+
+def test_attach_form_renders_real_form_markup():
+    """Extracted form fields become genuine <form>/<input> markup through
+    the component renderer — names, types, labels, and required survive."""
+    from vanjaro_cli.utils.block_compose import attach_form
+    from vanjaro_cli.utils.grapesjs import render_component
+
+    section = apply_overrides(make_two_text_template(), {"heading_1": "Contact"})["template"]
+    fields = [
+        {"name": "first_name", "type": "text", "label": "First Name",
+         "placeholder": "", "required": True},
+        {"name": "email", "type": "email", "label": "Email",
+         "placeholder": "Your email", "required": False},
+        {"name": "message", "type": "textarea", "label": "Message",
+         "placeholder": "", "required": False},
+    ]
+
+    attach_form(section, fields, "https://example.com/submit-quote")
+    html = render_component(section)
+
+    assert '<form' in html and 'action="https://example.com/submit-quote"' in html
+    assert 'name="first_name"' in html and 'required="required"' in html
+    assert '<input' in html and 'type="email"' in html
+    assert '<textarea' in html
+    assert '<label' in html and 'First Name' in html
+    assert 'type="submit"' in html
+
+
+def test_attach_form_without_fields_is_a_noop():
+    from vanjaro_cli.utils.block_compose import attach_form
+
+    section = apply_overrides(make_two_text_template(), {"heading_1": "Contact"})["template"]
+    before = json.dumps(section)
+    attach_form(section, [])
+    assert json.dumps(section) == before

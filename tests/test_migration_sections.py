@@ -2396,3 +2396,46 @@ def test_camelcase_button_classes_extract_as_buttons():
     link_texts = [link["text"] for link in sections[0]["content"]["links"]]
     assert "our team" in link_texts
     assert "Request a Quote" not in link_texts
+
+
+def test_form_fields_extract_names_types_labels_required():
+    """A real HTML form yields a field inventory; hidden/submit inputs are
+    plumbing, not fields."""
+    html = _wrap(
+        """
+        <section class="contact">
+          <h2>Get In Touch</h2>
+          <form action="/submit-quote" method="post">
+            <input type="hidden" name="csrf" value="tok">
+            <label for="fname">First Name</label>
+            <input type="text" id="fname" name="first_name" required>
+            <input type="email" name="email" placeholder="Your email">
+            <textarea name="message" aria-label="Message"></textarea>
+            <input type="submit" value="Send">
+          </form>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    content = sections[0]["content"]
+    assert content["form_action"] == f"{BASE_URL}submit-quote"
+    fields = content["form_fields"]
+    assert [f["name"] for f in fields] == ["first_name", "email", "message"]
+    assert fields[0] == {
+        "name": "first_name", "type": "text", "label": "First Name",
+        "placeholder": "", "required": True,
+    }
+    assert fields[1]["label"] == "Your email"
+    assert fields[2]["type"] == "textarea"
+    assert fields[2]["label"] == "Message"
+
+
+def test_formless_section_has_empty_form_fields():
+    html = _wrap("<section><h2>About</h2><p>No form here.</p></section>")
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["content"]["form_fields"] == []
+    assert sections[0]["content"]["form_action"] == ""
