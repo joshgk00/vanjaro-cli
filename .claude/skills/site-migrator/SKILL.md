@@ -1081,7 +1081,11 @@ Visual score:   91/100 (visual-report/vision-report.json)
 Gap report:     artifacts/migration/example-com/gap-report.md
 
 Known gaps:
-  - Contact form needs DNN module setup
+  - Contact form SUBMISSION needs wiring (form markup migrates: a real
+    <form> in the source extracts field-by-field and renders as a genuine
+    form on the migrated page; only the POST handler is missing — wire a
+    DNN forms module or external endpoint post-migration). JS-widget forms
+    (Thryv/HubSpot embeds) have no static markup and stay a crawl ceiling.
   - Blog page is static snapshot (no dynamic posts)
 
 Artifacts:
