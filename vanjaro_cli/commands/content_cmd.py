@@ -13,7 +13,7 @@ from vanjaro_cli import config as _config_module
 from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
 from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, parse_json_field, write_output
-from vanjaro_cli.utils.grapesjs import render_components
+from vanjaro_cli.utils.grapesjs import render_components, render_styles
 
 # VanjaroAI content endpoints (bypass DnnPageEditor restriction)
 GET_PAGE = "/API/VanjaroAI/AIPage/Get"
@@ -139,6 +139,12 @@ def update_content(page_id: int, input_file: str | None, locale: str, expected_v
     content_html = data.get("contentHtml")
     if not isinstance(content_html, str):
         content_html = render_components(components)
+        # styleJSON never reaches the anonymous render — per-id rules (hero
+        # background images, off-palette band colors) must ship as a <style>
+        # block inside contentHtml or they exist only in the editor.
+        style_css = render_styles(styles)
+        if style_css:
+            content_html = f"<style>{style_css}</style>{content_html}"
 
     # VanjaroAI expects ContentJSON/StyleJSON as JSON strings
     payload: dict = {
@@ -290,11 +296,15 @@ def rollback_content(page_id: int, input_file: str, locale: str, as_json: bool) 
             err=True,
         )
 
+    restored_html = render_components(data["components"])
+    restored_css = render_styles(data["styles"])
+    if restored_css:
+        restored_html = f"<style>{restored_css}</style>{restored_html}"
     payload = {
         "pageId": page_id,
         "contentJSON": json.dumps(data["components"]),
         "styleJSON": json.dumps(data["styles"]),
-        "contentHtml": render_components(data["components"]),
+        "contentHtml": restored_html,
         "locale": locale,
     }
 

@@ -535,3 +535,35 @@ def test_content_rollback_invalid_json(runner, mock_config, tmp_path):
 
     assert result.exit_code == 1
     assert "Invalid JSON" in result.output
+
+
+@responses.activate
+def test_content_update_ships_styles_in_content_html(runner, mock_config, tmp_path):
+    """Per-id style rules must travel inside contentHtml — the anonymous
+    render never reads styleJSON, so hero background images pushed only
+    there were invisible to visitors."""
+    mock_homepage()
+    responses.add(
+        responses.POST,
+        UPDATE_PAGE_URL,
+        json={"pageId": 10, "version": 5},
+        status=200,
+    )
+
+    content_file = tmp_path / "content.json"
+    content_file.write_text(json.dumps({
+        "components": SAMPLE_COMPONENTS,
+        "styles": [{
+            "selectors": [{"name": "tpl-hero-s1", "type": 2}],
+            "style": {"background-image": "url(/portals/0/hero.jpg)"},
+        }],
+    }))
+
+    result = runner.invoke(cli, ["content", "update", "10", "--file", str(content_file)])
+
+    assert result.exit_code == 0
+    post_call = [c for c in responses.calls if "AIPage/Update" in c.request.url][0]
+    sent_body = json.loads(post_call.request.body)
+    assert sent_body["contentHtml"].startswith(
+        "<style>#tpl-hero-s1{background-image:url(/portals/0/hero.jpg)}</style>"
+    )

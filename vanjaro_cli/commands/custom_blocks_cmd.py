@@ -10,6 +10,7 @@ import click
 from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
 from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, print_table
+from vanjaro_cli.utils.grapesjs import render_styles
 
 LIST_BLOCKS = "/API/Vanjaro/Block/GetAllCustomBlock"
 ADD_BLOCK = "/API/Vanjaro/Block/AddCustomBlock"
@@ -98,7 +99,7 @@ def create_block(name: str, category: str, file_path: str, as_json: bool) -> Non
         "Name": name,
         "Category": category,
         "Html": "",
-        "Css": "",
+        "Css": render_styles(style_json) if isinstance(style_json, list) else "",
         "IsGlobal": "false",
         "ContentJSON": json.dumps(content_json) if isinstance(content_json, (list, dict)) else content_json,
         "StyleJSON": json.dumps(style_json) if isinstance(style_json, (list, dict)) else style_json,

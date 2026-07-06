@@ -11,7 +11,7 @@ from vanjaro_cli.client import ApiError
 from vanjaro_cli.config import ConfigError
 from vanjaro_cli.commands.helpers import exit_error, get_client, output_result, print_table, write_output
 from vanjaro_cli.models.block import GlobalBlock, GlobalBlockDetail
-from vanjaro_cli.utils.grapesjs import render_components
+from vanjaro_cli.utils.grapesjs import render_components, render_styles
 
 LIST_BLOCKS = "/API/VanjaroAI/AIGlobalBlock/List"
 GET_BLOCK = "/API/VanjaroAI/AIGlobalBlock/Get"
@@ -84,12 +84,17 @@ def create_block(name: str, category: str, file_path: str, as_json: bool) -> Non
     # block for render-time wrapper expansion — an empty Html causes the
     # record to land in the custom-block table instead of the global one.
     html = render_components(content_json) if isinstance(content_json, list) else ""
+    style_css = render_styles(style_json) if isinstance(style_json, list) else ""
+    if style_css:
+        # Wrapper expansion serves the stored Html verbatim — per-id style
+        # rules must travel inside it to reach anonymous visitors.
+        html = f"<style>{style_css}</style>{html}"
 
     form_data = {
         "Name": name,
         "Category": category,
         "Html": html,
-        "Css": "",
+        "Css": style_css,
         "IsGlobal": "true",
         "ContentJSON": json.dumps(content_json) if isinstance(content_json, (list, dict)) else content_json,
         "StyleJSON": json.dumps(style_json) if isinstance(style_json, (list, dict)) else style_json,
@@ -187,6 +192,9 @@ def update_block(guid: str, file_path: str, as_json: bool) -> None:
     html = raw.get("html")
     if not isinstance(html, str):
         html = render_components(content_json) if isinstance(content_json, list) else ""
+        style_css = render_styles(style_json) if isinstance(style_json, list) else ""
+        if style_css:
+            html = f"<style>{style_css}</style>{html}"
 
     # AIGlobalBlock/Update binds contentJSON/styleJSON as strings — sending
     # raw arrays fails model binding with HTTP 500.

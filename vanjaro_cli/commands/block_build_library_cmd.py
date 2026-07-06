@@ -19,7 +19,7 @@ from vanjaro_cli.utils.block_compose import (
     check_overflow,
     find_template,
 )
-from vanjaro_cli.utils.grapesjs import render_components
+from vanjaro_cli.utils.grapesjs import render_components, render_styles
 
 __all__ = ["build_library"]
 
@@ -65,7 +65,7 @@ def _register_custom_block(
         "Name": name,
         "Category": category,
         "Html": "",
-        "Css": "",
+        "Css": render_styles(style_json),
         "IsGlobal": "false",
         "ContentJSON": json.dumps(content_json),
         "StyleJSON": json.dumps(style_json),
@@ -110,12 +110,17 @@ def _register_global_block(
     style_json = composed.get("styles", [])
     # An empty Html causes the server to register the block in the custom-block
     # table rather than the global one — pre-render so the global-block path is
-    # taken and wrapper expansion works at render time.
+    # taken and wrapper expansion works at render time. Per-id style rules
+    # travel inside the Html; wrapper expansion serves it verbatim.
+    global_html = render_components(content_json)
+    style_css = render_styles(style_json)
+    if style_css:
+        global_html = f"<style>{style_css}</style>{global_html}"
     form_data = {
         "Name": name,
         "Category": category,
-        "Html": render_components(content_json),
-        "Css": "",
+        "Html": global_html,
+        "Css": style_css,
         "IsGlobal": "true",
         "ContentJSON": json.dumps(content_json),
         "StyleJSON": json.dumps(style_json),

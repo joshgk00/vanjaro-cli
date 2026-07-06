@@ -857,3 +857,25 @@ def test_rewrite_style_url_backgrounds(runner, tmp_path):
     style = data["components"][0]["attributes"]["style"]
     assert "url(/Portals/0/Images/band.jpg)" in style
     assert "source.test" not in style
+
+
+def test_style_rules_background_urls_are_rewritten():
+    """Per-id style rules carry hero background images — the component walk
+    never sees them, so migrated heroes hot-linked the source CDN."""
+    content = {
+        "components": [],
+        "styles": [{
+            "selectors": [{"name": "tpl-rtx-s1", "type": 2}],
+            "style": {"background-image": "url(https://source.test/hero.jpg)"},
+        }],
+    }
+
+    report = rewrite_tree(
+        content,
+        {"https://source.test/hero.jpg": "https://vanjaro.test/portals/0/hero.jpg"},
+        {},
+    )
+
+    rule = content["styles"][0]["style"]
+    assert rule["background-image"] == "url(https://vanjaro.test/portals/0/hero.jpg)"
+    assert report.images_rewritten == 1

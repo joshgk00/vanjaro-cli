@@ -480,3 +480,37 @@ class TestRenderComponents:
             'data-guid="fe37ff48-2c99-4201-85fc-913cac94914d" id="i2orf"></div>'
         )
         assert render_components(components) == expected
+
+
+def test_render_styles_serializes_id_and_class_rules():
+    """styleJSON feeds only the editor — per-id rules must render to CSS to
+    reach anonymous visitors."""
+    from vanjaro_cli.utils.grapesjs import render_styles
+
+    css = render_styles([
+        {
+            "selectors": [{"name": "tpl-rtx-s1", "type": 2}],
+            "style": {"background-image": "url(/hero.jpg)", "background-size": "cover"},
+        },
+        {"selectors": ["band-dark"], "style": {"color": "#ffffff"}},
+        {"selectors": [], "style": {"color": "red"}},
+        {"selectors": ["x"], "style": {}},
+    ])
+
+    assert css == (
+        "#tpl-rtx-s1{background-image:url(/hero.jpg);background-size:cover}"
+        ".band-dark{color:#ffffff}"
+    )
+
+
+def test_render_styles_wraps_media_rules():
+    from vanjaro_cli.utils.grapesjs import render_styles
+
+    css = render_styles([{
+        "selectors": [{"name": "hero", "type": 2}],
+        "style": {"display": "none"},
+        "mediaText": "(max-width: 768px)",
+        "atRuleType": "media",
+    }])
+
+    assert css == "@media (max-width: 768px){#hero{display:none}}"

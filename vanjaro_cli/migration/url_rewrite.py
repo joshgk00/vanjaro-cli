@@ -223,6 +223,21 @@ def rewrite_tree(
     else:
         _walk(content, asset_lookup, page_lookup, report, variant_lookup)
 
+    # Style rules carry section background images as url(...) values — the
+    # component walk never sees them, so without this pass migrated hero
+    # backgrounds keep hot-linking the source CDN.
+    styles = content.get("styles")
+    if isinstance(styles, list):
+        for rule in styles:
+            if not isinstance(rule, dict):
+                continue
+            style = rule.get("style")
+            if not isinstance(style, dict):
+                continue
+            for prop, value in style.items():
+                if isinstance(value, str) and "url(" in value:
+                    style[prop] = _substitute_css_urls(value, asset_lookup, report)
+
     return report
 
 
@@ -287,6 +302,28 @@ def _wrap_images_in_list(
 _STYLE_URL = re.compile(r"url\(\s*['\"]?([^'\")]+)['\"]?\s*\)")
 
 
+def _substitute_css_urls(
+    css_value: str,
+    asset_lookup: dict[str, str],
+    report: RewriteReport,
+) -> str:
+    """Rewrite every url(...) reference in a CSS value string."""
+
+    def _substitute(match: re.Match) -> str:
+        original = match.group(1)
+        replacement = _lookup_url(original, asset_lookup)
+        if replacement is None:
+            report.record_missing_asset(original)
+            return match.group(0)
+        if replacement != original:
+            report.images_rewritten += 1
+        else:
+            report.images_unchanged += 1
+        return f"url({replacement})"
+
+    return _STYLE_URL.sub(_substitute, css_value)
+
+
 def _rewrite_style_urls(
     attributes: dict,
     asset_lookup: dict[str, str],
@@ -301,19 +338,7 @@ def _rewrite_style_urls(
     if not isinstance(style, str) or "url(" not in style:
         return
 
-    def _substitute(match: re.Match) -> str:
-        original = match.group(1)
-        replacement = _lookup_url(original, asset_lookup)
-        if replacement is None:
-            report.record_missing_asset(original)
-            return match.group(0)
-        if replacement != original:
-            report.images_rewritten += 1
-        else:
-            report.images_unchanged += 1
-        return f"url({replacement})"
-
-    attributes["style"] = _STYLE_URL.sub(_substitute, style)
+    attributes["style"] = _substitute_css_urls(style, asset_lookup, report)
 
 
 def _is_image_component(node: dict) -> bool:

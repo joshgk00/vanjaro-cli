@@ -15,6 +15,7 @@ __all__ = [
     "create_component",
     "render_components",
     "render_component",
+    "render_styles",
 ]
 
 # GrapesJS component type → HTML tag name mapping. Components with an
@@ -272,3 +273,46 @@ def render_components(components: list[dict]) -> str:
     blank to anonymous visitors.
     """
     return "".join(render_component(c) for c in components if isinstance(c, dict))
+
+
+def render_styles(styles: list[dict]) -> str:
+    """Serialize a GrapesJS styles array to CSS text.
+
+    The visitor-facing page is emitted from ``contentHtml`` alone —
+    ``styleJSON`` feeds the editor. Any per-id rule (hero background
+    images, band colors that match no palette slot) must therefore be
+    rendered to CSS and shipped alongside the components (a ``<style>``
+    block in contentHtml, or a block's ``Css`` field) or it never reaches
+    anonymous visitors.
+
+    Selector entries are strings or GrapesJS selector dicts (``type`` 2 =
+    id, else class). Rules with a ``mediaText`` at-rule wrap in ``@media``.
+    """
+    rules: list[str] = []
+    for rule in styles or []:
+        if not isinstance(rule, dict):
+            continue
+        style = rule.get("style")
+        if not isinstance(style, dict) or not style:
+            continue
+        selectors: list[str] = []
+        for selector in rule.get("selectors") or []:
+            if isinstance(selector, str) and selector:
+                selectors.append(
+                    selector if selector.startswith((".", "#")) else f".{selector}"
+                )
+            elif isinstance(selector, dict):
+                name = selector.get("name")
+                if not name:
+                    continue
+                prefix = "#" if selector.get("type") == 2 else "."
+                selectors.append(f"{prefix}{name}")
+        if not selectors:
+            continue
+        body = ";".join(f"{prop}:{value}" for prop, value in style.items())
+        css = f"{','.join(selectors)}{{{body}}}"
+        media_text = rule.get("mediaText")
+        if media_text and rule.get("atRuleType") == "media":
+            css = f"@media {media_text}{{{css}}}"
+        rules.append(css)
+    return "".join(rules)
