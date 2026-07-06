@@ -2439,3 +2439,57 @@ def test_formless_section_has_empty_form_fields():
 
     assert sections[0]["content"]["form_fields"] == []
     assert sections[0]["content"]["form_action"] == ""
+
+
+def test_hidden_near_duplicate_with_placeholder_chrome_is_dropped():
+    """A hidden editor copy of a carousel wraps the same reviews in
+    placeholder chrome ('Slide title'/'Button') — a few novel tokens must
+    not make the whole duplicate read as unique content."""
+    html = _wrap(
+        """
+        <section>
+          <h2>What Our Customers Say</h2>
+          <div class="slide"><p>Ace's three are the best plumbing company in the metro area today. - Suzanna S.</p></div>
+          <div class="slider-editor-copy" data-migrate-hidden="1">
+            <h3>Slide title</h3>
+            <p>Ace's three are the best plumbing company in the metro area today. - Suzanna S.</p>
+            <p>Button</p>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    paragraphs = " ".join(sections[0]["content"]["paragraphs"])
+    assert paragraphs.count("Ace's three are the best") == 1
+    assert "Slide title" not in " ".join(sections[0]["content"].get("headings", []))
+    assert "Button" not in paragraphs
+
+
+def test_kept_hidden_slide_still_drops_its_nested_placeholder():
+    """Keeping a unique hidden carousel slide must not unhide the slide's
+    own hidden 'Slide title' placeholder heading — and a second hidden copy
+    of already-kept content is a duplicate."""
+    html = _wrap(
+        """
+        <section>
+          <h2>What Our Customers Say</h2>
+          <div class="slide"><p>Great service and fair prices every time. - Corinne V.</p></div>
+          <div class="slide" data-migrate-hidden="1">
+            <h3 class="slide-title" data-migrate-hidden="1">Slide title</h3>
+            <p>They rebuilt our water heater the same afternoon we called. - Crystal S.</p>
+          </div>
+          <div class="slide-copy" data-migrate-hidden="1">
+            <p>They rebuilt our water heater the same afternoon we called. - Crystal S.</p>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    content = sections[0]["content"]
+    paragraphs = " ".join(content["paragraphs"])
+    assert paragraphs.count("Crystal S.") == 1
+    assert "Slide title" not in " ".join(content.get("headings", []))

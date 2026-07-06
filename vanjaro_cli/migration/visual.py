@@ -50,15 +50,36 @@ class VisualCaptureError(Exception):
 # offcanvas menus) get data-migrate-hidden so extraction can drop them —
 # serialized DOM otherwise carries entire hidden datasets onto the page.
 COMPUTED_STYLE_STAMP_JS = """() => {
+    // Hidden-marking must cover EVERY element: builders hide leaf tags
+    // directly (a display:none <h3 class="slide-title"> placeholder inside
+    // a visible slide), and an unmarked hidden leaf extracts as if painted.
+    // Mark only the hidden BOUNDARY, not inherited descendants: display:none
+    // never inherits as computed 'none', and for visibility the boundary is
+    // the first element whose parent is still visible. Marking every
+    // inheriting fragment would make extraction judge a hidden slide's
+    // pieces separately, and short legit fragments (a review's "- Name"
+    // attribution) die by the noise floor.
+    for (const el of document.querySelectorAll('body *')) {
+        const cs = getComputedStyle(el);
+        if (cs.display === 'none') {
+            el.setAttribute('data-migrate-hidden', '1');
+            continue;
+        }
+        if (cs.visibility === 'hidden') {
+            const parent = el.parentElement;
+            if (!parent || getComputedStyle(parent).visibility !== 'hidden') {
+                el.setAttribute('data-migrate-hidden', '1');
+            }
+        }
+    }
     const candidates = document.querySelectorAll(
         'div, section, article, header, footer, main, aside'
     );
     for (const el of candidates) {
-        const cs = getComputedStyle(el);
-        if (cs.display === 'none' || cs.visibility === 'hidden') {
-            el.setAttribute('data-migrate-hidden', '1');
+        if (el.hasAttribute('data-migrate-hidden')) {
             continue;
         }
+        const cs = getComputedStyle(el);
         let bg = cs.backgroundColor;
         let overlayHidesImage = false;
         if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {

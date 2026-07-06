@@ -63,6 +63,13 @@ _HIDDEN_JUNK_CLASS = re.compile(
 # (close buttons, icon labels), not withheld content.
 _HIDDEN_KEEP_MIN_TEXT = 20
 
+# A hidden subtree counts as withheld content only when this share of its
+# words is absent from the visible page. Exact containment is not enough:
+# builders keep a hidden editor copy of a carousel that wraps the same
+# reviews in placeholder chrome ("Slide title ... Button"), and those few
+# extra tokens made the whole duplicate read as unique.
+_HIDDEN_NOVELTY_RATIO = 0.3
+
 
 def _is_hidden_marked(tag: Tag) -> bool:
     return isinstance(tag, Tag) and (
@@ -97,24 +104,55 @@ def _strip_hidden_elements(soup: BeautifulSoup) -> None:
         return
 
     container = soup.body or soup
-    visible_corpus = _normalized_text(" ".join(
+    visible_words = set(_normalized_text(" ".join(
         text
         for text in container.strings
         if text.find_parent(_is_hidden_marked) is None
-    ))
+    )).split())
 
     for root in roots:
-        classes = " ".join(root.get("class", []))
-        text = _normalized_text(root.get_text(separator=" ", strip=True))
-        is_junk = _HIDDEN_JUNK_CLASS.search(classes) is not None
-        if is_junk or len(text) < _HIDDEN_KEEP_MIN_TEXT or text in visible_corpus:
-            root.decompose()
-            continue
-        for tag in [root, *root.find_all(_is_hidden_marked)]:
-            if tag.has_attr(HIDDEN_ATTR):
-                del tag[HIDDEN_ATTR]
-            if tag.get("aria-hidden") == "true":
-                del tag["aria-hidden"]
+        _strip_or_keep_hidden(root, visible_words)
+
+
+def _strip_or_keep_hidden(element: Tag, visible_words: set[str]) -> None:
+    """Drop a hidden subtree, or unhide it and judge its nested hidden parts.
+
+    A kept subtree's nested hidden elements are NOT unhidden wholesale —
+    each is judged by the same rules (a kept carousel slide still carries
+    its own hidden 'Slide title' placeholder heading, which must go). Kept
+    text joins the visible corpus so a second hidden copy of the same
+    content reads as the duplicate it is.
+    """
+    classes = " ".join(element.get("class", []))
+    text = _normalized_text(element.get_text(separator=" ", strip=True))
+    words = text.split()
+    novel_share = (
+        sum(1 for word in words if word not in visible_words) / len(words)
+        if words
+        else 0.0
+    )
+    if (
+        _HIDDEN_JUNK_CLASS.search(classes) is not None
+        or len(text) < _HIDDEN_KEEP_MIN_TEXT
+        or novel_share < _HIDDEN_NOVELTY_RATIO
+    ):
+        element.decompose()
+        return
+
+    if element.has_attr(HIDDEN_ATTR):
+        del element[HIDDEN_ATTR]
+    if element.get("aria-hidden") == "true":
+        del element["aria-hidden"]
+    nested_roots = [
+        nested
+        for nested in element.find_all(_is_hidden_marked)
+        if nested.find_parent(_is_hidden_marked) is None
+    ]
+    for nested in nested_roots:
+        _strip_or_keep_hidden(nested, visible_words)
+    visible_words.update(
+        _normalized_text(element.get_text(separator=" ", strip=True)).split()
+    )
 
 _CSS_RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
 _CSS_BG_DECL = re.compile(r"(?:^|;)\s*background(?:-color)?\s*:\s*([^;}]+)", re.IGNORECASE)
