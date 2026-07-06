@@ -561,8 +561,13 @@ def _parse_srcset_urls(srcset: str, base_url: str) -> list[str]:
 
 
 def _is_button_styled(anchor: Tag) -> bool:
-    """True when the anchor's classes mark it as a button (``btn``/``button``)."""
-    classes = " ".join(anchor.get("class", []))
+    """True when the anchor's classes mark it as a button (``btn``/``button``).
+
+    Case-insensitive: builder markup camelCases the marker (Duda's
+    ``dmButtonLink``/``dmOnlyButton``), and a case-sensitive test filed every
+    such CTA under plain links — which nothing downstream renders.
+    """
+    classes = " ".join(anchor.get("class", [])).lower()
     return "btn" in classes or "button" in classes
 
 

@@ -1061,3 +1061,51 @@ def test_small_grid_is_left_untouched():
     composed = apply_overrides(_grid_template(3), {f"image_{i}_src": f"/{i}.jpg" for i in range(1, 4)})
     # 3 columns < 4 — below the rebalance threshold, template default kept
     assert _md_widths(composed) == ["col-md-4"] * 3
+
+
+def test_button_slots_expand_by_cloning():
+    """A second CTA clones the hero template's existing button."""
+    overrides = {
+        "button_1": "Get Started",
+        "button_1_href": "/signup",
+        "button_2": "Request a Quote",
+        "button_2_href": "/quote",
+    }
+
+    result = apply_overrides(HERO_TEMPLATE, overrides)
+
+    column = result["template"]["components"][0]["components"][0]["components"][0]
+    buttons = [c for c in column["components"] if c["type"] == "button"]
+    assert [(b["content"], b["attributes"]["href"]) for b in buttons] == [
+        ("Get Started", "/signup"),
+        ("Request a Quote", "/quote"),
+    ]
+
+
+def test_buttonless_template_gains_synthesized_cta():
+    """A section CTA fed to a template with no button must ship, not drop —
+    Duda styles CTAs as button-classed links that Rich Text Block sections
+    were silently losing."""
+    overrides = {
+        "heading_1": "Residential Plumbing",
+        "text_1": "We fix leaks.",
+        "button_1": "Request a Quote",
+        "button_1_href": "/plumbing-estimate",
+    }
+
+    result = apply_overrides(make_two_text_template(), overrides)
+
+    column = result["template"]["components"][0]
+    buttons = [c for c in column["components"] if c["type"] == "button"]
+    assert len(buttons) == 1
+    assert buttons[0]["content"] == "Request a Quote"
+    assert buttons[0]["attributes"]["href"] == "/plumbing-estimate"
+
+
+def test_sparse_high_button_index_does_not_synthesize():
+    """A stray button_9 against a buttonless template is overflow, not a
+    request for nine synthesized buttons."""
+    result = apply_overrides(make_two_text_template(), {"button_9": "stray", "text_1": "x"})
+
+    column = result["template"]["components"][0]
+    assert not [c for c in column["components"] if c["type"] == "button"]

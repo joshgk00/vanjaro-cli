@@ -19,6 +19,7 @@ __all__ = [
     "apply_section_background",
     "check_overflow",
     "enumerate_slots",
+    "expand_button_slots",
     "expand_column_units",
     "expand_image_slots",
     "expand_list_slots",
@@ -133,6 +134,7 @@ def enumerate_slots(template_component: dict) -> list[dict]:
 _TEXT_OVERRIDE_KEY = re.compile(r"^text_(\d+)$")
 _IMAGE_SRC_OVERRIDE_KEY = re.compile(r"^image_(\d+)_src$")
 _LIST_ITEM_OVERRIDE_KEY = re.compile(r"^list-item_(\d+)$")
+_BUTTON_OVERRIDE_KEY = re.compile(r"^button_(\d+)$")
 
 
 def _max_requested_text_slot(overrides: dict[str, str]) -> int:
@@ -149,6 +151,15 @@ def _max_requested_image_slot(overrides: dict[str, str]) -> int:
         int(match.group(1))
         for key in overrides
         if (match := _IMAGE_SRC_OVERRIDE_KEY.match(key)) and overrides[key]
+    ]
+    return max(indices, default=0)
+
+
+def _max_requested_button_slot(overrides: dict[str, str]) -> int:
+    indices = [
+        int(match.group(1))
+        for key in overrides
+        if (match := _BUTTON_OVERRIDE_KEY.match(key)) and overrides[key]
     ]
     return max(indices, default=0)
 
@@ -440,11 +451,68 @@ def expand_list_slots(template_data: dict, overrides: dict[str, str]) -> dict:
     return result
 
 
+def expand_button_slots(template_data: dict, overrides: dict[str, str]) -> dict:
+    """Make room for every ``button_N`` override.
+
+    Clones the template's last button in place when slots run out. Templates
+    with no button at all (Rich Text Block fed a section whose call-to-action
+    the source styles as a button) get a button-styled link appended after
+    the last text component — a section's CTA must ship, not drop.
+    """
+    requested = _max_requested_button_slot(overrides)
+    if requested == 0:
+        return template_data
+
+    existing = sum(
+        1 for _, comp_type, _ in _walk_overridable(template_data["template"])
+        if comp_type == "button"
+    )
+    if 0 < existing >= requested:
+        return template_data
+
+    result = copy.deepcopy(template_data)
+    located = _find_last_of_type(result["template"], "button")
+    if located is not None and located[1] is not None:
+        last_button, parent = located
+        insert_at = parent["components"].index(last_button) + 1
+        for clone_number in range(requested - existing):
+            clone = copy.deepcopy(last_button)
+            _rewrite_component_ids(clone, f"-x{clone_number + 2}")
+            parent["components"].insert(insert_at + clone_number, clone)
+        return result
+
+    # Sections carry one CTA, occasionally a pair — a higher request against
+    # a buttonless template is card-grid content that belongs to column-unit
+    # expansion, not a row of synthesized buttons. Leave it to overflow
+    # reporting instead.
+    if requested > 2:
+        return template_data
+    anchor = _find_last_of_type(result["template"], "text") or _find_last_of_type(
+        result["template"], "heading"
+    )
+    if anchor is None or anchor[1] is None:
+        return template_data
+    _, parent = anchor
+    for slot_number in range(1, requested + 1):
+        parent["components"].append({
+            "type": "button",
+            "tagName": "a",
+            "classes": [
+                {"name": "btn", "active": False},
+                {"name": "btn-primary", "active": False},
+                {"name": "button-style-1", "active": False},
+                {"name": "mt-4", "active": False},
+            ],
+            "attributes": {"id": f"tpl-auto-btn{slot_number}", "role": "button", "href": "#"},
+        })
+    return result
+
+
 def _expand_slots(template_data: dict, overrides: dict[str, str]) -> dict:
     """Run unit expansion, then leaf expansion for any residue units don't cover."""
     expanded = expand_column_units(template_data, overrides)
     expanded = expand_image_slots(expand_text_slots(expanded, overrides), overrides)
-    return expand_list_slots(expanded, overrides)
+    return expand_button_slots(expand_list_slots(expanded, overrides), overrides)
 
 
 def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:

@@ -2370,3 +2370,29 @@ def test_lazy_loaded_images_extract_from_data_src():
     assert f"{BASE_URL}photos/bathroom.jpg" in srcs
     assert f"{BASE_URL}photos/kitchen.jpg" in srcs
     assert f"{BASE_URL}photos/eager.jpg" in srcs
+
+
+def test_camelcase_button_classes_extract_as_buttons():
+    """Builder CTAs (Duda's dmButtonLink/dmOnlyButton) are buttons, not plain
+    links — the case-sensitive class test filed them under links, which
+    nothing downstream renders."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Residential Plumbing Solutions</h2>
+          <p>Your home's plumbing deserves expert care.</p>
+          <a class="dmButtonLink dmOnlyButton" href="/plumbing-estimate">Request a Quote</a>
+          <p>Call <a href="/contact">our team</a> for details.</p>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    buttons = sections[0]["content"]["buttons"]
+    assert buttons == [
+        {"text": "Request a Quote", "href": f"{BASE_URL}plumbing-estimate"},
+    ]
+    link_texts = [link["text"] for link in sections[0]["content"]["links"]]
+    assert "our team" in link_texts
+    assert "Request a Quote" not in link_texts
