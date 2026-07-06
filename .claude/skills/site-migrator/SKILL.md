@@ -1085,7 +1085,9 @@ Known gaps:
     <form> in the source extracts field-by-field and renders as a genuine
     form on the migrated page; only the POST handler is missing — wire a
     DNN forms module or external endpoint post-migration). JS-widget forms
-    (Thryv/HubSpot embeds) have no static markup and stay a crawl ceiling.
+    (Thryv/HubSpot embeds) migrate too when crawled with --rendered — the
+    widget's injected form DOM is captured like any real form; only a
+    static crawl misses them.
   - Blog page is static snapshot (no dynamic posts)
 
 Artifacts:
