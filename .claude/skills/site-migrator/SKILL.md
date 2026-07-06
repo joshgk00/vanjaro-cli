@@ -1081,13 +1081,13 @@ Visual score:   91/100 (visual-report/vision-report.json)
 Gap report:     artifacts/migration/example-com/gap-report.md
 
 Known gaps:
-  - Contact form SUBMISSION needs wiring (form markup migrates: a real
-    <form> in the source extracts field-by-field and renders as a genuine
-    form on the migrated page; only the POST handler is missing — wire a
-    DNN forms module or external endpoint post-migration). JS-widget forms
-    (Thryv/HubSpot embeds) migrate too when crawled with --rendered — the
-    widget's injected form DOM is captured like any real form; only a
-    static crawl misses them.
+  - Forms are deliberately NOT migrated as working or lookalike HTML forms
+    — the site owner builds forms with the platform's forms plugin, which
+    needs manual setup. Where the source had a form (including JS-widget
+    forms captured by a --rendered crawl), the migrated page shows a
+    dashed-border placeholder listing the detected fields (required ones
+    starred) so the manual pass knows exactly what to configure and where.
+    Never emit raw <form>/<input> markup or wire a form module yourself.
   - Blog page is static snapshot (no dynamic posts)
 
 Artifacts:

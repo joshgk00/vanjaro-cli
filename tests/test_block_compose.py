@@ -1111,10 +1111,11 @@ def test_sparse_high_button_index_does_not_synthesize():
     assert not [c for c in column["components"] if c["type"] == "button"]
 
 
-def test_attach_form_renders_real_form_markup():
-    """Extracted form fields become genuine <form>/<input> markup through
-    the component renderer — names, types, labels, and required survive."""
-    from vanjaro_cli.utils.block_compose import attach_form
+def test_attach_form_placeholder_lists_detected_fields():
+    """Migrated pages carry NO working or lookalike form — forms are built
+    with the site's forms plugin manually, so the placeholder marks the spot
+    and lists the detected fields (required starred) for the rebuild."""
+    from vanjaro_cli.utils.block_compose import attach_form_placeholder
     from vanjaro_cli.utils.grapesjs import render_component
 
     section = apply_overrides(make_two_text_template(), {"heading_1": "Contact"})["template"]
@@ -1127,21 +1128,48 @@ def test_attach_form_renders_real_form_markup():
          "placeholder": "", "required": False},
     ]
 
-    attach_form(section, fields, "https://example.com/submit-quote")
+    attach_form_placeholder(section, fields)
     html = render_component(section)
 
-    assert '<form' in html and 'action="https://example.com/submit-quote"' in html
-    assert 'name="first_name"' in html and 'required="required"' in html
-    assert '<input' in html and 'type="email"' in html
-    assert '<textarea' in html
-    assert '<label' in html and 'First Name' in html
-    assert 'type="submit"' in html
+    assert "[ Contact form goes here ]" in html
+    assert "First Name*" in html
+    assert "Email" in html and "Message" in html
+    assert "<form" not in html
+    assert "<input" not in html
+    assert "<textarea" not in html
 
 
-def test_attach_form_without_fields_is_a_noop():
-    from vanjaro_cli.utils.block_compose import attach_form
+def test_attach_form_placeholder_without_fields_is_a_noop():
+    from vanjaro_cli.utils.block_compose import attach_form_placeholder
 
     section = apply_overrides(make_two_text_template(), {"heading_1": "Contact"})["template"]
     before = json.dumps(section)
-    attach_form(section, [])
+    attach_form_placeholder(section, [])
     assert json.dumps(section) == before
+
+
+def test_image_band_gets_text_shadow_for_contrast():
+    """Text over a photo/pattern band gets a soft dark shadow — white hero
+    text went invisible wherever a striped background ran light."""
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    inline_section = {}
+    apply_section_background(inline_section, {"background_image": "/hero-stripes.png"})
+    assert "text-shadow:0 1px 3px rgba(0,0,0,0.55)" in inline_section["attributes"]["style"]
+
+    palette = {"primary": (188, 48, 47)}
+    styles: list = []
+    palette_section = {"attributes": {"id": "s1"}}
+    apply_section_background(
+        palette_section, {"background_image": "/hero-stripes.png"},
+        palette=palette, styles=styles,
+    )
+    assert styles and styles[0]["style"]["text-shadow"] == "0 1px 3px rgba(0,0,0,0.55)"
+
+
+def test_flat_color_band_gets_no_text_shadow():
+    from vanjaro_cli.utils.block_compose import apply_section_background
+
+    section = {}
+    apply_section_background(section, {"background_color": "rgb(188, 48, 47)"})
+    assert "text-shadow" not in section["attributes"]["style"]

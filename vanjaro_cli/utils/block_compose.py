@@ -17,7 +17,7 @@ __all__ = [
     "TemplateNotFoundError",
     "apply_overrides",
     "apply_section_background",
-    "attach_form",
+    "attach_form_placeholder",
     "check_overflow",
     "enumerate_slots",
     "expand_button_slots",
@@ -509,102 +509,60 @@ def expand_button_slots(template_data: dict, overrides: dict[str, str]) -> dict:
     return result
 
 
-def attach_form(section: dict, fields: list[dict], action: str = "") -> None:
-    """Append a real form component tree to a composed section, in place.
+def attach_form_placeholder(section: dict, fields: list[dict]) -> None:
+    """Append a visible placeholder where the source page had a form.
 
-    Renders as genuine ``<form>``/``<input>`` markup through the component
-    renderer (an explicit ``tagName`` beats the type lookup, and ``input``
-    is a void element), so the migrated page keeps the source form's shape:
-    field names, types, labels, and required flags all survive. Submission
-    is NOT wired — no form handler exists in this stack — so the source
-    ``action`` is carried only when it was a real URL, and hooking up a
-    working backend stays a documented post-migration step.
+    Migrated pages deliberately carry NO working or lookalike form: forms on
+    the target platform are built with the site's forms plugin and need
+    manual setup in the editor, and a rendered ``<form>`` that silently
+    drops submissions is worse than an honest marker. The placeholder lists
+    the detected fields (required ones starred) so whoever rebuilds the form
+    knows exactly what to configure.
     """
     if not fields:
         return
     located = _find_last_of_type(section, "text") or _find_last_of_type(section, "heading")
     parent = located[1] if located is not None and located[1] is not None else section
 
-    children: list[dict] = []
+    field_labels: list[str] = []
     for index, field in enumerate(fields, start=1):
         if not isinstance(field, dict):
             continue
-        field_type = str(field.get("type") or "text")
-        name = str(field.get("name") or f"field-{index}")
-        label = str(field.get("label") or "")
-        control_id = f"tpl-auto-ff{index}"
+        label = str(field.get("label") or field.get("name") or f"Field {index}")
+        field_labels.append(f"{label}*" if field.get("required") else label)
 
-        group: list[dict] = []
-        if label:
-            group.append({
-                "type": "default",
-                "tagName": "label",
-                "content": label,
-                "classes": [{"name": "form-label", "active": False}],
-                "attributes": {"id": f"{control_id}-label", "for": control_id},
-            })
-        attributes: dict = {"id": control_id, "name": name}
-        placeholder = str(field.get("placeholder") or "")
-        if placeholder:
-            attributes["placeholder"] = placeholder
-        if field.get("required"):
-            attributes["required"] = "required"
-        if field_type == "textarea":
-            control = {
-                "type": "default",
-                "tagName": "textarea",
-                "classes": [{"name": "form-control", "active": False}],
-                "attributes": {**attributes, "rows": "4"},
-            }
-        elif field_type == "select":
-            control = {
-                "type": "default",
-                "tagName": "select",
-                "classes": [{"name": "form-select", "active": False}],
-                "attributes": attributes,
-                "components": [{
-                    "type": "default",
-                    "tagName": "option",
-                    "content": label or name,
-                    "attributes": {"id": f"{control_id}-opt"},
-                }],
-            }
-        else:
-            control = {
-                "type": "default",
-                "tagName": "input",
-                "classes": [{"name": "form-control", "active": False}],
-                "attributes": {**attributes, "type": field_type},
-            }
-        children.append({
-            "type": "default",
-            "tagName": "div",
-            "classes": [{"name": "mb-3", "active": False}],
-            "attributes": {"id": f"{control_id}-group"},
-            "components": [*group, control],
-        })
-
-    children.append({
-        "type": "button",
-        "tagName": "button",
-        "content": "Send Message",
-        "classes": [
-            {"name": "btn", "active": False},
-            {"name": "btn-primary", "active": False},
-            {"name": "button-style-1", "active": False},
-        ],
-        "attributes": {"id": "tpl-auto-form-submit", "type": "submit"},
-    })
-
-    form_attributes: dict = {"id": "tpl-auto-form", "method": "post"}
-    if action:
-        form_attributes["action"] = action
     parent.setdefault("components", []).append({
         "type": "default",
-        "tagName": "form",
-        "classes": [{"name": "migrated-form", "active": False}],
-        "attributes": form_attributes,
-        "components": children,
+        "tagName": "div",
+        "classes": [
+            {"name": "form-placeholder", "active": False},
+            {"name": "border", "active": False},
+            {"name": "rounded", "active": False},
+            {"name": "p-4", "active": False},
+            {"name": "my-3", "active": False},
+            {"name": "text-center", "active": False},
+        ],
+        "attributes": {
+            "id": "tpl-form-placeholder",
+            "style": "border:2px dashed #999 !important;",
+        },
+        "components": [
+            {
+                "type": "heading",
+                "tagName": "h4",
+                "content": "[ Contact form goes here ]",
+                "attributes": {"id": "tpl-form-placeholder-title"},
+            },
+            {
+                "type": "text",
+                "content": (
+                    "Rebuild this form with the forms plugin. Detected fields: "
+                    + ", ".join(field_labels)
+                    + " (* = required)"
+                ),
+                "attributes": {"id": "tpl-form-placeholder-fields"},
+            },
+        ],
     })
 
 
@@ -781,6 +739,7 @@ def _apply_inline_background(
         style += (
             f"background-image:url({background_image});"
             "background-size:cover;background-position:center;"
+            f"text-shadow:{_IMAGE_BAND_TEXT_SHADOW};"
         )
     if text_color:
         style += f"color:{text_color};"
@@ -789,6 +748,10 @@ def _apply_inline_background(
     existing = attributes.get("style", "")
     attributes["style"] = f"{existing.rstrip(';')};{style}".lstrip(";") if existing else style
 
+
+# Soft dark shadow behind text on image-backed bands — legibility insurance
+# for wherever the photo/pattern runs light under light text.
+_IMAGE_BAND_TEXT_SHADOW = "0 1px 3px rgba(0,0,0,0.55)"
 
 # Slot a near-white captured/derived text color resolves to. Reference sites
 # use text-light for light text on dark bands rather than text-white.
@@ -838,6 +801,11 @@ def _apply_palette_background(
         inline_rule["background-image"] = f"url({background_image})"
         inline_rule["background-size"] = "cover"
         inline_rule["background-position"] = "center"
+        # Text over a photo/pattern has no guaranteed contrast anywhere the
+        # image runs light (white hero text went invisible over the white
+        # half of a striped pattern) — a soft dark shadow keeps any band
+        # text legible without needing to know the image's brightness.
+        inline_rule["text-shadow"] = _IMAGE_BAND_TEXT_SHADOW
 
     if text_color:
         slot = _text_color_slot(text_color, palette)
