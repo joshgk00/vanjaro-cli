@@ -53,19 +53,68 @@ BACKGROUND_IMAGE_ATTR = "data-migrate-bg-image"
 HIDDEN_ATTR = "data-migrate-hidden"
 
 
+# Hidden containers that are UI chrome, never page content — kept-if-unique
+# must not apply to them (a cookie banner's text is always unique).
+_HIDDEN_JUNK_CLASS = re.compile(
+    r"popup|modal|dialog|cookie|consent|offcanvas|drawer|lightbox", re.IGNORECASE
+)
+
+# Below this many normalized characters a unique hidden subtree is noise
+# (close buttons, icon labels), not withheld content.
+_HIDDEN_KEEP_MIN_TEXT = 20
+
+
+def _is_hidden_marked(tag: Tag) -> bool:
+    return isinstance(tag, Tag) and (
+        tag.has_attr(HIDDEN_ATTR) or tag.get("aria-hidden") == "true"
+    )
+
+
+def _normalized_text(value: str) -> str:
+    return " ".join(value.lower().split())
+
+
 def _strip_hidden_elements(soup: BeautifulSoup) -> None:
-    """Drop subtrees the browser never painted.
+    """Drop hidden subtrees whose content the visible page already shows.
 
     The rendered crawl stamps ``data-migrate-hidden`` on display:none /
-    visibility:hidden elements (inactive tab panes, hidden slides, offcanvas
-    menus); ``aria-hidden="true"`` catches carousel clone items in static
-    fetches too. Without this, serialized DOMs dump entire hidden datasets
-    (e.g. every testimonial tab) into extracted sections.
+    visibility:hidden elements; ``aria-hidden="true"`` catches carousel clone
+    items in static fetches too. Most hidden subtrees are duplicates — Duda
+    renders every row twice (desktop/mobile twins) and menus repeat the nav —
+    and dropping them keeps hidden datasets from flooding extraction. But a
+    hidden subtree whose text appears NOWHERE visible is real content behind
+    a JS reveal (carousel slides, tab panes): stripping it loses it outright
+    (a reviews carousel kept only its active slide), so unique hidden content
+    is unhidden and kept instead. Hidden UI chrome (popups, cookie banners)
+    is always dropped — its text is unique by nature but is not content.
     """
-    for element in soup.find_all(attrs={HIDDEN_ATTR: True}):
-        element.decompose()
-    for element in soup.find_all(attrs={"aria-hidden": "true"}):
-        element.decompose()
+    roots = [
+        element
+        for element in soup.find_all(_is_hidden_marked)
+        if element.find_parent(_is_hidden_marked) is None
+    ]
+    if not roots:
+        return
+
+    container = soup.body or soup
+    visible_corpus = _normalized_text(" ".join(
+        text
+        for text in container.strings
+        if text.find_parent(_is_hidden_marked) is None
+    ))
+
+    for root in roots:
+        classes = " ".join(root.get("class", []))
+        text = _normalized_text(root.get_text(separator=" ", strip=True))
+        is_junk = _HIDDEN_JUNK_CLASS.search(classes) is not None
+        if is_junk or len(text) < _HIDDEN_KEEP_MIN_TEXT or text in visible_corpus:
+            root.decompose()
+            continue
+        for tag in [root, *root.find_all(_is_hidden_marked)]:
+            if tag.has_attr(HIDDEN_ATTR):
+                del tag[HIDDEN_ATTR]
+            if tag.get("aria-hidden") == "true":
+                del tag["aria-hidden"]
 
 _CSS_RULE = re.compile(r"([^{}]+)\{([^{}]*)\}")
 _CSS_BG_DECL = re.compile(r"(?:^|;)\s*background(?:-color)?\s*:\s*([^;}]+)", re.IGNORECASE)

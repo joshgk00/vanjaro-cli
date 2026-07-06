@@ -1602,8 +1602,10 @@ def test_uniform_card_grid_still_not_split():
 # ---------------------------------------------------------------------------
 
 
-def test_hidden_stamped_subtrees_are_dropped():
-    """data-migrate-hidden subtrees (inactive tab panes) never extract."""
+def test_hidden_unique_content_is_kept():
+    """Hidden subtrees with text the visible page never shows are withheld
+    content behind a JS reveal (inactive tabs, carousel slides) — stripping
+    them lost a reviews carousel's every slide but the active one."""
     html = _wrap(
         """
         <section>
@@ -1621,7 +1623,56 @@ def test_hidden_stamped_subtrees_are_dropped():
 
     assert len(sections) == 1
     paragraphs = sections[0]["content"]["paragraphs"]
-    assert paragraphs == ["Visible testimonial quote."]
+    assert "Visible testimonial quote." in paragraphs
+    assert "Hidden testimonial one with a very long body." in paragraphs
+    assert "Hidden testimonial two with a very long body." in paragraphs
+
+
+def test_hidden_duplicate_row_twin_is_dropped():
+    """Builder markup renders each row twice (desktop/mobile twins) with one
+    hidden — the duplicate must not double every section's content."""
+    html = _wrap(
+        """
+        <section>
+          <div class="row"><h2>Residential Plumbing</h2>
+            <p>We fix leaks and install fixtures for homes.</p></div>
+          <div class="row mobile-variant" data-migrate-hidden="1">
+            <h2>Residential Plumbing</h2>
+            <p>We fix leaks and install fixtures for homes.</p></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert sections[0]["content"]["headings"] == ["Residential Plumbing"]
+    assert sections[0]["content"]["paragraphs"] == [
+        "We fix leaks and install fixtures for homes.",
+    ]
+
+
+def test_hidden_popup_chrome_is_dropped_even_when_unique():
+    """Hidden UI chrome (popups, cookie banners) has unique text by nature
+    but is never page content."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Our Services</h2>
+          <p>Full-service plumbing for the metro.</p>
+          <div class="dmPopup" data-migrate-hidden="1">
+            <p>Content, including images, displayed on this website is protected.</p>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 1
+    assert sections[0]["content"]["paragraphs"] == [
+        "Full-service plumbing for the metro.",
+    ]
 
 
 def test_aria_hidden_subtrees_are_dropped():

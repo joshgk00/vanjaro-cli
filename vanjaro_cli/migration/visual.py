@@ -59,13 +59,37 @@ COMPUTED_STYLE_STAMP_JS = """() => {
             el.setAttribute('data-migrate-hidden', '1');
             continue;
         }
-        const bg = cs.backgroundColor;
-        if (bg && bg !== 'rgba(0, 0, 0, 0)' && bg !== 'transparent') {
+        let bg = cs.backgroundColor;
+        let overlayHidesImage = false;
+        if (!bg || bg === 'rgba(0, 0, 0, 0)' || bg === 'transparent') {
+            // Builder themes (Duda parallax bands) paint the section color on
+            // a full-cover ::before/::after overlay, not the element itself —
+            // without this the red/blue bands extract as white sections. A
+            // near-opaque overlay also hides the element's own background
+            // photo, so stamping that image too would bury the band color.
+            bg = null;
+            for (const pseudoName of ['::before', '::after']) {
+                const ps = getComputedStyle(el, pseudoName);
+                if (!ps || ps.content === 'none') continue;
+                const pbg = ps.backgroundColor;
+                const fullCover = ps.position === 'absolute'
+                    && ps.top === '0px' && ps.bottom === '0px'
+                    && ps.left === '0px' && ps.right === '0px';
+                const opacity = parseFloat(ps.opacity || '1');
+                if (pbg && pbg !== 'rgba(0, 0, 0, 0)' && pbg !== 'transparent'
+                        && fullCover && opacity >= 0.5) {
+                    bg = pbg;
+                    overlayHidesImage = opacity >= 0.85;
+                    break;
+                }
+            }
+        }
+        if (bg) {
             el.setAttribute('data-migrate-bg', bg);
             el.setAttribute('data-migrate-color', cs.color);
         }
         const match = (cs.backgroundImage || '').match(/url\\(["']?([^"')]+)["']?\\)/);
-        if (match && !match[1].startsWith('data:')) {
+        if (match && !match[1].startsWith('data:') && !overlayHidesImage) {
             el.setAttribute('data-migrate-bg-image', match[1]);
         }
     }
