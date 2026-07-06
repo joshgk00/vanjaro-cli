@@ -70,6 +70,16 @@ _HIDDEN_KEEP_MIN_TEXT = 20
 # extra tokens made the whole duplicate read as unique.
 _HIDDEN_NOVELTY_RATIO = 0.3
 
+# Builder editor defaults that make a hidden subtree's text "unique" without
+# being content — a never-configured slider slide is exactly these phrases.
+_EDITOR_PLACEHOLDER_PHRASES = ("slide title", "write your caption here")
+
+
+def _without_placeholder_phrases(text: str) -> str:
+    for phrase in _EDITOR_PLACEHOLDER_PHRASES:
+        text = text.replace(phrase, " ")
+    return " ".join(text.split())
+
 
 def _is_hidden_marked(tag: Tag) -> bool:
     return isinstance(tag, Tag) and (
@@ -133,7 +143,7 @@ def _strip_or_keep_hidden(element: Tag, visible_words: set[str]) -> None:
     )
     if (
         _HIDDEN_JUNK_CLASS.search(classes) is not None
-        or len(text) < _HIDDEN_KEEP_MIN_TEXT
+        or len(_without_placeholder_phrases(text)) < _HIDDEN_KEEP_MIN_TEXT
         or novel_share < _HIDDEN_NOVELTY_RATIO
     ):
         element.decompose()
@@ -800,6 +810,22 @@ def _extract_content(element: Tag, base_url: str) -> dict:
             text = li.get_text(separator=" ", strip=True)
             if text:
                 list_items.append(text)
+    if list_items and paragraphs:
+        # Slider markup renders slides as <li> wrapping <p> — the same review
+        # extracts as a merged list item AND as paragraphs, and both map to
+        # slots, so every slide rendered twice in a row.
+        paragraph_words = set(_normalized_text(
+            re.sub(r"<[^>]+>", " ", " ".join(paragraphs))
+        ).split())
+
+        def _duplicates_paragraphs(item: str) -> bool:
+            words = _normalized_text(item).split()
+            if not words:
+                return True
+            covered = sum(1 for word in words if word in paragraph_words)
+            return covered / len(words) >= 0.9
+
+        list_items = [item for item in list_items if not _duplicates_paragraphs(item)]
 
     blockquotes: list[dict] = []
     for bq in element.find_all("blockquote"):

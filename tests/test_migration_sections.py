@@ -2493,3 +2493,59 @@ def test_kept_hidden_slide_still_drops_its_nested_placeholder():
     paragraphs = " ".join(content["paragraphs"])
     assert paragraphs.count("Crystal S.") == 1
     assert "Slide title" not in " ".join(content.get("headings", []))
+
+
+def test_hidden_placeholder_only_slide_is_dropped_despite_unique_text():
+    """A never-configured slider slide is pure editor placeholder text —
+    unique on the page, but not content."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Our Legacy</h2>
+          <p>Serving Oklahoma City for over four decades with licensed plumbers.</p>
+          <div class="slide-inner" data-migrate-hidden="1">
+            <h3 class="slide-title">Slide title</h3>
+            <p>Write your caption here</p>
+            <p>Button</p>
+          </div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    content = sections[0]["content"]
+    joined = " ".join(content["paragraphs"] + content.get("headings", []) + content.get("list_items", []))
+    assert "Slide title" not in joined
+    assert "Write your caption" not in joined
+
+
+def test_list_items_duplicating_paragraphs_are_dropped():
+    """Slides render as <li> wrapping <p> — the merged list item must not
+    double-render content the paragraphs already carry."""
+    html = _wrap(
+        """
+        <section>
+          <h2>What Our Customers Say</h2>
+          <ul class="slides">
+            <li>
+              <p>Great service and fair prices every time we call them out.</p>
+              <p>- Corinne V.</p>
+            </li>
+          </ul>
+          <ul class="feature-list">
+            <li>Hosting for your website</li>
+            <li>Mobile-friendly design</li>
+          </ul>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    content = sections[0]["content"]
+    assert "Great service and fair prices every time we call them out." in content["paragraphs"]
+    joined_items = " ".join(content["list_items"])
+    assert "Great service" not in joined_items
+    assert "Hosting for your website" in content["list_items"]
+    assert "Mobile-friendly design" in content["list_items"]
