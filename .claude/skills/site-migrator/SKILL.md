@@ -204,8 +204,8 @@ vanjaro migrate crawl https://example.com \
 | Flag | Purpose |
 |------|---------|
 | `--max-pages N` | Cap the crawl (default 50). Use a small number like 10–20 for smoke tests. |
-| `--include-paths '/services/*'` | Glob patterns (repeatable) to include only matching paths. |
-| `--exclude-paths '/blog/*'` | Glob patterns (repeatable) to skip paths. |
+| `--include-paths '/services/*'` | Glob patterns (repeatable) to include only matching paths. On Git Bash, MSYS path conversion rewrites leading-slash args into Windows paths (`C:/Program Files/Git/...`) — set `MSYS_NO_PATHCONV=1` or run from PowerShell. |
+| `--exclude-paths '/blog/*'` | Glob patterns (repeatable) to skip paths. Same Git Bash caveat as `--include-paths`. |
 | `--skip-assets` | Don't download images. Useful for dry runs. |
 | `--json` | Structured output — required for scripting. |
 
@@ -222,6 +222,10 @@ ls artifacts/migration/example-com/
 Open `site-inventory.json` and confirm the page list with the user before
 proceeding. They may want to re-run with tighter `--include-paths` or
 `--exclude-paths` to narrow scope.
+
+If the crawl exits with "0 pages discovered" and you passed leading-slash
+glob filters from Git Bash, MSYS path conversion likely rewrote them into
+Windows paths. Re-run with `MSYS_NO_PATHCONV=1` or from PowerShell.
 
 Check `warnings[]` in the crawl output — it is the extraction health signal.
 A "yielded 0 sections" warning means the extractor could not read that page's

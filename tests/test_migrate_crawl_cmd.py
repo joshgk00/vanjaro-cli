@@ -345,3 +345,91 @@ def test_migrate_crawl_warns_when_page_extracts_zero_sections(runner, tmp_path: 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
     assert any("0 sections" in warning for warning in payload["warnings"])
+
+
+def _register_homepage_only(rsps: responses.RequestsMock) -> None:
+    """Register just the homepage and sitemap — enough for page discovery."""
+    rsps.add(responses.GET, f"{SOURCE_URL}/", body=HOMEPAGE_HTML, status=200)
+    rsps.add(responses.GET, f"{SOURCE_URL}/sitemap.xml", status=404)
+
+
+@responses.activate
+def test_migrate_crawl_zero_pages_exits_with_filter_guidance(runner, tmp_path: Path):
+    """Filters that match nothing must exit cleanly, not crash with IndexError."""
+    _register_homepage_only(responses.mock)
+
+    result = runner.invoke(
+        cli,
+        [
+            "migrate", "crawl", SOURCE_URL,
+            "--output-dir", str(tmp_path / "out"),
+            "--include-paths", "services*",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert result.exception is None or isinstance(result.exception, SystemExit)
+    assert "0 pages discovered" in result.output
+    assert "--include-paths/--exclude-paths" in result.output
+    assert "MSYS_NO_PATHCONV" not in result.output
+
+
+@responses.activate
+def test_migrate_crawl_zero_pages_msys_hint_for_mangled_filter(runner, tmp_path: Path):
+    """A Windows-mangled filter (MSYS rewrote '/services/*') gets the Git Bash hint."""
+    _register_homepage_only(responses.mock)
+
+    result = runner.invoke(
+        cli,
+        [
+            "migrate", "crawl", SOURCE_URL,
+            "--output-dir", str(tmp_path / "out"),
+            "--include-paths", "C:/Program Files/Git/services/*",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "0 pages discovered" in result.output
+    assert "Git Bash" in result.output
+    assert "MSYS_NO_PATHCONV=1" in result.output
+
+
+@responses.activate
+def test_migrate_crawl_zero_pages_msys_hint_for_leading_slash_filter(runner, tmp_path: Path):
+    """Leading-slash filters that match nothing also get the Git Bash hint."""
+    _register_homepage_only(responses.mock)
+
+    result = runner.invoke(
+        cli,
+        [
+            "migrate", "crawl", SOURCE_URL,
+            "--output-dir", str(tmp_path / "out"),
+            "--exclude-paths", "/*",
+        ],
+    )
+
+    assert result.exit_code == 1
+    assert "0 pages discovered" in result.output
+    assert "MSYS_NO_PATHCONV=1" in result.output
+
+
+@responses.activate
+def test_migrate_crawl_zero_pages_json_output(runner, tmp_path: Path):
+    """--json gets a structured error payload, not a traceback."""
+    _register_homepage_only(responses.mock)
+
+    result = runner.invoke(
+        cli,
+        [
+            "migrate", "crawl", SOURCE_URL,
+            "--output-dir", str(tmp_path / "out"),
+            "--include-paths", "C:/Program Files/Git/services/*",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 1
+    payload = json.loads(result.output)
+    assert payload["status"] == "error"
+    assert "0 pages discovered" in payload["message"]
+    assert "MSYS_NO_PATHCONV=1" in payload["message"]
