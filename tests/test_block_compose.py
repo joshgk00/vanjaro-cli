@@ -848,6 +848,71 @@ def test_unit_expansion_does_not_mutate_original():
 
 
 # ---------------------------------------------------------------------------
+# Testimonial Cards (3-up) per-card chrome
+# ---------------------------------------------------------------------------
+
+
+def _testimonial_columns(composed: dict) -> list[dict]:
+    return composed["template"]["components"][0]["components"][0]["components"]
+
+
+def test_testimonial_slot_keys_unchanged_by_chrome():
+    """The icon/star-rating chrome added to each card is template decoration,
+    not an override slot — enumerate_slots must list exactly the same
+    heading/text/background_image keys, in the same order, as before the
+    chrome existed. A test-registered custom-blocks mapping keyed on these
+    slot names would otherwise silently break."""
+    template = find_template("Testimonial Cards (3-up)")
+
+    slots = enumerate_slots(template["template"])
+
+    assert [slot["key"] for slot in slots] == [
+        "text_1",
+        "heading_1",
+        "text_2",
+        "heading_2",
+        "text_3",
+        "heading_3",
+        "background_image",
+    ]
+
+
+def test_testimonial_chrome_lives_inside_each_card_column():
+    """Each card's decorative chrome (star rating / icon) must be a child of
+    that card's own column, not a sibling trailing the row."""
+    template = find_template("Testimonial Cards (3-up)")
+
+    columns = _testimonial_columns(template)
+
+    assert len(columns) == 3
+    for column in columns:
+        child_types = [child["type"] for child in column["components"]]
+        assert "icon" in child_types
+        assert child_types.index("icon") < child_types.index("text")
+
+
+def test_testimonial_column_expansion_carries_chrome_into_cloned_card():
+    """A 4th testimonial's worth of overrides clones the whole card column
+    (see expand_column_units) — the clone must carry its own chrome icon,
+    not leave the 4th card without a rating."""
+    template = find_template("Testimonial Cards (3-up)")
+    overrides = {
+        "text_1": "Quote one.", "heading_1": "Name One",
+        "text_2": "Quote two.", "heading_2": "Name Two",
+        "text_3": "Quote three.", "heading_3": "Name Three",
+        "text_4": "Quote four.", "heading_4": "Name Four",
+    }
+
+    composed = apply_overrides(template, overrides)
+
+    columns = _testimonial_columns(composed)
+    assert len(columns) == 4
+    for column in columns:
+        icons = [child for child in column["components"] if child["type"] == "icon"]
+        assert len(icons) == 1
+
+
+# ---------------------------------------------------------------------------
 # expand_list_slots
 # ---------------------------------------------------------------------------
 

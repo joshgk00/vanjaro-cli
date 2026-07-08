@@ -71,6 +71,34 @@
         },
         "components": [
          {
+          "type": "icon",
+          "classes": [
+           {
+            "name": "icon-box",
+            "active": false
+           },
+           {
+            "name": "vj-icon",
+            "active": false
+           },
+           {
+            "name": "star-rating",
+            "active": false
+           },
+           {
+            "name": "text-warning",
+            "active": false
+           },
+           {
+            "name": "mb-2",
+            "active": false
+           }
+          ],
+          "attributes": {
+           "id": "tpl-tc3-c1-ic1"
+          }
+         },
+         {
           "type": "text",
           "content": "\"This product completely transformed how we work. Highly recommended for any team looking to level up.\"",
           "classes": [
@@ -144,6 +172,34 @@
         },
         "components": [
          {
+          "type": "icon",
+          "classes": [
+           {
+            "name": "icon-box",
+            "active": false
+           },
+           {
+            "name": "vj-icon",
+            "active": false
+           },
+           {
+            "name": "star-rating",
+            "active": false
+           },
+           {
+            "name": "text-warning",
+            "active": false
+           },
+           {
+            "name": "mb-2",
+            "active": false
+           }
+          ],
+          "attributes": {
+           "id": "tpl-tc3-c2-ic1"
+          }
+         },
+         {
           "type": "text",
           "content": "\"The support team was incredible and the onboarding process was seamless. We were up and running in no time.\"",
           "classes": [
@@ -216,6 +272,34 @@
          "id": "tpl-tc3-c3"
         },
         "components": [
+         {
+          "type": "icon",
+          "classes": [
+           {
+            "name": "icon-box",
+            "active": false
+           },
+           {
+            "name": "vj-icon",
+            "active": false
+           },
+           {
+            "name": "star-rating",
+            "active": false
+           },
+           {
+            "name": "text-warning",
+            "active": false
+           },
+           {
+            "name": "mb-2",
+            "active": false
+           }
+          ],
+          "attributes": {
+           "id": "tpl-tc3-c3-ic1"
+          }
+         },
          {
           "type": "text",
           "content": "\"A game-changer for our workflow. The results speak for themselves \u2014 40% faster turnaround.\"",

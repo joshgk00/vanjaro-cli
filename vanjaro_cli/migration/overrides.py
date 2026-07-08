@@ -21,6 +21,7 @@ def crawl_content_to_overrides(content: dict, index_offset: int = 0) -> dict[str
     Maps all extracted content types to their template override slots:
       - headings   → heading_1, heading_2, ...
       - paragraphs → text_1, text_2, ...
+      - blockquotes → text_N, N continuing right after the last paragraph
       - buttons    → button_1 / button_1_href, ...
       - images     → image_1_src / image_1_alt, ...
       - list_items → list-item_1, list-item_2, ...
@@ -57,6 +58,28 @@ def crawl_content_to_overrides(content: dict, index_offset: int = 0) -> dict[str
             index = position + index_offset
             if isinstance(paragraph, str):
                 overrides[f"text_{index}"] = paragraph
+
+    # Testimonial quotes usually crawl as <blockquote> elements rather than
+    # <p> tags, landing in content.blockquotes instead of content.paragraphs.
+    # Templates have no dedicated blockquote slot, so fold the quote text
+    # into the same text_N sequence right after the paragraphs — but only
+    # when a section-specific rescope (see _rescope_testimonial) hasn't
+    # already copied the same quote into paragraphs, which would otherwise
+    # ship the quote twice.
+    blockquotes = content.get("blockquotes") or []
+    if isinstance(blockquotes, list):
+        paragraph_texts = {
+            paragraph.strip() for paragraph in paragraphs if isinstance(paragraph, str)
+        }
+        next_index = len(paragraphs) + index_offset + 1
+        for blockquote in blockquotes:
+            if not isinstance(blockquote, dict) or not isinstance(blockquote.get("text"), str):
+                continue
+            text = blockquote["text"]
+            if text.strip() in paragraph_texts:
+                continue
+            overrides[f"text_{next_index}"] = text
+            next_index += 1
 
     buttons = content.get("buttons") or []
     if isinstance(buttons, list):
