@@ -9,6 +9,7 @@ import re
 import uuid
 from pathlib import Path
 from typing import Generator
+from urllib.parse import urlsplit
 
 from vanjaro_cli.utils.color import parse_color
 from vanjaro_cli.utils.theme_palette import nearest_palette_slot
@@ -28,6 +29,7 @@ __all__ = [
     "find_template",
     "get_templates_dir",
     "parse_color",
+    "promote_background_images",
 ]
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -112,6 +114,11 @@ def enumerate_slots(template_component: dict) -> list[dict]:
     Returns a list of dicts with keys: key, type, field, value.
     Slot keys follow the pattern: {type}_{n} for content,
     {type}_{n}_{attr} for attributes (e.g. button_1_href).
+
+    Section-rooted templates also expose a ``background_image`` slot: a
+    section-level URL applied as a cover background (see ``apply_overrides``),
+    so full-bleed photo bands work on any template without a dedicated image
+    component.
     """
     slots: list[dict] = []
     for comp, comp_type, n in _walk_overridable(template_component):
@@ -129,6 +136,13 @@ def enumerate_slots(template_component: dict) -> list[dict]:
                 "field": f"attributes.{attr_name}",
                 "value": comp.get("attributes", {}).get(attr_name, ""),
             })
+    if template_component.get("type") == "section":
+        slots.append({
+            "key": "background_image",
+            "type": "section",
+            "field": "style.background-image",
+            "value": "",
+        })
     return slots
 
 
@@ -593,6 +607,9 @@ def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
             if attr_key in overrides:
                 comp.setdefault("attributes", {})[attr_name] = overrides[attr_key]
     _balance_card_rows(result["template"])
+    background_image = overrides.get("background_image")
+    if background_image and result["template"].get("type") == "section":
+        apply_section_background(result["template"], {"background_image": background_image})
     return result
 
 
@@ -685,6 +702,62 @@ def _resolve_band_text_color(
     ):
         return "#ffffff"
     return captured
+
+
+# Sections whose background-role images are promoted to the band background.
+# Card/content sections keep them inline — there a CSS background is often
+# the card's own visual, not the band's.
+_BACKGROUND_PROMOTED_SECTION_TYPES = frozenset({"hero", "cta"})
+
+# Full-bleed band photos are almost always photographic formats; transparent
+# slants, waves, and pattern overlays ship as png/svg.
+_PHOTO_EXTENSIONS = (".jpg", ".jpeg", ".webp", ".avif")
+
+
+def _most_photographic(urls: list[str]) -> str:
+    """Return the first URL with a photographic extension, else the first URL."""
+    for url in urls:
+        if urlsplit(url).path.lower().endswith(_PHOTO_EXTENSIONS):
+            return url
+    return urls[0]
+
+
+def promote_background_images(content: dict, section_type: str | None) -> None:
+    """Route background-role images into the section background for hero/cta bands.
+
+    The crawler tags CSS-derived backgrounds it finds inside a section as
+    ``role: "background"`` in ``content.images``. For hero/cta sections that
+    photo is the band's dominant visual: left in the inline list it renders
+    as a stray floating ``<img>``, while a decorative outer background (a
+    transparent slant/wave PNG captured as ``content.background_image``)
+    wins the band instead. Move background-role images out of the inline
+    list and put the most photo-like candidate in ``content.background_image``
+    so ``apply_section_background`` renders it full-bleed.
+    """
+    if section_type not in _BACKGROUND_PROMOTED_SECTION_TYPES:
+        return
+    images = content.get("images")
+    if not isinstance(images, list):
+        return
+    background_urls = [
+        image["src"]
+        for image in images
+        if isinstance(image, dict)
+        and image.get("role") == "background"
+        and isinstance(image.get("src"), str)
+        and image["src"]
+    ]
+    if not background_urls:
+        return
+    content["images"] = [
+        image
+        for image in images
+        if not (isinstance(image, dict) and image.get("role") == "background")
+    ]
+    existing = content.get("background_image")
+    if isinstance(existing, str) and existing:
+        background_urls.append(existing)
+    content["background_image"] = _most_photographic(background_urls)
 
 
 def apply_section_background(

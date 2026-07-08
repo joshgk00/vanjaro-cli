@@ -711,6 +711,45 @@ def test_assemble_background_image_and_rgb_dark_color(runner, tmp_path, monkeypa
     assert "color:#ffffff;" in style
 
 
+def test_assemble_promotes_background_role_image_over_decorative_overlay(
+    runner, tmp_path, monkeypatch, write_json
+):
+    """A hero/cta background-role photo becomes the band background, not an inline <img>."""
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, HERO_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = write_json(
+        tmp_path / "section-1-cta.json",
+        {
+            "type": "cta",
+            "template": "Centered Hero",
+            "content": {
+                "paragraphs": ["Crafting Total Comfort"],
+                "images": [
+                    {"src": "https://source.test/team-photo-1920w.jpg", "alt": "", "role": "background"}
+                ],
+                "buttons": [{"text": "Request a Quote", "href": "https://source.test/quote"}],
+                "background_image": "https://source.test/bg-slant-1920w.png",
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    section = json.loads(output_file.read_text())["components"][0]
+    style = section["attributes"]["style"]
+    assert "background-image:url(https://source.test/team-photo-1920w.jpg);" in style
+    assert "bg-slant" not in style
+    # The photo must not also render as an inline/floating <img>
+    assert "team-photo" not in json.dumps(section["components"])
+
+
 def test_crawler_sections_blank_unfilled_placeholder_slots(runner, tmp_path, monkeypatch, write_json):
     """Template placeholder copy must not leak when crawled content lacks a slot."""
     templates_dir = tmp_path / "templates"

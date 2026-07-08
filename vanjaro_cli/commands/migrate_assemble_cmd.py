@@ -21,6 +21,7 @@ from vanjaro_cli.utils.block_compose import (
     check_overflow,
     enumerate_slots,
     find_template,
+    promote_background_images,
 )
 from vanjaro_cli.utils.theme_palette import PaletteError, load_palette
 
@@ -199,6 +200,10 @@ def _classify_and_resolve(
                 f"Section file {source_file} has a 'template' key that is not a non-empty string.",
                 as_json,
             )
+
+        content_block = section_data.get("content")
+        if isinstance(content_block, dict):
+            promote_background_images(content_block, section_data.get("type"))
 
         raw_overrides = section_data.get("overrides")
         if raw_overrides is None and "content" in section_data:

@@ -14,6 +14,7 @@ from vanjaro_cli.utils.block_compose import (
     check_overflow,
     enumerate_slots,
     find_template,
+    promote_background_images,
 )
 
 HERO_TEMPLATE = {
@@ -94,11 +95,12 @@ def _write_template(templates_dir: Path, template: dict) -> None:
 def test_enumerate_slots_hero():
     slots = enumerate_slots(HERO_TEMPLATE["template"])
 
-    assert len(slots) == 4
+    assert len(slots) == 5
     assert slots[0] == {"key": "heading_1", "type": "heading", "field": "content", "value": "Your Headline Here"}
     assert slots[1] == {"key": "text_1", "type": "text", "field": "content", "value": "Supporting text goes here."}
     assert slots[2] == {"key": "button_1", "type": "button", "field": "content", "value": "Get Started"}
     assert slots[3] == {"key": "button_1_href", "type": "button", "field": "attributes.href", "value": "#"}
+    assert slots[4] == {"key": "background_image", "type": "section", "field": "style.background-image", "value": ""}
 
 
 def test_enumerate_slots_multiple_of_same_type():
@@ -113,7 +115,13 @@ def test_enumerate_slots_multiple_of_same_type():
 
 
 def test_enumerate_slots_empty_template():
+    """A content-empty section still exposes the section-level background slot."""
     slots = enumerate_slots({"type": "section", "components": []})
+    assert [s["key"] for s in slots] == ["background_image"]
+
+
+def test_enumerate_slots_non_section_root_has_no_background_slot():
+    slots = enumerate_slots({"type": "row", "components": []})
     assert slots == []
 
 
@@ -252,10 +260,11 @@ def test_compose_list_slots_json(runner, tmp_path, monkeypatch):
 
     assert result.exit_code == 0
     data = json.loads(result.output)
-    assert len(data) == 4
+    assert len(data) == 5
     keys = [s["key"] for s in data]
     assert "heading_1" in keys
     assert "button_1_href" in keys
+    assert "background_image" in keys
 
 
 # -- CLI: blocks compose (default) --
@@ -1005,6 +1014,137 @@ def test_palette_none_keeps_exact_inline_behavior():
     # No palette -> the original inline style string, no classes, no styles list.
     assert section["attributes"]["style"] == "background-color:#00aa55;color:#ffffff;"
     assert "classes" not in section
+
+
+# ---------------------------------------------------------------------------
+# promote_background_images — background-role images become the band background
+# ---------------------------------------------------------------------------
+
+
+def test_promote_moves_background_role_image_to_background_image():
+    content = {
+        "images": [{"src": "https://src.test/team-photo.jpg", "alt": "", "role": "background"}],
+        "background_color": "rgb(188, 48, 47)",
+    }
+
+    promote_background_images(content, "cta")
+
+    assert content["background_image"] == "https://src.test/team-photo.jpg"
+    assert content["images"] == []
+    assert content["background_color"] == "rgb(188, 48, 47)"
+
+
+def test_promote_photo_wins_over_decorative_png_background():
+    """A background-role photo beats a decorative slant/wave PNG for the band."""
+    content = {
+        "images": [{"src": "https://src.test/three-amigos-1920w.jpg", "role": "background"}],
+        "background_image": "https://src.test/bg-slant-bottom-right-1920w.png",
+    }
+
+    promote_background_images(content, "cta")
+
+    assert content["background_image"] == "https://src.test/three-amigos-1920w.jpg"
+    assert content["images"] == []
+
+
+def test_promote_keeps_existing_photo_over_decorative_role_image():
+    content = {
+        "images": [{"src": "https://src.test/wave-overlay.png", "role": "background"}],
+        "background_image": "https://src.test/hero-photo.jpg",
+    }
+
+    promote_background_images(content, "hero")
+
+    assert content["background_image"] == "https://src.test/hero-photo.jpg"
+    assert content["images"] == []
+
+
+def test_promote_all_decorative_candidates_first_role_image_wins():
+    content = {
+        "images": [
+            {"src": "https://src.test/pattern-a.png", "role": "background"},
+            {"src": "https://src.test/pattern-b.png", "role": "background"},
+        ],
+    }
+
+    promote_background_images(content, "hero")
+
+    assert content["background_image"] == "https://src.test/pattern-a.png"
+
+
+def test_promote_keeps_inline_images_without_background_role():
+    content = {
+        "images": [
+            {"src": "https://src.test/photo.jpg", "role": "background"},
+            {"src": "https://src.test/product.jpg", "alt": "Product"},
+        ],
+    }
+
+    promote_background_images(content, "hero")
+
+    assert content["images"] == [{"src": "https://src.test/product.jpg", "alt": "Product"}]
+    assert content["background_image"] == "https://src.test/photo.jpg"
+
+
+def test_promote_ignores_non_hero_cta_sections():
+    content = {
+        "images": [{"src": "https://src.test/card-bg.jpg", "role": "background"}],
+    }
+
+    promote_background_images(content, "cards")
+
+    assert content["images"] == [{"src": "https://src.test/card-bg.jpg", "role": "background"}]
+    assert "background_image" not in content
+
+
+def test_promote_no_background_role_images_is_a_no_op():
+    content = {
+        "images": [{"src": "https://src.test/inline.jpg", "alt": "Inline"}],
+        "background_image": "https://src.test/existing.png",
+    }
+
+    promote_background_images(content, "hero")
+
+    assert content["images"] == [{"src": "https://src.test/inline.jpg", "alt": "Inline"}]
+    assert content["background_image"] == "https://src.test/existing.png"
+
+
+def test_promote_tolerates_missing_or_malformed_images():
+    promote_background_images({}, "hero")
+    promote_background_images({"images": "not-a-list"}, "hero")
+    content = {"images": ["not-a-dict", {"role": "background"}]}
+    promote_background_images(content, "hero")
+    assert content["images"] == ["not-a-dict", {"role": "background"}]
+
+
+# ---------------------------------------------------------------------------
+# background_image override slot — apply_overrides / check_overflow
+# ---------------------------------------------------------------------------
+
+
+def test_apply_overrides_background_image_sets_cover_style_on_section():
+    composed = apply_overrides(
+        HERO_TEMPLATE, {"background_image": "https://src.test/hero.jpg"}
+    )
+
+    style = composed["template"]["attributes"]["style"]
+    assert "background-image:url(https://src.test/hero.jpg);" in style
+    assert "background-size:cover" in style
+
+
+def test_apply_overrides_without_background_image_leaves_section_unstyled():
+    composed = apply_overrides(HERO_TEMPLATE, {"heading_1": "Welcome"})
+
+    assert "style" not in composed["template"]["attributes"]
+
+
+def test_check_overflow_accepts_background_image_override():
+    unused = check_overflow(
+        HERO_TEMPLATE,
+        {"background_image": "https://src.test/hero.jpg", "heading_9": "overflow"},
+    )
+
+    assert unused == ["heading_9"]
 
 
 # ---------------------------------------------------------------------------

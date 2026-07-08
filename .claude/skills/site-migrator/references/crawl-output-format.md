@@ -118,6 +118,13 @@ content into override slots: `heading_N`, `text_N`, `button_N`/`button_N_href`,
 and `list-item_N`. If the resulting overrides exceed the template's capacity,
 a warning is emitted to stderr listing the dropped keys.
 
+Images tagged `"role": "background"` were CSS backgrounds in the source. In
+hero/cta sections, assemble-page promotes them to the section's band
+background (`content.background_image`) instead of rendering them inline;
+when a section carries both a background-role photo and a decorative
+`background_image` overlay (transparent slant/wave PNG), the photographic
+format wins. In other section types they stay inline images.
+
 ## global/header.json and global/footer.json
 
 Navigation and footer content extracted from the source site.

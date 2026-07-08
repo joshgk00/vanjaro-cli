@@ -207,6 +207,7 @@ vanjaro migrate crawl https://example.com \
 | `--include-paths '/services/*'` | Glob patterns (repeatable) to include only matching paths. |
 | `--exclude-paths '/blog/*'` | Glob patterns (repeatable) to skip paths. |
 | `--skip-assets` | Don't download images. Useful for dry runs. |
+| `--rendered` | Fetch pages with a real browser (Playwright). Captures JS-rendered sections (sliders, carousels, form widgets) and computed section backgrounds. Use it when the source sets hero/band photos via stylesheet classes instead of inline styles (WordPress/Divi does this) — a static crawl extracts the band color but misses the photo. |
 | `--json` | Structured output — required for scripting. |
 
 ### Stage 1 Gate
@@ -296,6 +297,16 @@ multiple plan entries:
 
 If `assemble-page` detects overflow it warns on stderr with the dropped keys,
 but it's better to split at plan time so nothing is lost.
+
+**Full-bleed photo heroes/CTAs**: Every section-rooted template exposes a
+`background_image` slot (visible in `--list-slots`) that renders a URL as a
+cover background on the band — no dedicated image component needed. During
+assemble this is automatic: a crawled `content.background_image`, or any
+`role: "background"` image the crawler found inside a hero/cta section, is
+applied as the band background (photo formats win over decorative PNG/SVG
+overlays) instead of rendering as an inline image. For manual composition,
+set it directly: `vanjaro blocks compose "Centered Hero" -s
+background_image=https://.../hero.jpg`.
 
 ### 2.3 Identify New Templates Needed
 
