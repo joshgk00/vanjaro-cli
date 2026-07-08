@@ -486,11 +486,11 @@ def test_check_overflow_returns_empty_when_all_match():
 def test_check_overflow_returns_unmatched_keys():
     unused = check_overflow(HERO_TEMPLATE, {
         "heading_1": "Hello",
-        "heading_2": "Dropped",
+        "link_2": "Dropped",
         "image_5_src": "also-dropped.jpg",
     })
-    # image_5_src is absorbed by image slot expansion, not overflow
-    assert unused == ["heading_2"]
+    # image_5_src is absorbed by image slot expansion; links have no expansion
+    assert unused == ["link_2"]
 
 
 def test_check_overflow_absorbs_excess_list_items():
@@ -517,11 +517,11 @@ def test_compose_warns_on_overflow(runner, tmp_path, monkeypatch):
     result = runner.invoke(cli, [
         "blocks", "compose", "Centered Hero",
         "--set", "heading_1=OK",
-        "--set", "heading_99=Dropped",
+        "--set", "link_99=Dropped",
     ])
 
     assert result.exit_code == 0
-    assert "heading_99" in result.output
+    assert "link_99" in result.output
 
 
 # ---------------------------------------------------------------------------
@@ -589,6 +589,64 @@ def test_check_overflow_ignores_absorbable_text_keys():
 
     # text and image keys are absorbed by slot expansion; buttons are not
     assert overflow == ["button_7"]
+
+
+# ---------------------------------------------------------------------------
+# expand_heading_slots
+# ---------------------------------------------------------------------------
+
+
+def test_apply_overrides_expands_heading_slots_for_multi_heading_content():
+    """Quality-hc regression: Rich Text Block sections carried one heading per
+    subsection but the template ships a single title slot — every heading past
+    heading_1 was dropped while paragraphs were absorbed."""
+    overrides = {f"heading_{n}": f"Subsection {n}" for n in range(1, 4)}
+    overrides["text_1"] = "Body copy."
+
+    result = apply_overrides(make_two_text_template(), overrides)
+
+    column = result["template"]["components"][0]
+    headings = [c for c in column["components"] if c["type"] == "heading"]
+    assert [h["content"] for h in headings] == [f"Subsection {n}" for n in range(1, 4)]
+
+
+def test_expanded_heading_clones_get_unique_ids():
+    overrides = {f"heading_{n}": f"H{n}" for n in range(1, 4)}
+
+    result = apply_overrides(make_two_text_template(), overrides)
+
+    column = result["template"]["components"][0]
+    ids = [c["attributes"]["id"] for c in column["components"] if c["type"] == "heading"]
+    assert len(ids) == len(set(ids)) == 3
+
+
+def test_no_heading_expansion_when_overrides_fit():
+    result = apply_overrides(make_two_text_template(), {"heading_1": "Only one"})
+
+    column = result["template"]["components"][0]
+    headings = [c for c in column["components"] if c["type"] == "heading"]
+    assert len(headings) == 1
+
+
+def test_check_overflow_ignores_absorbable_heading_keys():
+    overflow = check_overflow(make_two_text_template(), {"heading_3": "Deep heading"})
+
+    assert overflow == []
+
+
+def test_heading_keys_stay_overflow_when_template_has_no_heading():
+    overflow = check_overflow(make_one_image_template(), {"heading_2": "No home"})
+
+    assert overflow == ["heading_2"]
+
+
+def test_heading_expansion_does_not_mutate_original():
+    template = make_two_text_template()
+    apply_overrides(template, {f"heading_{n}": f"H{n}" for n in range(1, 4)})
+
+    column = template["template"]["components"][0]
+    headings = [c for c in column["components"] if c["type"] == "heading"]
+    assert len(headings) == 1
 
 
 # ---------------------------------------------------------------------------
@@ -1141,10 +1199,10 @@ def test_apply_overrides_without_background_image_leaves_section_unstyled():
 def test_check_overflow_accepts_background_image_override():
     unused = check_overflow(
         HERO_TEMPLATE,
-        {"background_image": "https://src.test/hero.jpg", "heading_9": "overflow"},
+        {"background_image": "https://src.test/hero.jpg", "link_9": "overflow"},
     )
 
-    assert unused == ["heading_9"]
+    assert unused == ["link_9"]
 
 
 # ---------------------------------------------------------------------------

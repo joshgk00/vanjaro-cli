@@ -23,6 +23,7 @@ __all__ = [
     "enumerate_slots",
     "expand_button_slots",
     "expand_column_units",
+    "expand_heading_slots",
     "expand_image_slots",
     "expand_list_slots",
     "expand_text_slots",
@@ -146,10 +147,20 @@ def enumerate_slots(template_component: dict) -> list[dict]:
     return slots
 
 
+_HEADING_OVERRIDE_KEY = re.compile(r"^heading_(\d+)$")
 _TEXT_OVERRIDE_KEY = re.compile(r"^text_(\d+)$")
 _IMAGE_SRC_OVERRIDE_KEY = re.compile(r"^image_(\d+)_src$")
 _LIST_ITEM_OVERRIDE_KEY = re.compile(r"^list-item_(\d+)$")
 _BUTTON_OVERRIDE_KEY = re.compile(r"^button_(\d+)$")
+
+
+def _max_requested_heading_slot(overrides: dict[str, str]) -> int:
+    indices = [
+        int(match.group(1))
+        for key in overrides
+        if (match := _HEADING_OVERRIDE_KEY.match(key))
+    ]
+    return max(indices, default=0)
 
 
 def _max_requested_text_slot(overrides: dict[str, str]) -> int:
@@ -305,6 +316,41 @@ def expand_column_units(template_data: dict, overrides: dict[str, str]) -> dict:
     for clone_number in range(units_needed):
         clone = copy.deepcopy(last_unit)
         _rewrite_component_ids(clone, f"-u{clone_number + 2}")
+        parent["components"].insert(insert_at + clone_number, clone)
+    return result
+
+
+def expand_heading_slots(template_data: dict, overrides: dict[str, str]) -> dict:
+    """Clone the last heading slot until every ``heading_N`` override has a home.
+
+    Crawled content sections carry one heading per subsection while generic
+    templates ship a single title slot (Rich Text Block) — before expansion
+    every heading past the slot count was dropped, losing real section titles
+    even though the surrounding paragraphs were absorbed. Clones land directly
+    after the template's last heading — same parent, so they inherit its
+    column/styling — with ``-xN`` id suffixes to keep ids unique.
+    """
+    requested = _max_requested_heading_slot(overrides)
+    if requested == 0:
+        return template_data
+
+    existing = sum(
+        1 for _, comp_type, _ in _walk_overridable(template_data["template"])
+        if comp_type == "heading"
+    )
+    if existing == 0 or requested <= existing:
+        return template_data
+
+    result = copy.deepcopy(template_data)
+    located = _find_last_of_type(result["template"], "heading")
+    if located is None or located[1] is None:
+        return template_data
+    last_heading, parent = located
+
+    insert_at = parent["components"].index(last_heading) + 1
+    for clone_number in range(requested - existing):
+        clone = copy.deepcopy(last_heading)
+        _rewrite_component_ids(clone, f"-x{clone_number + 2}")
         parent["components"].insert(insert_at + clone_number, clone)
     return result
 
@@ -583,15 +629,17 @@ def attach_form_placeholder(section: dict, fields: list[dict]) -> None:
 def _expand_slots(template_data: dict, overrides: dict[str, str]) -> dict:
     """Run unit expansion, then leaf expansion for any residue units don't cover."""
     expanded = expand_column_units(template_data, overrides)
-    expanded = expand_image_slots(expand_text_slots(expanded, overrides), overrides)
-    return expand_button_slots(expand_list_slots(expanded, overrides), overrides)
+    expanded = expand_text_slots(expand_heading_slots(expanded, overrides), overrides)
+    return expand_button_slots(
+        expand_list_slots(expand_image_slots(expanded, overrides), overrides), overrides
+    )
 
 
 def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
     """Deep-copy a template and apply content overrides to matching slots.
 
-    Column units, then text and image slots, are expanded first so content
-    beyond the template's capacity is absorbed instead of silently dropped.
+    Column units, then heading, text, and image slots, are expanded first so
+    content beyond the template's capacity is absorbed instead of dropped.
 
     Returns the full template dict (name, category, description, template, styles)
     with the component tree modified according to the overrides.
@@ -941,7 +989,7 @@ def check_overflow(template_data: dict, overrides: dict[str, str]) -> list[str]:
     Useful for detecting silent data loss when a migration plan has more
     content items than a template can hold (e.g. 11 portfolio items mapped
     to a 3-up card template). Overflow that slot expansion absorbs (column
-    units, text, images) doesn't count.
+    units, headings, text, images) doesn't count.
     """
     expanded = _expand_slots(template_data, overrides)
     available_keys = {slot["key"] for slot in enumerate_slots(expanded["template"])}
