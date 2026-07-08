@@ -64,6 +64,35 @@ def _write_json(path: Path, data: object) -> None:
     path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
 
+def _looks_shell_mangled(pattern: str) -> bool:
+    """Return True if a path filter may have been rewritten by Git Bash.
+
+    MSYS path conversion turns a leading-slash glob like '/services/*' into
+    an absolute Windows path such as 'C:/Program Files/Git/services/*'.
+    """
+    has_drive_letter = len(pattern) >= 2 and pattern[0].isalpha() and pattern[1] == ":"
+    return (
+        pattern.startswith("/")
+        or has_drive_letter
+        or "program files/git" in pattern.lower()
+    )
+
+
+def _zero_pages_message(url: str, filters: tuple[str, ...]) -> str:
+    """Build the error message for a crawl that discovered no pages."""
+    message = (
+        f"0 pages discovered at {url}. Check your --include-paths/--exclude-paths "
+        "filters — no crawled URL path matched them."
+    )
+    if any(_looks_shell_mangled(pattern) for pattern in filters):
+        message += (
+            " Git Bash rewrites leading-slash arguments into Windows paths "
+            "(MSYS path conversion) — set MSYS_NO_PATHCONV=1 or run the "
+            "command from PowerShell."
+        )
+    return message
+
+
 @migrate.command("crawl")
 @click.argument("url")
 @click.option(
@@ -155,6 +184,10 @@ def crawl(
     except CrawlError as exc:
         rendered_stack.close()
         exit_error(str(exc), as_json)
+
+    if not page_urls:
+        rendered_stack.close()
+        exit_error(_zero_pages_message(url, include_paths + exclude_paths), as_json)
 
     pages_summary: list[dict] = []
     url_map: dict[str, str] = {}
