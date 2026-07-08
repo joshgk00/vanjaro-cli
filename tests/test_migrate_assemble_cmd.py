@@ -483,6 +483,114 @@ def test_assemble_expands_excess_list_items(runner, tmp_path, monkeypatch, write
         assert item in rendered
 
 
+RICH_TEXT_TEMPLATE = {
+    "name": "Rich Text Block",
+    "category": "Content",
+    "description": "Heading plus body paragraphs",
+    "template": {
+        "type": "section",
+        "attributes": {"id": "tpl-rt-s1"},
+        "components": [{
+            "type": "column",
+            "attributes": {"id": "tpl-rt-c1"},
+            "components": [
+                {"type": "heading", "tagName": "h2", "content": "Heading Text", "attributes": {"id": "tpl-rt-h1"}},
+                {"type": "text", "content": "Paragraph of text content.", "attributes": {"id": "tpl-rt-t1"}},
+                {"type": "text", "content": "Paragraph of text content.", "attributes": {"id": "tpl-rt-t2"}},
+            ],
+        }],
+    },
+    "styles": [],
+}
+
+
+def test_assemble_expands_excess_headings(runner, tmp_path, monkeypatch, write_json):
+    """Headings beyond the template's slot count ship via heading expansion.
+
+    Quality-hc regression: Rich Text Block content sections carried a heading
+    per subsection ("Find Comfort in The Home Promise Club!") and every
+    heading past heading_1 was dropped, while paragraph overflow was absorbed.
+    """
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, RICH_TEXT_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = write_json(
+        tmp_path / "content.json",
+        {
+            "type": "content",
+            "template": "Rich Text Block",
+            "content": {
+                "headings": ["The Home Promise Club", "Find Comfort in The Home Promise Club!"],
+                "paragraphs": ["Intro.", "Lead-in.", "Perk one.", "Perk two."],
+                "buttons": [],
+                "list_items": [],
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "exceed template" not in result.output
+    rendered = json.dumps(json.loads(output_file.read_text()))
+    assert "Find Comfort in The Home Promise Club!" in rendered
+    for paragraph in ("Intro.", "Lead-in.", "Perk one.", "Perk two."):
+        assert paragraph in rendered
+
+
+def test_assemble_warns_dropped_paragraphs_when_template_has_no_text_slot(
+    runner, tmp_path, monkeypatch, write_json
+):
+    """A template with no text component cannot absorb paragraphs — they must
+    warn on stderr as dropped keys, never vanish silently."""
+    logo_bar = {
+        "name": "Logo Bar",
+        "category": "Content",
+        "description": "Heading plus logos, no body text",
+        "template": {
+            "type": "section",
+            "attributes": {"id": "tpl-lb-s1"},
+            "components": [
+                {"type": "heading", "tagName": "h2", "content": "Trusted By", "attributes": {"id": "tpl-lb-h1"}},
+            ],
+        },
+        "styles": [],
+    }
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, logo_bar)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = write_json(
+        tmp_path / "logos.json",
+        {
+            "type": "gallery",
+            "template": "Logo Bar",
+            "content": {
+                "headings": ["Trusted By"],
+                "paragraphs": ["Orphan paragraph."],
+                "buttons": [],
+                "list_items": [],
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert "exceed template" in result.output
+    assert "text_1" in result.output
+    assert "Orphan paragraph." not in output_file.read_text()
+
+
 def test_assemble_no_warning_when_content_fits(runner, tmp_path, monkeypatch, write_json):
     templates_dir = tmp_path / "templates"
     _write_template(templates_dir, FOOTER_TEMPLATE)
