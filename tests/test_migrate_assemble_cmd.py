@@ -165,6 +165,78 @@ def test_crawl_section_ignores_non_string_entries():
     assert "button_2" not in overrides
 
 
+def test_crawl_section_maps_blockquotes_after_paragraphs():
+    content = {
+        "paragraphs": ["Intro paragraph."],
+        "blockquotes": [
+            {"text": "This product changed our workflow.", "citation": "Jane Smith"},
+            {"text": "Support was incredible.", "citation": "John Doe"},
+        ],
+    }
+
+    overrides = crawl_content_to_overrides(content)
+
+    assert overrides["text_1"] == "Intro paragraph."
+    assert overrides["text_2"] == "This product changed our workflow."
+    assert overrides["text_3"] == "Support was incredible."
+
+
+def test_crawl_section_maps_blockquotes_with_no_paragraphs():
+    content = {
+        "blockquotes": [{"text": "Great team.", "citation": ""}],
+    }
+
+    overrides = crawl_content_to_overrides(content)
+
+    assert overrides["text_1"] == "Great team."
+
+
+def test_crawl_section_skips_blockquote_already_in_paragraphs():
+    """A section-specific rescope (see _rescope_testimonial) sometimes copies
+    the quote into paragraphs before this mapping runs; the same quote text
+    must not also be pulled from blockquotes, or it ships twice."""
+    content = {
+        "paragraphs": ["Great team.", "Second quote."],
+        "blockquotes": [
+            {"text": "Great team.", "citation": "Jane Smith"},
+            {"text": "Second quote.", "citation": "John Doe"},
+            {"text": "Only here.", "citation": "Alex Johnson"},
+        ],
+    }
+
+    overrides = crawl_content_to_overrides(content)
+
+    assert overrides["text_1"] == "Great team."
+    assert overrides["text_2"] == "Second quote."
+    assert overrides["text_3"] == "Only here."
+    assert "text_4" not in overrides
+
+
+def test_crawl_section_skips_non_dict_and_textless_blockquotes():
+    """The crawler always emits blockquotes as {text, citation} dicts; guard
+    against malformed entries the same way headings/buttons/images do."""
+    content = {
+        "blockquotes": ["not-a-dict", {"citation": "No text here"}, {"text": "Valid quote."}],
+    }
+
+    overrides = crawl_content_to_overrides(content)
+
+    assert overrides["text_1"] == "Valid quote."
+    assert "text_2" not in overrides
+
+
+def test_crawl_section_blockquotes_respect_index_offset():
+    content = {
+        "paragraphs": ["Caption."],
+        "blockquotes": [{"text": "Quote."}],
+    }
+
+    overrides = crawl_content_to_overrides(content, index_offset=1)
+
+    assert overrides["text_2"] == "Caption."
+    assert overrides["text_3"] == "Quote."
+
+
 # -- CLI: Mode A (raw component trees) --
 
 
