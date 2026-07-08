@@ -31,6 +31,7 @@ __all__ = [
     "get_templates_dir",
     "parse_color",
     "promote_background_images",
+    "prune_unfilled_images",
 ]
 
 _PACKAGE_ROOT = Path(__file__).resolve().parent.parent.parent
@@ -624,6 +625,75 @@ def attach_form_placeholder(section: dict, fields: list[dict]) -> None:
             },
         ],
     })
+
+
+def _walk_overridable_with_ancestors(
+    component: dict,
+    ancestors: list[dict] | None = None,
+    counters: dict[str, int] | None = None,
+) -> Generator[tuple[dict, list[dict], str, int], None, None]:
+    """Like ``_walk_overridable`` but also yields each component's ancestor chain.
+
+    The chain (root-to-parent order) lets a caller splice a component out of
+    its parent's children and walk back up pruning any wrapper the removal
+    leaves empty.
+    """
+    if ancestors is None:
+        ancestors = []
+    if counters is None:
+        counters = {}
+
+    comp_type = component.get("type", "")
+    if comp_type in CONTENT_TYPES or comp_type in ATTRIBUTE_SLOTS:
+        counters[comp_type] = counters.get(comp_type, 0) + 1
+        yield component, ancestors, comp_type, counters[comp_type]
+
+    for child in component.get("components", []):
+        yield from _walk_overridable_with_ancestors(child, ancestors + [component], counters)
+
+
+def _remove_child(parent: dict, child: dict) -> None:
+    """Remove ``child`` from ``parent``'s components list by identity."""
+    children = parent.get("components")
+    if not isinstance(children, list):
+        return
+    for index, candidate in enumerate(children):
+        if candidate is child:
+            del children[index]
+            return
+
+
+def prune_unfilled_images(section: dict, overrides: dict[str, str]) -> None:
+    """Remove image components an unfilled crawled override left at the template default.
+
+    ``apply_overrides`` only writes an image's ``src`` when the override map
+    supplies ``image_N_src`` — an image slot the crawl never filled keeps the
+    template's placeholder ``src`` (a placehold.co URL), which renders as a
+    gray placeholder frame on the migrated page. A dropped ``<img>`` is a
+    better outcome than a broken-image icon, so the component is removed
+    entirely rather than blanked. Any wrapper (column, figure, ...) the
+    removal leaves childless is removed in turn, walking up the tree until a
+    still-populated ancestor or the section root is reached — the section
+    itself is never removed.
+
+    Only meaningful for crawler-content sections: manual ``--overrides`` mode
+    supplies every value deliberately, so it never calls this function.
+    Mutates ``section`` in place.
+    """
+    to_remove: list[tuple[dict, list[dict]]] = []
+    for component, ancestors, comp_type, index in _walk_overridable_with_ancestors(section):
+        if comp_type != "image":
+            continue
+        if not overrides.get(f"image_{index}_src"):
+            to_remove.append((component, ancestors))
+
+    for component, ancestors in to_remove:
+        chain = [*ancestors, component]
+        for depth in range(len(chain) - 1, 0, -1):
+            child, parent = chain[depth], chain[depth - 1]
+            _remove_child(parent, child)
+            if parent.get("type") == "section" or parent.get("components") or parent.get("content"):
+                break
 
 
 def _expand_slots(template_data: dict, overrides: dict[str, str]) -> dict:

@@ -22,6 +22,7 @@ from vanjaro_cli.utils.block_compose import (
     enumerate_slots,
     find_template,
     promote_background_images,
+    prune_unfilled_images,
 )
 from vanjaro_cli.utils.theme_palette import PaletteError, load_palette
 
@@ -206,7 +207,8 @@ def _classify_and_resolve(
             promote_background_images(content_block, section_data.get("type"))
 
         raw_overrides = section_data.get("overrides")
-        if raw_overrides is None and "content" in section_data:
+        is_crawler_content = raw_overrides is None and "content" in section_data
+        if is_crawler_content:
             content_block = section_data.get("content")
             if not isinstance(content_block, dict):
                 exit_error(
@@ -236,6 +238,12 @@ def _classify_and_resolve(
         section, styles = _compose_template_section(
             template_name, overrides, source_file, as_json
         )
+        if is_crawler_content:
+            # Same rationale as the content-slot blanking above: an unfilled
+            # image slot must not ship the template's placehold.co placeholder
+            # image. Manual --overrides mode leaves images untouched — a
+            # designer may want the placeholder there.
+            prune_unfilled_images(section, overrides)
         content_block = section_data.get("content")
         if isinstance(content_block, dict):
             form_fields = content_block.get("form_fields")

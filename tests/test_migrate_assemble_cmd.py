@@ -949,6 +949,208 @@ def test_cloned_column_units_do_not_leak_placeholder_copy(runner, tmp_path, monk
     assert "Project Title" not in json.dumps(rendered)
 
 
+# --- Unfilled image slots (crawler-content sections only) ---
+
+SPLIT_MEDIA_TEST_TEMPLATE = {
+    "name": "Split Media Test",
+    "category": "Content",
+    "description": "Image column beside a heading/text column",
+    "template": {
+        "type": "section",
+        "attributes": {"id": "tpl-sm-s1"},
+        "components": [
+            {
+                "type": "column",
+                "attributes": {"id": "tpl-sm-c1"},
+                "components": [
+                    {
+                        "type": "image",
+                        "attributes": {
+                            "id": "tpl-sm-img1",
+                            "src": "https://placehold.co/600x400",
+                            "alt": "Section image",
+                        },
+                    },
+                ],
+            },
+            {
+                "type": "column",
+                "attributes": {"id": "tpl-sm-c2"},
+                "components": [
+                    {
+                        "type": "heading",
+                        "content": "Section Heading",
+                        "attributes": {"id": "tpl-sm-h1"},
+                    },
+                    {
+                        "type": "text",
+                        "content": "Body copy.",
+                        "attributes": {"id": "tpl-sm-t1"},
+                    },
+                ],
+            },
+        ],
+    },
+    "styles": [],
+}
+
+GALLERY_CARD_TEST_TEMPLATE = {
+    "name": "Gallery Card Test",
+    "category": "Cards",
+    "description": "Single card with an image above a heading",
+    "template": {
+        "type": "section",
+        "attributes": {"id": "tpl-gc-s1"},
+        "components": [
+            {
+                "type": "column",
+                "attributes": {"id": "tpl-gc-c1"},
+                "components": [
+                    {
+                        "type": "image",
+                        "attributes": {
+                            "id": "tpl-gc-img1",
+                            "src": "https://placehold.co/400x400?text=Project+1",
+                            "alt": "Project image",
+                        },
+                    },
+                    {
+                        "type": "heading",
+                        "content": "Project Title",
+                        "attributes": {"id": "tpl-gc-h1"},
+                    },
+                ],
+            },
+        ],
+    },
+    "styles": [],
+}
+
+
+def test_unfilled_image_slot_and_its_wrapper_are_removed(runner, tmp_path, monkeypatch, write_json):
+    """An image column the crawl never fills is dropped instead of shipping placehold.co."""
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, SPLIT_MEDIA_TEST_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = write_json(
+        tmp_path / "split.json",
+        {
+            "type": "content",
+            "template": "Split Media Test",
+            "content": {
+                "headings": ["Real Heading"],
+                "paragraphs": ["Real body."],
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    section = json.loads(output_file.read_text())["components"][0]
+    column_ids = [c["attributes"]["id"] for c in section["components"]]
+    assert "tpl-sm-c1" not in column_ids
+    assert "placehold.co" not in json.dumps(section)
+    remaining_column = section["components"][0]
+    assert remaining_column["attributes"]["id"] == "tpl-sm-c2"
+    assert remaining_column["components"][0]["content"] == "Real Heading"
+
+
+def test_filled_image_slot_is_untouched(runner, tmp_path, monkeypatch, write_json):
+    """A crawled image src replaces the template default and the component ships."""
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, SPLIT_MEDIA_TEST_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = write_json(
+        tmp_path / "split.json",
+        {
+            "type": "content",
+            "template": "Split Media Test",
+            "content": {
+                "headings": ["Real Heading"],
+                "images": [{"src": "https://example.com/photo.jpg", "alt": "Team"}],
+            },
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    section = json.loads(output_file.read_text())["components"][0]
+    column_ids = [c["attributes"]["id"] for c in section["components"]]
+    assert column_ids == ["tpl-sm-c1", "tpl-sm-c2"]
+    image = section["components"][0]["components"][0]
+    assert image["attributes"]["src"] == "https://example.com/photo.jpg"
+
+
+def test_unfilled_image_removed_but_sibling_content_kept(runner, tmp_path, monkeypatch, write_json):
+    """Removing an unfilled image must not remove a wrapper that still has other content."""
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, GALLERY_CARD_TEST_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = write_json(
+        tmp_path / "card.json",
+        {
+            "type": "gallery",
+            "template": "Gallery Card Test",
+            "content": {"headings": ["Real Project"]},
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    section = json.loads(output_file.read_text())["components"][0]
+    column = section["components"][0]
+    assert column["attributes"]["id"] == "tpl-gc-c1"
+    component_types = [c["type"] for c in column["components"]]
+    assert "image" not in component_types
+    assert column["components"][0]["content"] == "Real Project"
+
+
+def test_manual_overrides_mode_leaves_unfilled_image_untouched(runner, tmp_path, monkeypatch, write_json):
+    """Manual --overrides sections keep the template's placeholder image (mode B, no pruning)."""
+    templates_dir = tmp_path / "templates"
+    _write_template(templates_dir, SPLIT_MEDIA_TEST_TEMPLATE)
+    monkeypatch.setenv("VANJARO_TEMPLATES_DIR", str(templates_dir))
+
+    section_file = write_json(
+        tmp_path / "split.json",
+        {
+            "template": "Split Media Test",
+            "overrides": {"heading_1": "Manual Heading"},
+        },
+    )
+    output_file = tmp_path / "out.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(section_file), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    section = json.loads(output_file.read_text())["components"][0]
+    column_ids = [c["attributes"]["id"] for c in section["components"]]
+    assert column_ids == ["tpl-sm-c1", "tpl-sm-c2"]
+    image = section["components"][0]["components"][0]
+    assert image["attributes"]["src"] == "https://placehold.co/600x400"
+
+
 # --- Global dedup stub resolution (--global-guids) ---
 
 
