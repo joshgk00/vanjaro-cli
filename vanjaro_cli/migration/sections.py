@@ -751,6 +751,14 @@ def _extract_content(element: Tag, base_url: str) -> dict:
 
     for picture in element.find_all("picture"):
         img_tag = picture.find("img")
+        # One entry per <picture>: the <img> fallback (already collected by
+        # the img loop above) wins over its <source> siblings. The fallback
+        # is the author-designated universally supported format (jpeg/png),
+        # it carries the alt text, and Vanjaro regenerates WebP variants on
+        # asset upload — so a webp <source> kept alongside it just rendered
+        # the same visual twice.
+        if img_tag is not None and _image_src(img_tag):
+            continue
         fallback_src = ""
         fallback_alt = ""
         if img_tag:
@@ -772,6 +780,9 @@ def _extract_content(element: Tag, base_url: str) -> dict:
                 "source_type": source_type,
                 "role": "picture_source",
             })
+            # No usable <img> fallback: the first <source> stands in as the
+            # picture's single entry.
+            break
 
     form_fields: list[dict] = []
     form_action = ""
@@ -899,6 +910,25 @@ def _extract_content(element: Tag, base_url: str) -> dict:
                 "alt": "",
                 "role": "background",
             })
+
+    # Source markup repeats the same image (responsive wrappers, nested
+    # slider clones), and each repeat became its own frame on the migrated
+    # page. Collapse exact-src repeats within this section — first occurrence
+    # wins so figure captions attached above survive. The role is part of the
+    # key so a background-role copy is never merged away from background
+    # promotion. Scope is per-section: the same logo in another section is a
+    # separate, legitimate entry.
+    kept_by_key: dict[tuple[str, str], dict] = {}
+    deduped_images: list[dict] = []
+    for image in images:
+        key = (image["src"], image.get("role", ""))
+        kept = kept_by_key.get(key)
+        if kept is None:
+            kept_by_key[key] = image
+            deduped_images.append(image)
+        elif not kept.get("alt") and image.get("alt"):
+            kept["alt"] = image["alt"]
+    images = deduped_images
 
     return {
         "headings": headings,
