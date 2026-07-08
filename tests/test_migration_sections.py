@@ -693,8 +693,8 @@ def test_extract_img_without_srcset_has_no_srcset_key():
     assert "srcset_urls" not in img
 
 
-def test_extract_picture_source_elements():
-    """<picture> with <source> elements should extract each source entry."""
+def test_extract_picture_collapses_to_img_fallback():
+    """A <picture> with an <img> fallback should yield exactly one entry."""
     html = _wrap(
         """
         <section>
@@ -711,16 +711,122 @@ def test_extract_picture_source_elements():
     sections = extract_sections(html, BASE_URL)
     images = sections[0]["content"]["images"]
 
-    # The <img> inside <picture> is extracted by the normal img loop
-    fallback = [i for i in images if i["src"] == "https://example.com/hero.jpg" and i.get("role") != "picture_source"]
-    assert len(fallback) == 1
+    assert len(images) == 1
+    assert images[0]["src"] == "https://example.com/hero.jpg"
+    assert images[0]["alt"] == "Fallback"
+    assert images[0].get("role") != "picture_source"
 
-    # Each <source> also generates an entry
-    sources = [i for i in images if i.get("role") == "picture_source"]
-    assert len(sources) == 2
-    assert sources[0]["source_type"] == "image/webp"
-    assert "https://example.com/hero.webp" in sources[0]["srcset_urls"]
-    assert sources[1]["source_type"] == "image/jpeg"
+
+def test_extract_picture_without_img_fallback_keeps_first_source():
+    """A <picture> with no <img> fallback should keep one source entry."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Responsive</h2>
+          <picture>
+            <source srcset="/hero.webp 1x, /hero@2x.webp 2x" type="image/webp">
+            <source srcset="/hero.jpg 1x, /hero@2x.jpg 2x" type="image/jpeg">
+          </picture>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    images = sections[0]["content"]["images"]
+
+    assert len(images) == 1
+    assert images[0]["role"] == "picture_source"
+    assert images[0]["source_type"] == "image/webp"
+    assert "https://example.com/hero.webp" in images[0]["srcset_urls"]
+
+
+def test_extract_dedupes_repeated_image_src_within_section():
+    """The same src repeated in one section should collapse to one entry."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Partners</h2>
+          <div><img src="/logo.png" alt="Logo"></div>
+          <div><img src="/logo.png" alt="Logo"></div>
+          <div><a href="/home"><img src="/logo.png" alt=""></a></div>
+          <div><img src="/logo.png" alt="Logo"></div>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    images = sections[0]["content"]["images"]
+
+    assert len(images) == 1
+    assert images[0]["src"] == "https://example.com/logo.png"
+    assert images[0]["alt"] == "Logo"
+
+
+def test_extract_dedupe_fills_missing_alt_from_later_duplicate():
+    """A later duplicate with alt text should fill the kept entry's empty alt."""
+    html = _wrap(
+        """
+        <section>
+          <h2>Partners</h2>
+          <img src="/logo.png" alt="">
+          <img src="/logo.png" alt="Company logo">
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+    images = sections[0]["content"]["images"]
+
+    assert len(images) == 1
+    assert images[0]["alt"] == "Company logo"
+
+
+def test_extract_keeps_distinct_gallery_images():
+    """Distinct gallery images must all survive dedupe."""
+    html = _wrap(
+        """
+        <section>
+          <h2>My Work</h2>
+          <a href="/photo-1-full.jpg"><img src="/photo-1.jpg" alt="One"></a>
+          <a href="/photo-2-full.jpg"><img src="/photo-2.jpg" alt="Two"></a>
+          <a href="/photo-3-full.jpg"><img src="/photo-3.jpg" alt="Three"></a>
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[0]["type"] == "gallery"
+    images = sections[0]["content"]["images"]
+    assert [i["src"] for i in images] == [
+        "https://example.com/photo-1.jpg",
+        "https://example.com/photo-2.jpg",
+        "https://example.com/photo-3.jpg",
+    ]
+
+
+def test_extract_keeps_same_image_in_two_sections():
+    """Dedupe is per-section: a logo used in two sections stays in both."""
+    html = _wrap(
+        """
+        <section>
+          <h2>First</h2>
+          <img src="/logo.png" alt="Logo">
+        </section>
+        <section>
+          <h2>Second</h2>
+          <img src="/logo.png" alt="Logo">
+        </section>
+        """
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert len(sections) == 2
+    for section in sections:
+        assert [i["src"] for i in section["content"]["images"]] == [
+            "https://example.com/logo.png"
+        ]
 
 
 def test_collect_image_urls_includes_srcset_urls():
