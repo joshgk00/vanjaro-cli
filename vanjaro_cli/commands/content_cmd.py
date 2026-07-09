@@ -116,7 +116,7 @@ def update_content(page_id: int, input_file: str | None, locale: str, expected_v
     Creates a new draft version (use `content publish` to make it live).
     """
     if input_file:
-        raw_json = Path(input_file).read_text()
+        raw_json = Path(input_file).read_text(encoding="utf-8")
     elif not sys.stdin.isatty():
         raw_json = sys.stdin.read()
     else:
@@ -280,7 +280,7 @@ def rollback_content(page_id: int, input_file: str, locale: str, as_json: bool) 
         exit_error(f"Snapshot file not found: {input_file}", as_json)
 
     try:
-        raw = snapshot_path.read_text()
+        raw = snapshot_path.read_text(encoding="utf-8")
         data = json.loads(raw)
     except json.JSONDecodeError as exc:
         exit_error(f"Invalid JSON in snapshot file: {exc}", as_json)

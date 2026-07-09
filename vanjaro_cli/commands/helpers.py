@@ -93,7 +93,7 @@ def write_output(path: str, content: str, as_json: bool) -> None:
     from pathlib import Path
 
     try:
-        Path(path).write_text(content)
+        Path(path).write_text(content, encoding="utf-8")
     except OSError as exc:
         exit_error(f"Cannot write to {path}: {exc}", as_json)
 

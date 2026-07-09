@@ -84,7 +84,7 @@ def create_block(name: str, category: str, file_path: str, as_json: bool) -> Non
     creates an independent copy that can be edited per-page.
     """
     try:
-        raw = json.loads(Path(file_path).read_text())
+        raw = json.loads(Path(file_path).read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         exit_error(f"Cannot read {file_path}: {exc}", as_json)
 

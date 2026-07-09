@@ -132,6 +132,38 @@ def test_content_update_from_file(runner, mock_config, tmp_path):
 
 
 @responses.activate
+def test_content_update_preserves_non_ascii_from_utf8_file(runner, mock_config, tmp_path):
+    """A UTF-8 content file with literal non-ASCII text (e.g. an infinity
+    glyph) must survive the upload intact regardless of the platform's
+    default encoding — cp1252 on Windows mangled it before the explicit
+    encoding was added."""
+    mock_homepage()
+    responses.add(
+        responses.POST,
+        UPDATE_PAGE_URL,
+        json={"pageId": 10, "version": 4},
+        status=200,
+    )
+
+    content_file = tmp_path / "content.json"
+    content_file.write_text(
+        json.dumps(
+            {"components": [{"type": "text", "content": "∞ Happy Students"}], "styles": []},
+            ensure_ascii=False,
+        ),
+        encoding="utf-8",
+    )
+
+    result = runner.invoke(cli, ["content", "update", "10", "--file", str(content_file)])
+
+    assert result.exit_code == 0
+    post_call = [c for c in responses.calls if "AIPage/Update" in c.request.url][0]
+    sent_body = json.loads(post_call.request.body)
+    parsed_components = json.loads(sent_body["contentJSON"])
+    assert parsed_components[0]["content"] == "∞ Happy Students"
+
+
+@responses.activate
 def test_content_update_with_version(runner, mock_config, tmp_path):
     mock_homepage()
     responses.add(

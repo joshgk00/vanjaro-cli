@@ -168,7 +168,7 @@ def set_bulk(file_path: str, as_json: bool) -> None:
     File format: [{"guid": "...", "value": "..."}, ...] or [{"lessVariable": "...", "value": "..."}]
     """
     try:
-        raw = json.loads(Path(file_path).read_text())
+        raw = json.loads(Path(file_path).read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         exit_error(f"Cannot read {file_path}: {exc}", as_json)
 
@@ -507,7 +507,7 @@ def css_get(output: str | None, as_json: bool) -> None:
 def css_update(file_path: str, as_json: bool) -> None:
     """Replace the site-wide custom CSS with the contents of a file."""
     try:
-        content = Path(file_path).read_text()
+        content = Path(file_path).read_text(encoding="utf-8")
     except OSError as exc:
         exit_error(f"Cannot read {file_path}: {exc}", as_json)
 
@@ -536,7 +536,7 @@ def css_update(file_path: str, as_json: bool) -> None:
 def css_append(file_path: str, as_json: bool) -> None:
     """Append CSS from a file to the existing site-wide custom CSS."""
     try:
-        new_content = Path(file_path).read_text()
+        new_content = Path(file_path).read_text(encoding="utf-8")
     except OSError as exc:
         exit_error(f"Cannot read {file_path}: {exc}", as_json)
 

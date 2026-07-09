@@ -72,7 +72,7 @@ def list_blocks(as_json: bool) -> None:
 def create_block(name: str, category: str, file_path: str, as_json: bool) -> None:
     """Create a new global block from a JSON file."""
     try:
-        raw = json.loads(Path(file_path).read_text())
+        raw = json.loads(Path(file_path).read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         exit_error(f"Cannot read {file_path}: {exc}", as_json)
 
@@ -179,7 +179,7 @@ def update_block(guid: str, file_path: str, as_json: bool) -> None:
     client, _ = get_client()
 
     try:
-        raw = json.loads(Path(file_path).read_text())
+        raw = json.loads(Path(file_path).read_text(encoding="utf-8"))
     except (json.JSONDecodeError, OSError) as exc:
         exit_error(f"Cannot read {file_path}: {exc}", as_json)
 

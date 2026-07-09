@@ -253,7 +253,7 @@ def build_library(
         if output_dir:
             filename = _slugify(name) + ".json"
             filepath = Path(output_dir) / filename
-            filepath.write_text(json.dumps(composed, indent=2))
+            filepath.write_text(json.dumps(composed, indent=2), encoding="utf-8")
             entry_result: dict = {"name": name, "status": "written", "file": filename, "type": block_type}
             if unused:
                 entry_result["dropped_overrides"] = unused
