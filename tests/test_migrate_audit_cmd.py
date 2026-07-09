@@ -393,3 +393,66 @@ def test_audit_structure_page_flag_never_filtered(runner, mock_config):
     assert result.exit_code == 0
     data = json.loads(result.output)
     assert len(data["pages"]) == 1
+
+
+# ---------------------------------------------------------------------------
+# Child-portal alias handling
+# ---------------------------------------------------------------------------
+
+
+def _write_child_portal_config(config_file, base_url: str) -> None:
+    config_file.write_text(json.dumps({
+        "active_profile": "default",
+        "profiles": {"default": {"base_url": base_url, "portal_id": 2, "cookies": FAKE_COOKIES}},
+    }))
+
+
+@responses.activate
+def test_audit_structure_all_child_portal_alias_not_doubled(runner, mock_config):
+    """Page URLs on a child portal already carry the alias — the audit must not
+    join them onto the aliased base URL a second time."""
+    child_base = f"{BASE_URL}/child"
+    _write_child_portal_config(mock_config, child_base)
+    responses.add(
+        responses.GET,
+        f"{child_base}/API/PersonaBar/Pages/GetPageList",
+        json=_make_pages_response([
+            _make_page_item(1, "Home", f"{child_base}/", isspecial=True, tabpath="/Home"),
+            _make_page_item(2, "About", f"{child_base}/about", tabpath="/About"),
+        ]),
+        status=200,
+    )
+    responses.add(responses.GET, f"{child_base}/", body=_make_clean_page_html(), status=200)
+    responses.add(responses.GET, f"{child_base}/about", body=_make_clean_page_html("bbbb-2222"), status=200)
+
+    result = runner.invoke(cli, ["migrate", "audit-structure", "--all", "--as-json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    audited_urls = sorted(p["url"] for p in data["pages"])
+    assert audited_urls == [f"{child_base}/", f"{child_base}/about"]
+
+
+@responses.activate
+def test_audit_structure_all_child_portal_home_not_filtered_as_system(runner, mock_config):
+    """The child-portal home page has an alias-prefixed path (not a bare ``/``)
+    but is still a content page — the isspecial filter must leave it through."""
+    child_base = f"{BASE_URL}/child"
+    _write_child_portal_config(mock_config, child_base)
+    responses.add(
+        responses.GET,
+        f"{child_base}/API/PersonaBar/Pages/GetPageList",
+        json=_make_pages_response([
+            _make_page_item(1, "Home", f"{child_base}/", isspecial=True, tabpath="/Home"),
+            _make_page_item(2, "Signin", f"{child_base}/Signin", isspecial=True, tabpath="/Signin"),
+        ]),
+        status=200,
+    )
+    responses.add(responses.GET, f"{child_base}/", body=_make_clean_page_html(), status=200)
+
+    result = runner.invoke(cli, ["migrate", "audit-structure", "--all", "--as-json"])
+
+    assert result.exit_code == 0
+    data = json.loads(result.output)
+    audited_urls = [p["url"] for p in data["pages"]]
+    assert audited_urls == [f"{child_base}/"]

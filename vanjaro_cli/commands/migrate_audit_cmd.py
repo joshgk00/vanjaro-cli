@@ -25,23 +25,40 @@ _DNN_SYSTEM_TABPATHS: frozenset[str] = frozenset(
 )
 
 
-def _is_system_page(page: dict) -> bool:
+def _strip_alias_path(path: str, base_path: str) -> str:
+    """Return ``path`` relative to the portal-alias path prefix.
+
+    Child portals carry the alias in every page URL (``/keys-to-success/about``
+    on base URL ``http://host/keys-to-success``); joining that onto the base
+    URL would double the alias. Root-alias portals pass through unchanged.
+    """
+    clean = "/" + (path or "").strip("/")
+    prefix = "/" + base_path.strip("/")
+    if prefix == "/":
+        return clean
+    if clean == prefix:
+        return "/"
+    if clean.startswith(prefix + "/"):
+        return clean[len(prefix):]
+    return clean
+
+
+def _is_system_page(page: dict, page_path: str) -> bool:
     """Return True when a page is a DNN system/admin page, not migrated content.
 
+    ``page_path`` is the page's URL path relative to the portal alias.
     Detection uses two complementary signals from the PersonaBar GetPageList
     response:
     - ``isspecial: true`` — set by DNN on Activity-Feed, Signin, and similar
       framework pages. The portal home page is also ``isspecial`` but has
-      ``parentId == -1`` and a bare ``/`` URL, so we leave it through; in
-      practice the home page is always a content page worth auditing.
+      ``parentId == -1`` and a bare ``/`` alias-relative path, so we leave it
+      through; in practice the home page is always a content page worth
+      auditing.
     - tabpath in ``_DNN_SYSTEM_TABPATHS`` — catches Search Results and 404
       Error Page, which DNN does not mark ``isspecial``.
     """
-    if page.get("isspecial"):
-        url = page.get("url") or ""
-        parsed_path = urlparse(url).path
-        if parsed_path not in ("", "/"):
-            return True
+    if page.get("isspecial") and page_path not in ("", "/"):
+        return True
     tabpath = page.get("tabpath") or ""
     return tabpath in _DNN_SYSTEM_TABPATHS
 
@@ -59,8 +76,10 @@ def _fetch_rendered_html(base_url: str, path: str) -> str:
     return response.text
 
 
-def _discover_page_paths(as_json: bool, include_system: bool = False) -> list[str]:
-    """Return published page paths from the Vanjaro API.
+def _discover_page_paths(
+    base_url: str, as_json: bool, include_system: bool = False
+) -> list[str]:
+    """Return published page paths, relative to the portal alias in ``base_url``.
 
     DNN system pages (Activity-Feed, Signin, Search Results, 404 Error Page)
     are excluded by default; pass ``include_system=True`` to keep them.
@@ -75,17 +94,19 @@ def _discover_page_paths(as_json: bool, include_system: bool = False) -> list[st
     except Exception as exc:
         exit_error(f"Failed to list pages: {exc}", as_json)
 
+    base_path = urlparse(base_url).path
     raw_pages = _walk_page_tree(client, response.json())
     paths: list[str] = []
     for page in raw_pages:
         if not isinstance(page, dict):
             continue
-        if not include_system and _is_system_page(page):
-            continue
         url = page.get("url") or page.get("tabpath") or ""
-        if url:
-            parsed = urlparse(url)
-            paths.append(parsed.path or "/")
+        if not url:
+            continue
+        page_path = _strip_alias_path(urlparse(url).path, base_path)
+        if not include_system and _is_system_page(page, page_path):
+            continue
+        paths.append(page_path)
     return paths
 
 
@@ -193,7 +214,7 @@ def audit_structure(
 
     paths: list[str] = []
     if audit_all:
-        paths = _discover_page_paths(as_json, include_system=include_system)
+        paths = _discover_page_paths(base_url, as_json, include_system=include_system)
         if not paths:
             exit_error("No published pages found via API.", as_json)
     else:
