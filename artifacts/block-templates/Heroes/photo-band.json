@@ -1,0 +1,52 @@
+{
+  "name": "Photo Band",
+  "category": "Heroes",
+  "description": "Full-bleed background-photo band with a baked min-height and no overlay text, for hero/CTA photos that already carry their own text",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "p-0", "active": false}
+    ],
+    "attributes": {"id": "tpl-pb-s1", "style": "min-height:60vh;background-size:cover;background-position:center;"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container-fluid", "active": false},
+          {"name": "p-0", "active": false}
+        ],
+        "attributes": {"id": "tpl-pb-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-0", "active": false}
+            ],
+            "attributes": {"id": "tpl-pb-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-pb-c1", "style": "min-height:60vh;"},
+                "components": [
+                  {
+                    "type": "spacer",
+                    "classes": [
+                      {"name": "spacer", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-pb-sp1", "style": "min-height:60vh;"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

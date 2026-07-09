@@ -1,0 +1,138 @@
+{
+  "name": "Video Feature",
+  "category": "Content",
+  "description": "Centered eyebrow, heading, and paragraph above a large rounded media area with a centered play button linked to a video",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-vf-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-vf-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "justify-content-center", "active": false},
+              {"name": "mb-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-vf-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-8", "active": false},
+                  {"name": "col-md-10", "active": false},
+                  {"name": "col-12", "active": false},
+                  {"name": "text-center", "active": false}
+                ],
+                "attributes": {"id": "tpl-vf-c1"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Eyebrow",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false},
+                      {"name": "text-uppercase", "active": false},
+                      {"name": "text-primary", "active": false},
+                      {"name": "fw-bold", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-vf-h1"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "A Headline About This Video",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-vf-h2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A short paragraph introducing the video and what viewers can expect to see.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-vf-t1"}
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "justify-content-center", "active": false}
+            ],
+            "attributes": {"id": "tpl-vf-r2"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-10", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-vf-c2"},
+                "components": [
+                  {
+                    "type": "link",
+                    "tagName": "a",
+                    "classes": [
+                      {"name": "vj-link", "active": false},
+                      {"name": "kts-rounded-16", "active": false},
+                      {"name": "d-block", "active": false},
+                      {"name": "position-relative", "active": false},
+                      {"name": "overflow-hidden", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-vf-lnk1", "href": "#"},
+                    "components": [
+                      {
+                        "type": "image",
+                        "classes": [
+                          {"name": "image-box", "active": false},
+                          {"name": "vj-image", "active": false},
+                          {"name": "img-fluid", "active": false},
+                          {"name": "w-100", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-vf-img1", "src": "https://placehold.co/1000x560?text=Video", "alt": "Video thumbnail"}
+                      },
+                      {
+                        "type": "default",
+                        "tagName": "div",
+                        "classes": [
+                          {"name": "kts-play-btn", "active": false},
+                          {"name": "position-absolute", "active": false},
+                          {"name": "top-50", "active": false},
+                          {"name": "start-50", "active": false},
+                          {"name": "translate-middle", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-vf-play1"}
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

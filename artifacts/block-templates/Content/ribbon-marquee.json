@@ -1,0 +1,142 @@
+{
+  "name": "Ribbon Marquee",
+  "category": "Content",
+  "description": "Full-width angled pink ribbon band that scrolls a single repeated phrase marquee-style",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "kts-marquee", "active": false},
+      {"name": "py-3", "active": false}
+    ],
+    "attributes": {"id": "tpl-marq-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container-fluid", "active": false},
+          {"name": "px-0", "active": false}
+        ],
+        "attributes": {"id": "tpl-marq-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-0", "active": false}
+            ],
+            "attributes": {"id": "tpl-marq-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-marq-c1"},
+                "components": [
+                  {
+                    "type": "default",
+                    "tagName": "div",
+                    "classes": [
+                      {"name": "kts-marquee-track", "active": false},
+                      {"name": "d-flex", "active": false},
+                      {"name": "align-items-center", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-marq-track1"},
+                    "components": [
+                      {
+                        "type": "text",
+                        "tagName": "span",
+                        "content": "Your Message Here",
+                        "classes": [
+                          {"name": "vj-text", "active": false},
+                          {"name": "paragraph-style-1", "active": false},
+                          {"name": "fw-bold", "active": false},
+                          {"name": "text-uppercase", "active": false},
+                          {"name": "text-white", "active": false},
+                          {"name": "me-5", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-marq-p1"}
+                      },
+                      {
+                        "type": "text",
+                        "tagName": "span",
+                        "content": "Your Message Here",
+                        "classes": [
+                          {"name": "vj-text", "active": false},
+                          {"name": "paragraph-style-1", "active": false},
+                          {"name": "fw-bold", "active": false},
+                          {"name": "text-uppercase", "active": false},
+                          {"name": "text-white", "active": false},
+                          {"name": "me-5", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-marq-p2"}
+                      },
+                      {
+                        "type": "text",
+                        "tagName": "span",
+                        "content": "Your Message Here",
+                        "classes": [
+                          {"name": "vj-text", "active": false},
+                          {"name": "paragraph-style-1", "active": false},
+                          {"name": "fw-bold", "active": false},
+                          {"name": "text-uppercase", "active": false},
+                          {"name": "text-white", "active": false},
+                          {"name": "me-5", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-marq-p3"}
+                      },
+                      {
+                        "type": "text",
+                        "tagName": "span",
+                        "content": "Your Message Here",
+                        "classes": [
+                          {"name": "vj-text", "active": false},
+                          {"name": "paragraph-style-1", "active": false},
+                          {"name": "fw-bold", "active": false},
+                          {"name": "text-uppercase", "active": false},
+                          {"name": "text-white", "active": false},
+                          {"name": "me-5", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-marq-p4"}
+                      },
+                      {
+                        "type": "text",
+                        "tagName": "span",
+                        "content": "Your Message Here",
+                        "classes": [
+                          {"name": "vj-text", "active": false},
+                          {"name": "paragraph-style-1", "active": false},
+                          {"name": "fw-bold", "active": false},
+                          {"name": "text-uppercase", "active": false},
+                          {"name": "text-white", "active": false},
+                          {"name": "me-5", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-marq-p5"}
+                      },
+                      {
+                        "type": "text",
+                        "tagName": "span",
+                        "content": "Your Message Here",
+                        "classes": [
+                          {"name": "vj-text", "active": false},
+                          {"name": "paragraph-style-1", "active": false},
+                          {"name": "fw-bold", "active": false},
+                          {"name": "text-uppercase", "active": false},
+                          {"name": "text-white", "active": false},
+                          {"name": "me-5", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-marq-p6"}
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

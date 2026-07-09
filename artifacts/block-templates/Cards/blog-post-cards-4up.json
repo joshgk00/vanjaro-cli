@@ -1,0 +1,378 @@
+{
+  "name": "Blog Post Cards (4-up)",
+  "category": "Cards",
+  "description": "Row of four white blog cards with image, category pill, title, excerpt, and meta, plus a centered Load More button",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-bpc4-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-bpc4-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "mb-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-bpc4-r0"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-bpc4-c0"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "Latest Posts",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-h0"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Read our latest articles and updates.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-1", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-sub0"}
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-bpc4-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-bpc4-c1"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "kts-rounded-16", "active": false},
+                      {"name": "w-100", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-img1", "src": "https://placehold.co/400x260?text=Blog", "alt": "Blog post image"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "kts-pill-tag", "active": false},
+                      {"name": "kts-pill-orange", "active": false},
+                      {"name": "d-inline-block", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-cat1"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Blog Post Title Goes Here",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-h1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A brief excerpt from the blog post that previews the article.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-t1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "By Author Name | Jan 1, 2024",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-muted", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-m1"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-bpc4-c2"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "kts-rounded-16", "active": false},
+                      {"name": "w-100", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-img2", "src": "https://placehold.co/400x260?text=Blog", "alt": "Blog post image"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "kts-pill-tag", "active": false},
+                      {"name": "kts-pill-yellow", "active": false},
+                      {"name": "d-inline-block", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-cat2"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Another Blog Post Title",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-h2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A brief excerpt from the blog post that previews the article.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-t2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "By Author Name | Jan 1, 2024",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-muted", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-m2"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-bpc4-c3"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "kts-rounded-16", "active": false},
+                      {"name": "w-100", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-img3", "src": "https://placehold.co/400x260?text=Blog", "alt": "Blog post image"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "kts-pill-tag", "active": false},
+                      {"name": "kts-pill-teal", "active": false},
+                      {"name": "d-inline-block", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-cat3"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Third Blog Post Title",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-h3"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A brief excerpt from the blog post that previews the article.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-t3"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "By Author Name | Jan 1, 2024",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-muted", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-m3"}
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-3", "active": false},
+                  {"name": "col-md-3", "active": false},
+                  {"name": "col-sm-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-bpc4-c4"},
+                "components": [
+                  {
+                    "type": "image",
+                    "classes": [
+                      {"name": "image-box", "active": false},
+                      {"name": "vj-image", "active": false},
+                      {"name": "img-fluid", "active": false},
+                      {"name": "kts-rounded-16", "active": false},
+                      {"name": "w-100", "active": false},
+                      {"name": "mb-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-img4", "src": "https://placehold.co/400x260?text=Blog", "alt": "Blog post image"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Category",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "kts-pill-tag", "active": false},
+                      {"name": "kts-pill-pink", "active": false},
+                      {"name": "d-inline-block", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-cat4"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h3",
+                    "content": "Fourth Blog Post Title",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-h4"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A brief excerpt from the blog post that previews the article.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-t4"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "By Author Name | Jan 1, 2024",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-2", "active": false},
+                      {"name": "text-muted", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-m4"}
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "mt-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-bpc4-r2"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false},
+                  {"name": "text-center", "active": false}
+                ],
+                "attributes": {"id": "tpl-bpc4-c5"},
+                "components": [
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Load More",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-outline-dark", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "kts-outline-box", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-bpc4-b1", "role": "button", "href": "#"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

@@ -1,0 +1,450 @@
+{
+  "name": "Class Photo Cards (2x2)",
+  "category": "Cards",
+  "description": "Two-by-two grid of photo-top cards with a solid color body panel holding a title, pill tag, paragraph, and dark button",
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-cpc-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-cpc-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false},
+              {"name": "mb-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-cpc-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-cpc-c1"},
+                "components": [
+                  {
+                    "type": "default",
+                    "tagName": "div",
+                    "classes": [
+                      {"name": "kts-rounded-16", "active": false},
+                      {"name": "overflow-hidden", "active": false},
+                      {"name": "h-100", "active": false},
+                      {"name": "shadow-sm", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-cpc-card1"},
+                    "components": [
+                      {
+                        "type": "default",
+                        "tagName": "div",
+                        "classes": [],
+                        "attributes": {"id": "tpl-cpc-imgwrap1"},
+                        "components": [
+                          {
+                            "type": "image",
+                            "classes": [
+                              {"name": "image-box", "active": false},
+                              {"name": "vj-image", "active": false},
+                              {"name": "img-fluid", "active": false},
+                              {"name": "w-100", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-img1", "src": "https://placehold.co/500x360?text=Class", "alt": "Class photo"}
+                          }
+                        ]
+                      },
+                      {
+                        "type": "default",
+                        "tagName": "div",
+                        "classes": [
+                          {"name": "kts-card-band", "active": false},
+                          {"name": "kts-band-pink", "active": false},
+                          {"name": "p-4", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-cpc-body1"},
+                        "components": [
+                          {
+                            "type": "heading",
+                            "tagName": "h3",
+                            "content": "Prelude",
+                            "classes": [
+                              {"name": "vj-heading", "active": false},
+                              {"name": "head-style-3", "active": false},
+                              {"name": "fw-bold", "active": false},
+                              {"name": "text-white", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-h1"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "Age: 0-5 yrs",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-2", "active": false},
+                              {"name": "kts-pill-tag", "active": false},
+                              {"name": "kts-pill-pink", "active": false},
+                              {"name": "d-inline-block", "active": false},
+                              {"name": "mt-2", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-tag1"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "A short description of this class and who it is designed for.",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-1", "active": false},
+                              {"name": "text-white", "active": false},
+                              {"name": "mt-3", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-t1"}
+                          },
+                          {
+                            "type": "button",
+                            "tagName": "a",
+                            "content": "Learn More",
+                            "classes": [
+                              {"name": "btn", "active": false},
+                              {"name": "btn-dark", "active": false},
+                              {"name": "button-style-1", "active": false},
+                              {"name": "mt-3", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-b1", "role": "button", "href": "#"}
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-cpc-c2"},
+                "components": [
+                  {
+                    "type": "default",
+                    "tagName": "div",
+                    "classes": [
+                      {"name": "kts-rounded-16", "active": false},
+                      {"name": "overflow-hidden", "active": false},
+                      {"name": "h-100", "active": false},
+                      {"name": "shadow-sm", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-cpc-card2"},
+                    "components": [
+                      {
+                        "type": "default",
+                        "tagName": "div",
+                        "classes": [],
+                        "attributes": {"id": "tpl-cpc-imgwrap2"},
+                        "components": [
+                          {
+                            "type": "image",
+                            "classes": [
+                              {"name": "image-box", "active": false},
+                              {"name": "vj-image", "active": false},
+                              {"name": "img-fluid", "active": false},
+                              {"name": "w-100", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-img2", "src": "https://placehold.co/500x360?text=Class", "alt": "Class photo"}
+                          }
+                        ]
+                      },
+                      {
+                        "type": "default",
+                        "tagName": "div",
+                        "classes": [
+                          {"name": "kts-card-band", "active": false},
+                          {"name": "kts-band-yellow", "active": false},
+                          {"name": "p-4", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-cpc-body2"},
+                        "components": [
+                          {
+                            "type": "heading",
+                            "tagName": "h3",
+                            "content": "Opening Notes",
+                            "classes": [
+                              {"name": "vj-heading", "active": false},
+                              {"name": "head-style-3", "active": false},
+                              {"name": "fw-bold", "active": false},
+                              {"name": "text-dark", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-h2"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "Pre Piano ages 4-6",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-2", "active": false},
+                              {"name": "kts-pill-tag", "active": false},
+                              {"name": "kts-pill-yellow", "active": false},
+                              {"name": "d-inline-block", "active": false},
+                              {"name": "mt-2", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-tag2"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "A short description of this class and who it is designed for.",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-1", "active": false},
+                              {"name": "text-dark", "active": false},
+                              {"name": "mt-3", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-t2"}
+                          },
+                          {
+                            "type": "button",
+                            "tagName": "a",
+                            "content": "Learn More",
+                            "classes": [
+                              {"name": "btn", "active": false},
+                              {"name": "btn-dark", "active": false},
+                              {"name": "button-style-1", "active": false},
+                              {"name": "mt-3", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-b2", "role": "button", "href": "#"}
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "g-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-cpc-r2"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-cpc-c3"},
+                "components": [
+                  {
+                    "type": "default",
+                    "tagName": "div",
+                    "classes": [
+                      {"name": "kts-rounded-16", "active": false},
+                      {"name": "overflow-hidden", "active": false},
+                      {"name": "h-100", "active": false},
+                      {"name": "shadow-sm", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-cpc-card3"},
+                    "components": [
+                      {
+                        "type": "default",
+                        "tagName": "div",
+                        "classes": [],
+                        "attributes": {"id": "tpl-cpc-imgwrap3"},
+                        "components": [
+                          {
+                            "type": "image",
+                            "classes": [
+                              {"name": "image-box", "active": false},
+                              {"name": "vj-image", "active": false},
+                              {"name": "img-fluid", "active": false},
+                              {"name": "w-100", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-img3", "src": "https://placehold.co/500x360?text=Class", "alt": "Class photo"}
+                          }
+                        ]
+                      },
+                      {
+                        "type": "default",
+                        "tagName": "div",
+                        "classes": [
+                          {"name": "kts-card-band", "active": false},
+                          {"name": "kts-band-teal", "active": false},
+                          {"name": "p-4", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-cpc-body3"},
+                        "components": [
+                          {
+                            "type": "heading",
+                            "tagName": "h3",
+                            "content": "Symphony",
+                            "classes": [
+                              {"name": "vj-heading", "active": false},
+                              {"name": "head-style-3", "active": false},
+                              {"name": "fw-bold", "active": false},
+                              {"name": "text-white", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-h3"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "Lessons for all ages",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-2", "active": false},
+                              {"name": "kts-pill-tag", "active": false},
+                              {"name": "kts-pill-teal", "active": false},
+                              {"name": "d-inline-block", "active": false},
+                              {"name": "mt-2", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-tag3"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "A short description of this class and who it is designed for.",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-1", "active": false},
+                              {"name": "text-white", "active": false},
+                              {"name": "mt-3", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-t3"}
+                          },
+                          {
+                            "type": "button",
+                            "tagName": "a",
+                            "content": "Learn More",
+                            "classes": [
+                              {"name": "btn", "active": false},
+                              {"name": "btn-dark", "active": false},
+                              {"name": "button-style-1", "active": false},
+                              {"name": "mt-3", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-b3", "role": "button", "href": "#"}
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              },
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-md-6", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-cpc-c4"},
+                "components": [
+                  {
+                    "type": "default",
+                    "tagName": "div",
+                    "classes": [
+                      {"name": "kts-rounded-16", "active": false},
+                      {"name": "overflow-hidden", "active": false},
+                      {"name": "h-100", "active": false},
+                      {"name": "shadow-sm", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-cpc-card4"},
+                    "components": [
+                      {
+                        "type": "default",
+                        "tagName": "div",
+                        "classes": [],
+                        "attributes": {"id": "tpl-cpc-imgwrap4"},
+                        "components": [
+                          {
+                            "type": "image",
+                            "classes": [
+                              {"name": "image-box", "active": false},
+                              {"name": "vj-image", "active": false},
+                              {"name": "img-fluid", "active": false},
+                              {"name": "w-100", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-img4", "src": "https://placehold.co/500x360?text=Class", "alt": "Class photo"}
+                          }
+                        ]
+                      },
+                      {
+                        "type": "default",
+                        "tagName": "div",
+                        "classes": [
+                          {"name": "kts-card-band", "active": false},
+                          {"name": "kts-band-orange", "active": false},
+                          {"name": "p-4", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-cpc-body4"},
+                        "components": [
+                          {
+                            "type": "heading",
+                            "tagName": "h3",
+                            "content": "Finale",
+                            "classes": [
+                              {"name": "vj-heading", "active": false},
+                              {"name": "head-style-3", "active": false},
+                              {"name": "fw-bold", "active": false},
+                              {"name": "text-white", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-h4"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "Lessons for adults",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-2", "active": false},
+                              {"name": "kts-pill-tag", "active": false},
+                              {"name": "kts-pill-orange", "active": false},
+                              {"name": "d-inline-block", "active": false},
+                              {"name": "mt-2", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-tag4"}
+                          },
+                          {
+                            "type": "text",
+                            "content": "A short description of this class and who it is designed for.",
+                            "classes": [
+                              {"name": "vj-text", "active": false},
+                              {"name": "paragraph-style-1", "active": false},
+                              {"name": "text-white", "active": false},
+                              {"name": "mt-3", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-t4"}
+                          },
+                          {
+                            "type": "button",
+                            "tagName": "a",
+                            "content": "Learn More",
+                            "classes": [
+                              {"name": "btn", "active": false},
+                              {"name": "btn-dark", "active": false},
+                              {"name": "button-style-1", "active": false},
+                              {"name": "mt-3", "active": false}
+                            ],
+                            "attributes": {"id": "tpl-cpc-b4", "role": "button", "href": "#"}
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}
