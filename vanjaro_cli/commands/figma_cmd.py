@@ -204,12 +204,16 @@ def tokens(url: str, node: str | None, output: str, palette_path: str | None, as
         document,
         extracted_from=url,
     )
-    Path(output).write_text(json.dumps(design_tokens, indent=2), encoding="utf-8")
+    output_file = Path(output)
+    output_file.parent.mkdir(parents=True, exist_ok=True)
+    output_file.write_text(json.dumps(design_tokens, indent=2), encoding="utf-8")
 
     written = {"design_tokens": output}
     if palette_path:
         palette = build_theme_palette(document)
-        Path(palette_path).write_text(json.dumps(palette, indent=2), encoding="utf-8")
+        palette_file = Path(palette_path)
+        palette_file.parent.mkdir(parents=True, exist_ok=True)
+        palette_file.write_text(json.dumps(palette, indent=2), encoding="utf-8")
         written["palette"] = palette_path
 
     output_result(
