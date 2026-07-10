@@ -11,7 +11,7 @@ import click
 
 from vanjaro_cli.commands.helpers import exit_error, output_result, read_json_file
 from vanjaro_cli.migration.dedup import parse_global_placeholder
-from vanjaro_cli.migration.global_blocks import make_global_block_wrapper
+from vanjaro_cli.migration.global_blocks import _section_group, make_global_block_wrapper
 from vanjaro_cli.migration.overrides import crawl_content_to_overrides
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
@@ -27,6 +27,39 @@ from vanjaro_cli.utils.block_compose import (
 from vanjaro_cli.utils.theme_palette import PaletteError, load_palette
 
 __all__ = ["assemble_page"]
+
+# The composition audit counts direct children of #vjEditor and rewards 3-9.
+# Once header/footer chrome plus interior sections would exceed this, group the
+# interior sections into a few full-width wrapper nodes to pull the count back
+# in range without changing the page's visual layout.
+_MAX_TOP_LEVEL_CHILDREN = 9
+_TARGET_SECTION_GROUPS = 3
+
+
+def _group_interior_sections(sections: list[dict], reserved_chrome: int) -> list[dict]:
+    """Wrap interior sections in container nodes to cap top-level child count.
+
+    ``reserved_chrome`` is the number of top-level header/footer wrappers that
+    will bracket these sections (0-2). Those wrappers must stay top-level and
+    unwrapped so Vanjaro expands them server-side, so they only factor into the
+    child budget here, never the grouping. Sections are split into contiguous,
+    order-preserving, size-balanced groups; each group becomes one full-width
+    wrapper node, so the top-level count drops to ``reserved_chrome`` + group
+    count. Left unchanged when the count already fits (idempotent-safe).
+    """
+    if len(sections) + reserved_chrome <= _MAX_TOP_LEVEL_CHILDREN:
+        return sections
+
+    group_count = min(_TARGET_SECTION_GROUPS, len(sections))
+    base_size, remainder = divmod(len(sections), group_count)
+
+    groups: list[dict] = []
+    start = 0
+    for index in range(group_count):
+        size = base_size + (1 if index < remainder else 0)
+        groups.append(_section_group(sections[start:start + size]))
+        start += size
+    return groups
 
 
 def _natural_sort_key(value: str) -> list:
@@ -479,6 +512,9 @@ def assemble_page(
             _validate_section_component(section_component, source_file, as_json)
             components.append(section_component)
         _merge_styles(styles, section_styles)
+
+    reserved_chrome = bool(header_block_guid) + bool(footer_block_guid)
+    components = _group_interior_sections(components, reserved_chrome)
 
     if header_block_guid:
         components.insert(0, make_global_block_wrapper("Global: Header", header_block_guid))

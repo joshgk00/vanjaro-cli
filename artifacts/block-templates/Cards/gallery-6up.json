@@ -90,6 +90,10 @@
             "active": false
            },
            {
+            "name": "paragraph-style-1",
+            "active": false
+           },
+           {
             "name": "lead",
             "active": false
            },

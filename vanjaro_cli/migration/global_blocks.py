@@ -28,6 +28,7 @@ __all__ = [
     "make_global_block_wrapper",
     "GLOBAL_BLOCK_WRAPPER_TYPE_GUID",
     "MENU_BLOCK_GUID",
+    "NAV_TOGGLE_PORTAL_CSS",
 ]
 
 MENU_BLOCK_GUID = "3007ca5e-0c09-4824-ae81-0044f993c8f5"
@@ -128,6 +129,13 @@ def _container(children: list[dict]) -> dict:
     return _component("grid", classes=["container"], children=children)
 
 
+def _section_group(children: list[dict]) -> dict:
+    # Full-width wrapper for grouping top-level sections. Uses a plain div with
+    # no `container` class so full-bleed sections keep their edge-to-edge
+    # backgrounds — only the #vjEditor child count changes, not the layout.
+    return _component("default", classes=["vj-section-group"], children=children)
+
+
 def _row(children: list[dict], extra_classes: list[str] | None = None) -> dict:
     classes = ["row"] + (extra_classes or [])
     return _component("row", classes=classes, children=children)
@@ -142,13 +150,29 @@ def _image(src: str, alt: str, extra_classes: list[str] | None = None) -> dict:
     return _component("image", classes=classes, attributes={"src": src, "alt": alt})
 
 
+# The audit (check_theme_classes) requires every .vj-heading to carry a
+# head-style-N class and every .vj-text a paragraph-style-N class. These
+# defaults ship whenever a call site doesn't supply its own, matching the
+# audit regexes ``\bhead-style-\d+\b`` and ``\bparagraph-style-\d+\b``.
+_DEFAULT_HEAD_STYLE = "head-style-4"
+_DEFAULT_PARA_STYLE = "paragraph-style-1"
+
+
+def _with_default_style(base: str, prefix: str, default: str, extra_classes: list[str] | None) -> list[str]:
+    """Prepend ``base`` and a default style class, unless the caller already
+    supplied a ``prefix``-style class in ``extra_classes``."""
+    extra = extra_classes or []
+    fallback = [] if any(c.startswith(prefix) for c in extra) else [default]
+    return [base] + fallback + extra
+
+
 def _heading(text: str, tag: str = "h4", extra_classes: list[str] | None = None) -> dict:
-    classes = ["vj-heading"] + (extra_classes or [])
+    classes = _with_default_style("vj-heading", "head-style-", _DEFAULT_HEAD_STYLE, extra_classes)
     return _component("heading", tag_name=tag, content=text, classes=classes)
 
 
 def _text(text: str, extra_classes: list[str] | None = None) -> dict:
-    classes = ["vj-text"] + (extra_classes or [])
+    classes = _with_default_style("vj-text", "paragraph-style-", _DEFAULT_PARA_STYLE, extra_classes)
     return _component("text", content=text, classes=classes)
 
 
@@ -232,10 +256,25 @@ def build_header_block(
         row_cols.append(_col(logo_children, size_classes=["col-md-3", "col-6"]))
 
     nav_children: list[dict] = []
+    styles: list = []
     if static_nav:
         nav_entries = _header_nav_entries(content)
         if nav_entries:
-            nav_classes = ["d-flex", "flex-wrap", "gap-3", "justify-content-md-end"]
+            # JS-free checkbox-hack hamburger: the hidden checkbox and its label
+            # are siblings of the links container so the CSS combinator
+            # ``#kts-nav-toggle:checked ~ .kts-nav-links`` can reveal the stacked
+            # links on mobile with zero JS/Bootstrap deps. The matching CSS
+            # ships via portal.css (see NAV_TOGGLE_PORTAL_CSS), NOT the block
+            # styles array — the styleJSON store strips @media/combinator rules.
+            nav_classes = ["kts-nav-links", "d-flex", "flex-wrap", "gap-3", "justify-content-md-end"]
+            nav_children.append(_component(
+                "default", tag_name="input", classes=["kts-nav-toggle"],
+                attributes={"type": "checkbox", "id": _NAV_TOGGLE_ID},
+            ))
+            nav_children.append(_component(
+                "default", tag_name="label", content="☰", classes=["kts-nav-toggle-label"],
+                attributes={"for": _NAV_TOGGLE_ID, "aria-label": "Toggle navigation"},
+            ))
             nav_children.append(_component("default", classes=nav_classes, children=nav_entries))
     else:
         nav_children.append(_menu_block())
@@ -260,9 +299,28 @@ def build_header_block(
             ]),
         ],
     )
-    styles: list = []
     apply_section_background(section, content, palette=palette, styles=styles)
     return _wrap(section, styles)
+
+
+_NAV_TOGGLE_ID = "kts-nav-toggle"
+_NAV_TOGGLE_BREAKPOINT = "(max-width: 992px)"
+
+# CSS for the static-nav checkbox-hack hamburger. It MUST ship through portal.css
+# (a raw site-wide stylesheet stored verbatim), never the block styleJSON array:
+# Vanjaro's styleJSON store silently drops @media and combinator rules on save
+# (verified live 2026-07-09), which would strip exactly the rules the toggle
+# needs. The build-global command writes this to a sidecar file via
+# --portal-css-out so the build flow can `vanjaro theme css append` it.
+NAV_TOGGLE_PORTAL_CSS = f"""\
+.{_NAV_TOGGLE_ID} {{ display: none; }}
+.kts-nav-toggle-label {{ display: none; cursor: pointer; font-size: 1.75rem; line-height: 1; }}
+@media {_NAV_TOGGLE_BREAKPOINT} {{
+  .kts-nav-toggle-label {{ display: block; }}
+  .kts-nav-links {{ display: none; width: 100%; }}
+  #{_NAV_TOGGLE_ID}:checked ~ .kts-nav-links {{ display: flex; }}
+}}
+"""
 
 
 def _header_logo(content: dict) -> dict | None:

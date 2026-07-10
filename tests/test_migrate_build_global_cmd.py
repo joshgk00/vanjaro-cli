@@ -264,6 +264,178 @@ def test_build_global_theme_palette_maps_footer_band_to_class(runner, tmp_path: 
     assert "style" not in section["attributes"]
 
 
+def _logo_manifest(src: str, width: int = 142) -> list[dict]:
+    """A one-entry asset manifest giving ``src`` a single responsive variant."""
+    stem = src.rsplit(".", 1)[0]
+    return [
+        {
+            "source_url": "https://example.com" + src,
+            "vanjaro_url": src,
+            "variants": [
+                {"url": f"{stem}/.versions/logo_{width}w.png", "width": width, "type": "image"},
+                {"url": f"{stem}/.versions/logo_{width}w.webp", "width": width, "type": "webp"},
+            ],
+        }
+    ]
+
+
+def _find_first(tree: dict, predicate) -> dict | None:
+    matches = _find_all_in_tree(tree, predicate)
+    return matches[0] if matches else None
+
+
+def _class_names(component: dict) -> list[str]:
+    return [c["name"] for c in component.get("classes", []) if isinstance(c, dict)]
+
+
+def test_build_global_wraps_header_logo_with_asset_manifest(runner, tmp_path: Path, write_json):
+    source = _make_global(
+        tmp_path,
+        "header",
+        {
+            "images": [{"src": "/logo.png", "alt": "Logo"}],
+            "nav_items": [{"label": "Home", "href": "/"}],
+        },
+    )
+    manifest = write_json(tmp_path / "asset-manifest.json", _logo_manifest("/logo.png"))
+    output = tmp_path / "header-built.json"
+
+    result = runner.invoke(
+        build_global,
+        [
+            "--source", str(source),
+            "--kind", "header",
+            "--output", str(output),
+            "--asset-manifest", str(manifest),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    built = json.loads(output.read_text())
+    section = built["components"][0]
+
+    picture = _find_first(section, lambda n: n.get("tagName") == "picture")
+    assert picture is not None, "logo was not wrapped in a <picture>"
+    source_node = _find_first(picture, lambda n: n.get("type") == "source")
+    assert source_node is not None
+    assert "/.versions/" in source_node["attributes"]["srcset"]
+
+    inner_img = _find_first(picture, lambda n: n.get("type") == "image")
+    assert inner_img is not None
+    assert "header-logo" in _class_names(inner_img)
+    assert inner_img["attributes"]["src"] == "/logo.png"
+
+
+def test_build_global_wraps_footer_image_and_preserves_class(runner, tmp_path: Path, write_json):
+    source = _make_global(
+        tmp_path,
+        "footer",
+        {
+            "headings": ["Links"],
+            "list_items": ["About"],
+            "images": [{"src": "/logo-footer.png", "alt": "Logo"}],
+        },
+    )
+    manifest = write_json(tmp_path / "asset-manifest.json", _logo_manifest("/logo-footer.png", width=170))
+    output = tmp_path / "footer-built.json"
+
+    result = runner.invoke(
+        build_global,
+        [
+            "--source", str(source),
+            "--kind", "footer",
+            "--output", str(output),
+            "--asset-manifest", str(manifest),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    section = json.loads(output.read_text())["components"][0]
+
+    picture = _find_first(section, lambda n: n.get("tagName") == "picture")
+    assert picture is not None, "footer logo was not wrapped in a <picture>"
+    inner_img = _find_first(picture, lambda n: n.get("type") == "image")
+    assert inner_img is not None
+    # The footer builder tags images with `footer-badge`; the wrap must keep it.
+    assert "footer-badge" in _class_names(inner_img)
+
+
+def test_build_global_without_manifest_leaves_plain_logo(runner, tmp_path: Path):
+    source = _make_global(
+        tmp_path,
+        "header",
+        {"images": [{"src": "/logo.png", "alt": "Logo"}], "nav_items": []},
+    )
+    output = tmp_path / "header-built.json"
+
+    result = runner.invoke(
+        build_global,
+        ["--source", str(source), "--kind", "header", "--output", str(output), "--json"],
+    )
+
+    assert result.exit_code == 0, result.output
+    section = json.loads(output.read_text())["components"][0]
+
+    assert _find_first(section, lambda n: n.get("tagName") == "picture") is None
+    logo = _find_first(section, lambda n: "header-logo" in _class_names(n))
+    assert logo is not None
+    assert logo["type"] == "image"
+    assert logo["attributes"]["src"] == "/logo.png"
+
+
+def test_build_global_static_nav_writes_hamburger_portal_css(runner, tmp_path: Path):
+    source = _make_global(
+        tmp_path,
+        "header",
+        {"images": [{"src": "/logo.png", "alt": "Logo"}], "nav_items": [{"label": "Home", "href": "/"}]},
+    )
+    output = tmp_path / "header-built.json"
+    portal_css = tmp_path / "hamburger.css"
+
+    result = runner.invoke(
+        build_global,
+        [
+            "--source", str(source),
+            "--kind", "header",
+            "--output", str(output),
+            "--static-nav",
+            "--portal-css-out", str(portal_css),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    css = portal_css.read_text(encoding="utf-8")
+    assert "@media (max-width: 992px)" in css
+    assert "#kts-nav-toggle:checked ~ .kts-nav-links" in css
+
+
+def test_build_global_no_portal_css_without_static_nav(runner, tmp_path: Path):
+    source = _make_global(
+        tmp_path,
+        "header",
+        {"images": [{"src": "/logo.png", "alt": "Logo"}], "nav_items": [{"label": "Home", "href": "/"}]},
+    )
+    output = tmp_path / "header-built.json"
+    portal_css = tmp_path / "hamburger.css"
+
+    result = runner.invoke(
+        build_global,
+        [
+            "--source", str(source),
+            "--kind", "header",
+            "--output", str(output),
+            "--portal-css-out", str(portal_css),
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    assert not portal_css.exists()
+
+
 def test_build_global_theme_palette_unmatched_color_lands_in_styles(runner, tmp_path: Path, write_json):
     source = _make_global(
         tmp_path,

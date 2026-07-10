@@ -237,6 +237,104 @@ def test_crawl_section_blockquotes_respect_index_offset():
     assert overrides["text_3"] == "Quote."
 
 
+# -- Top-level section grouping (composition audit 3-9) --
+
+
+def test_assemble_groups_many_sections_into_few_top_level_children(runner, tmp_path, write_json):
+    """13 interior sections collapse to 3-9 top-level children via full-width grouping."""
+    section_files = []
+    for index in range(1, 14):
+        path = write_json(
+            tmp_path / f"section-{index:02d}.json", _raw_section(f"s{index}", f"Section {index}")
+        )
+        section_files.append(str(path))
+    output_file = tmp_path / "home.json"
+
+    args = []
+    for path in section_files:
+        args += ["--sections", path]
+    args += ["--output", str(output_file)]
+
+    result = runner.invoke(assemble_page, args)
+
+    assert result.exit_code == 0, result.output
+    components = json.loads(output_file.read_text())["components"]
+    assert 3 <= len(components) <= 9
+    # Every top-level child is a full-width group wrapping sections, not a bare section.
+    for component in components:
+        assert component["type"] == "default"
+        assert "vj-section-group" in [cls["name"] for cls in component["classes"]]
+
+
+def test_assemble_grouping_preserves_section_order(runner, tmp_path, write_json):
+    """Sections must stay in order after grouping — no reshuffle across containers."""
+    for index in range(1, 14):
+        write_json(tmp_path / f"section-{index:02d}.json", _raw_section(f"s{index}", f"Section {index}"))
+    output_file = tmp_path / "home.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(tmp_path / "section-*.json"), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    components = json.loads(output_file.read_text())["components"]
+    flattened_ids = [
+        section["attributes"]["id"]
+        for container in components
+        for section in container["components"]
+    ]
+    assert flattened_ids == [f"s{index}" for index in range(1, 14)]
+
+
+def test_assemble_grouping_keeps_header_footer_wrappers_top_level(runner, tmp_path, write_json):
+    """Header/footer wrappers must stay top-level and unwrapped so Vanjaro expands them."""
+    for index in range(1, 14):
+        write_json(tmp_path / f"section-{index:02d}.json", _raw_section(f"s{index}", f"Section {index}"))
+    output_file = tmp_path / "home.json"
+
+    result = runner.invoke(
+        assemble_page,
+        [
+            "--sections", str(tmp_path / "section-*.json"),
+            "--output", str(output_file),
+            "--header-block-guid", "header-guid",
+            "--footer-block-guid", "footer-guid",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    components = json.loads(output_file.read_text())["components"]
+    assert 3 <= len(components) <= 9
+    assert components[0]["type"] == "globalblockwrapper"
+    assert components[0]["name"] == "Global: Header"
+    assert components[-1]["type"] == "globalblockwrapper"
+    assert components[-1]["name"] == "Global: Footer"
+    # The chrome wrappers are never nested inside a grouping wrapper.
+    for group in components[1:-1]:
+        assert group["type"] == "default"
+        assert not any(
+            child.get("type") == "globalblockwrapper" for child in group["components"]
+        )
+
+
+def test_assemble_leaves_small_page_ungrouped(runner, tmp_path, write_json):
+    """A page already within the 3-9 budget is written unchanged (idempotent-safe)."""
+    for index in range(1, 4):
+        write_json(tmp_path / f"section-{index}.json", _raw_section(f"s{index}", f"Section {index}"))
+    output_file = tmp_path / "home.json"
+
+    result = runner.invoke(
+        assemble_page,
+        ["--sections", str(tmp_path / "section-*.json"), "--output", str(output_file)],
+    )
+
+    assert result.exit_code == 0, result.output
+    components = json.loads(output_file.read_text())["components"]
+    assert [c["type"] for c in components] == ["section", "section", "section"]
+    assert [c["attributes"]["id"] for c in components] == ["s1", "s2", "s3"]
+
+
 # -- CLI: Mode A (raw component trees) --
 
 

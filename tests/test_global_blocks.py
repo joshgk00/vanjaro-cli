@@ -547,3 +547,137 @@ def test_truly_empty_footer_still_gets_placeholder():
     block = build_footer_block({})
 
     assert "no content captured" in str(block)
+
+
+# --- Fix A: default theme-style classes on _heading / _text ---
+
+import re
+
+_HEAD_STYLE = re.compile(r"\bhead-style-\d+\b")
+_PARA_STYLE = re.compile(r"\bparagraph-style-\d+\b")
+
+
+def _class_names(component: dict) -> list[str]:
+    return [c["name"] for c in component.get("classes", [])]
+
+
+def test_heading_default_carries_head_style_class():
+    from vanjaro_cli.migration.global_blocks import _heading
+
+    names = _class_names(_heading("Title", tag="h5"))
+
+    assert "vj-heading" in names
+    assert any(_HEAD_STYLE.fullmatch(n) for n in names)
+
+
+def test_heading_default_with_extra_classes_still_gets_style():
+    from vanjaro_cli.migration.global_blocks import _heading
+
+    names = _class_names(_heading("Title", tag="h5", extra_classes=["mb-3"]))
+
+    assert "mb-3" in names
+    assert any(_HEAD_STYLE.fullmatch(n) for n in names)
+
+
+def test_heading_does_not_double_add_explicit_head_style():
+    from vanjaro_cli.migration.global_blocks import _heading
+
+    names = _class_names(_heading("Title", tag="h5", extra_classes=["head-style-5", "mb-0"]))
+
+    assert [n for n in names if n.startswith("head-style-")] == ["head-style-5"]
+
+
+def test_text_default_carries_paragraph_style_class():
+    from vanjaro_cli.migration.global_blocks import _text
+
+    names = _class_names(_text("Body copy"))
+
+    assert "vj-text" in names
+    assert any(_PARA_STYLE.fullmatch(n) for n in names)
+
+
+def test_text_default_with_extra_classes_still_gets_style():
+    from vanjaro_cli.migration.global_blocks import _text
+
+    names = _class_names(_text("Copyright 2026", extra_classes=["d-inline", "me-3"]))
+
+    assert "d-inline" in names
+    assert any(_PARA_STYLE.fullmatch(n) for n in names)
+
+
+def test_text_does_not_double_add_explicit_paragraph_style():
+    from vanjaro_cli.migration.global_blocks import _text
+
+    names = _class_names(_text("Caption", extra_classes=["paragraph-style-2", "text-muted"]))
+
+    assert [n for n in names if n.startswith("paragraph-style-")] == ["paragraph-style-2"]
+
+
+def test_footer_headings_and_texts_all_theme_styled():
+    """Every .vj-heading / .vj-text a real footer emits must carry a style class."""
+    from vanjaro_cli.migration.global_blocks import build_footer_block
+
+    block = build_footer_block({
+        "headings": ["Services", "Company"],
+        "list_items": ["SEO", "Design", "About", "Careers"],
+        "paragraphs": ["We build sites."],
+        "copyright_text": "Copyright 2026",
+    })
+    rendered = str(block)
+
+    assert "head-style-" in rendered
+    assert "paragraph-style-" in rendered
+
+
+# --- Fix B: CSS-only hamburger for the static-nav header ---
+
+
+def test_static_nav_header_emits_toggle_input_and_label():
+    from vanjaro_cli.migration.global_blocks import build_header_block
+
+    block = build_header_block(
+        {"images": [{"src": "/logo.png", "alt": "Logo"}], "list_items": ["Home", "About"]},
+        static_nav=True,
+    )
+    rendered = str(block)
+
+    assert "kts-nav-toggle" in rendered
+    assert "'type': 'checkbox'" in rendered
+    assert "'for': 'kts-nav-toggle'" in rendered
+    assert "kts-nav-links" in rendered
+
+
+def test_static_nav_header_keeps_toggle_css_out_of_block_styles():
+    # The styleJSON store strips @media/combinator rules on save, so the toggle
+    # CSS must not ride in the block styles — it ships via portal.css instead.
+    from vanjaro_cli.migration.global_blocks import build_header_block
+    from vanjaro_cli.utils.grapesjs import render_styles
+
+    block = build_header_block(
+        {"images": [{"src": "/logo.png", "alt": "Logo"}], "list_items": ["Home", "About"]},
+        static_nav=True,
+    )
+    css = render_styles(block["styles"])
+
+    assert "kts-nav-toggle" not in css
+    assert "@media" not in css
+
+
+def test_nav_toggle_portal_css_has_media_query_and_combinator():
+    from vanjaro_cli.migration.global_blocks import NAV_TOGGLE_PORTAL_CSS
+
+    assert "@media (max-width: 992px)" in NAV_TOGGLE_PORTAL_CSS
+    assert "#kts-nav-toggle:checked ~ .kts-nav-links" in NAV_TOGGLE_PORTAL_CSS
+    assert ".kts-nav-toggle { display: none; }" in NAV_TOGGLE_PORTAL_CSS
+
+
+def test_menu_nav_header_has_no_hamburger():
+    from vanjaro_cli.migration.global_blocks import build_header_block
+
+    block = build_header_block(
+        {"images": [{"src": "/logo.png", "alt": "Logo"}], "list_items": ["Home", "About"]},
+        static_nav=False,
+    )
+    rendered = str(block)
+
+    assert "kts-nav-toggle" not in rendered
