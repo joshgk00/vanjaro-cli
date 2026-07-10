@@ -83,6 +83,7 @@ vanjaro api-key generate
 
 Accept the design in any form:
 - **Screenshots/mockups** — read image files directly
+- **Figma URL** — inspect with `vanjaro figma inspect <url>` to list pages and page-like frames
 - **Live site URL** — fetch and analyze
 - **HTML mockups** — read and parse
 - **Written description** — the user describes what they want
@@ -121,6 +122,8 @@ Extract tokens from the design:
 1. Analyze the design for colors, fonts, weights, spacing, border radius
 2. Produce `artifacts/design-tokens.json`
 3. Note items for custom CSS in the `custom_css_needed` array
+
+When a Figma URL was provided, run `vanjaro figma tokens <url> [--node <frame>] -o artifacts/design-tokens.json --palette artifacts/theme-palette.json` for exact tokens, and `vanjaro figma export <url> [--node <frame>] -o artifacts/figma-assets` for original-resolution assets, instead of eyeballing the mockup. Review the emitted `custom_css_needed` notes and fill in font `import_url`s before applying controls.
 
 ### 2.2 Register Custom Fonts
 

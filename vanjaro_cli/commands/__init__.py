@@ -6,6 +6,7 @@ from vanjaro_cli.commands.branding_cmd import branding
 from vanjaro_cli.commands.build_cmd import build
 from vanjaro_cli.commands.content_cmd import content
 from vanjaro_cli.commands.custom_blocks_cmd import custom_blocks
+from vanjaro_cli.commands.figma_cmd import figma
 from vanjaro_cli.commands.global_blocks_cmd import global_blocks
 from vanjaro_cli.commands.modules_cmd import modules
 from vanjaro_cli.commands.pages_cmd import pages
@@ -42,4 +43,4 @@ except ImportError as _migrate_import_error:  # pragma: no cover - exercised via
         )
         context.exit(1)
 
-__all__ = ["api_key", "assets", "auth", "blocks", "branding", "build", "content", "custom_blocks", "global_blocks", "migrate", "modules", "pages", "profile", "site", "templates", "theme"]
+__all__ = ["api_key", "assets", "auth", "blocks", "branding", "build", "content", "custom_blocks", "figma", "global_blocks", "migrate", "modules", "pages", "profile", "site", "templates", "theme"]
