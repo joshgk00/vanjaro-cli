@@ -183,10 +183,12 @@ class FigmaClient:
         try:
             response = self._session.get(url, timeout=_REQUEST_TIMEOUT)
         except requests.RequestException as exc:
-            raise FigmaError(f"Download failed ({url}): {exc}") from exc
+            raise FigmaError(
+                f"Download failed: {exc.__class__.__name__}."
+            ) from exc
         if response.status_code != 200:
             raise FigmaError(
-                f"Download failed ({url}): HTTP {response.status_code}."
+                f"Download failed: HTTP {response.status_code}."
             )
         content = response.content
         dest.parent.mkdir(parents=True, exist_ok=True)

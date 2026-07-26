@@ -161,3 +161,15 @@ class TestFigmaClient:
         assert dest.read_bytes() == png_bytes
         assert size == len(png_bytes)
         assert content_type == "image/png"
+
+    @responses.activate
+    def test_download_error_never_leaks_signed_url(self, tmp_path) -> None:
+        signed = "https://s3.invalid/original.png?X-Amz-Signature=secret&Expires=60"
+        responses.add(responses.GET, signed, status=403)
+
+        with pytest.raises(FigmaError) as error:
+            make_client().download(signed, tmp_path / "image.png")
+
+        assert "X-Amz-Signature" not in str(error.value)
+        assert "secret" not in str(error.value)
+        assert "HTTP 403" in str(error.value)
