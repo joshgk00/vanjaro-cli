@@ -1,0 +1,254 @@
+# Visual Fidelity — Build Backlog
+
+This backlog turns `visual-fidelity-goal.md` into bounded implementation tasks.
+Task IDs are stable and should be referenced in subagent handoffs, tests, and
+review notes. The handoff template in `design-translation-v2-tasks.md` applies
+unchanged.
+
+## Wave 1 — VM1 make the loop measurable
+
+### VF-001 — Scorer contracts and regime versioning
+
+**Dependencies:** None
+
+**Acceptance criteria**
+
+- Typed per-section, per-breakpoint score result with a required
+  `regime_version` on every record.
+- Comparing or aggregating scores across regime versions raises rather than
+  silently averaging.
+- Serialization is deterministic and byte-identical on repeat runs.
+- Module is pure: no network, no filesystem, no model calls.
+
+**Tests:** determinism, cross-regime rejection, boundary scores 0 and 100.
+
+### VF-002 — Layout and geometry metric
+
+**Dependencies:** VF-001
+
+**Acceptance criteria**
+
+- Section bounding-box IoU against Design Document geometry.
+- Column count and section order compared per breakpoint.
+- Missing geometry yields an explicit unavailable value, never a default score.
+
+**Tests:** exact match, shifted, resized, reordered, and missing-geometry cases.
+
+### VF-003 — Colour metric
+
+**Dependencies:** VF-001
+
+**Acceptance criteria**
+
+- CIEDE2000 distance between dominant rendered colours and design tokens.
+- Background, text, and accent roles scored separately.
+- Implemented with the standard library; no new dependency.
+
+**Tests:** identical palette, single-slot drift, full-palette drift, greyscale.
+
+### VF-004 — Typography and spacing metric
+
+**Dependencies:** VF-001
+
+**Acceptance criteria**
+
+- Font family match, size ratio against the design type scale, and weight.
+- Section padding and inter-element rhythm compared to design observations.
+- A refused font substitution scores as unavailable, not as a failure.
+
+**Tests:** exact scale, compressed scale, substituted family, missing evidence.
+
+### VF-005 — Media and integrity metric
+
+**Dependencies:** VF-001
+
+**Acceptance criteria**
+
+- Image aspect ratio, focal point, and crop compared to the source asset.
+- Integrity checks for horizontal overflow, empty slots, placeholder leakage,
+  and console errors.
+- Any placeholder leakage forces the section score to zero.
+
+**Tests:** correct crop, wrong focal point, overflow, leaked placeholder.
+
+### VF-006 — Three-breakpoint capture hook
+
+**Dependencies:** VF-001
+
+**Acceptance criteria**
+
+- Satisfies the gate's `CaptureHook` at the canonical 1440/768/390 viewports.
+- Triggers lazy load, settles fonts, and disables animation before capture.
+- Partial viewport failure preserves successful captures and warns.
+- Reuses the existing visual harness rather than adding a second one.
+
+**Tests:** settle evidence, partial failure, viewport completeness.
+
+### VF-007 — Wire the gate into `project verify`
+
+**Dependencies:** VF-002 through VF-006
+
+**Acceptance criteria**
+
+- `run_visual_quality_gate` executes in the verify stage with the deterministic
+  scorer as `score_hook`.
+- Scores, section aggregates, and failures are written into
+  `draft-verification.json` alongside existing coverage and blocker fields.
+- Draft thresholds block approval; the stage engine invalidates downstream
+  state when scores change.
+- A deliberately degraded build fails the gate.
+
+**Tests:** passing build, degraded build, missing captures, schema round-trip.
+
+### VF-008 — Establish the regime-1 corpus baseline
+
+**Dependencies:** VF-007
+
+**Acceptance criteria**
+
+- Every corpus site is built and scored once under frozen regime 1.
+- Baseline is committed as machine-readable evidence with per-site and
+  per-section detail.
+- Re-running reproduces the baseline exactly.
+- Requires the dedicated per-site portals; a shared portal invalidates the run.
+
+**Tests:** reproducibility check against the committed baseline.
+
+## Wave 2 — VM2 make the loop self-directing
+
+### VF-101 — Vision reviewer emitting findings
+
+**Dependencies:** VF-006
+
+**Acceptance criteria**
+
+- Emits existing `ReportFinding` records with category, severity, section,
+  breakpoint, `PipelineStage`, and probable source file.
+- Output never contributes to the primary score.
+- Provider failure degrades to zero findings with a warning, never a score change.
+
+**Tests:** finding shape, stage attribution, provider failure isolation.
+
+### VF-102 — Corpus finding ledger
+
+**Dependencies:** VF-008, VF-101
+
+**Acceptance criteria**
+
+- Aggregates findings and Layer 1 deficits across every corpus site.
+- Clusters by root cause, retaining every contributing site and section.
+- Ledger is deterministic given fixed inputs.
+
+**Tests:** clustering, multi-site aggregation, determinism.
+
+### VF-103 — Value ranking and `fidelity rank` command
+
+**Dependencies:** VF-102
+
+**Acceptance criteria**
+
+- Ranks clusters by sites, sections, severity, and breakpoint weight over
+  estimated effort, with mobile weighted above desktop.
+- Regenerates from current evidence on every invocation.
+- Emits JSON and human-readable output; blocked clusters carry their evidence.
+
+**Tests:** ranking order, mobile weighting, stale-evidence regeneration.
+
+**Milestone acceptance:** the ranked queue independently surfaces theme,
+responsive, and navigation as the top clusters. If it does not, the ledger is
+correct and the manual analysis was wrong.
+
+## Wave 3 — VM3 close the top-ranked gaps
+
+Ordered by the ledger, not by this document. Expected order below.
+
+### VF-201 — Apply theme translation under approval
+
+**Acceptance criteria**
+
+- Theme apply is an approved, fingerprinted stage with before-state snapshot
+  and rollback.
+- Only planned slots change; unavailable fonts are still refused.
+- Failure restores the prior theme exactly.
+
+**Tests:** apply, rollback, partial failure, refused substitution.
+
+### VF-202 — Token fidelity metric in the benchmark
+
+**Dependencies:** VF-201, VF-003, VF-004
+
+**Acceptance criteria**
+
+- Colour and typography fidelity join the offline benchmark metric set with
+  documented thresholds and regression detection.
+
+### VF-203 — Rendered responsive deltas
+
+**Acceptance criteria**
+
+- Focal point, background sizing, alignment, and width collapse captured per
+  breakpoint from rendered HTML.
+- `responsive_observation_coverage` reaches 1.00 for HTML corpus cases.
+
+### VF-204 — Figma responsive pairing deltas
+
+**Acceptance criteria**
+
+- Desktop/mobile frame pairing emits the same property families as VF-203.
+- Inferred values stay labelled distinctly from observed values.
+- `responsive_observation_coverage` reaches 1.00 across the corpus.
+
+### VF-205 — Navigation template family
+
+**Acceptance criteria**
+
+- Two or more navbar templates with full capability manifests and physical
+  slot contracts.
+- Desktop layout and native mobile collapse are declared responsive behaviour.
+
+### VF-206 — Retire the bespoke header composer
+
+**Dependencies:** VF-205
+
+**Acceptance criteria**
+
+- Headers are selected through normal matching against navigation templates.
+- The bespoke composer is removed, not left in parallel.
+- Existing header behaviour and accessibility fallbacks are preserved.
+
+### VF-207 — Re-baseline the matcher
+
+**Dependencies:** VF-205, VF-206
+
+**Acceptance criteria**
+
+- `northstar.nav` resolves to a navigation template.
+- Top-1 >= 0.90 and top-3 >= 0.97 across the corpus.
+
+## Wave 4 — VM4 prove sustained improvement
+
+### VF-301 — Autonomous loop runner
+
+**Dependencies:** VF-103
+
+**Acceptance criteria**
+
+- Executes the loop defined in the goal document: rank, fix, test, rebuild,
+  re-score, accept or revert, commit evidence.
+- Rejects any change that raises the target site while lowering the corpus mean.
+- Holds the control site out of the fix loop and reports its score every run.
+- Honours every prohibition in VF-5; a failure to reproduce the prior baseline
+  halts the loop as a measurement fault.
+
+**Tests:** accept path, revert path, control regression, baseline mismatch halt.
+
+### VF-302 — Convergence run and release evidence
+
+**Dependencies:** All tasks
+
+**Acceptance criteria**
+
+- All goal success measures demonstrated under one unchanged regime version.
+- Regime-1 baseline and final corpus scores committed as release evidence.
+- Full non-integration suite and offline benchmark pass.
+- No secrets in artefacts; `git diff --check` passes.
