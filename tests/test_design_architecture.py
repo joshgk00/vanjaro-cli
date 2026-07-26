@@ -151,3 +151,27 @@ def test_agency_library_governance_is_independent_of_cli_portal_and_projects() -
             if imported.startswith(forbidden_prefixes)
         }
         assert not offending, f"{module}: {sorted(offending)}"
+
+
+def test_fidelity_scoring_is_pure() -> None:
+    """The authoritative score must not depend on I/O or a model provider.
+
+    VF-1 requires the primary score be reproducible from measured evidence
+    alone. Reaching the network, the filesystem, or an evidence provider would
+    make a rerun able to return a different number for unchanged input.
+    """
+
+    forbidden = {
+        "requests",
+        "pathlib",
+        "os",
+        "subprocess",
+        "vanjaro_cli.client",
+        "vanjaro_cli.config",
+        "vanjaro_cli.evidence",
+        "vanjaro_cli.evidence.openai_provider",
+        "vanjaro_cli.portal",
+    }
+
+    imported = _imports(DESIGN_ROOT / "fidelity.py")
+    assert imported.isdisjoint(forbidden), sorted(imported & forbidden)

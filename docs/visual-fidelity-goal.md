@@ -261,3 +261,31 @@ offline benchmark passes with no threshold or regression failures.
 Observed, not fixed: `migrate benchmark` fails with a Windows file-exists error
 when `--output` points at an existing report path. There is no `--force`. Worth
 a separate task.
+
+### 2026-07-26 — VF-001 scorer contracts and regime versioning
+
+- Added `design/fidelity.py` (360 lines) with `DimensionScore`,
+  `SectionFidelityScore`, `BreakpointFidelityScore`, and `FidelityReport`.
+  Every record carries `regime_version`; `CURRENT_REGIME_VERSION` is 1.
+- Weights live in one typed location, `DIMENSION_WEIGHTS`, covering layout,
+  colour, typography, media, spacing, and integrity, and summing to 1.0.
+  Changing any weight changes the meaning of every score and requires a regime
+  bump plus a full re-baseline in the same commit.
+- Combining regimes raises. `aggregate_breakpoint` and `build_fidelity_report`
+  raise `RegimeMismatchError` directly; direct model construction surfaces the
+  same refusal through pydantic's `ValidationError`.
+- An unmeasured dimension is excluded from the weighted mean rather than scored
+  zero, so missing evidence cannot look like a poor build. Remaining weights are
+  renormalized. A section with nothing measurable reports `score is None` and
+  `require_score()` raises.
+- `to_viewport_visual_score` bridges to the existing gate `ScoreHook` contract
+  and refuses to pass an unmeasured section through, so absent evidence can
+  never be presented to the gate as a passing score.
+- Added a `forces_zero` flag with a mandatory detail, the contract hook VF-005
+  needs so placeholder leakage can invalidate a section outright.
+- Determinism is covered by repeated-serialization, input-order, and canonical
+  breakpoint-order tests. Purity is enforced by a new architecture test
+  forbidding network, filesystem, and evidence-provider imports.
+
+Verification: 1,567 non-integration tests pass, up from 1,542. The five-case
+offline benchmark passes with no threshold or regression failures.
