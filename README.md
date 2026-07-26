@@ -1,6 +1,7 @@
 # vanjaro-cli
 
-CLI tool for managing Vanjaro/DNN websites from Claude Code (or any terminal).
+CLI and resumable agency workflow for building and managing Vanjaro/DNN sites
+from live HTML, Figma designs, and reference images.
 
 ## Install
 
@@ -63,6 +64,58 @@ vanjaro content publish PAGE_ID
 
 Every command supports `--json` for structured output — ideal for scripting and Claude Code.
 
+### Agency projects
+
+```bash
+# Initialize a project from a live site, Figma file, or reference images.
+vanjaro project init artifacts/projects/example \
+  --name "Example Client" \
+  --target-profile example-client \
+  --source live_html=https://example.com/
+
+# Inspect, analyze, plan, and preview the resumable workflow.
+vanjaro project status artifacts/projects/example
+vanjaro project analyze artifacts/projects/example
+vanjaro project plan artifacts/projects/example
+vanjaro project build artifacts/projects/example --through verify --dry-run
+```
+
+Image projects declare page, breakpoint, and viewport ownership. Automatic
+evidence generation is explicit and supports a credential-free dry run:
+
+```bash
+vanjaro project evidence generate artifacts/projects/image-example --dry-run
+vanjaro project evidence generate artifacts/projects/image-example --by "Agency Operator"
+```
+
+Generated sidecars are bound to the exact raster SHA-256 and are reviewed by
+the normal `project analyze` and planning gates. Existing sidecars are retained
+unless `--overwrite` is supplied; overwrites are snapshotted under
+`history/evidence`.
+
+Shared agency libraries are immutable named/versioned packs. Review an upgrade
+without changing the project or portal:
+
+```bash
+vanjaro project pack upgrade artifacts/projects/example \
+  --to-version 1.1.0 --dry-run --json
+```
+
+Pack manifests independently lock template and modifier payload versions and
+hashes. Compatibility reports fail closed when project usage, migration rules,
+or used contract ownership cannot be proven.
+
+Apply only the exact report that was reviewed:
+
+```bash
+vanjaro project pack upgrade artifacts/projects/example \
+  --to-version 1.1.0 --apply \
+  --accept-fingerprint <dry-run-fingerprint> --by <reviewer> --json
+```
+
+This transaction is offline: it snapshots the project, replans against the
+attested target catalog, invalidates stale approvals, and never calls a portal.
+
 ## Configuration
 
 Config is stored in `~/.vanjaro-cli/config.json`. Environment variables override file values:
@@ -74,6 +127,10 @@ Config is stored in `~/.vanjaro-cli/config.json`. Environment variables override
 | `VANJARO_PASSWORD` | DNN password |
 | `VANJARO_TOKEN` | Override stored JWT |
 | `VANJARO_PORTAL_ID` | Portal ID for multi-site (default: 0) |
+| `FIGMA_ACCESS_TOKEN` | Figma REST token for Figma source acquisition |
+| `OPENAI_API_KEY` | OpenAI key used only for explicit image evidence generation |
+| `VANJARO_IMAGE_EVIDENCE_MODEL` | Optional vision model override (default: `gpt-5.4`) |
+| `VANJARO_AGENCY_PACKS_DIR` | Optional versioned agency-pack registry override |
 
 Copy `.env.example` to `.env` for local development.
 
