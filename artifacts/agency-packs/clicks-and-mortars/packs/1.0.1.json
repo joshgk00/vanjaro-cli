@@ -1,0 +1,27 @@
+{
+  "modifiers": {
+    "path": "modifiers/1.0.0.json",
+    "sha256": "331b7c14af6ae87ac9d04a6559ff9ae3ed4c252a21be80c6fa5159c1f720f087",
+    "version": "1.0.0"
+  },
+  "name": "clicks-and-mortars",
+  "schema_version": "1.0",
+  "templates": {
+    "path": "templates/1.0.0.json",
+    "sha256": "c4e1316345e4c275ae9fb99312a3c2014de1ce39781a547b6a2d8685f42c8a73",
+    "version": "1.0.0"
+  },
+  "upgrade_rules": [
+    {
+      "compatible_modifier_changes": [],
+      "compatible_template_changes": [],
+      "from_version": "1.0.0",
+      "modifier_replacements": {},
+      "notes": [
+        "Adds immutable registry and compatibility governance without changing executable content."
+      ],
+      "template_replacements": {}
+    }
+  ],
+  "version": "1.0.1"
+}

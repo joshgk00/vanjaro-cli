@@ -1,0 +1,78 @@
+{
+  "modifiers": [
+    {
+      "contract_sha256": "84f8d6b5ca55a74f1bb6fa26b7f1276d7450a220a896b8042dce305c51f33535",
+      "modifier_id": "accent-color"
+    },
+    {
+      "contract_sha256": "fa550942588ece4d2751f127d0d6a2d87002686eb6d7dc9f54794f0972065360",
+      "modifier_id": "background-image"
+    },
+    {
+      "contract_sha256": "5174500c595b0d9d60213b7decd7f5c8e7c10c47067913874aa13f1e7e24af36",
+      "modifier_id": "background-overlay"
+    },
+    {
+      "contract_sha256": "ad1f9caba9eb82d8cb00b1a68b41e2257dfcf12e73fee5e36b87a8a35a69fb3d",
+      "modifier_id": "band-angle"
+    },
+    {
+      "contract_sha256": "9bbe7d4a8e3cad970060adbce85bd42431f1394531ef2139309b500bcfbaf44a",
+      "modifier_id": "band-color"
+    },
+    {
+      "contract_sha256": "179732283566d8d6d8192eb095bc0199456874bc62961e128deda37fc9c9d24d",
+      "modifier_id": "button-style"
+    },
+    {
+      "contract_sha256": "c7fab2b098f8ec6d98f7b66da0a7b082277232ae40755a7a9d00e0b576b610c1",
+      "modifier_id": "card-radius"
+    },
+    {
+      "contract_sha256": "a17faff716e2a3161d3499a3bf402b5a8fe37a43aa448cf6085d0257111e1701",
+      "modifier_id": "card-shadow"
+    },
+    {
+      "contract_sha256": "21bd19f53732bf97cb7f697e2c55c3bec6ab7df5fc2c5fb7d6552cd71a014b1e",
+      "modifier_id": "column-gap"
+    },
+    {
+      "contract_sha256": "1dce32f54029e7002896aa5203d9878aa43f65a25edccd7ab182d3d4d5257f6f",
+      "modifier_id": "content-width"
+    },
+    {
+      "contract_sha256": "a243506d6e4764520f61bb55adeb0b09f18a3c3b6a1ac474ac692713ac7c57b2",
+      "modifier_id": "divider"
+    },
+    {
+      "contract_sha256": "67f3b16605b99ed8860cb4f5029f625697eb4a8ee7b09394111ad9ce709ce710",
+      "modifier_id": "image-focal-point"
+    },
+    {
+      "contract_sha256": "0d1429a7c0ee07477e49e7a82a44771fcee697fbceea2744f9068101b464a403",
+      "modifier_id": "image-radius"
+    },
+    {
+      "contract_sha256": "fe267705dc9216262cb054c6fad366c79f527342d5e439e0ab73101a4a46b3b1",
+      "modifier_id": "marquee-speed"
+    },
+    {
+      "contract_sha256": "6afe0fbbe5b22375229695befe61f3077f3e643dd48e673a5d658e45f6c7192e",
+      "modifier_id": "media-aspect"
+    },
+    {
+      "contract_sha256": "6fa023e9f86a2193d55e9ccee0a9129e73542f2a6fd1f28ff3fd8465036760c4",
+      "modifier_id": "reverse-layout"
+    },
+    {
+      "contract_sha256": "32bdd36d373ae0cd826c99ab58dbfb1ed075bd9b1575902b70b10dc9d29b3620",
+      "modifier_id": "spacing"
+    },
+    {
+      "contract_sha256": "3748e52cc4eedfda33e15338e36cf6f31ed7866764d7d5c41b27951bb9a2982f",
+      "modifier_id": "text-alignment"
+    }
+  ],
+  "schema_version": "1.0",
+  "version": "1.0.0"
+}

@@ -1,0 +1,152 @@
+{
+  "capability_schema_version": "1.0",
+  "schema_version": "1.0",
+  "templates": [
+    {
+      "capability_sha256": "229269c54f7643b01d2b34649b35291d39dc4c73a42dd4934e34517bf00d19d9",
+      "template_id": "Cards/blog-post-cards-3up",
+      "template_sha256": "d1887fa5e06aed54802ac4ebb0f50040798440d04ad88ba7f8c9d05ee2b633c0"
+    },
+    {
+      "capability_sha256": "6df32ebb0806cbe430d072d659015bd6a2be176e8f6b8abb61d6722197759e59",
+      "template_id": "Cards/blog-post-cards-4up",
+      "template_sha256": "75259bc497c84ff62ab69482683665d4d5d4d16b2470506de1da80c4d54fa764"
+    },
+    {
+      "capability_sha256": "96e926925db0ff52044cf47f38ceb6e550737ac3cdd1748b0ebe199c66c19275",
+      "template_id": "Cards/class-photo-cards-4up",
+      "template_sha256": "9f84fac9865d7cda91936d24873a86d381af05c17b885b145a6522e3c5d79192"
+    },
+    {
+      "capability_sha256": "a2339a7ca9a6c980f1f7f21732bf90b7d019ed74339872aba577e8f82742ea4e",
+      "template_id": "Cards/feature-cards-3up",
+      "template_sha256": "846f4c5980127d727e0bfaedaebbd056399016a84db290ce1068e1daf855420d"
+    },
+    {
+      "capability_sha256": "331dba5d85737508b318dbff2619195257c571ab6a98725f74850077b621ac8f",
+      "template_id": "Cards/feature-cards-4up",
+      "template_sha256": "0957e8c534265681379dd0144650c2f49f93c7ce11b2d8cf6c223a1144b1ba5b"
+    },
+    {
+      "capability_sha256": "01a463809e21032f6c94c378e1e6b94a8e1091649fa333af6574380952c386da",
+      "template_id": "Cards/gallery-3up",
+      "template_sha256": "10bae19b528fbbd822412b2528130c004d393e54353cf9e389a560d73b5562db"
+    },
+    {
+      "capability_sha256": "702bbeab8c55a5d6d8f99f2eea2bdde3efd7fa8f556f93c18d5f315a61036307",
+      "template_id": "Cards/gallery-6up",
+      "template_sha256": "67d6c1dd5391f79046e04a595a0e29902f8d56aa42822a70706cb2f8e4352527"
+    },
+    {
+      "capability_sha256": "f9138e65fe897f4d51610184d544b8d0d6a2c71518493cac957dc9f0714e6d98",
+      "template_id": "Cards/pricing-cards-3up",
+      "template_sha256": "9cf186ba6273923f815bd8769c287ebea9e558ad32377c48df3253fe05151bfc"
+    },
+    {
+      "capability_sha256": "838753ed290480b98cf6eb3f6bf8c89488337853919e42c0a3e5f5c9d0576257",
+      "template_id": "Cards/team-member-grid-4up",
+      "template_sha256": "fc68906300165f96deec8a80b11ceba28718d74d89b9ffd0aec7c1e398f37807"
+    },
+    {
+      "capability_sha256": "13f8eacbf074fede2bdc50c60ea6f927711ab8fcc6c068f2b6b7adf0630583d9",
+      "template_id": "Cards/testimonial-cards-3up",
+      "template_sha256": "9a673fabe138e1226b8e6296b81272127f16d8144c51a41c9a25cd0bb43c2fd2"
+    },
+    {
+      "capability_sha256": "b2f506f4756a292ced8c9fcae8b20a2deff32a4067f504e6d57e93ab4ccb8535",
+      "template_id": "Content/bio-about",
+      "template_sha256": "7d79a556a1c8d96d38f1b4ca2e97b2525bb6d41868a1a7e6c6b8bd2deb7ee045"
+    },
+    {
+      "capability_sha256": "b12dcc55d0af44cb56ac95afcba12f53faef9f79bfb66da195dfc643c275d16a",
+      "template_id": "Content/contact-section",
+      "template_sha256": "89b9eb3b275eb0a33282969148f0fa31ebb4686d56a6eb54c6c3dec2a8deccf7"
+    },
+    {
+      "capability_sha256": "21593950b682f1c0daa10c1a2c32173c16275838318bd411928218fa4cbad3a7",
+      "template_id": "Content/faq-accordion",
+      "template_sha256": "a6b51e8942dc93f95a17bb50845425f51a30e83ca5021aca03e1cd8ffdbbf9c7"
+    },
+    {
+      "capability_sha256": "baca4f24f46f44df93829f0ed3a7e410db6c5863162d1ed5033ee37676ecd918",
+      "template_id": "Content/logo-bar",
+      "template_sha256": "9b2870cd7f919d14d908b73d58d8d15c532f2e49178306fa1d60624a37d45477"
+    },
+    {
+      "capability_sha256": "32cb0d4578689cf65755e02f3e29a2b446a60a88e12942064d5c28dac9ab0b2d",
+      "template_id": "Content/ribbon-marquee",
+      "template_sha256": "8ecd2b5f08b41ebb4b973776e991cd7b7475a4a669c88d58333756875a3ff95c"
+    },
+    {
+      "capability_sha256": "702558bb34bf31936b68d5b0067b860c4b1f8a642461b0506e03ec219ab57d7d",
+      "template_id": "Content/rich-text",
+      "template_sha256": "89d953a73d0ffa0f2f8356c9bfd69500b8991e5194e19a2ac3780ac5f7b2e69a"
+    },
+    {
+      "capability_sha256": "30c287db936249fbecf73c5098855f06221395287135cfcf53a7d4f5d8a5fe2f",
+      "template_id": "Content/split-media-reverse",
+      "template_sha256": "7d6a7c7cc69aecb96ba324e7a1848df7f0daf9ba3e6ff4123ed8ebfec9e55cab"
+    },
+    {
+      "capability_sha256": "596e5dbd8b3f40011c3611ee09e013a4c5df85f2eb7ab201fd5df824415c86b0",
+      "template_id": "Content/split-media",
+      "template_sha256": "f45d0dab5a5a06b3dc04d357d102eca47a2c03878d09e76f2887cf4ba7bcc112"
+    },
+    {
+      "capability_sha256": "e3f887924806557ac5cc81e84b279831b41ad4769bf53012c3c4f5a5de69e353",
+      "template_id": "Content/stats-band-3up",
+      "template_sha256": "d63aed7a6b716a28d9bef5dff9a324a1f9aa73eba3175a138122b5db5ca407cb"
+    },
+    {
+      "capability_sha256": "8a93378aba86702ab1dfe9766248537d8f72d0d6ffae0dce694d5b6e66d7d450",
+      "template_id": "Content/stats-grid-4up",
+      "template_sha256": "2b9f75039428a0b94e2f4a940c18e0b29d5348ebcb874664fc5d5bff7e24329d"
+    },
+    {
+      "capability_sha256": "61f4378630e586825ede1c4c6b42a5574255932a62ec30beeb9928958dd9a7f8",
+      "template_id": "Content/video-feature",
+      "template_sha256": "6f705a615f79dc85c0aeb4a38dabe910af5f5603e0f65b60857d62f9b17a3af5"
+    },
+    {
+      "capability_sha256": "218e8ba2164a1ea663cc2c6def03009937f0dd5b25ec3b5a2c0483a34e1076b9",
+      "template_id": "CTAs/cta-banner",
+      "template_sha256": "ab59b1aa5efcd2cecf5f5f7889483d0e53af2edccda4b2407f73f817529d83c4"
+    },
+    {
+      "capability_sha256": "8671226919cb1f7d6da2e4466e9717c792cfc7efb49099e2dc7c8478fe7b6141",
+      "template_id": "CTAs/cta-split",
+      "template_sha256": "320aca6bf3a76b2dfa603894a3079f9e0ecc283faa7aef0398215aeb17fe2c2c"
+    },
+    {
+      "capability_sha256": "9f4256f3b758ef474fb8c83277648766b88ed7028b3b60fdd6a0ba77ac8cd752",
+      "template_id": "Heroes/centered-hero",
+      "template_sha256": "ee35a3b9b4a5b7a46c7e5e4008764638af5f94cb6a1b0b6ee438bea943475145"
+    },
+    {
+      "capability_sha256": "f2daf7a31e1ab5288baf0463aa12ba1943a2b7208adcefb2032dbe58318afb4b",
+      "template_id": "Heroes/photo-band",
+      "template_sha256": "3ac7c9c81163b06fc264a33fdd109918d1329c9bfcebbf792333e91ffff293f4"
+    },
+    {
+      "capability_sha256": "9635a4b43a55347e445566e0fe3bae73054b2c5248e2a621ed739b22ecd68220",
+      "template_id": "Heroes/split-hero",
+      "template_sha256": "52782e22183f37b2332705717e46ba57b3e58b90cf67a3b56614454b351dc963"
+    },
+    {
+      "capability_sha256": "fed2c87b4dfd725f85be7cc131ed80a67a706d1fbf5fed8329be8de3cb07c6db",
+      "template_id": "Lists/icon-feature-list",
+      "template_sha256": "734aad3fb0982154232c51eaacbc11567e58ea99733135d65f0cb499f49fd68a"
+    },
+    {
+      "capability_sha256": "f4f28f879665d83c993ef11139b8d771ebebae405a5c19f888005522d054df41",
+      "template_id": "Navigation/footer-3col",
+      "template_sha256": "67ca3e27e113a2bd17ba1679244745baa3d157c55e9a2aa65f4be6270f990553"
+    },
+    {
+      "capability_sha256": "4fda3aee3a5f6f782964a0859d24861f236a33ab2d92be993cef4498ccbd6a9b",
+      "template_id": "Navigation/footer-4col",
+      "template_sha256": "3876a4b668af8ccfdbd45f9ee144202731fdd77705ede81a1b20b013172d733b"
+    }
+  ],
+  "version": "1.0.0"
+}
