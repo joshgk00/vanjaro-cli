@@ -1,0 +1,631 @@
+{
+  "$defs": {
+    "BlockType": {
+      "enum": [
+        "custom",
+        "global"
+      ],
+      "title": "BlockType",
+      "type": "string"
+    },
+    "BreakpointName": {
+      "description": "Canonical responsive breakpoint names.",
+      "enum": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "title": "BreakpointName",
+      "type": "string"
+    },
+    "CompositionPlanEntry": {
+      "additionalProperties": false,
+      "properties": {
+        "bindings": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/SemanticBinding"
+          },
+          "title": "Bindings",
+          "type": "array"
+        },
+        "block": {
+          "$ref": "#/$defs/PlanBlock"
+        },
+        "clear_slots": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Clear Slots",
+          "type": "array"
+        },
+        "css_scope": {
+          "anyOf": [
+            {
+              "pattern": "^\\.[a-z][a-z0-9-]*(?: \\.[a-z][a-z0-9-]*)+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Css Scope"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "match": {
+          "$ref": "#/$defs/PlanMatch"
+        },
+        "modifiers": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Modifiers",
+          "type": "array"
+        },
+        "override_audit": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/OverrideAudit"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "scoped_css": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Scoped Css",
+          "type": "object"
+        },
+        "simplifications": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/SimplificationDecision"
+          },
+          "title": "Simplifications",
+          "type": "array"
+        },
+        "source_section_id": {
+          "minLength": 1,
+          "title": "Source Section Id",
+          "type": "string"
+        },
+        "style_decisions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/StyleDecision"
+          },
+          "title": "Style Decisions",
+          "type": "array"
+        },
+        "template": {
+          "minLength": 1,
+          "title": "Template",
+          "type": "string"
+        },
+        "template_id": {
+          "minLength": 1,
+          "title": "Template Id",
+          "type": "string"
+        },
+        "warnings": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Warnings",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "source_section_id",
+        "template_id",
+        "template",
+        "match",
+        "block"
+      ],
+      "title": "CompositionPlanEntry",
+      "type": "object"
+    },
+    "EvidenceStatus": {
+      "description": "Whether evidence was directly observed or inferred.",
+      "enum": [
+        "observed",
+        "inferred"
+      ],
+      "title": "EvidenceStatus",
+      "type": "string"
+    },
+    "IssueSeverity": {
+      "enum": [
+        "low",
+        "medium",
+        "high"
+      ],
+      "title": "IssueSeverity",
+      "type": "string"
+    },
+    "MatchAlternative": {
+      "additionalProperties": false,
+      "properties": {
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        },
+        "template_id": {
+          "minLength": 1,
+          "title": "Template Id",
+          "type": "string"
+        },
+        "template_name": {
+          "minLength": 1,
+          "title": "Template Name",
+          "type": "string"
+        }
+      },
+      "required": [
+        "template_id",
+        "template_name",
+        "score",
+        "confidence"
+      ],
+      "title": "MatchAlternative",
+      "type": "object"
+    },
+    "OverrideAudit": {
+      "additionalProperties": false,
+      "properties": {
+        "author": {
+          "minLength": 1,
+          "title": "Author",
+          "type": "string"
+        },
+        "previous_candidates": {
+          "items": {
+            "$ref": "#/$defs/MatchAlternative"
+          },
+          "minItems": 1,
+          "title": "Previous Candidates",
+          "type": "array"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        }
+      },
+      "required": [
+        "author",
+        "reason",
+        "previous_candidates"
+      ],
+      "title": "OverrideAudit",
+      "type": "object"
+    },
+    "PlanBlock": {
+      "additionalProperties": false,
+      "properties": {
+        "category": {
+          "minLength": 1,
+          "title": "Category",
+          "type": "string"
+        },
+        "name": {
+          "minLength": 1,
+          "title": "Name",
+          "type": "string"
+        },
+        "type": {
+          "$ref": "#/$defs/BlockType",
+          "default": "custom"
+        }
+      },
+      "required": [
+        "name",
+        "category"
+      ],
+      "title": "PlanBlock",
+      "type": "object"
+    },
+    "PlanMatch": {
+      "additionalProperties": false,
+      "properties": {
+        "alternatives": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/MatchAlternative"
+          },
+          "title": "Alternatives",
+          "type": "array"
+        },
+        "blocking": {
+          "default": false,
+          "title": "Blocking",
+          "type": "boolean"
+        },
+        "confidence": {
+          "enum": [
+            "high",
+            "medium",
+            "low"
+          ],
+          "title": "Confidence",
+          "type": "string"
+        },
+        "reasons": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Reasons",
+          "type": "array"
+        },
+        "score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "score",
+        "confidence"
+      ],
+      "title": "PlanMatch",
+      "type": "object"
+    },
+    "PlanPolicy": {
+      "additionalProperties": false,
+      "properties": {
+        "allow_simplification": {
+          "default": false,
+          "title": "Allow Simplification",
+          "type": "boolean"
+        },
+        "css_rule_budget": {
+          "default": 12,
+          "minimum": 0,
+          "title": "Css Rule Budget",
+          "type": "integer"
+        },
+        "minimum_confidence": {
+          "default": 0.65,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Minimum Confidence",
+          "type": "number"
+        }
+      },
+      "title": "PlanPolicy",
+      "type": "object"
+    },
+    "PlanSummary": {
+      "additionalProperties": false,
+      "properties": {
+        "blocking_count": {
+          "minimum": 0,
+          "title": "Blocking Count",
+          "type": "integer"
+        },
+        "editable_content_coverage": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Editable Content Coverage",
+          "type": "number"
+        },
+        "native_component_ratio": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Native Component Ratio",
+          "type": "number"
+        },
+        "scoped_css_bytes": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Scoped Css Bytes",
+          "type": "integer"
+        },
+        "scoped_css_rule_count": {
+          "default": 0,
+          "minimum": 0,
+          "title": "Scoped Css Rule Count",
+          "type": "integer"
+        },
+        "section_count": {
+          "minimum": 0,
+          "title": "Section Count",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "section_count",
+        "blocking_count",
+        "native_component_ratio",
+        "editable_content_coverage"
+      ],
+      "title": "PlanSummary",
+      "type": "object"
+    },
+    "SemanticBinding": {
+      "additionalProperties": false,
+      "description": "One declared semantic field bound to one actual override slot.",
+      "properties": {
+        "editable": {
+          "default": true,
+          "title": "Editable",
+          "type": "boolean"
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "semantic_field": {
+          "minLength": 1,
+          "title": "Semantic Field",
+          "type": "string"
+        },
+        "slot": {
+          "pattern": "^[a-z][a-z0-9_-]*(?:_\\d+)?(?:_[a-z]+)?$",
+          "title": "Slot",
+          "type": "string"
+        },
+        "source_element_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Source Element Ids",
+          "type": "array"
+        },
+        "value": {
+          "title": "Value",
+          "type": "string"
+        }
+      },
+      "required": [
+        "semantic_field",
+        "slot",
+        "source_element_ids",
+        "value"
+      ],
+      "title": "SemanticBinding",
+      "type": "object"
+    },
+    "SimplificationDecision": {
+      "additionalProperties": false,
+      "properties": {
+        "classification": {
+          "$ref": "#/$defs/SimplificationKind"
+        },
+        "reason": {
+          "minLength": 1,
+          "title": "Reason",
+          "type": "string"
+        },
+        "severity": {
+          "$ref": "#/$defs/IssueSeverity"
+        },
+        "source_ids": {
+          "default": [],
+          "items": {
+            "type": "string"
+          },
+          "title": "Source Ids",
+          "type": "array"
+        },
+        "trait": {
+          "minLength": 1,
+          "title": "Trait",
+          "type": "string"
+        }
+      },
+      "required": [
+        "trait",
+        "classification",
+        "severity",
+        "reason"
+      ],
+      "title": "SimplificationDecision",
+      "type": "object"
+    },
+    "SimplificationKind": {
+      "enum": [
+        "omit",
+        "approximate",
+        "modifier",
+        "new_template",
+        "manual_module"
+      ],
+      "title": "SimplificationKind",
+      "type": "string"
+    },
+    "StyleDecision": {
+      "additionalProperties": false,
+      "description": "One explainable source-style translation decision.",
+      "properties": {
+        "breakpoint": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BreakpointName"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "distance": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "number"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Distance"
+        },
+        "evidence_status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "observed"
+        },
+        "layer": {
+          "$ref": "#/$defs/TranslationLayer"
+        },
+        "property": {
+          "$ref": "#/$defs/StyleProperty"
+        },
+        "reason": {
+          "title": "Reason",
+          "type": "string"
+        },
+        "source_value": {
+          "title": "Source Value",
+          "type": "string"
+        },
+        "target": {
+          "title": "Target",
+          "type": "string"
+        }
+      },
+      "required": [
+        "property",
+        "source_value",
+        "layer",
+        "target",
+        "confidence",
+        "reason"
+      ],
+      "title": "StyleDecision",
+      "type": "object"
+    },
+    "StyleProperty": {
+      "description": "Normalized style properties supported by Design Document v1.",
+      "enum": [
+        "background_color",
+        "background_image",
+        "background_position",
+        "text_color",
+        "font_family",
+        "font_size",
+        "font_weight",
+        "line_height",
+        "letter_spacing",
+        "width",
+        "height",
+        "min_height",
+        "max_width",
+        "margin",
+        "padding",
+        "row_gap",
+        "column_gap",
+        "text_align",
+        "item_align",
+        "border",
+        "border_radius",
+        "box_shadow",
+        "object_fit",
+        "object_position",
+        "position",
+        "overlap",
+        "transform",
+        "rotation",
+        "opacity",
+        "overlay_color",
+        "display",
+        "visibility",
+        "flex_direction",
+        "flex_wrap",
+        "order",
+        "column_count"
+      ],
+      "title": "StyleProperty",
+      "type": "string"
+    },
+    "TranslationLayer": {
+      "description": "Ordered maintenance layers used to represent a source property.",
+      "enum": [
+        "theme",
+        "platform_utility",
+        "template_modifier",
+        "agency_utility",
+        "scoped_css",
+        "manual"
+      ],
+      "title": "TranslationLayer",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "entries": {
+      "items": {
+        "$ref": "#/$defs/CompositionPlanEntry"
+      },
+      "title": "Entries",
+      "type": "array"
+    },
+    "policy": {
+      "$ref": "#/$defs/PlanPolicy"
+    },
+    "schema_version": {
+      "const": "2.0",
+      "default": "2.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source_document_id": {
+      "minLength": 1,
+      "title": "Source Document Id",
+      "type": "string"
+    },
+    "summary": {
+      "$ref": "#/$defs/PlanSummary"
+    }
+  },
+  "required": [
+    "source_document_id",
+    "entries",
+    "summary"
+  ],
+  "title": "CompositionPlan",
+  "type": "object"
+}
