@@ -1,7 +1,94 @@
 {
   "name": "Split Media",
   "category": "Content",
-  "description": "Two-column row with a rectangular image on the left and heading + text on the right",
+  "description": "Two-column row with media, heading, optional subtitle, supporting text, and action",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "split_media",
+      "image_text"
+    ],
+    "layout": {
+      "kind": "split",
+      "columns": [
+        2
+      ],
+      "media_positions": [
+        "left"
+      ],
+      "alignment": [
+        "left",
+        "center"
+      ]
+    },
+    "repeat_group": null,
+    "fields": {
+      "media": "required",
+      "title": "required",
+      "subtitle": "optional",
+      "body": "required",
+      "action": "optional"
+    },
+    "physical_fields": {
+      "media": {
+        "owner": "section",
+        "slot_type": "image",
+        "slots": [
+          "image_1_src"
+        ],
+        "slots_per_owner": 1
+      },
+      "title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "subtitle": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2"
+        ],
+        "slots_per_owner": 1
+      },
+      "body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "action": {
+        "owner": "section",
+        "slot_type": "button",
+        "slots": [
+          "button_1"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 2,
+      "tablet_columns": 2,
+      "mobile_columns": 1,
+      "stacking_order": "media-first"
+    },
+    "interactions": [],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "content-width",
+      "image-focal-point",
+      "image-radius",
+      "media-aspect",
+      "spacing",
+      "reverse-layout"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [
@@ -69,6 +156,17 @@
                     "attributes": {"id": "tpl-split-h1"}
                   },
                   {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "A supporting subtitle for this section",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-split-h2"}
+                  },
+                  {
                     "type": "text",
                     "content": "A paragraph describing this part of the page. Pair it with the image alongside to explain a feature, service, or idea.",
                     "classes": [
@@ -77,6 +175,18 @@
                       {"name": "mt-3", "active": false}
                     ],
                     "attributes": {"id": "tpl-split-t1"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Learn More",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-split-b1", "role": "button", "href": "#"}
                   }
                 ]
               }

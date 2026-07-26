@@ -2,6 +2,83 @@
   "name": "Stats Grid (4-up)",
   "category": "Content",
   "description": "Four-column stats display with large numbers and labels — for impact metrics, company stats, and achievements",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "stats",
+      "metrics_grid"
+    ],
+    "layout": {
+      "kind": "grid",
+      "columns": [
+        4
+      ],
+      "media_positions": [
+        "none"
+      ],
+      "alignment": [
+        "center"
+      ]
+    },
+    "repeat_group": {
+      "kind": "stat",
+      "minimum": 1,
+      "default": 4,
+      "maximum": 8,
+      "expandable": true
+    },
+    "fields": {
+      "section_title": "optional",
+      "item.value": "required",
+      "item.label": "required"
+    },
+    "physical_fields": {
+      "section_title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.value": {
+        "owner": "repeat_item",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2",
+          "heading_3",
+          "heading_4",
+          "heading_5"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.label": {
+        "owner": "repeat_item",
+        "slot_type": "text",
+        "slots": [
+          "text_1",
+          "text_2",
+          "text_3",
+          "text_4"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 4,
+      "tablet_columns": 4,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "accent-color",
+      "band-color",
+      "column-gap",
+      "spacing"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

@@ -2,6 +2,77 @@
   "name": "Icon Feature List",
   "category": "Lists",
   "description": "Vertical list of features, each with an icon, heading, and description text",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "feature_list",
+      "service_list"
+    ],
+    "layout": {
+      "kind": "list",
+      "columns": [
+        1
+      ],
+      "media_positions": [
+        "left",
+        "none"
+      ],
+      "alignment": [
+        "left"
+      ]
+    },
+    "repeat_group": {
+      "kind": "feature",
+      "minimum": 1,
+      "default": 3,
+      "maximum": 12,
+      "expandable": true
+    },
+    "fields": {
+      "item.title": "required",
+      "item.body": "optional"
+    },
+    "static_fields": [
+      "item.icon"
+    ],
+    "physical_fields": {
+      "item.title": {
+        "owner": "repeat_item",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1",
+          "heading_2",
+          "heading_3"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.body": {
+        "owner": "repeat_item",
+        "slot_type": "text",
+        "slots": [
+          "text_1",
+          "text_2",
+          "text_3"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 1,
+      "tablet_columns": 1,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "accent-color",
+      "band-color",
+      "content-width",
+      "divider",
+      "spacing"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [
@@ -48,7 +119,7 @@
                         "classes": [
                           {"name": "col-xl-2", "active": false},
                           {"name": "col-md-2", "active": false},
-                          {"name": "col-3", "active": false},
+                          {"name": "col-12", "active": false},
                           {"name": "text-center", "active": false}
                         ],
                         "attributes": {"id": "tpl-ifl-ic1"},
@@ -69,7 +140,7 @@
                         "classes": [
                           {"name": "col-xl-10", "active": false},
                           {"name": "col-md-10", "active": false},
-                          {"name": "col-9", "active": false}
+                          {"name": "col-12", "active": false}
                         ],
                         "attributes": {"id": "tpl-ifl-tc1"},
                         "components": [
@@ -111,7 +182,7 @@
                         "classes": [
                           {"name": "col-xl-2", "active": false},
                           {"name": "col-md-2", "active": false},
-                          {"name": "col-3", "active": false},
+                          {"name": "col-12", "active": false},
                           {"name": "text-center", "active": false}
                         ],
                         "attributes": {"id": "tpl-ifl-ic2"},
@@ -132,7 +203,7 @@
                         "classes": [
                           {"name": "col-xl-10", "active": false},
                           {"name": "col-md-10", "active": false},
-                          {"name": "col-9", "active": false}
+                          {"name": "col-12", "active": false}
                         ],
                         "attributes": {"id": "tpl-ifl-tc2"},
                         "components": [
@@ -174,7 +245,7 @@
                         "classes": [
                           {"name": "col-xl-2", "active": false},
                           {"name": "col-md-2", "active": false},
-                          {"name": "col-3", "active": false},
+                          {"name": "col-12", "active": false},
                           {"name": "text-center", "active": false}
                         ],
                         "attributes": {"id": "tpl-ifl-ic3"},
@@ -195,7 +266,7 @@
                         "classes": [
                           {"name": "col-xl-10", "active": false},
                           {"name": "col-md-10", "active": false},
-                          {"name": "col-9", "active": false}
+                          {"name": "col-12", "active": false}
                         ],
                         "attributes": {"id": "tpl-ifl-tc3"},
                         "components": [

@@ -1,0 +1,351 @@
+{
+  "$defs": {
+    "LayoutCapability": {
+      "additionalProperties": false,
+      "description": "Structural layouts a template can represent without composition changes.",
+      "properties": {
+        "alignment": {
+          "items": {
+            "enum": [
+              "left",
+              "center",
+              "right",
+              "mixed"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Alignment",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "columns": {
+          "items": {
+            "maximum": 12,
+            "minimum": 1,
+            "type": "integer"
+          },
+          "minItems": 1,
+          "title": "Columns",
+          "type": "array",
+          "uniqueItems": true
+        },
+        "kind": {
+          "enum": [
+            "single",
+            "split",
+            "grid",
+            "band",
+            "list",
+            "accordion",
+            "navigation"
+          ],
+          "title": "Kind",
+          "type": "string"
+        },
+        "media_positions": {
+          "items": {
+            "enum": [
+              "none",
+              "top",
+              "bottom",
+              "left",
+              "right",
+              "background",
+              "inline"
+            ],
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Media Positions",
+          "type": "array",
+          "uniqueItems": true
+        }
+      },
+      "required": [
+        "kind",
+        "columns",
+        "media_positions",
+        "alignment"
+      ],
+      "title": "LayoutCapability",
+      "type": "object"
+    },
+    "PhysicalFieldCapability": {
+      "additionalProperties": false,
+      "description": "Executable GrapesJS slots owned by one semantic capability field.",
+      "properties": {
+        "owner": {
+          "enum": [
+            "section",
+            "repeat_item"
+          ],
+          "title": "Owner",
+          "type": "string"
+        },
+        "slot_type": {
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "title": "Slot Type",
+          "type": "string"
+        },
+        "slots": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "title": "Slots",
+          "type": "array"
+        },
+        "slots_per_owner": {
+          "minimum": 1,
+          "title": "Slots Per Owner",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "owner",
+        "slot_type",
+        "slots",
+        "slots_per_owner"
+      ],
+      "title": "PhysicalFieldCapability",
+      "type": "object"
+    },
+    "RepeatGroupCapability": {
+      "additionalProperties": false,
+      "description": "Card/list-style repetition supported by a template.",
+      "properties": {
+        "default": {
+          "minimum": 1,
+          "title": "Default",
+          "type": "integer"
+        },
+        "expandable": {
+          "title": "Expandable",
+          "type": "boolean"
+        },
+        "kind": {
+          "minLength": 1,
+          "pattern": "^[a-z][a-z0-9_-]*$",
+          "title": "Kind",
+          "type": "string"
+        },
+        "maximum": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Maximum"
+        },
+        "minimum": {
+          "minimum": 1,
+          "title": "Minimum",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "minimum",
+        "default",
+        "expandable"
+      ],
+      "title": "RepeatGroupCapability",
+      "type": "object"
+    },
+    "ResponsiveCapability": {
+      "additionalProperties": false,
+      "description": "Canonical desktop, tablet, and mobile behavior.",
+      "properties": {
+        "desktop_columns": {
+          "maximum": 12,
+          "minimum": 1,
+          "title": "Desktop Columns",
+          "type": "integer"
+        },
+        "mobile_columns": {
+          "maximum": 12,
+          "minimum": 1,
+          "title": "Mobile Columns",
+          "type": "integer"
+        },
+        "stacking_order": {
+          "enum": [
+            "source",
+            "media-first",
+            "content-first",
+            "not-applicable"
+          ],
+          "title": "Stacking Order",
+          "type": "string"
+        },
+        "tablet_columns": {
+          "maximum": 12,
+          "minimum": 1,
+          "title": "Tablet Columns",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "desktop_columns",
+        "tablet_columns",
+        "mobile_columns",
+        "stacking_order"
+      ],
+      "title": "ResponsiveCapability",
+      "type": "object"
+    }
+  },
+  "$id": "https://clicksandmortars.com/schemas/template-capabilities-v1.1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "allOf": [
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "1.1"
+          }
+        }
+      },
+      "then": {
+        "required": [
+          "physical_fields"
+        ]
+      }
+    },
+    {
+      "if": {
+        "properties": {
+          "schema_version": {
+            "const": "1.0"
+          }
+        }
+      },
+      "then": {
+        "properties": {
+          "physical_fields": {
+            "maxProperties": 0
+          }
+        }
+      }
+    }
+  ],
+  "description": "Versioned matcher-facing capabilities embedded in a template.",
+  "properties": {
+    "fields": {
+      "minProperties": 1,
+      "patternProperties": {
+        "^[a-z][a-z0-9_.-]*$": {
+          "enum": [
+            "required",
+            "optional"
+          ],
+          "type": "string"
+        }
+      },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_.-]*$"
+      },
+      "title": "Fields",
+      "type": "object"
+    },
+    "interactions": {
+      "default": [],
+      "items": {
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "type": "string"
+      },
+      "title": "Interactions",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "layout": {
+      "$ref": "#/$defs/LayoutCapability"
+    },
+    "native_component_ratio": {
+      "maximum": 1.0,
+      "minimum": 0.0,
+      "title": "Native Component Ratio",
+      "type": "number"
+    },
+    "physical_fields": {
+      "patternProperties": {
+        "^[a-z][a-z0-9_.-]*$": {
+          "$ref": "#/$defs/PhysicalFieldCapability"
+        }
+      },
+      "propertyNames": {
+        "pattern": "^[a-z][a-z0-9_.-]*$"
+      },
+      "title": "Physical Fields",
+      "type": "object"
+    },
+    "repeat_group": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/RepeatGroupCapability"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "responsive": {
+      "$ref": "#/$defs/ResponsiveCapability"
+    },
+    "roles": {
+      "items": {
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "type": "string"
+      },
+      "minItems": 1,
+      "title": "Roles",
+      "type": "array",
+      "uniqueItems": true
+    },
+    "schema_version": {
+      "enum": [
+        "1.0",
+        "1.1"
+      ],
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "static_fields": {
+      "default": [],
+      "items": {
+        "pattern": "^[a-z][a-z0-9_.-]*$",
+        "type": "string"
+      },
+      "title": "Static Fields",
+      "type": "array"
+    },
+    "supported_modifiers": {
+      "default": [],
+      "items": {
+        "pattern": "^[a-z][a-z0-9_-]*$",
+        "type": "string"
+      },
+      "title": "Supported Modifiers",
+      "type": "array",
+      "uniqueItems": true
+    }
+  },
+  "required": [
+    "schema_version",
+    "roles",
+    "layout",
+    "fields",
+    "responsive",
+    "native_component_ratio"
+  ],
+  "title": "CapabilityManifest",
+  "type": "object"
+}

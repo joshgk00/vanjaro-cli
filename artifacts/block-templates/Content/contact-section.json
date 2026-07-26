@@ -2,6 +2,104 @@
   "name": "Contact Section",
   "category": "Content",
   "description": "Two-column contact section with info (address, phone, email) on the left and a call-to-action on the right",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "contact",
+      "contact_cta"
+    ],
+    "layout": {
+      "kind": "split",
+      "columns": [
+        2
+      ],
+      "media_positions": [
+        "none"
+      ],
+      "alignment": [
+        "left"
+      ]
+    },
+    "repeat_group": null,
+    "fields": {
+      "section_title": "required",
+      "section_body": "optional",
+      "contact_items": "optional",
+      "action_title": "optional",
+      "action_body": "optional",
+      "action": "optional"
+    },
+    "physical_fields": {
+      "section_title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "section_body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "contact_items": {
+        "owner": "section",
+        "slot_type": "list-item",
+        "slots": [
+          "list-item_1",
+          "list-item_2",
+          "list-item_3"
+        ],
+        "slots_per_owner": 3
+      },
+      "action_title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2"
+        ],
+        "slots_per_owner": 1
+      },
+      "action_body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_2"
+        ],
+        "slots_per_owner": 1
+      },
+      "action": {
+        "owner": "section",
+        "slot_type": "button",
+        "slots": [
+          "button_1"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 2,
+      "tablet_columns": 2,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "link"
+    ],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "button-style",
+      "content-width",
+      "spacing",
+      "text-alignment",
+      "column-gap"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

@@ -2,11 +2,72 @@
   "name": "Ribbon Marquee",
   "category": "Content",
   "description": "Full-width angled pink ribbon band that scrolls a single repeated phrase marquee-style",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "marquee",
+      "announcement_band"
+    ],
+    "layout": {
+      "kind": "band",
+      "columns": [
+        1
+      ],
+      "media_positions": [
+        "none"
+      ],
+      "alignment": [
+        "center"
+      ]
+    },
+    "repeat_group": {
+      "kind": "marquee_item",
+      "minimum": 1,
+      "default": 6,
+      "maximum": 20,
+      "expandable": true
+    },
+    "fields": {
+      "item.body": "required"
+    },
+    "physical_fields": {
+      "item.body": {
+        "owner": "repeat_item",
+        "slot_type": "text",
+        "slots": [
+          "text_1",
+          "text_2",
+          "text_3",
+          "text_4",
+          "text_5",
+          "text_6"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 1,
+      "tablet_columns": 1,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "marquee"
+    ],
+    "native_component_ratio": 0.9,
+    "supported_modifiers": [
+      "accent-color",
+      "band-angle",
+      "marquee-speed",
+      "spacing"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [
       {"name": "vj-section", "active": false},
       {"name": "kts-marquee", "active": false},
+      {"name": "bg-primary", "active": false},
       {"name": "py-3", "active": false}
     ],
     "attributes": {"id": "tpl-marq-s1"},
@@ -54,6 +115,8 @@
                           {"name": "fw-bold", "active": false},
                           {"name": "text-uppercase", "active": false},
                           {"name": "text-white", "active": false},
+                          {"name": "text-nowrap", "active": false},
+                          {"name": "flex-shrink-0", "active": false},
                           {"name": "me-5", "active": false}
                         ],
                         "attributes": {"id": "tpl-marq-p1"}
@@ -68,6 +131,8 @@
                           {"name": "fw-bold", "active": false},
                           {"name": "text-uppercase", "active": false},
                           {"name": "text-white", "active": false},
+                          {"name": "text-nowrap", "active": false},
+                          {"name": "flex-shrink-0", "active": false},
                           {"name": "me-5", "active": false}
                         ],
                         "attributes": {"id": "tpl-marq-p2"}
@@ -82,6 +147,8 @@
                           {"name": "fw-bold", "active": false},
                           {"name": "text-uppercase", "active": false},
                           {"name": "text-white", "active": false},
+                          {"name": "text-nowrap", "active": false},
+                          {"name": "flex-shrink-0", "active": false},
                           {"name": "me-5", "active": false}
                         ],
                         "attributes": {"id": "tpl-marq-p3"}
@@ -96,6 +163,8 @@
                           {"name": "fw-bold", "active": false},
                           {"name": "text-uppercase", "active": false},
                           {"name": "text-white", "active": false},
+                          {"name": "text-nowrap", "active": false},
+                          {"name": "flex-shrink-0", "active": false},
                           {"name": "me-5", "active": false}
                         ],
                         "attributes": {"id": "tpl-marq-p4"}
@@ -110,6 +179,8 @@
                           {"name": "fw-bold", "active": false},
                           {"name": "text-uppercase", "active": false},
                           {"name": "text-white", "active": false},
+                          {"name": "text-nowrap", "active": false},
+                          {"name": "flex-shrink-0", "active": false},
                           {"name": "me-5", "active": false}
                         ],
                         "attributes": {"id": "tpl-marq-p5"}
@@ -124,6 +195,8 @@
                           {"name": "fw-bold", "active": false},
                           {"name": "text-uppercase", "active": false},
                           {"name": "text-white", "active": false},
+                          {"name": "text-nowrap", "active": false},
+                          {"name": "flex-shrink-0", "active": false},
                           {"name": "me-5", "active": false}
                         ],
                         "attributes": {"id": "tpl-marq-p6"}

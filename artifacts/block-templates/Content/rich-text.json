@@ -2,6 +2,66 @@
   "name": "Rich Text Block",
   "category": "Content",
   "description": "Generic content section — heading plus paragraphs. Fallback template for sections with no specific layout.",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "rich_text",
+      "content"
+    ],
+    "layout": {
+      "kind": "single",
+      "columns": [
+        1
+      ],
+      "media_positions": [
+        "none"
+      ],
+      "alignment": [
+        "left",
+        "center"
+      ]
+    },
+    "repeat_group": null,
+    "fields": {
+      "title": "optional",
+      "body": "required"
+    },
+    "physical_fields": {
+      "title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1",
+          "text_2",
+          "text_3",
+          "text_4"
+        ],
+        "slots_per_owner": 4
+      }
+    },
+    "responsive": {
+      "desktop_columns": 1,
+      "tablet_columns": 1,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "content-width",
+      "spacing",
+      "text-alignment"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

@@ -2,6 +2,87 @@
   "name": "Split Hero",
   "category": "Heroes",
   "description": "Two-column hero with heading, subtext, and CTA on the left and an image on the right",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "hero",
+      "hero_split"
+    ],
+    "layout": {
+      "kind": "split",
+      "columns": [
+        2
+      ],
+      "media_positions": [
+        "right"
+      ],
+      "alignment": [
+        "left"
+      ]
+    },
+    "repeat_group": null,
+    "fields": {
+      "title": "required",
+      "body": "optional",
+      "action": "optional",
+      "media": "required"
+    },
+    "physical_fields": {
+      "title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "action": {
+        "owner": "section",
+        "slot_type": "button",
+        "slots": [
+          "button_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "media": {
+        "owner": "section",
+        "slot_type": "image",
+        "slots": [
+          "image_1_src"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 2,
+      "tablet_columns": 2,
+      "mobile_columns": 1,
+      "stacking_order": "content-first"
+    },
+    "interactions": [
+      "link"
+    ],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "content-width",
+      "image-focal-point",
+      "image-radius",
+      "media-aspect",
+      "spacing",
+      "background-overlay",
+      "button-style",
+      "reverse-layout"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

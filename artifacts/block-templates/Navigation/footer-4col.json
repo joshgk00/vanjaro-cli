@@ -2,6 +2,124 @@
   "name": "Footer (4-column)",
   "category": "Navigation",
   "description": "Four-column footer with brand/about, two link sections, and contact info",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "footer",
+      "footer_navigation"
+    ],
+    "layout": {
+      "kind": "navigation",
+      "columns": [
+        4
+      ],
+      "media_positions": [
+        "none"
+      ],
+      "alignment": [
+        "left"
+      ]
+    },
+    "repeat_group": {
+      "kind": "navigation_column",
+      "minimum": 1,
+      "default": 2,
+      "maximum": 2,
+      "expandable": false
+    },
+    "fields": {
+      "brand.title": "required",
+      "brand.body": "optional",
+      "column.title": "required",
+      "column.links": "required",
+      "contact_title": "required",
+      "contact_items": "optional"
+    },
+    "physical_fields": {
+      "brand.title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "brand.body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "column.title": {
+        "owner": "repeat_item",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2",
+          "heading_3"
+        ],
+        "slots_per_owner": 1
+      },
+      "column.links": {
+        "owner": "repeat_item",
+        "slot_type": "list-item",
+        "slots": [
+          "list-item_1",
+          "list-item_2",
+          "list-item_3",
+          "list-item_4",
+          "list-item_5",
+          "list-item_6",
+          "list-item_7",
+          "list-item_8",
+          "list-item_9",
+          "list-item_10",
+          "list-item_11",
+          "list-item_12"
+        ],
+        "slots_per_owner": 6
+      },
+      "contact_title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_4"
+        ],
+        "slots_per_owner": 1
+      },
+      "contact_items": {
+        "owner": "section",
+        "slot_type": "list-item",
+        "slots": [
+          "list-item_13",
+          "list-item_14",
+          "list-item_15",
+          "list-item_16",
+          "list-item_17",
+          "list-item_18"
+        ],
+        "slots_per_owner": 6
+      }
+    },
+    "responsive": {
+      "desktop_columns": 4,
+      "tablet_columns": 2,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "link"
+    ],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "accent-color",
+      "band-color",
+      "column-gap",
+      "divider",
+      "spacing"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

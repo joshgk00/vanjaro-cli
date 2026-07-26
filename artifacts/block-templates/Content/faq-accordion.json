@@ -2,6 +2,88 @@
   "name": "FAQ Accordion",
   "category": "Content",
   "description": "Question-and-answer list with 5 pairs — for FAQ pages, knowledge bases, and support sections",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "faq",
+      "question_answer"
+    ],
+    "layout": {
+      "kind": "accordion",
+      "columns": [
+        1
+      ],
+      "media_positions": [
+        "none"
+      ],
+      "alignment": [
+        "left"
+      ]
+    },
+    "repeat_group": {
+      "kind": "faq_item",
+      "minimum": 1,
+      "default": 5,
+      "maximum": null,
+      "expandable": true
+    },
+    "fields": {
+      "section_title": "optional",
+      "item.question": "required",
+      "item.answer": "required"
+    },
+    "physical_fields": {
+      "section_title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.question": {
+        "owner": "repeat_item",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2",
+          "heading_3",
+          "heading_4",
+          "heading_5",
+          "heading_6"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.answer": {
+        "owner": "repeat_item",
+        "slot_type": "text",
+        "slots": [
+          "text_1",
+          "text_2",
+          "text_3",
+          "text_4",
+          "text_5"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 1,
+      "tablet_columns": 1,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "accordion"
+    ],
+    "native_component_ratio": 0.95,
+    "supported_modifiers": [
+      "band-color",
+      "content-width",
+      "spacing",
+      "text-alignment",
+      "divider"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

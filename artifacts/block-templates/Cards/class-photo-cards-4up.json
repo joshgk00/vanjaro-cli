@@ -1,7 +1,137 @@
 {
   "name": "Class Photo Cards (2x2)",
   "category": "Cards",
-  "description": "Two-by-two grid of photo-top cards with a solid color body panel holding a title, pill tag, paragraph, and dark button",
+  "description": "Section heading and subtitle above a two-by-two grid of editable photo-top class cards",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "class_cards",
+      "program_cards",
+      "service_cards"
+    ],
+    "layout": {
+      "kind": "grid",
+      "columns": [
+        2
+      ],
+      "media_positions": [
+        "top"
+      ],
+      "alignment": [
+        "left",
+        "center"
+      ]
+    },
+    "repeat_group": {
+      "kind": "card",
+      "minimum": 1,
+      "default": 4,
+      "maximum": 12,
+      "expandable": true
+    },
+    "fields": {
+      "section_title": "optional",
+      "subtitle": "optional",
+      "item.media": "required",
+      "item.title": "required",
+      "item.tag": "optional",
+      "item.body": "optional",
+      "item.action": "optional"
+    },
+    "physical_fields": {
+      "section_title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "subtitle": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.media": {
+        "owner": "repeat_item",
+        "slot_type": "image",
+        "slots": [
+          "image_1_src",
+          "image_2_src",
+          "image_3_src",
+          "image_4_src"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.title": {
+        "owner": "repeat_item",
+        "slot_type": "heading",
+        "slots": [
+          "heading_3",
+          "heading_4",
+          "heading_5",
+          "heading_6"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.tag": {
+        "owner": "repeat_item",
+        "slot_type": "text",
+        "slots": [
+          "text_1",
+          "text_3",
+          "text_5",
+          "text_7"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.body": {
+        "owner": "repeat_item",
+        "slot_type": "text",
+        "slots": [
+          "text_2",
+          "text_4",
+          "text_6",
+          "text_8"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.action": {
+        "owner": "repeat_item",
+        "slot_type": "button",
+        "slots": [
+          "button_1",
+          "button_2",
+          "button_3",
+          "button_4"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 2,
+      "tablet_columns": 2,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "link"
+    ],
+    "native_component_ratio": 0.78,
+    "supported_modifiers": [
+      "band-color",
+      "card-radius",
+      "card-shadow",
+      "column-gap",
+      "media-aspect",
+      "spacing",
+      "accent-color",
+      "image-focal-point"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [
@@ -17,6 +147,47 @@
         ],
         "attributes": {"id": "tpl-cpc-g1"},
         "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "mb-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-cpc-r0"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-12", "active": false},
+                  {"name": "text-center", "active": false}
+                ],
+                "attributes": {"id": "tpl-cpc-c0"},
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "Our Classes",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-cpc-h0"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "Explore our most popular classes",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-cpc-h00"}
+                  }
+                ]
+              }
+            ]
+          },
           {
             "type": "row",
             "classes": [

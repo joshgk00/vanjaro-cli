@@ -2,6 +2,83 @@
   "name": "Bio / About",
   "category": "Content",
   "description": "Side-by-side image and bio text with name, role, and description",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "about",
+      "bio",
+      "profile"
+    ],
+    "layout": {
+      "kind": "split",
+      "columns": [
+        2
+      ],
+      "media_positions": [
+        "left"
+      ],
+      "alignment": [
+        "left"
+      ]
+    },
+    "repeat_group": null,
+    "fields": {
+      "title": "required",
+      "eyebrow": "optional",
+      "body": "required",
+      "media": "required"
+    },
+    "physical_fields": {
+      "title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "eyebrow": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2"
+        ],
+        "slots_per_owner": 1
+      },
+      "body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "media": {
+        "owner": "section",
+        "slot_type": "image",
+        "slots": [
+          "image_1_src"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 2,
+      "tablet_columns": 2,
+      "mobile_columns": 1,
+      "stacking_order": "media-first"
+    },
+    "interactions": [],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "content-width",
+      "image-focal-point",
+      "image-radius",
+      "media-aspect",
+      "spacing"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

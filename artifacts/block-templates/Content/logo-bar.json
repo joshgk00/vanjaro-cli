@@ -2,6 +2,75 @@
   "name": "Logo Bar",
   "category": "Content",
   "description": "Horizontal row of partner or client logos with optional section heading",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "logo_bar",
+      "partner_logos",
+      "client_logos"
+    ],
+    "layout": {
+      "kind": "grid",
+      "columns": [
+        5
+      ],
+      "media_positions": [
+        "inline"
+      ],
+      "alignment": [
+        "center"
+      ]
+    },
+    "repeat_group": {
+      "kind": "logo",
+      "minimum": 1,
+      "default": 5,
+      "maximum": 12,
+      "expandable": true
+    },
+    "fields": {
+      "section_title": "optional",
+      "item.media": "required"
+    },
+    "physical_fields": {
+      "section_title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.media": {
+        "owner": "repeat_item",
+        "slot_type": "image",
+        "slots": [
+          "image_1_src",
+          "image_2_src",
+          "image_3_src",
+          "image_4_src",
+          "image_5_src"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 5,
+      "tablet_columns": 4,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "link"
+    ],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "column-gap",
+      "image-focal-point",
+      "spacing"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

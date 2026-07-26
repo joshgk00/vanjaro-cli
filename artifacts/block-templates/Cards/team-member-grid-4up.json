@@ -2,6 +2,120 @@
   "name": "Team Member Grid (4-up)",
   "category": "Cards",
   "description": "Four team member cards with photo, name, role, and short bio",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "team_grid",
+      "people_cards"
+    ],
+    "layout": {
+      "kind": "grid",
+      "columns": [
+        4
+      ],
+      "media_positions": [
+        "top"
+      ],
+      "alignment": [
+        "left",
+        "center"
+      ]
+    },
+    "repeat_group": {
+      "kind": "person",
+      "minimum": 1,
+      "default": 4,
+      "maximum": 12,
+      "expandable": true
+    },
+    "fields": {
+      "section_title": "optional",
+      "section_body": "optional",
+      "item.title": "required",
+      "item.role": "optional",
+      "item.body": "optional",
+      "item.media": "required"
+    },
+    "physical_fields": {
+      "section_title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "section_body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.title": {
+        "owner": "repeat_item",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2",
+          "heading_3",
+          "heading_4",
+          "heading_5"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.role": {
+        "owner": "repeat_item",
+        "slot_type": "text",
+        "slots": [
+          "text_2",
+          "text_4",
+          "text_6",
+          "text_8"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.body": {
+        "owner": "repeat_item",
+        "slot_type": "text",
+        "slots": [
+          "text_3",
+          "text_5",
+          "text_7",
+          "text_9"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.media": {
+        "owner": "repeat_item",
+        "slot_type": "image",
+        "slots": [
+          "image_1_src",
+          "image_2_src",
+          "image_3_src",
+          "image_4_src"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 4,
+      "tablet_columns": 4,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "card-radius",
+      "card-shadow",
+      "column-gap",
+      "media-aspect",
+      "spacing",
+      "image-focal-point"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

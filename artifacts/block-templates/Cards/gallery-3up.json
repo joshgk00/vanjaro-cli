@@ -2,6 +2,105 @@
  "name": "Gallery (3-up)",
  "category": "Cards",
  "description": "Three-column image gallery with captions \u2014 for portfolios, project showcases, and visual indices",
+ "capabilities": {
+   "schema_version": "1.1",
+   "roles": [
+     "gallery",
+     "portfolio_grid"
+   ],
+   "layout": {
+     "kind": "grid",
+     "columns": [
+       3
+     ],
+     "media_positions": [
+       "top"
+     ],
+     "alignment": [
+       "left",
+       "center"
+     ]
+   },
+   "repeat_group": {
+     "kind": "gallery_item",
+     "minimum": 1,
+     "default": 3,
+     "maximum": 12,
+     "expandable": true
+   },
+   "fields": {
+   "section_title": "optional",
+   "section_body": "optional",
+   "item.title": "optional",
+   "item.meta": "optional",
+   "item.media": "required"
+   },
+   "physical_fields": {
+     "section_title": {
+       "owner": "section",
+       "slot_type": "heading",
+       "slots": [
+         "heading_1"
+       ],
+       "slots_per_owner": 1
+     },
+     "section_body": {
+       "owner": "section",
+       "slot_type": "text",
+       "slots": [
+         "text_1"
+       ],
+       "slots_per_owner": 1
+     },
+     "item.title": {
+       "owner": "repeat_item",
+       "slot_type": "heading",
+       "slots": [
+         "heading_2",
+         "heading_3",
+         "heading_4"
+       ],
+       "slots_per_owner": 1
+     },
+     "item.meta": {
+       "owner": "repeat_item",
+       "slot_type": "text",
+       "slots": [
+         "text_2",
+         "text_3",
+         "text_4"
+       ],
+       "slots_per_owner": 1
+     },
+     "item.media": {
+       "owner": "repeat_item",
+       "slot_type": "image",
+       "slots": [
+         "image_1_src",
+         "image_2_src",
+         "image_3_src"
+       ],
+       "slots_per_owner": 1
+     }
+   },
+   "responsive": {
+     "desktop_columns": 3,
+     "tablet_columns": 3,
+     "mobile_columns": 1,
+     "stacking_order": "source"
+   },
+   "interactions": [],
+   "native_component_ratio": 1.0,
+   "supported_modifiers": [
+     "band-color",
+     "card-radius",
+     "card-shadow",
+     "column-gap",
+     "media-aspect",
+     "spacing",
+     "image-focal-point"
+   ]
+ },
  "template": {
   "type": "section",
   "classes": [
@@ -83,7 +182,7 @@
          {
           "type": "text",
           "tagName": "p",
-          "content": "",
+          "content": "A curated selection of recent work and featured projects.",
           "classes": [
            {
             "name": "vj-text",

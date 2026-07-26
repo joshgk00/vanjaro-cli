@@ -2,6 +2,107 @@
   "name": "Pricing Cards (3-up)",
   "category": "Cards",
   "description": "Three pricing tier cards with plan name, price, feature list, and CTA button",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "pricing_cards",
+      "membership_plans"
+    ],
+    "layout": {
+      "kind": "grid",
+      "columns": [
+        3
+      ],
+      "media_positions": [
+        "none"
+      ],
+      "alignment": [
+        "left",
+        "center"
+      ]
+    },
+    "repeat_group": {
+      "kind": "pricing_plan",
+      "minimum": 1,
+      "default": 3,
+      "maximum": 6,
+      "expandable": true
+    },
+    "fields": {
+      "item.title": "required",
+      "item.price": "required",
+      "item.features": "required",
+      "item.action": "required"
+    },
+    "physical_fields": {
+      "item.title": {
+        "owner": "repeat_item",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1",
+          "heading_3",
+          "heading_5"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.price": {
+        "owner": "repeat_item",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2",
+          "heading_4",
+          "heading_6"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.features": {
+        "owner": "repeat_item",
+        "slot_type": "list-item",
+        "slots": [
+          "list-item_1",
+          "list-item_2",
+          "list-item_3",
+          "list-item_4",
+          "list-item_5",
+          "list-item_6",
+          "list-item_7",
+          "list-item_8",
+          "list-item_9"
+        ],
+        "slots_per_owner": 3
+      },
+      "item.action": {
+        "owner": "repeat_item",
+        "slot_type": "button",
+        "slots": [
+          "button_1",
+          "button_2",
+          "button_3"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 3,
+      "tablet_columns": 3,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "link"
+    ],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "card-radius",
+      "card-shadow",
+      "column-gap",
+      "media-aspect",
+      "spacing",
+      "accent-color",
+      "button-style"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

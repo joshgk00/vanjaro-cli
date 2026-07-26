@@ -1,7 +1,96 @@
 {
   "name": "CTA Banner",
   "category": "CTAs",
-  "description": "Centered call-to-action banner with heading, supporting text, and button",
+  "description": "Centered call-to-action banner with heading, optional subtitle, supporting text, button, and optional background media",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "cta",
+      "cta_banner"
+    ],
+    "layout": {
+      "kind": "single",
+      "columns": [
+        1
+      ],
+      "media_positions": [
+        "none",
+        "background"
+      ],
+      "alignment": [
+        "center"
+      ]
+    },
+    "repeat_group": null,
+    "fields": {
+      "title": "required",
+      "subtitle": "optional",
+      "body": "optional",
+      "action": "required",
+      "background_media": "optional"
+    },
+    "physical_fields": {
+      "title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "subtitle": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2"
+        ],
+        "slots_per_owner": 1
+      },
+      "body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "action": {
+        "owner": "section",
+        "slot_type": "button",
+        "slots": [
+          "button_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "background_media": {
+        "owner": "section",
+        "slot_type": "section",
+        "slots": [
+          "background_image"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 1,
+      "tablet_columns": 1,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "link"
+    ],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "button-style",
+      "content-width",
+      "spacing",
+      "text-alignment",
+      "background-image",
+      "background-overlay"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [
@@ -44,6 +133,17 @@
                       {"name": "head-style-2", "active": false}
                     ],
                     "attributes": {"id": "tpl-ctab-h1"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h4",
+                    "content": "A supporting call-to-action subtitle",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-4", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-ctab-h2"}
                   },
                   {
                     "type": "text",

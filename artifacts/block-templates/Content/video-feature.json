@@ -2,6 +2,95 @@
   "name": "Video Feature",
   "category": "Content",
   "description": "Centered eyebrow, heading, and paragraph above a large rounded media area with a centered play button linked to a video",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "video_feature",
+      "media_feature"
+    ],
+    "layout": {
+      "kind": "single",
+      "columns": [
+        1
+      ],
+      "media_positions": [
+        "bottom",
+        "background"
+      ],
+      "alignment": [
+        "center"
+      ]
+    },
+    "repeat_group": null,
+    "fields": {
+      "eyebrow": "optional",
+      "title": "required",
+      "body": "optional",
+      "media": "required",
+      "action": "optional"
+    },
+    "physical_fields": {
+      "eyebrow": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2"
+        ],
+        "slots_per_owner": 1
+      },
+      "body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "media": {
+        "owner": "section",
+        "slot_type": "image",
+        "slots": [
+          "image_1_src"
+        ],
+        "slots_per_owner": 1
+      },
+      "action": {
+        "owner": "section",
+        "slot_type": "link",
+        "slots": [
+          "link_1"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 1,
+      "tablet_columns": 1,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "video"
+    ],
+    "native_component_ratio": 0.92,
+    "supported_modifiers": [
+      "band-color",
+      "content-width",
+      "image-focal-point",
+      "image-radius",
+      "media-aspect",
+      "spacing",
+      "background-overlay"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

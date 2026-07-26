@@ -2,6 +2,119 @@
   "name": "Blog Post Cards (3-up)",
   "category": "Cards",
   "description": "Three blog post cards with image, category tag, heading, excerpt, and read more link",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "blog_cards",
+      "article_cards"
+    ],
+    "layout": {
+      "kind": "grid",
+      "columns": [
+        3
+      ],
+      "media_positions": [
+        "top"
+      ],
+      "alignment": [
+        "left",
+        "center"
+      ]
+    },
+    "repeat_group": {
+      "kind": "article",
+      "minimum": 1,
+      "default": 3,
+      "maximum": 12,
+      "expandable": true
+    },
+    "fields": {
+      "section_title": "optional",
+      "item.media": "required",
+      "item.tag": "optional",
+      "item.title": "required",
+      "item.body": "optional",
+      "item.action": "optional"
+    },
+    "physical_fields": {
+      "section_title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.media": {
+        "owner": "repeat_item",
+        "slot_type": "image",
+        "slots": [
+          "image_1_src",
+          "image_2_src",
+          "image_3_src"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.tag": {
+        "owner": "repeat_item",
+        "slot_type": "text",
+        "slots": [
+          "text_1",
+          "text_3",
+          "text_5"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.title": {
+        "owner": "repeat_item",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2",
+          "heading_3",
+          "heading_4"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.body": {
+        "owner": "repeat_item",
+        "slot_type": "text",
+        "slots": [
+          "text_2",
+          "text_4",
+          "text_6"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.action": {
+        "owner": "repeat_item",
+        "slot_type": "button",
+        "slots": [
+          "button_1",
+          "button_2",
+          "button_3"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 3,
+      "tablet_columns": 3,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "link"
+    ],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "card-radius",
+      "card-shadow",
+      "column-gap",
+      "media-aspect",
+      "spacing"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

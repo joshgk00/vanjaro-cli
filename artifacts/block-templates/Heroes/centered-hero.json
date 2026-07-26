@@ -2,6 +2,86 @@
   "name": "Centered Hero",
   "category": "Heroes",
   "description": "Full-width hero with centered heading, subtext, and CTA button",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "hero",
+      "hero_centered"
+    ],
+    "layout": {
+      "kind": "single",
+      "columns": [
+        1
+      ],
+      "media_positions": [
+        "none",
+        "background"
+      ],
+      "alignment": [
+        "center"
+      ]
+    },
+    "repeat_group": null,
+    "fields": {
+      "title": "required",
+      "body": "optional",
+      "action": "optional",
+      "background_media": "optional"
+    },
+    "physical_fields": {
+      "title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "action": {
+        "owner": "section",
+        "slot_type": "button",
+        "slots": [
+          "button_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "background_media": {
+        "owner": "section",
+        "slot_type": "section",
+        "slots": [
+          "background_image"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 1,
+      "tablet_columns": 1,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "link"
+    ],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "button-style",
+      "content-width",
+      "spacing",
+      "text-alignment",
+      "background-image",
+      "background-overlay"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [

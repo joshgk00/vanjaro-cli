@@ -2,6 +2,55 @@
   "name": "Photo Band",
   "category": "Heroes",
   "description": "Full-bleed background-photo band with a baked min-height and no overlay text, for hero/CTA photos that already carry their own text",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "photo_band",
+      "hero_media",
+      "cta_media"
+    ],
+    "layout": {
+      "kind": "band",
+      "columns": [
+        1
+      ],
+      "media_positions": [
+        "background"
+      ],
+      "alignment": [
+        "center"
+      ]
+    },
+    "repeat_group": null,
+    "fields": {
+      "background_media": "required"
+    },
+    "physical_fields": {
+      "background_media": {
+        "owner": "section",
+        "slot_type": "section",
+        "slots": [
+          "background_image"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 1,
+      "tablet_columns": 1,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "background-image",
+      "background-overlay",
+      "image-focal-point",
+      "media-aspect",
+      "spacing"
+    ]
+  },
   "template": {
     "type": "section",
     "classes": [
