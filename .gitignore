@@ -32,3 +32,8 @@ tmp/
 
 # Agent review scratch output
 .agent/
+
+# Per-run agency project and E2E evidence (screenshots + resolved documents).
+# Regenerable from the project workspace; reports are summarized in docs/.
+artifacts/e2e/
+artifacts/keys-to-success/
