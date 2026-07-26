@@ -131,9 +131,44 @@ If that errors with "Session expired", re-authenticate non-interactively with
 using credentials the user has provided (e.g. the repo `.env`). Only ask the
 user to log in themselves when no credentials are available to you.
 
+## Choose the path first
+
+Two routes exist. Pick before Stage 1.
+
+**Project workspace (default for a full site).** Resumable, fingerprinted, and
+approval-gated. The live site is just another typed source:
+
+```bash
+vanjaro project init ./projects/client \
+  --name "Client" --target-profile client \
+  --expected-portal-id 2 --expected-base-url http://site.local \
+  --source html=https://source-site.com --json
+vanjaro project analyze ./projects/client --json
+vanjaro project plan ./projects/client --json
+vanjaro project build ./projects/client --dry-run --json
+```
+
+Follow `../site-builder/references/project-workflow.md` for the stage graph,
+approvals, and failure modes, then return here only for source-specific
+concerns: crawl tuning, URL rewriting, and the single-page-to-multi-page split.
+
+**Manual stages (below).** Use for partial migrations, repairing an existing
+migration, or when you need step-level control the workspace doesn't expose.
+The manual path does not resume automatically and has no approval gates.
+
+Either way, an existing crawl converts to a Design Document offline, with no
+recrawl and no portal:
+
+```bash
+vanjaro migrate analyze artifacts/migration/<site-slug> --json
+vanjaro blocks plan --design artifacts/migration/<site-slug>/design-document.json \
+  --output plan.json --library-plan library-plan.json
+vanjaro blocks plan-validate plan.json --json
+```
+
 ## Overview
 
-The migration has 6 stages:
+The manual migration has 6 stages:
 
 ```
 ┌─────────────────────────────────────────────────────────┐

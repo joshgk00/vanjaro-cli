@@ -228,4 +228,36 @@ unchanged scoring regime.
 
 ## Progress log
 
-_No iterations recorded yet._
+### 2026-07-26 — VF-010 agent skills refreshed against the current CLI
+
+- Verified the real command surface with the Click runner rather than recall.
+  `python -m vanjaro_cli.cli --help` emits nothing, so command text was taken
+  from `CliRunner` output.
+- `site-builder` rewritten around the project workspace: intake, target pinning,
+  evidence, analyze, plan, approval, build, and verify. Superseded manual
+  composition stages were removed rather than left alongside.
+- Recorded the two behaviours most likely to mislead an agent: `--theme-mode`
+  accepts only `preserve` and `plan` and never applies a theme, and
+  `--page-mode isolated` produces hidden drafts that still require deliberate
+  publication.
+- Added `references/project-workflow.md` covering workspace layout, the stage
+  graph and fingerprint rules, source kinds, image evidence requirements, pack
+  governance, and failure modes.
+- `site-migrator` now routes to the project workspace by default and keeps the
+  manual six-stage path for partial migrations and repairs. It documents the
+  offline `migrate analyze` to `blocks plan` conversion.
+- Added `tests/test_skill_command_references.py`, which parses every skill
+  document and asserts each referenced command resolves in the CLI. Verified it
+  fails on an injected bogus command rather than passing vacuously.
+
+**Not complete:** the manual six-stage body of `site-migrator` was kept. It is
+superseded for new full-site migrations but could not be removed safely without
+an end-to-end HTML-source project run, which needs a portal. Removal should
+follow the first verified HTML-source project build.
+
+Verification: 1,542 non-integration tests pass, up from 1,528. The five-case
+offline benchmark passes with no threshold or regression failures.
+
+Observed, not fixed: `migrate benchmark` fails with a Windows file-exists error
+when `--output` points at an existing report path. There is no `--force`. Worth
+a separate task.
