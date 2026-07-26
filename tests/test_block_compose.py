@@ -158,6 +158,27 @@ def test_apply_overrides_multiple():
     assert col[2]["attributes"]["href"] == "/go"
 
 
+def test_apply_overrides_removes_explicitly_cleared_optional_components():
+    composed = apply_overrides(
+        HERO_TEMPLATE,
+        {
+            "heading_1": "Music for everyone",
+            "text_1": "",
+            "button_1": "",
+            "button_1_href": "",
+        },
+    )
+
+    column = composed["template"]["components"][0]["components"][0]["components"][0]
+    assert [component["type"] for component in column["components"]] == ["heading"]
+
+
+def test_apply_overrides_removes_explicitly_cleared_existing_image():
+    composed = apply_overrides(make_one_image_template(), {"image_1_src": ""})
+
+    assert composed["template"]["components"] == []
+
+
 def test_apply_overrides_does_not_mutate_original():
     original_heading = HERO_TEMPLATE["template"]["components"][0]["components"][0]["components"][0]["components"][0]["content"]
     apply_overrides(HERO_TEMPLATE, {"heading_1": "Changed"})

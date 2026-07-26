@@ -22,6 +22,10 @@ from vanjaro_cli.commands.migrate_audit_cmd import audit_structure
 from vanjaro_cli.commands.migrate_gap_report_cmd import gap_report
 from vanjaro_cli.commands.migrate_verify_cmd import verify, verify_all
 from vanjaro_cli.commands.migrate_visual_cmd import visual_capture
+from vanjaro_cli.commands.migrate_analyze_cmd import analyze
+from vanjaro_cli.commands.migrate_benchmark_cmd import benchmark
+from vanjaro_cli.design.html_adapter import HtmlAdapterError, convert_legacy_crawl
+from vanjaro_cli.design.serialization import write_design_document
 from vanjaro_cli.migration.assets import download_assets
 from vanjaro_cli.migration.crawler import (
     CrawlError,
@@ -57,6 +61,8 @@ migrate.add_command(rewrite_urls)
 migrate.add_command(verify)
 migrate.add_command(verify_all)
 migrate.add_command(visual_capture)
+migrate.add_command(analyze)
+migrate.add_command(benchmark)
 
 
 def _write_json(path: Path, data: object) -> None:
@@ -114,6 +120,11 @@ def _zero_pages_message(url: str, filters: tuple[str, ...]) -> str:
 )
 @click.option("--skip-assets", is_flag=True, help="Don't download images.")
 @click.option(
+    "--legacy-only",
+    is_flag=True,
+    help="Write only established crawl artifacts; skip design-document.json.",
+)
+@click.option(
     "--rendered",
     is_flag=True,
     help=(
@@ -130,6 +141,7 @@ def crawl(
     include_paths: tuple[str, ...],
     exclude_paths: tuple[str, ...],
     skip_assets: bool,
+    legacy_only: bool,
     rendered: bool,
     as_json: bool,
 ) -> None:
@@ -317,6 +329,20 @@ def crawl(
     _write_json(destination / "site-inventory.json", inventory)
     _write_json(destination / "page-url-map.json", url_map)
 
+    design_document_path = destination / "design-document.json"
+    design_document_written = False
+    if not legacy_only:
+        try:
+            design_document = convert_legacy_crawl(destination)
+            write_design_document(design_document_path, design_document)
+            design_document_written = True
+        except (HtmlAdapterError, OSError, ValueError) as exc:
+            _warn(
+                "Design Document generation failed after legacy crawl artifacts "
+                f"were written: {exc}. Run `vanjaro migrate analyze "
+                f"{destination}` after correcting the artifact."
+            )
+
     output_result(
         as_json,
         status="ok",
@@ -327,5 +353,6 @@ def crawl(
         output_dir=str(destination),
         pages_crawled=len(pages_summary),
         assets_downloaded=len(asset_manifest),
+        design_document=(str(design_document_path) if design_document_written else None),
         warnings=warnings,
     )

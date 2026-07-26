@@ -129,11 +129,14 @@ def visual_capture(
     )
 
     try:
+        capture_cookies = (
+            {**config.cookies, "vj_IsPageEdit": "true"} if use_auth else None
+        )
         manifest = run_capture(
             plan,
             destination,
             viewport_size,
-            cookies=config.cookies if use_auth else None,
+            cookies=capture_cookies,
             vanjaro_base_url=config.base_url,
             timeout_seconds=timeout_seconds,
         )

@@ -322,3 +322,10 @@ def export(url: str, node: str | None, output: str, render: bool, dry_run: bool,
         renders=renders,
         missing_refs=missing,
     )
+
+
+# Imported after the existing command definitions to keep the analysis command
+# isolated and avoid changing inspect/tokens/export behavior.
+from vanjaro_cli.commands.figma_analyze_cmd import figma_analyze  # noqa: E402
+
+figma.add_command(figma_analyze)

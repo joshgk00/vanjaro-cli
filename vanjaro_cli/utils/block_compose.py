@@ -679,12 +679,49 @@ def prune_unfilled_images(section: dict, overrides: dict[str, str]) -> None:
     Only meaningful for crawler-content sections: manual ``--overrides`` mode
     supplies every value deliberately, so it never calls this function.
     Mutates ``section`` in place.
+
+    An unfilled image whose src is a real URL rather than a placeholder is
+    template chrome (a decorative graphic the template ships on purpose) and
+    is kept.
     """
     to_remove: list[tuple[dict, list[dict]]] = []
     for component, ancestors, comp_type, index in _walk_overridable_with_ancestors(section):
         if comp_type != "image":
             continue
-        if not overrides.get(f"image_{index}_src"):
+        if overrides.get(f"image_{index}_src"):
+            continue
+        src = (component.get("attributes") or {}).get("src", "")
+        if src and "placehold" not in src:
+            continue
+        to_remove.append((component, ancestors))
+
+    for component, ancestors in to_remove:
+        chain = [*ancestors, component]
+        for depth in range(len(chain) - 1, 0, -1):
+            child, parent = chain[depth], chain[depth - 1]
+            _remove_child(parent, child)
+            if parent.get("type") == "section" or parent.get("components") or parent.get("content"):
+                break
+
+
+def _prune_explicitly_empty_slots(section: dict, overrides: dict[str, str]) -> None:
+    """Remove template chrome for slots the composition plan explicitly cleared."""
+
+    to_remove: list[tuple[dict, list[dict]]] = []
+    for component, ancestors, comp_type, index in _walk_overridable_with_ancestors(section):
+        content_key = f"{comp_type}_{index}"
+        cleared_content = (
+            comp_type in CONTENT_TYPES
+            and content_key in overrides
+            and overrides[content_key] == ""
+        )
+        source_key = f"image_{index}_src"
+        cleared_image = (
+            comp_type == "image"
+            and source_key in overrides
+            and overrides[source_key] == ""
+        )
+        if cleared_content or cleared_image:
             to_remove.append((component, ancestors))
 
     for component, ancestors in to_remove:
@@ -724,10 +761,11 @@ def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
             attr_key = f"{comp_type}_{n}_{suffix}"
             if attr_key in overrides:
                 comp.setdefault("attributes", {})[attr_name] = overrides[attr_key]
-    _balance_card_rows(result["template"])
     background_image = overrides.get("background_image")
     if background_image and result["template"].get("type") == "section":
         apply_section_background(result["template"], {"background_image": background_image})
+    _prune_explicitly_empty_slots(result["template"], overrides)
+    _balance_card_rows(result["template"])
     return result
 
 

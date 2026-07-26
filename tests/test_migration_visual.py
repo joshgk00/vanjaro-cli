@@ -180,3 +180,14 @@ def test_visual_capture_runs_plan(runner, mock_config, tmp_path, monkeypatch):
     # Anonymous by default — admin chrome must not leak into screenshots
     assert captured_kwargs["cookies"] is None
     assert str(captured_kwargs["output_dir"]).endswith("visual-report")
+
+    captured_kwargs.clear()
+    authenticated = runner.invoke(
+        cli,
+        [
+            "migrate", "visual-capture", "--dir", str(tmp_path),
+            "--auth", "--json",
+        ],
+    )
+    assert authenticated.exit_code == 0
+    assert captured_kwargs["cookies"]["vj_IsPageEdit"] == "true"
