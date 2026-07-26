@@ -1,0 +1,761 @@
+{
+  "aggregate": {
+    "extraction": {
+      "asset_association_accuracy": {
+        "denominator": 15,
+        "numerator": 15,
+        "status": "measured",
+        "value": 1.0
+      },
+      "group_field_association_accuracy": {
+        "denominator": 79,
+        "numerator": 79,
+        "status": "measured",
+        "value": 1.0
+      },
+      "responsive_observation_coverage": {
+        "denominator": 44,
+        "numerator": 19,
+        "status": "measured",
+        "value": 0.431818
+      },
+      "section_boundary_precision": {
+        "denominator": 25,
+        "numerator": 25,
+        "status": "measured",
+        "value": 1.0
+      },
+      "section_boundary_recall": {
+        "denominator": 25,
+        "numerator": 25,
+        "status": "measured",
+        "value": 1.0
+      },
+      "semantic_role_accuracy": {
+        "denominator": 25,
+        "numerator": 25,
+        "status": "measured",
+        "value": 1.0
+      },
+      "visitor_content_retention": {
+        "denominator": 127,
+        "numerator": 127,
+        "status": "measured",
+        "value": 1.0
+      }
+    },
+    "matcher": {
+      "high_confidence_precision": {
+        "denominator": 10,
+        "numerator": 9,
+        "status": "measured",
+        "value": 0.9
+      },
+      "template_top1_accuracy": {
+        "denominator": 24,
+        "numerator": 22,
+        "status": "measured",
+        "value": 0.916667
+      },
+      "template_top3_accuracy": {
+        "denominator": 24,
+        "numerator": 24,
+        "status": "measured",
+        "value": 1.0
+      }
+    }
+  },
+  "case_filter": [
+    "html-bootstrap-agency",
+    "html-elementor-studio",
+    "html-dnn-services",
+    "figma-auto-layout-saas",
+    "figma-freeform-nonprofit"
+  ],
+  "cases": [
+    {
+      "case_id": "html-bootstrap-agency",
+      "extraction": {
+        "asset_association_accuracy": {
+          "denominator": 4,
+          "numerator": 4,
+          "status": "measured",
+          "value": 1.0
+        },
+        "group_field_association_accuracy": {
+          "denominator": 17,
+          "numerator": 17,
+          "status": "measured",
+          "value": 1.0
+        },
+        "responsive_observation_coverage": {
+          "denominator": 10,
+          "numerator": 5,
+          "status": "measured",
+          "value": 0.5
+        },
+        "section_boundary_precision": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "section_boundary_recall": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "semantic_role_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "visitor_content_retention": {
+          "denominator": 27,
+          "numerator": 27,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "failures": [
+        {
+          "actual": null,
+          "case_id": "html-bootstrap-agency",
+          "expected": "520px",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[northstar.hero].responsive[mobile].min_height",
+          "section_id": "northstar.hero"
+        },
+        {
+          "actual": null,
+          "case_id": "html-bootstrap-agency",
+          "expected": "65% 50%",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[northstar.hero].responsive[mobile].background_position",
+          "section_id": "northstar.hero"
+        },
+        {
+          "actual": null,
+          "case_id": "html-bootstrap-agency",
+          "expected": true,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[northstar.testimonials].responsive[mobile].carousel",
+          "section_id": "northstar.testimonials"
+        },
+        {
+          "actual": null,
+          "case_id": "html-bootstrap-agency",
+          "expected": "center",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[northstar.contact].responsive[mobile].alignment",
+          "section_id": "northstar.contact"
+        },
+        {
+          "actual": null,
+          "case_id": "html-bootstrap-agency",
+          "expected": "100%",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[northstar.contact].responsive[mobile].button_width",
+          "section_id": "northstar.contact"
+        }
+      ],
+      "matcher": {
+        "high_confidence_precision": {
+          "denominator": 2,
+          "numerator": 2,
+          "status": "measured",
+          "value": 1.0
+        },
+        "template_top1_accuracy": {
+          "denominator": 4,
+          "numerator": 4,
+          "status": "measured",
+          "value": 1.0
+        },
+        "template_top3_accuracy": {
+          "denominator": 4,
+          "numerator": 4,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "source_kind": "live_html"
+    },
+    {
+      "case_id": "html-elementor-studio",
+      "extraction": {
+        "asset_association_accuracy": {
+          "denominator": 3,
+          "numerator": 3,
+          "status": "measured",
+          "value": 1.0
+        },
+        "group_field_association_accuracy": {
+          "denominator": 21,
+          "numerator": 21,
+          "status": "measured",
+          "value": 1.0
+        },
+        "responsive_observation_coverage": {
+          "denominator": 8,
+          "numerator": 4,
+          "status": "measured",
+          "value": 0.5
+        },
+        "section_boundary_precision": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "section_boundary_recall": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "semantic_role_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "visitor_content_retention": {
+          "denominator": 30,
+          "numerator": 30,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "failures": [
+        {
+          "actual": null,
+          "case_id": "html-elementor-studio",
+          "expected": "left",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[juniper.hero].responsive[mobile].alignment",
+          "section_id": "juniper.hero"
+        },
+        {
+          "actual": null,
+          "case_id": "html-elementor-studio",
+          "expected": "600px",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[juniper.hero].responsive[mobile].min_height",
+          "section_id": "juniper.hero"
+        },
+        {
+          "actual": null,
+          "case_id": "html-elementor-studio",
+          "expected": true,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[juniper.testimonials].responsive[mobile].carousel",
+          "section_id": "juniper.testimonials"
+        },
+        {
+          "actual": null,
+          "case_id": "html-elementor-studio",
+          "expected": "left",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[juniper.contact].responsive[mobile].alignment",
+          "section_id": "juniper.contact"
+        }
+      ],
+      "matcher": {
+        "high_confidence_precision": {
+          "denominator": 2,
+          "numerator": 2,
+          "status": "measured",
+          "value": 1.0
+        },
+        "template_top1_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "template_top3_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "source_kind": "live_html"
+    },
+    {
+      "case_id": "html-dnn-services",
+      "extraction": {
+        "asset_association_accuracy": {
+          "denominator": 2,
+          "numerator": 2,
+          "status": "measured",
+          "value": 1.0
+        },
+        "group_field_association_accuracy": {
+          "denominator": 14,
+          "numerator": 14,
+          "status": "measured",
+          "value": 1.0
+        },
+        "responsive_observation_coverage": {
+          "denominator": 8,
+          "numerator": 7,
+          "status": "measured",
+          "value": 0.875
+        },
+        "section_boundary_precision": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "section_boundary_recall": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "semantic_role_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "visitor_content_retention": {
+          "denominator": 25,
+          "numerator": 25,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "failures": [
+        {
+          "actual": null,
+          "case_id": "html-dnn-services",
+          "expected": "100%",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[harbor.cta].responsive[mobile].button_width",
+          "section_id": "harbor.cta"
+        }
+      ],
+      "matcher": {
+        "high_confidence_precision": {
+          "denominator": 2,
+          "numerator": 2,
+          "status": "measured",
+          "value": 1.0
+        },
+        "template_top1_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "template_top3_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "source_kind": "live_html"
+    },
+    {
+      "case_id": "figma-auto-layout-saas",
+      "extraction": {
+        "asset_association_accuracy": {
+          "denominator": 1,
+          "numerator": 1,
+          "status": "measured",
+          "value": 1.0
+        },
+        "group_field_association_accuracy": {
+          "denominator": 13,
+          "numerator": 13,
+          "status": "measured",
+          "value": 1.0
+        },
+        "responsive_observation_coverage": {
+          "denominator": 8,
+          "numerator": 2,
+          "status": "measured",
+          "value": 0.25
+        },
+        "section_boundary_precision": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "section_boundary_recall": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "semantic_role_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "visitor_content_retention": {
+          "denominator": 21,
+          "numerator": 21,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "failures": [
+        {
+          "actual": null,
+          "case_id": "figma-auto-layout-saas",
+          "expected": "bottom",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[orbit.hero].responsive[mobile].media_position",
+          "section_id": "orbit.hero"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-auto-layout-saas",
+          "expected": true,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[orbit.logos].responsive[mobile].wrap",
+          "section_id": "orbit.logos"
+        },
+        {
+          "actual": 1,
+          "case_id": "figma-auto-layout-saas",
+          "expected": 2,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[orbit.logos].responsive[mobile].columns",
+          "section_id": "orbit.logos"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-auto-layout-saas",
+          "expected": 2,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[orbit.features].responsive[tablet].columns",
+          "section_id": "orbit.features"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-auto-layout-saas",
+          "expected": 1,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[orbit.testimonials].responsive[mobile].columns",
+          "section_id": "orbit.testimonials"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-auto-layout-saas",
+          "expected": "100%",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[orbit.cta].responsive[mobile].button_width",
+          "section_id": "orbit.cta"
+        }
+      ],
+      "matcher": {
+        "high_confidence_precision": {
+          "denominator": 2,
+          "numerator": 2,
+          "status": "measured",
+          "value": 1.0
+        },
+        "template_top1_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "template_top3_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "source_kind": "figma"
+    },
+    {
+      "case_id": "figma-freeform-nonprofit",
+      "extraction": {
+        "asset_association_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "group_field_association_accuracy": {
+          "denominator": 14,
+          "numerator": 14,
+          "status": "measured",
+          "value": 1.0
+        },
+        "responsive_observation_coverage": {
+          "denominator": 10,
+          "numerator": 1,
+          "status": "measured",
+          "value": 0.1
+        },
+        "section_boundary_precision": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "section_boundary_recall": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "semantic_role_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        },
+        "visitor_content_retention": {
+          "denominator": 24,
+          "numerator": 24,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "failures": [
+        {
+          "actual": null,
+          "case_id": "figma-freeform-nonprofit",
+          "expected": "top",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[riverkind.hero].responsive[mobile].media_position",
+          "section_id": "riverkind.hero"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-freeform-nonprofit",
+          "expected": 1,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[riverkind.hero].responsive[mobile].columns",
+          "section_id": "riverkind.hero"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-freeform-nonprofit",
+          "expected": 1,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[riverkind.stats].responsive[mobile].columns",
+          "section_id": "riverkind.stats"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-freeform-nonprofit",
+          "expected": 1,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[riverkind.programs].responsive[mobile].columns",
+          "section_id": "riverkind.programs"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-freeform-nonprofit",
+          "expected": false,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[riverkind.programs].responsive[mobile].overlap",
+          "section_id": "riverkind.programs"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-freeform-nonprofit",
+          "expected": false,
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[riverkind.story].responsive[mobile].overlap",
+          "section_id": "riverkind.story"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-freeform-nonprofit",
+          "expected": "top",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[riverkind.story].responsive[mobile].media_position",
+          "section_id": "riverkind.story"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-freeform-nonprofit",
+          "expected": "100%",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[riverkind.cta].responsive[mobile].button_width",
+          "section_id": "riverkind.cta"
+        },
+        {
+          "actual": null,
+          "case_id": "figma-freeform-nonprofit",
+          "expected": "vertical",
+          "message": "responsive observation is missing or differs",
+          "metric": "responsive_observation_coverage",
+          "path": "sections[riverkind.cta].responsive[mobile].direction",
+          "section_id": "riverkind.cta"
+        },
+        {
+          "actual": "centered-hero",
+          "case_id": "figma-freeform-nonprofit",
+          "expected": [
+            "split-hero",
+            "split-media-reverse"
+          ],
+          "message": "selected template is not an acceptable annotated match",
+          "metric": "template_top1_accuracy",
+          "path": "sections[riverkind.hero].template_match.selected",
+          "section_id": "riverkind.hero"
+        },
+        {
+          "actual": "stats-grid-4up",
+          "case_id": "figma-freeform-nonprofit",
+          "expected": [
+            "stats-band-3up"
+          ],
+          "message": "selected template is not an acceptable annotated match",
+          "metric": "template_top1_accuracy",
+          "path": "sections[riverkind.stats].template_match.selected",
+          "section_id": "riverkind.stats"
+        },
+        {
+          "actual": "stats-grid-4up",
+          "case_id": "figma-freeform-nonprofit",
+          "expected": [
+            "stats-band-3up"
+          ],
+          "message": "high-confidence selection is incorrect",
+          "metric": "high_confidence_precision",
+          "path": "sections[riverkind.stats].template_match.confidence",
+          "section_id": "riverkind.stats"
+        }
+      ],
+      "matcher": {
+        "high_confidence_precision": {
+          "denominator": 2,
+          "numerator": 1,
+          "status": "measured",
+          "value": 0.5
+        },
+        "template_top1_accuracy": {
+          "denominator": 5,
+          "numerator": 3,
+          "status": "measured",
+          "value": 0.6
+        },
+        "template_top3_accuracy": {
+          "denominator": 5,
+          "numerator": 5,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "source_kind": "figma"
+    }
+  ],
+  "corpus_name": "Vanjaro Design Translation Offline Corpus",
+  "regressions": [
+    {
+      "baseline": 1.0,
+      "comparable": true,
+      "current": 1.0,
+      "delta": 0.0,
+      "failed": false,
+      "metric": "section_boundary_precision",
+      "reason": null,
+      "tolerance": 0.02
+    },
+    {
+      "baseline": 0.9333,
+      "comparable": true,
+      "current": 1.0,
+      "delta": 0.0667,
+      "failed": false,
+      "metric": "section_boundary_recall",
+      "reason": null,
+      "tolerance": 0.02
+    },
+    {
+      "baseline": 0.2857,
+      "comparable": true,
+      "current": 1.0,
+      "delta": 0.7143,
+      "failed": false,
+      "metric": "semantic_role_accuracy",
+      "reason": null,
+      "tolerance": 0.02
+    },
+    {
+      "baseline": 0.8293,
+      "comparable": true,
+      "current": 1.0,
+      "delta": 0.1707,
+      "failed": false,
+      "metric": "visitor_content_retention",
+      "reason": null,
+      "tolerance": 0.02
+    },
+    {
+      "baseline": null,
+      "comparable": false,
+      "current": 1.0,
+      "delta": null,
+      "failed": false,
+      "metric": "group_field_association_accuracy",
+      "reason": "baseline or current metric is not measurable",
+      "tolerance": 0.02
+    },
+    {
+      "baseline": 0.8889,
+      "comparable": true,
+      "current": 1.0,
+      "delta": 0.1111,
+      "failed": false,
+      "metric": "asset_association_accuracy",
+      "reason": null,
+      "tolerance": 0.02
+    },
+    {
+      "baseline": 0.0,
+      "comparable": true,
+      "current": 0.615385,
+      "delta": 0.615385,
+      "failed": false,
+      "metric": "responsive_observation_coverage",
+      "reason": null,
+      "tolerance": 0.02
+    }
+  ],
+  "schema_version": "1.0",
+  "threshold_failures": []
+}

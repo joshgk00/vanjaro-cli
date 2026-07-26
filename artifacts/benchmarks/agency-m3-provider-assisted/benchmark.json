@@ -1,0 +1,146 @@
+{
+  "aggregate": {
+    "extraction": {
+      "asset_association_accuracy": {
+        "denominator": 0,
+        "numerator": 0,
+        "status": "not_measurable",
+        "value": null
+      },
+      "group_field_association_accuracy": {
+        "denominator": 3,
+        "numerator": 3,
+        "status": "measured",
+        "value": 1.0
+      },
+      "responsive_observation_coverage": {
+        "denominator": 6,
+        "numerator": 6,
+        "status": "measured",
+        "value": 1.0
+      },
+      "section_boundary_precision": {
+        "denominator": 3,
+        "numerator": 3,
+        "status": "measured",
+        "value": 1.0
+      },
+      "section_boundary_recall": {
+        "denominator": 3,
+        "numerator": 3,
+        "status": "measured",
+        "value": 1.0
+      },
+      "semantic_role_accuracy": {
+        "denominator": 3,
+        "numerator": 3,
+        "status": "measured",
+        "value": 1.0
+      },
+      "visitor_content_retention": {
+        "denominator": 11,
+        "numerator": 11,
+        "status": "measured",
+        "value": 1.0
+      }
+    },
+    "matcher": {
+      "high_confidence_precision": {
+        "denominator": 1,
+        "numerator": 1,
+        "status": "measured",
+        "value": 1.0
+      },
+      "template_top1_accuracy": {
+        "denominator": 2,
+        "numerator": 2,
+        "status": "measured",
+        "value": 1.0
+      },
+      "template_top3_accuracy": {
+        "denominator": 2,
+        "numerator": 2,
+        "status": "measured",
+        "value": 1.0
+      }
+    }
+  },
+  "case_filter": [
+    "image-assisted-agency"
+  ],
+  "cases": [
+    {
+      "case_id": "image-assisted-agency",
+      "extraction": {
+        "asset_association_accuracy": {
+          "denominator": 0,
+          "numerator": 0,
+          "status": "not_measurable",
+          "value": null
+        },
+        "group_field_association_accuracy": {
+          "denominator": 3,
+          "numerator": 3,
+          "status": "measured",
+          "value": 1.0
+        },
+        "responsive_observation_coverage": {
+          "denominator": 6,
+          "numerator": 6,
+          "status": "measured",
+          "value": 1.0
+        },
+        "section_boundary_precision": {
+          "denominator": 3,
+          "numerator": 3,
+          "status": "measured",
+          "value": 1.0
+        },
+        "section_boundary_recall": {
+          "denominator": 3,
+          "numerator": 3,
+          "status": "measured",
+          "value": 1.0
+        },
+        "semantic_role_accuracy": {
+          "denominator": 3,
+          "numerator": 3,
+          "status": "measured",
+          "value": 1.0
+        },
+        "visitor_content_retention": {
+          "denominator": 11,
+          "numerator": 11,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "failures": [],
+      "matcher": {
+        "high_confidence_precision": {
+          "denominator": 1,
+          "numerator": 1,
+          "status": "measured",
+          "value": 1.0
+        },
+        "template_top1_accuracy": {
+          "denominator": 2,
+          "numerator": 2,
+          "status": "measured",
+          "value": 1.0
+        },
+        "template_top3_accuracy": {
+          "denominator": 2,
+          "numerator": 2,
+          "status": "measured",
+          "value": 1.0
+        }
+      },
+      "source_kind": "image"
+    }
+  ],
+  "corpus_name": "Vanjaro Assisted Image Evidence Corpus",
+  "regressions": [],
+  "schema_version": "1.0",
+  "threshold_failures": []
+}
