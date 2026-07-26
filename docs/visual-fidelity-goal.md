@@ -289,3 +289,30 @@ a separate task.
 
 Verification: 1,567 non-integration tests pass, up from 1,542. The five-case
 offline benchmark passes with no threshold or regression failures.
+
+### 2026-07-26 — VF-002 layout and geometry metric
+
+- Added `design/fidelity_layout.py` (238 lines) scoring bounding-box IoU,
+  column count, and section order. Sub-weights are bounds 0.60, columns 0.25,
+  order 0.15, declared once and part of the frozen regime.
+- Boxes are scaled by their own viewport width before comparison, so a 1440px
+  design and a 1280px render of the same proportional layout score 100 rather
+  than registering a false offset.
+- **A section missing from the build scores zero; a section whose geometry
+  could not be measured is unavailable.** Collapsing these would let a failed
+  capture read as a missing section, or hide a missing section from the score
+  entirely. Both directions are covered by tests.
+- Column mismatch scores by ratio rather than all-or-nothing: a 3-column band
+  rendered as 2 columns is measurably closer to correct than one rendered as
+  12. Order displacement scales against section count for the same reason.
+- Sections built but absent from the design are ignored by this metric.
+  Unplanned extra content is a planning concern, not a geometry measurement.
+- Purity is enforced by extending the VF-001 architecture guard to the new
+  module.
+
+Caught during implementation: the first test helper silently substituted a
+default box when a caller passed `bounds=None`, which made the missing-geometry
+case untestable and produced two false passes. Fixed with an explicit sentinel.
+
+Verification: 1,591 non-integration tests pass, up from 1,567. The five-case
+offline benchmark passes with no threshold or regression failures.
