@@ -1,0 +1,1723 @@
+{
+  "$defs": {
+    "Alignment": {
+      "description": "Normalized content or item alignment.",
+      "enum": [
+        "left",
+        "center",
+        "right",
+        "start",
+        "end",
+        "stretch",
+        "space_between"
+      ],
+      "title": "Alignment",
+      "type": "string"
+    },
+    "AssetKind": {
+      "description": "Asset payload types referenced by design elements.",
+      "enum": [
+        "image",
+        "video",
+        "font",
+        "svg",
+        "document",
+        "other"
+      ],
+      "title": "AssetKind",
+      "type": "string"
+    },
+    "AssetRecord": {
+      "additionalProperties": false,
+      "description": "A de-duplicated source asset or explicit unresolved asset.",
+      "properties": {
+        "alt_text": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Alt Text"
+        },
+        "height": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Height"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/AssetKind"
+        },
+        "local_path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Local Path"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Metadata",
+          "type": "object"
+        },
+        "mime_type": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Mime Type"
+        },
+        "missing_reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Missing Reason"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "role": {
+          "$ref": "#/$defs/AssetRole"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
+        },
+        "width": {
+          "anyOf": [
+            {
+              "minimum": 0,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Width"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "role"
+      ],
+      "title": "AssetRecord",
+      "type": "object"
+    },
+    "AssetRole": {
+      "description": "Whether an asset is editable content or visual decoration.",
+      "enum": [
+        "editorial",
+        "decorative"
+      ],
+      "title": "AssetRole",
+      "type": "string"
+    },
+    "BoundingBox": {
+      "additionalProperties": false,
+      "description": "Source geometry in CSS or Figma pixels.",
+      "properties": {
+        "height": {
+          "minimum": 0,
+          "title": "Height",
+          "type": "number"
+        },
+        "width": {
+          "minimum": 0,
+          "title": "Width",
+          "type": "number"
+        },
+        "x": {
+          "title": "X",
+          "type": "number"
+        },
+        "y": {
+          "title": "Y",
+          "type": "number"
+        }
+      },
+      "required": [
+        "x",
+        "y",
+        "width",
+        "height"
+      ],
+      "title": "BoundingBox",
+      "type": "object"
+    },
+    "BreakpointName": {
+      "description": "Canonical responsive breakpoint names.",
+      "enum": [
+        "desktop",
+        "tablet",
+        "mobile"
+      ],
+      "title": "BreakpointName",
+      "type": "string"
+    },
+    "CandidateRole": {
+      "additionalProperties": false,
+      "description": "Alternative semantic role considered for a section.",
+      "properties": {
+        "evidence": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Evidence",
+          "type": "array"
+        },
+        "role": {
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        },
+        "score": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Score",
+          "type": "number"
+        }
+      },
+      "required": [
+        "role",
+        "score"
+      ],
+      "title": "CandidateRole",
+      "type": "object"
+    },
+    "ContentElement": {
+      "additionalProperties": false,
+      "description": "Visitor-facing content with semantic ownership and provenance.",
+      "properties": {
+        "asset_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Asset Id"
+        },
+        "attributes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Attributes",
+          "type": "object"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "group_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Group Id"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/ContentKind"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Metadata",
+          "type": "object"
+        },
+        "order": {
+          "minimum": 0,
+          "title": "Order",
+          "type": "integer"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "role": {
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        },
+        "style": {
+          "$ref": "#/$defs/StyleSet"
+        },
+        "value": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/JsonValue"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "role",
+        "order",
+        "provenance",
+        "confidence"
+      ],
+      "title": "ContentElement",
+      "type": "object"
+    },
+    "ContentKind": {
+      "description": "Visitor-facing element kinds defined by Design Document v1.",
+      "enum": [
+        "heading",
+        "text",
+        "image",
+        "button",
+        "link",
+        "list",
+        "list_item",
+        "quote",
+        "stat",
+        "video",
+        "form_placeholder",
+        "other"
+      ],
+      "title": "ContentKind",
+      "type": "string"
+    },
+    "DecorativeLayer": {
+      "additionalProperties": false,
+      "description": "Non-editorial visual layer associated with a section.",
+      "properties": {
+        "asset_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Asset Id"
+        },
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "minLength": 1,
+          "title": "Kind",
+          "type": "string"
+        },
+        "order": {
+          "minimum": 0,
+          "title": "Order",
+          "type": "integer"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "style": {
+          "$ref": "#/$defs/StyleSet"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "order",
+        "provenance",
+        "confidence"
+      ],
+      "title": "DecorativeLayer",
+      "type": "object"
+    },
+    "DesignAnalysis": {
+      "additionalProperties": false,
+      "description": "Aggregate quality signals produced during design analysis.",
+      "properties": {
+        "metadata": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Metadata",
+          "type": "object"
+        },
+        "section_confidence_mean": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Section Confidence Mean",
+          "type": "number"
+        },
+        "unsupported_traits": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Unsupported Traits",
+          "type": "array"
+        }
+      },
+      "required": [
+        "section_confidence_mean",
+        "unsupported_traits"
+      ],
+      "title": "DesignAnalysis",
+      "type": "object"
+    },
+    "DesignSource": {
+      "additionalProperties": false,
+      "description": "Identity and capture metadata for the input design.",
+      "properties": {
+        "adapter_version": {
+          "minLength": 1,
+          "title": "Adapter Version",
+          "type": "string"
+        },
+        "captured_at": {
+          "format": "date-time",
+          "title": "Captured At",
+          "type": "string"
+        },
+        "identifier": {
+          "minLength": 1,
+          "title": "Identifier",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/SourceKind"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Metadata",
+          "type": "object"
+        }
+      },
+      "required": [
+        "kind",
+        "identifier",
+        "captured_at",
+        "adapter_version"
+      ],
+      "title": "DesignSource",
+      "type": "object"
+    },
+    "DesignTokens": {
+      "additionalProperties": false,
+      "description": "Source-level visual tokens shared across pages.",
+      "properties": {
+        "colors": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TokenValue"
+          },
+          "title": "Colors",
+          "type": "object"
+        },
+        "raw": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Raw",
+          "type": "object"
+        },
+        "spacing": {
+          "additionalProperties": {
+            "$ref": "#/$defs/TokenValue"
+          },
+          "title": "Spacing",
+          "type": "object"
+        },
+        "typography": {
+          "items": {
+            "$ref": "#/$defs/TypographyToken"
+          },
+          "title": "Typography",
+          "type": "array"
+        }
+      },
+      "title": "DesignTokens",
+      "type": "object"
+    },
+    "DesignWarning": {
+      "additionalProperties": false,
+      "description": "Non-fatal extraction or translation issue.",
+      "properties": {
+        "code": {
+          "minLength": 1,
+          "title": "Code",
+          "type": "string"
+        },
+        "message": {
+          "minLength": 1,
+          "title": "Message",
+          "type": "string"
+        },
+        "path": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Path"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "severity": {
+          "$ref": "#/$defs/WarningSeverity",
+          "default": "warning"
+        }
+      },
+      "required": [
+        "code",
+        "message"
+      ],
+      "title": "DesignWarning",
+      "type": "object"
+    },
+    "EvidenceStatus": {
+      "description": "Whether evidence was directly observed or inferred.",
+      "enum": [
+        "observed",
+        "inferred"
+      ],
+      "title": "EvidenceStatus",
+      "type": "string"
+    },
+    "Interaction": {
+      "additionalProperties": false,
+      "description": "Source interaction inventory and native-representation status.",
+      "properties": {
+        "confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "details": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Details",
+          "type": "object"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "kind": {
+          "$ref": "#/$defs/InteractionKind"
+        },
+        "native_representation_known": {
+          "title": "Native Representation Known",
+          "type": "boolean"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "observed"
+        },
+        "target_element_ids": {
+          "items": {
+            "type": "string"
+          },
+          "title": "Target Element Ids",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "native_representation_known",
+        "provenance",
+        "confidence"
+      ],
+      "title": "Interaction",
+      "type": "object"
+    },
+    "InteractionKind": {
+      "description": "Interactions that can be inventoried without copying source scripts.",
+      "enum": [
+        "accordion",
+        "tabs",
+        "carousel",
+        "video_embed",
+        "menu",
+        "form",
+        "modal_trigger",
+        "other"
+      ],
+      "title": "InteractionKind",
+      "type": "string"
+    },
+    "JsonValue": {},
+    "LayoutKind": {
+      "description": "Common source-neutral section and region layouts.",
+      "enum": [
+        "stack",
+        "grid",
+        "flex",
+        "split",
+        "carousel",
+        "freeform",
+        "other"
+      ],
+      "title": "LayoutKind",
+      "type": "string"
+    },
+    "LayoutObservation": {
+      "additionalProperties": false,
+      "description": "Normalized base layout for a section or nested region.",
+      "properties": {
+        "alignment": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/Alignment"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "columns": {
+          "anyOf": [
+            {
+              "minimum": 1,
+              "type": "integer"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Columns"
+        },
+        "contained": {
+          "title": "Contained",
+          "type": "boolean"
+        },
+        "direction": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Direction"
+        },
+        "full_bleed": {
+          "default": false,
+          "title": "Full Bleed",
+          "type": "boolean"
+        },
+        "kind": {
+          "$ref": "#/$defs/LayoutKind"
+        },
+        "media_position": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/MediaPosition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "metadata": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Metadata",
+          "type": "object"
+        },
+        "wrap": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Wrap"
+        }
+      },
+      "required": [
+        "kind",
+        "contained"
+      ],
+      "title": "LayoutObservation",
+      "type": "object"
+    },
+    "LayoutRegion": {
+      "additionalProperties": false,
+      "description": "A nested non-repeating owner for content elements.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "layout": {
+          "$ref": "#/$defs/LayoutObservation"
+        },
+        "order": {
+          "minimum": 0,
+          "title": "Order",
+          "type": "integer"
+        },
+        "parent_region_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Region Id"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "role": {
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "role",
+        "order",
+        "layout"
+      ],
+      "title": "LayoutRegion",
+      "type": "object"
+    },
+    "MediaPosition": {
+      "description": "Position of editorial media relative to primary content.",
+      "enum": [
+        "top",
+        "right",
+        "bottom",
+        "left",
+        "background",
+        "none"
+      ],
+      "title": "MediaPosition",
+      "type": "string"
+    },
+    "NavigationVisibility": {
+      "description": "Page-level navigation state captured from the source.",
+      "enum": [
+        "visible",
+        "hidden",
+        "unknown"
+      ],
+      "title": "NavigationVisibility",
+      "type": "string"
+    },
+    "ObservationMethod": {
+      "description": "Mechanism that produced a provenance record.",
+      "enum": [
+        "static",
+        "rendered",
+        "api",
+        "inferred",
+        "legacy",
+        "manual"
+      ],
+      "title": "ObservationMethod",
+      "type": "string"
+    },
+    "Page": {
+      "additionalProperties": false,
+      "description": "A source page or page-like Figma frame.",
+      "properties": {
+        "breakpoints": {
+          "items": {
+            "$ref": "#/$defs/BreakpointName"
+          },
+          "title": "Breakpoints",
+          "type": "array"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Metadata",
+          "type": "object"
+        },
+        "navigation_visibility": {
+          "$ref": "#/$defs/NavigationVisibility"
+        },
+        "parent_page_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Parent Page Id"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "sections": {
+          "items": {
+            "$ref": "#/$defs/Section"
+          },
+          "title": "Sections",
+          "type": "array",
+          "x-unique-by": "id"
+        },
+        "seo": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/SeoMetadata"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "slug": {
+          "title": "Slug",
+          "type": "string"
+        },
+        "source_reference": {
+          "minLength": 1,
+          "title": "Source Reference",
+          "type": "string"
+        },
+        "title": {
+          "minLength": 1,
+          "title": "Title",
+          "type": "string"
+        }
+      },
+      "required": [
+        "id",
+        "source_reference",
+        "title",
+        "slug",
+        "sections",
+        "breakpoints",
+        "navigation_visibility",
+        "provenance"
+      ],
+      "title": "Page",
+      "type": "object"
+    },
+    "Provenance": {
+      "additionalProperties": false,
+      "description": "Trace from inferred design data back to HTML or Figma evidence.",
+      "properties": {
+        "bounds": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BoundingBox"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
+        "component_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Component Id"
+        },
+        "css_selector": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Css Selector"
+        },
+        "element_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Element Node Id"
+        },
+        "file_key": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "File Key"
+        },
+        "frame_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Frame Node Id"
+        },
+        "instance_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Instance Id"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Metadata",
+          "type": "object"
+        },
+        "method": {
+          "$ref": "#/$defs/ObservationMethod"
+        },
+        "page_node_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Page Node Id"
+        },
+        "source_attribute": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Attribute"
+        },
+        "source_kind": {
+          "$ref": "#/$defs/SourceKind"
+        },
+        "source_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Source Url"
+        },
+        "viewport": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/BreakpointName"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        }
+      },
+      "required": [
+        "source_kind",
+        "method"
+      ],
+      "title": "Provenance",
+      "type": "object"
+    },
+    "RepeatGroup": {
+      "additionalProperties": false,
+      "description": "Relationship-preserving collection of repeated design items.",
+      "properties": {
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "items": {
+          "items": {
+            "$ref": "#/$defs/RepeatGroupItem"
+          },
+          "minItems": 1,
+          "title": "Items",
+          "type": "array",
+          "x-unique-by": "id"
+        },
+        "kind": {
+          "$ref": "#/$defs/RepeatGroupKind"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "kind",
+        "items"
+      ],
+      "title": "RepeatGroup",
+      "type": "object"
+    },
+    "RepeatGroupItem": {
+      "additionalProperties": false,
+      "description": "One repeat instance mapping semantic fields to element IDs.",
+      "properties": {
+        "fields": {
+          "additionalProperties": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            ]
+          },
+          "title": "Fields",
+          "type": "object"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        }
+      },
+      "required": [
+        "id",
+        "fields"
+      ],
+      "title": "RepeatGroupItem",
+      "type": "object"
+    },
+    "RepeatGroupKind": {
+      "description": "Repeatable semantic structures recognized by the design engine.",
+      "enum": [
+        "card",
+        "testimonial",
+        "stat",
+        "pricing_plan",
+        "team_member",
+        "faq_item",
+        "gallery_item",
+        "navigation_item",
+        "blog_post",
+        "other"
+      ],
+      "title": "RepeatGroupKind",
+      "type": "string"
+    },
+    "ResponsiveObservation": {
+      "additionalProperties": false,
+      "description": "Breakpoint delta from a section's base layout and styles.",
+      "properties": {
+        "breakpoint": {
+          "$ref": "#/$defs/BreakpointName"
+        },
+        "hidden": {
+          "anyOf": [
+            {
+              "type": "boolean"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Hidden"
+        },
+        "layout_changes": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Layout Changes",
+          "type": "object"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus"
+        },
+        "style": {
+          "$ref": "#/$defs/StyleSet"
+        },
+        "viewport": {
+          "$ref": "#/$defs/Viewport"
+        }
+      },
+      "required": [
+        "breakpoint",
+        "viewport",
+        "status"
+      ],
+      "title": "ResponsiveObservation",
+      "type": "object"
+    },
+    "Section": {
+      "additionalProperties": false,
+      "description": "Ordered semantic section within a design page.",
+      "properties": {
+        "candidate_roles": {
+          "items": {
+            "$ref": "#/$defs/CandidateRole"
+          },
+          "title": "Candidate Roles",
+          "type": "array"
+        },
+        "content": {
+          "items": {
+            "$ref": "#/$defs/ContentElement"
+          },
+          "title": "Content",
+          "type": "array",
+          "x-unique-by": "id"
+        },
+        "decorative_layers": {
+          "items": {
+            "$ref": "#/$defs/DecorativeLayer"
+          },
+          "title": "Decorative Layers",
+          "type": "array",
+          "x-unique-by": "id"
+        },
+        "groups": {
+          "items": {
+            "$ref": "#/$defs/RepeatGroup"
+          },
+          "title": "Groups",
+          "type": "array",
+          "x-unique-by": "id"
+        },
+        "id": {
+          "minLength": 1,
+          "title": "Id",
+          "type": "string"
+        },
+        "interactions": {
+          "items": {
+            "$ref": "#/$defs/Interaction"
+          },
+          "title": "Interactions",
+          "type": "array",
+          "x-unique-by": "id"
+        },
+        "layout": {
+          "$ref": "#/$defs/LayoutObservation"
+        },
+        "metadata": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Metadata",
+          "type": "object"
+        },
+        "order": {
+          "minimum": 0,
+          "title": "Order",
+          "type": "integer"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "regions": {
+          "items": {
+            "$ref": "#/$defs/LayoutRegion"
+          },
+          "title": "Regions",
+          "type": "array",
+          "x-unique-by": "id"
+        },
+        "responsive": {
+          "items": {
+            "$ref": "#/$defs/ResponsiveObservation"
+          },
+          "title": "Responsive",
+          "type": "array"
+        },
+        "role_confidence": {
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Role Confidence",
+          "type": "number"
+        },
+        "semantic_role": {
+          "minLength": 1,
+          "title": "Semantic Role",
+          "type": "string"
+        },
+        "style": {
+          "$ref": "#/$defs/StyleSet"
+        }
+      },
+      "required": [
+        "id",
+        "order",
+        "semantic_role",
+        "role_confidence",
+        "candidate_roles",
+        "layout",
+        "content",
+        "groups",
+        "style",
+        "responsive",
+        "decorative_layers",
+        "interactions",
+        "provenance"
+      ],
+      "title": "Section",
+      "type": "object"
+    },
+    "SeoMetadata": {
+      "additionalProperties": false,
+      "description": "SEO metadata available from a live page or design annotation.",
+      "properties": {
+        "canonical_url": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Canonical Url"
+        },
+        "description": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Description"
+        },
+        "open_graph": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Open Graph",
+          "type": "object"
+        },
+        "robots": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Robots"
+        },
+        "title": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Title"
+        }
+      },
+      "title": "SeoMetadata",
+      "type": "object"
+    },
+    "SourceKind": {
+      "description": "Supported origins for a Design Document.",
+      "enum": [
+        "live_html",
+        "figma",
+        "image",
+        "legacy_sections",
+        "composite"
+      ],
+      "title": "SourceKind",
+      "type": "string"
+    },
+    "StyleObservation": {
+      "additionalProperties": false,
+      "description": "A supported style value and the evidence that produced it.",
+      "properties": {
+        "confidence": {
+          "default": 1.0,
+          "maximum": 1,
+          "minimum": 0,
+          "title": "Confidence",
+          "type": "number"
+        },
+        "property": {
+          "$ref": "#/$defs/StyleProperty"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "status": {
+          "$ref": "#/$defs/EvidenceStatus",
+          "default": "observed"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "property",
+        "value"
+      ],
+      "title": "StyleObservation",
+      "type": "object"
+    },
+    "StyleProperty": {
+      "description": "Normalized style properties supported by Design Document v1.",
+      "enum": [
+        "background_color",
+        "background_image",
+        "background_position",
+        "text_color",
+        "font_family",
+        "font_size",
+        "font_weight",
+        "line_height",
+        "letter_spacing",
+        "width",
+        "height",
+        "min_height",
+        "max_width",
+        "margin",
+        "padding",
+        "row_gap",
+        "column_gap",
+        "text_align",
+        "item_align",
+        "border",
+        "border_radius",
+        "box_shadow",
+        "object_fit",
+        "object_position",
+        "position",
+        "overlap",
+        "transform",
+        "rotation",
+        "opacity",
+        "overlay_color",
+        "display",
+        "visibility",
+        "flex_direction",
+        "flex_wrap",
+        "order",
+        "column_count"
+      ],
+      "title": "StyleProperty",
+      "type": "string"
+    },
+    "StyleSet": {
+      "additionalProperties": false,
+      "description": "Observed styles plus unsupported CSS retained without applying it.",
+      "properties": {
+        "observations": {
+          "items": {
+            "$ref": "#/$defs/StyleObservation"
+          },
+          "title": "Observations",
+          "type": "array"
+        },
+        "raw": {
+          "additionalProperties": {
+            "$ref": "#/$defs/JsonValue"
+          },
+          "title": "Raw",
+          "type": "object"
+        }
+      },
+      "title": "StyleSet",
+      "type": "object"
+    },
+    "TokenValue": {
+      "additionalProperties": false,
+      "description": "Named design token with optional provenance.",
+      "properties": {
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "value": {
+          "$ref": "#/$defs/JsonValue"
+        }
+      },
+      "required": [
+        "value"
+      ],
+      "title": "TokenValue",
+      "type": "object"
+    },
+    "TypographyToken": {
+      "additionalProperties": false,
+      "description": "Typography evidence for a semantic role such as display or body.",
+      "properties": {
+        "font_family": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Font Family"
+        },
+        "font_size": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Font Size"
+        },
+        "font_weight": {
+          "anyOf": [
+            {
+              "type": "integer"
+            },
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Font Weight"
+        },
+        "letter_spacing": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Letter Spacing"
+        },
+        "line_height": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Line Height"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "role": {
+          "minLength": 1,
+          "title": "Role",
+          "type": "string"
+        }
+      },
+      "required": [
+        "role"
+      ],
+      "title": "TypographyToken",
+      "type": "object"
+    },
+    "Viewport": {
+      "additionalProperties": false,
+      "description": "Pixel dimensions used for a responsive observation.",
+      "properties": {
+        "height": {
+          "exclusiveMinimum": 0,
+          "title": "Height",
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "title": "Width",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height"
+      ],
+      "title": "Viewport",
+      "type": "object"
+    },
+    "WarningSeverity": {
+      "description": "Severity levels for non-fatal analysis findings.",
+      "enum": [
+        "info",
+        "warning",
+        "error"
+      ],
+      "title": "WarningSeverity",
+      "type": "string"
+    }
+  },
+  "$id": "https://schemas.vanjaro.dev/design-document-v1.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "description": "Version 1.0 rejects unknown fields. Minor versions may only add optional fields; breaking changes require a new major schema. Cross-reference and x-unique-by constraints are enforced by the DesignDocument model.",
+  "properties": {
+    "analysis": {
+      "$ref": "#/$defs/DesignAnalysis"
+    },
+    "assets": {
+      "items": {
+        "$ref": "#/$defs/AssetRecord"
+      },
+      "title": "Assets",
+      "type": "array",
+      "x-unique-by": "id"
+    },
+    "pages": {
+      "items": {
+        "$ref": "#/$defs/Page"
+      },
+      "title": "Pages",
+      "type": "array",
+      "x-unique-by": "id"
+    },
+    "schema_version": {
+      "pattern": "^1\\.0$",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "source": {
+      "$ref": "#/$defs/DesignSource"
+    },
+    "tokens": {
+      "$ref": "#/$defs/DesignTokens"
+    },
+    "warnings": {
+      "items": {
+        "$ref": "#/$defs/DesignWarning"
+      },
+      "title": "Warnings",
+      "type": "array"
+    }
+  },
+  "required": [
+    "schema_version",
+    "source",
+    "tokens",
+    "assets",
+    "pages",
+    "warnings",
+    "analysis"
+  ],
+  "title": "Vanjaro Design Document v1",
+  "type": "object",
+  "x-validation-notes": [
+    "Arrays marked x-unique-by use the id property as a uniqueness key.",
+    "Element, asset, page, section, group, region, layer, interaction, and repeat-item IDs share a document-wide namespace.",
+    "References are validated by vanjaro_cli.design.models.DesignDocument."
+  ]
+}
