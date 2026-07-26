@@ -1,0 +1,69 @@
+{
+  "schema_version": "1.0", "case_id": "html-dnn-services", "source_kind": "live_html",
+  "page": {"id": "harbor.home", "source_locator": "synthetic://harbor/", "title": "Harbor Services", "slug": "home", "breakpoints": ["desktop", "tablet", "mobile"]},
+  "expected": {"sections": [
+    {
+      "id": "harbor.hero", "order": 1, "boundary": {"kind": "css_selector", "value": "#dnn_HeroPane"}, "semantic_role": "hero",
+      "content": [
+        {"id": "ha-hero-media", "kind": "image", "role": "hero_media", "order": 1, "value": "/synthetic/harbor-team.jpg", "group_id": null, "attributes": {"alt": "Harbor support team"}},
+        {"id": "ha-hero-title", "kind": "heading", "role": "section_title", "order": 2, "value": "Steady support for growing organizations.", "group_id": null, "attributes": {"level": 1}},
+        {"id": "ha-hero-body", "kind": "text", "role": "body", "order": 3, "value": "Practical finance, people, and operations help.", "group_id": null},
+        {"id": "ha-hero-action", "kind": "button", "role": "primary_action", "order": 4, "value": "View services", "group_id": null, "attributes": {"href": "#services"}}
+      ], "groups": [], "assets": [{"element_id": "ha-hero-media", "role": "hero_media", "source_ref": "/synthetic/harbor-team.jpg"}],
+      "responsive": [{"breakpoint": "mobile", "observations": {"media_position": "top", "columns": 1}}], "acceptable_templates": ["split-hero", "split-media"]
+    },
+    {
+      "id": "harbor.services", "order": 2, "boundary": {"kind": "css_selector", "value": "#dnn_ServicesPane"}, "semantic_role": "feature_cards",
+      "content": [
+        {"id": "ha-services-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Services", "group_id": null, "attributes": {"level": 2}},
+        {"id": "ha-service-1-title", "kind": "heading", "role": "card_title", "order": 1, "value": "Bookkeeping", "group_id": "ha-service-cards", "attributes": {"level": 3}},
+        {"id": "ha-service-1-body", "kind": "text", "role": "card_body", "order": 2, "value": "Reliable monthly reporting.", "group_id": "ha-service-cards"},
+        {"id": "ha-service-2-title", "kind": "heading", "role": "card_title", "order": 3, "value": "People operations", "group_id": "ha-service-cards", "attributes": {"level": 3}},
+        {"id": "ha-service-2-body", "kind": "text", "role": "card_body", "order": 4, "value": "Clear systems for a supported team.", "group_id": "ha-service-cards"},
+        {"id": "ha-service-3-title", "kind": "heading", "role": "card_title", "order": 5, "value": "Business operations", "group_id": "ha-service-cards", "attributes": {"level": 3}},
+        {"id": "ha-service-3-body", "kind": "text", "role": "card_body", "order": 6, "value": "Processes that scale without extra noise.", "group_id": "ha-service-cards"}
+      ], "groups": [{"id": "ha-service-cards", "kind": "card", "items": [
+        {"id": "ha-service-card-1", "fields": {"title": "ha-service-1-title", "body": "ha-service-1-body"}},
+        {"id": "ha-service-card-2", "fields": {"title": "ha-service-2-title", "body": "ha-service-2-body"}},
+        {"id": "ha-service-card-3", "fields": {"title": "ha-service-3-title", "body": "ha-service-3-body"}}
+      ]}], "assets": [], "responsive": [{"breakpoint": "tablet", "observations": {"columns": 2}}, {"breakpoint": "mobile", "observations": {"columns": 1}}],
+      "acceptable_templates": ["feature-cards-3up", "icon-feature-list"]
+    },
+    {
+      "id": "harbor.stats", "order": 3, "boundary": {"kind": "css_selector", "value": "#dnn_StatsPane"}, "semantic_role": "stats",
+      "content": [
+        {"id": "ha-stats-title", "kind": "heading", "role": "section_title", "order": 1, "value": "A dependable partner", "group_id": null, "attributes": {"level": 2}},
+        {"id": "ha-stat-1-value", "kind": "stat", "role": "stat_value", "order": 1, "value": "12", "group_id": "ha-stat-items"},
+        {"id": "ha-stat-1-label", "kind": "text", "role": "stat_label", "order": 2, "value": "years serving teams", "group_id": "ha-stat-items"},
+        {"id": "ha-stat-2-value", "kind": "stat", "role": "stat_value", "order": 3, "value": "96%", "group_id": "ha-stat-items"},
+        {"id": "ha-stat-2-label", "kind": "text", "role": "stat_label", "order": 4, "value": "client retention", "group_id": "ha-stat-items"},
+        {"id": "ha-stat-3-value", "kind": "stat", "role": "stat_value", "order": 5, "value": "2d", "group_id": "ha-stat-items"},
+        {"id": "ha-stat-3-label", "kind": "text", "role": "stat_label", "order": 6, "value": "average response", "group_id": "ha-stat-items"}
+      ], "groups": [{"id": "ha-stat-items", "kind": "stat", "items": [
+        {"id": "ha-stat-item-1", "fields": {"value": "ha-stat-1-value", "label": "ha-stat-1-label"}},
+        {"id": "ha-stat-item-2", "fields": {"value": "ha-stat-2-value", "label": "ha-stat-2-label"}},
+        {"id": "ha-stat-item-3", "fields": {"value": "ha-stat-3-value", "label": "ha-stat-3-label"}}
+      ]}], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"columns": 1}}], "acceptable_templates": ["stats-band-3up"]
+    },
+    {
+      "id": "harbor.about", "order": 4, "boundary": {"kind": "css_selector", "value": "#dnn_AboutPane"}, "semantic_role": "split_feature",
+      "content": [
+        {"id": "ha-about-media", "kind": "image", "role": "section_media", "order": 1, "value": "/synthetic/harbor-office.jpg", "group_id": null, "attributes": {"alt": "Harbor office workshop"}},
+        {"id": "ha-about-title", "kind": "heading", "role": "section_title", "order": 2, "value": "Built for the work between milestones.", "group_id": null, "attributes": {"level": 2}},
+        {"id": "ha-about-body", "kind": "text", "role": "body", "order": 3, "value": "We document decisions and leave your team stronger.", "group_id": null},
+        {"id": "ha-about-point-1", "kind": "list_item", "role": "benefit", "order": 1, "value": "Documented handoffs", "group_id": "ha-about-points"},
+        {"id": "ha-about-point-2", "kind": "list_item", "role": "benefit", "order": 2, "value": "Plain-language reporting", "group_id": "ha-about-points"}
+      ], "groups": [{"id": "ha-about-points", "kind": "list_item", "items": [
+        {"id": "ha-about-item-1", "fields": {"text": "ha-about-point-1"}}, {"id": "ha-about-item-2", "fields": {"text": "ha-about-point-2"}}
+      ]}], "assets": [{"element_id": "ha-about-media", "role": "section_media", "source_ref": "/synthetic/harbor-office.jpg"}],
+      "responsive": [{"breakpoint": "mobile", "observations": {"media_position": "top", "columns": 1}}], "acceptable_templates": ["split-media", "split-media-reverse"]
+    },
+    {
+      "id": "harbor.cta", "order": 5, "boundary": {"kind": "css_selector", "value": "#dnn_CtaPane"}, "semantic_role": "call_to_action",
+      "content": [
+        {"id": "ha-cta-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Bring calm to the back office.", "group_id": null, "attributes": {"level": 2}},
+        {"id": "ha-cta-action", "kind": "button", "role": "primary_action", "order": 2, "value": "Book an introduction", "group_id": null, "attributes": {"href": "/contact"}}
+      ], "groups": [], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"button_width": "100%"}}], "acceptable_templates": ["cta-banner"]
+    }
+  ]}
+}

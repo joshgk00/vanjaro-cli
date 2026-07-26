@@ -1,0 +1,84 @@
+{
+  "schema_version": "1.0", "case_id": "html-elementor-studio", "source_kind": "live_html",
+  "page": {"id": "juniper.home", "source_locator": "synthetic://juniper/", "title": "Juniper Studio", "slug": "home", "breakpoints": ["desktop", "tablet", "mobile"]},
+  "expected": {"sections": [
+    {
+      "id": "juniper.hero", "order": 1, "boundary": {"kind": "css_selector", "value": "[data-id='juniper-hero']"}, "semantic_role": "hero",
+      "content": [
+        {"id": "ju-hero-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Rooms with a point of view.", "group_id": null, "attributes": {"level": 1}},
+        {"id": "ju-hero-body", "kind": "text", "role": "body", "order": 2, "value": "Warm, durable interiors made for everyday life.", "group_id": null},
+        {"id": "ju-hero-action", "kind": "button", "role": "primary_action", "order": 3, "value": "Explore projects", "group_id": null, "attributes": {"href": "#projects"}}
+      ], "groups": [], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"alignment": "left", "min_height": "600px"}}],
+      "acceptable_templates": ["centered-hero", "photo-band"]
+    },
+    {
+      "id": "juniper.projects", "order": 2, "boundary": {"kind": "css_selector", "value": "[data-id='juniper-projects']"}, "semantic_role": "project_gallery",
+      "content": [
+        {"id": "ju-projects-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Selected spaces", "group_id": null, "attributes": {"level": 2}},
+        {"id": "ju-project-1-media", "kind": "image", "role": "card_media", "order": 1, "value": "/synthetic/oak-house.jpg", "group_id": "ju-project-cards", "attributes": {"alt": "Oak House living room"}},
+        {"id": "ju-project-1-title", "kind": "heading", "role": "card_title", "order": 2, "value": "Oak House", "group_id": "ju-project-cards", "attributes": {"level": 3}},
+        {"id": "ju-project-1-type", "kind": "text", "role": "eyebrow", "order": 3, "value": "Residential", "group_id": "ju-project-cards"},
+        {"id": "ju-project-2-media", "kind": "image", "role": "card_media", "order": 4, "value": "/synthetic/cove-cafe.jpg", "group_id": "ju-project-cards", "attributes": {"alt": "Cove Cafe counter"}},
+        {"id": "ju-project-2-title", "kind": "heading", "role": "card_title", "order": 5, "value": "Cove Cafe", "group_id": "ju-project-cards", "attributes": {"level": 3}},
+        {"id": "ju-project-2-type", "kind": "text", "role": "eyebrow", "order": 6, "value": "Hospitality", "group_id": "ju-project-cards"},
+        {"id": "ju-project-3-media", "kind": "image", "role": "card_media", "order": 7, "value": "/synthetic/loom-office.jpg", "group_id": "ju-project-cards", "attributes": {"alt": "Loom Office lounge"}},
+        {"id": "ju-project-3-title", "kind": "heading", "role": "card_title", "order": 8, "value": "Loom Office", "group_id": "ju-project-cards", "attributes": {"level": 3}},
+        {"id": "ju-project-3-type", "kind": "text", "role": "eyebrow", "order": 9, "value": "Workplace", "group_id": "ju-project-cards"}
+      ],
+      "groups": [{"id": "ju-project-cards", "kind": "card", "items": [
+        {"id": "ju-project-card-1", "fields": {"media": "ju-project-1-media", "title": "ju-project-1-title", "type": "ju-project-1-type"}},
+        {"id": "ju-project-card-2", "fields": {"media": "ju-project-2-media", "title": "ju-project-2-title", "type": "ju-project-2-type"}},
+        {"id": "ju-project-card-3", "fields": {"media": "ju-project-3-media", "title": "ju-project-3-title", "type": "ju-project-3-type"}}
+      ]}],
+      "assets": [
+        {"element_id": "ju-project-1-media", "role": "card_media", "source_ref": "/synthetic/oak-house.jpg"},
+        {"element_id": "ju-project-2-media", "role": "card_media", "source_ref": "/synthetic/cove-cafe.jpg"},
+        {"element_id": "ju-project-3-media", "role": "card_media", "source_ref": "/synthetic/loom-office.jpg"}
+      ], "responsive": [{"breakpoint": "tablet", "observations": {"columns": 2}}, {"breakpoint": "mobile", "observations": {"columns": 1}}],
+      "acceptable_templates": ["gallery-3up", "feature-cards-3up"]
+    },
+    {
+      "id": "juniper.process", "order": 3, "boundary": {"kind": "css_selector", "value": "[data-id='juniper-process']"}, "semantic_role": "process_steps",
+      "content": [
+        {"id": "ju-process-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Our process", "group_id": null, "attributes": {"level": 2}},
+        {"id": "ju-step-1-number", "kind": "stat", "role": "step_number", "order": 1, "value": "01", "group_id": "ju-process-steps"},
+        {"id": "ju-step-1-title", "kind": "heading", "role": "step_title", "order": 2, "value": "Listen", "group_id": "ju-process-steps", "attributes": {"level": 3}},
+        {"id": "ju-step-2-number", "kind": "stat", "role": "step_number", "order": 3, "value": "02", "group_id": "ju-process-steps"},
+        {"id": "ju-step-2-title", "kind": "heading", "role": "step_title", "order": 4, "value": "Shape", "group_id": "ju-process-steps", "attributes": {"level": 3}},
+        {"id": "ju-step-3-number", "kind": "stat", "role": "step_number", "order": 5, "value": "03", "group_id": "ju-process-steps"},
+        {"id": "ju-step-3-title", "kind": "heading", "role": "step_title", "order": 6, "value": "Refine", "group_id": "ju-process-steps", "attributes": {"level": 3}}
+      ], "groups": [{"id": "ju-process-steps", "kind": "process_step", "items": [
+        {"id": "ju-step-1", "fields": {"number": "ju-step-1-number", "title": "ju-step-1-title"}},
+        {"id": "ju-step-2", "fields": {"number": "ju-step-2-number", "title": "ju-step-2-title"}},
+        {"id": "ju-step-3", "fields": {"number": "ju-step-3-number", "title": "ju-step-3-title"}}
+      ]}], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"direction": "vertical"}}],
+      "acceptable_templates": ["stats-band-3up", "icon-feature-list"]
+    },
+    {
+      "id": "juniper.testimonials", "order": 4, "boundary": {"kind": "css_selector", "value": "[data-id='juniper-quote']"}, "semantic_role": "testimonials",
+      "content": [
+        {"id": "ju-test-title", "kind": "heading", "role": "section_title", "order": 1, "value": "What clients notice", "group_id": null, "attributes": {"level": 2}},
+        {"id": "ju-test-1-quote", "kind": "quote", "role": "testimonial_quote", "order": 1, "value": "Good rooms support the life already happening inside them.", "group_id": "ju-test-items"},
+        {"id": "ju-test-1-author", "kind": "text", "role": "author", "order": 2, "value": "Mira, Alder House", "group_id": "ju-test-items"},
+        {"id": "ju-test-2-quote", "kind": "quote", "role": "testimonial_quote", "order": 3, "value": "The materials feel considered, never precious.", "group_id": "ju-test-items"},
+        {"id": "ju-test-2-author", "kind": "text", "role": "author", "order": 4, "value": "Dev, Cove Cafe", "group_id": "ju-test-items"},
+        {"id": "ju-test-3-quote", "kind": "quote", "role": "testimonial_quote", "order": 5, "value": "Our team uses every corner of the new studio.", "group_id": "ju-test-items"},
+        {"id": "ju-test-3-author", "kind": "text", "role": "author", "order": 6, "value": "Lee, Loom Office", "group_id": "ju-test-items"}
+      ], "groups": [{"id": "ju-test-items", "kind": "testimonial", "items": [
+        {"id": "ju-test-item-1", "fields": {"quote": "ju-test-1-quote", "author": "ju-test-1-author"}},
+        {"id": "ju-test-item-2", "fields": {"quote": "ju-test-2-quote", "author": "ju-test-2-author"}},
+        {"id": "ju-test-item-3", "fields": {"quote": "ju-test-3-quote", "author": "ju-test-3-author"}}
+      ]}], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"columns": 1, "carousel": true}}],
+      "acceptable_templates": ["testimonial-cards-3up"]
+    },
+    {
+      "id": "juniper.contact", "order": 5, "boundary": {"kind": "css_selector", "value": "[data-id='juniper-contact']"}, "semantic_role": "contact",
+      "content": [
+        {"id": "ju-contact-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Start a conversation", "group_id": null, "attributes": {"level": 2}},
+        {"id": "ju-contact-body", "kind": "text", "role": "body", "order": 2, "value": "Share your location, timeline, and hopes for the space.", "group_id": null},
+        {"id": "ju-contact-link", "kind": "link", "role": "primary_action", "order": 3, "value": "hello@example.invalid", "group_id": null, "attributes": {"href": "mailto:hello@example.invalid"}}
+      ], "groups": [], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"alignment": "left"}}],
+      "acceptable_templates": ["contact-section", "cta-banner"]
+    }
+  ]}
+}

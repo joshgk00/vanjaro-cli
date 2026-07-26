@@ -1,0 +1,64 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vanjaro.dev/schemas/design-benchmark-manifest-v1.json",
+  "title": "Vanjaro Design Benchmark Manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "corpus", "viewports", "cases"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "corpus": {
+      "type": "object",
+      "required": ["name", "license", "synthetic_only", "regression_tolerance"],
+      "properties": {
+        "name": {"type": "string", "minLength": 1},
+        "license": {"type": "string", "minLength": 1},
+        "synthetic_only": {"const": true},
+        "regression_tolerance": {"type": "number", "minimum": 0, "maximum": 1}
+      }
+    },
+    "viewports": {
+      "type": "object",
+      "required": ["desktop", "tablet", "mobile"],
+      "additionalProperties": {
+        "type": "object",
+        "required": ["width", "height"],
+        "properties": {"width": {"type": "integer"}, "height": {"type": "integer"}}
+      }
+    },
+    "cases": {
+      "type": "array",
+      "minItems": 5,
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "source_kind", "adapter_profile", "source", "annotations", "references", "legal"],
+        "properties": {
+          "id": {"type": "string", "pattern": "^[a-z0-9-]+$"},
+          "title": {"type": "string"},
+          "source_kind": {"enum": ["live_html", "figma", "image"]},
+          "adapter_profile": {"type": "string"},
+          "source": {
+            "type": "object",
+            "required": ["path", "format", "synthetic"],
+            "properties": {"path": {"type": "string"}, "format": {"enum": ["html", "figma_api_json", "image_evidence_json"]}, "synthetic": {"const": true}}
+          },
+          "annotations": {"type": "string"},
+          "references": {
+            "type": "array",
+            "minItems": 2,
+            "items": {
+              "type": "object",
+              "required": ["breakpoint", "width", "height", "path", "synthetic"],
+              "properties": {"breakpoint": {"enum": ["desktop", "mobile"]}, "page_slug": {"type": "string"}, "width": {"type": "integer"}, "height": {"type": "integer"}, "path": {"type": "string"}, "synthetic": {"const": true}}
+            }
+          },
+          "legal": {
+            "type": "object",
+            "required": ["classification", "contains_secrets", "contains_personal_data"],
+            "properties": {"classification": {"const": "synthetic"}, "contains_secrets": {"const": false}, "contains_personal_data": {"const": false}}
+          }
+        }
+      }
+    }
+  }
+}

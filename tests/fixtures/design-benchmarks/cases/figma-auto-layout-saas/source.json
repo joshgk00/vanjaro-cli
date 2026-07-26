@@ -1,0 +1,43 @@
+{
+  "name": "Synthetic Orbit SaaS",
+  "document": {
+    "id": "0:0", "name": "Document", "type": "DOCUMENT", "children": [
+      {"id": "1:0", "name": "Website", "type": "CANVAS", "children": [
+        {"id": "1:1", "name": "Home / Desktop", "type": "FRAME", "layoutMode": "VERTICAL", "itemSpacing": 0, "absoluteBoundingBox": {"x": 0, "y": 0, "width": 1440, "height": 3600}, "children": [
+          {"id": "10:1", "name": "Hero", "type": "FRAME", "layoutMode": "HORIZONTAL", "absoluteBoundingBox": {"x": 0, "y": 0, "width": 1440, "height": 760}, "children": [
+            {"id": "10:2", "name": "Hero copy", "type": "FRAME", "layoutMode": "VERTICAL", "children": [
+              {"id": "10:3", "name": "Heading", "type": "TEXT", "characters": "Plan launches without the scramble."},
+              {"id": "10:4", "name": "Body", "type": "TEXT", "characters": "Orbit keeps decisions, owners, and deadlines in one calm workspace."},
+              {"id": "10:5", "name": "Primary button", "type": "TEXT", "characters": "Start free"}
+            ]},
+            {"id": "10:6", "name": "Dashboard image", "type": "RECTANGLE", "fills": [{"type": "IMAGE", "imageRef": "synthetic-orbit-dashboard"}]}
+          ]},
+          {"id": "20:1", "name": "Logo cloud", "type": "FRAME", "layoutMode": "HORIZONTAL", "children": [
+            {"id": "20:2", "name": "Logo Northwind", "type": "TEXT", "characters": "NORTHWIND"},
+            {"id": "20:3", "name": "Logo Almanac", "type": "TEXT", "characters": "ALMANAC"},
+            {"id": "20:4", "name": "Logo Ember", "type": "TEXT", "characters": "EMBER"}
+          ]},
+          {"id": "30:1", "name": "Feature cards", "type": "FRAME", "layoutMode": "VERTICAL", "children": [
+            {"id": "30:2", "name": "Heading", "type": "TEXT", "characters": "One place for launch work"},
+            {"id": "30:3", "name": "Cards", "type": "FRAME", "layoutMode": "HORIZONTAL", "children": [
+              {"id": "31:1", "name": "Card Decisions", "type": "FRAME", "layoutMode": "VERTICAL", "children": [{"id": "31:2", "type": "TEXT", "name": "Title", "characters": "Decisions"}, {"id": "31:3", "type": "TEXT", "name": "Body", "characters": "Record the why beside the work."}]},
+              {"id": "32:1", "name": "Card Owners", "type": "FRAME", "layoutMode": "VERTICAL", "children": [{"id": "32:2", "type": "TEXT", "name": "Title", "characters": "Owners"}, {"id": "32:3", "type": "TEXT", "name": "Body", "characters": "Make every next step accountable."}]},
+              {"id": "33:1", "name": "Card Signals", "type": "FRAME", "layoutMode": "VERTICAL", "children": [{"id": "33:2", "type": "TEXT", "name": "Title", "characters": "Signals"}, {"id": "33:3", "type": "TEXT", "name": "Body", "characters": "Spot risk before it becomes a fire drill."}]}
+            ]}
+          ]},
+          {"id": "40:1", "name": "Testimonials", "type": "FRAME", "layoutMode": "VERTICAL", "children": [
+            {"id": "40:2", "name": "Heading", "type": "TEXT", "characters": "Teams ship with clarity"},
+            {"id": "41:1", "name": "Quote one", "type": "FRAME", "layoutMode": "VERTICAL", "children": [{"id": "41:2", "type": "TEXT", "name": "Quote", "characters": "Orbit turned our launch meetings into decisions."}, {"id": "41:3", "type": "TEXT", "name": "Author", "characters": "Avery, Northwind"}]},
+            {"id": "42:1", "name": "Quote two", "type": "FRAME", "layoutMode": "VERTICAL", "children": [{"id": "42:2", "type": "TEXT", "name": "Quote", "characters": "The team knows what matters every morning."}, {"id": "42:3", "type": "TEXT", "name": "Author", "characters": "Sam, Almanac"}]}
+          ]},
+          {"id": "50:1", "name": "Final CTA", "type": "FRAME", "layoutMode": "VERTICAL", "children": [
+            {"id": "50:2", "name": "Heading", "type": "TEXT", "characters": "Give your next launch room to breathe."},
+            {"id": "50:3", "name": "Button", "type": "TEXT", "characters": "Create a workspace"}
+          ]}
+        ]}
+      ]}
+    ]
+  },
+  "components": {}, "styles": {}, "images": {"synthetic-orbit-dashboard": "synthetic://orbit-dashboard"}
+}
+

@@ -1,0 +1,64 @@
+{
+  "schema_version": "1.0", "case_id": "figma-auto-layout-saas", "source_kind": "figma",
+  "page": {"id": "orbit.home", "source_locator": "1:1", "title": "Orbit SaaS", "slug": "home", "breakpoints": ["desktop", "tablet", "mobile"]},
+  "expected": {"sections": [
+    {
+      "id": "orbit.hero", "order": 1, "boundary": {"kind": "figma_node_id", "value": "10:1"}, "semantic_role": "hero",
+      "content": [
+        {"id": "or-hero-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Plan launches without the scramble.", "group_id": null, "attributes": {"figma_node_id": "10:3"}},
+        {"id": "or-hero-body", "kind": "text", "role": "body", "order": 2, "value": "Orbit keeps decisions, owners, and deadlines in one calm workspace.", "group_id": null, "attributes": {"figma_node_id": "10:4"}},
+        {"id": "or-hero-action", "kind": "button", "role": "primary_action", "order": 3, "value": "Start free", "group_id": null, "attributes": {"figma_node_id": "10:5"}},
+        {"id": "or-hero-media", "kind": "image", "role": "hero_media", "order": 4, "value": "synthetic-orbit-dashboard", "group_id": null, "attributes": {"figma_node_id": "10:6", "alt": "Orbit dashboard preview"}}
+      ], "groups": [], "assets": [{"element_id": "or-hero-media", "role": "hero_media", "source_ref": "synthetic-orbit-dashboard"}],
+      "responsive": [{"breakpoint": "mobile", "observations": {"direction": "vertical", "media_position": "bottom"}}], "acceptable_templates": ["split-hero", "split-media"]
+    },
+    {
+      "id": "orbit.logos", "order": 2, "boundary": {"kind": "figma_node_id", "value": "20:1"}, "semantic_role": "logo_cloud",
+      "content": [
+        {"id": "or-logo-1", "kind": "text", "role": "logo_wordmark", "order": 1, "value": "NORTHWIND", "group_id": "or-logo-items", "attributes": {"figma_node_id": "20:2"}},
+        {"id": "or-logo-2", "kind": "text", "role": "logo_wordmark", "order": 2, "value": "ALMANAC", "group_id": "or-logo-items", "attributes": {"figma_node_id": "20:3"}},
+        {"id": "or-logo-3", "kind": "text", "role": "logo_wordmark", "order": 3, "value": "EMBER", "group_id": "or-logo-items", "attributes": {"figma_node_id": "20:4"}}
+      ], "groups": [{"id": "or-logo-items", "kind": "logo", "items": [
+        {"id": "or-logo-item-1", "fields": {"label": "or-logo-1"}}, {"id": "or-logo-item-2", "fields": {"label": "or-logo-2"}}, {"id": "or-logo-item-3", "fields": {"label": "or-logo-3"}}
+      ]}], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"wrap": true, "columns": 2}}], "acceptable_templates": ["logo-bar"]
+    },
+    {
+      "id": "orbit.features", "order": 3, "boundary": {"kind": "figma_node_id", "value": "30:1"}, "semantic_role": "feature_cards",
+      "content": [
+        {"id": "or-features-title", "kind": "heading", "role": "section_title", "order": 1, "value": "One place for launch work", "group_id": null, "attributes": {"figma_node_id": "30:2"}},
+        {"id": "or-feature-1-title", "kind": "heading", "role": "card_title", "order": 1, "value": "Decisions", "group_id": "or-feature-cards", "attributes": {"figma_node_id": "31:2"}},
+        {"id": "or-feature-1-body", "kind": "text", "role": "card_body", "order": 2, "value": "Record the why beside the work.", "group_id": "or-feature-cards", "attributes": {"figma_node_id": "31:3"}},
+        {"id": "or-feature-2-title", "kind": "heading", "role": "card_title", "order": 3, "value": "Owners", "group_id": "or-feature-cards", "attributes": {"figma_node_id": "32:2"}},
+        {"id": "or-feature-2-body", "kind": "text", "role": "card_body", "order": 4, "value": "Make every next step accountable.", "group_id": "or-feature-cards", "attributes": {"figma_node_id": "32:3"}},
+        {"id": "or-feature-3-title", "kind": "heading", "role": "card_title", "order": 5, "value": "Signals", "group_id": "or-feature-cards", "attributes": {"figma_node_id": "33:2"}},
+        {"id": "or-feature-3-body", "kind": "text", "role": "card_body", "order": 6, "value": "Spot risk before it becomes a fire drill.", "group_id": "or-feature-cards", "attributes": {"figma_node_id": "33:3"}}
+      ], "groups": [{"id": "or-feature-cards", "kind": "card", "items": [
+        {"id": "or-feature-card-1", "fields": {"title": "or-feature-1-title", "body": "or-feature-1-body"}},
+        {"id": "or-feature-card-2", "fields": {"title": "or-feature-2-title", "body": "or-feature-2-body"}},
+        {"id": "or-feature-card-3", "fields": {"title": "or-feature-3-title", "body": "or-feature-3-body"}}
+      ]}], "assets": [], "responsive": [{"breakpoint": "tablet", "observations": {"columns": 2}}, {"breakpoint": "mobile", "observations": {"columns": 1}}],
+      "acceptable_templates": ["feature-cards-3up", "icon-feature-list"]
+    },
+    {
+      "id": "orbit.testimonials", "order": 4, "boundary": {"kind": "figma_node_id", "value": "40:1"}, "semantic_role": "testimonials",
+      "content": [
+        {"id": "or-test-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Teams ship with clarity", "group_id": null, "attributes": {"figma_node_id": "40:2"}},
+        {"id": "or-test-1-quote", "kind": "quote", "role": "testimonial_quote", "order": 1, "value": "Orbit turned our launch meetings into decisions.", "group_id": "or-test-items", "attributes": {"figma_node_id": "41:2"}},
+        {"id": "or-test-1-author", "kind": "text", "role": "author", "order": 2, "value": "Avery, Northwind", "group_id": "or-test-items", "attributes": {"figma_node_id": "41:3"}},
+        {"id": "or-test-2-quote", "kind": "quote", "role": "testimonial_quote", "order": 3, "value": "The team knows what matters every morning.", "group_id": "or-test-items", "attributes": {"figma_node_id": "42:2"}},
+        {"id": "or-test-2-author", "kind": "text", "role": "author", "order": 4, "value": "Sam, Almanac", "group_id": "or-test-items", "attributes": {"figma_node_id": "42:3"}}
+      ], "groups": [{"id": "or-test-items", "kind": "testimonial", "items": [
+        {"id": "or-test-item-1", "fields": {"quote": "or-test-1-quote", "author": "or-test-1-author"}},
+        {"id": "or-test-item-2", "fields": {"quote": "or-test-2-quote", "author": "or-test-2-author"}}
+      ]}], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"columns": 1}}], "acceptable_templates": ["testimonial-cards-3up"]
+    },
+    {
+      "id": "orbit.cta", "order": 5, "boundary": {"kind": "figma_node_id", "value": "50:1"}, "semantic_role": "call_to_action",
+      "content": [
+        {"id": "or-cta-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Give your next launch room to breathe.", "group_id": null, "attributes": {"figma_node_id": "50:2"}},
+        {"id": "or-cta-action", "kind": "button", "role": "primary_action", "order": 2, "value": "Create a workspace", "group_id": null, "attributes": {"figma_node_id": "50:3"}}
+      ], "groups": [], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"button_width": "100%"}}], "acceptable_templates": ["cta-banner"]
+    }
+  ]}
+}
+

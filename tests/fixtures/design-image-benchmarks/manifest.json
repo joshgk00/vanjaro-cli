@@ -1,0 +1,51 @@
+{
+  "schema_version": "1.0",
+  "corpus": {
+    "name": "Vanjaro Assisted Image Evidence Corpus",
+    "license": "Project test-fixture license; synthetic content only",
+    "synthetic_only": true,
+    "regression_tolerance": 0.02,
+    "measurement_scope": "Measures deterministic translation of independently annotated, hash-bound image evidence; it does not measure autonomous pixel interpretation."
+  },
+  "viewports": {
+    "desktop": {"width": 1440, "height": 900},
+    "mobile": {"width": 390, "height": 844}
+  },
+  "cases": [
+    {
+      "id": "image-assisted-agency",
+      "title": "Standard Studio",
+      "source_kind": "image",
+      "adapter_profile": "assisted_hash_bound_v1",
+      "source": {
+        "path": "cases/image-assisted-agency/evidence.json",
+        "format": "image_evidence_json",
+        "synthetic": true
+      },
+      "annotations": "cases/image-assisted-agency/annotations.json",
+      "references": [
+        {
+          "breakpoint": "desktop",
+          "page_slug": "home",
+          "width": 1440,
+          "height": 900,
+          "path": "references/image-assisted-agency-desktop.png",
+          "synthetic": true
+        },
+        {
+          "breakpoint": "mobile",
+          "page_slug": "home",
+          "width": 390,
+          "height": 844,
+          "path": "references/image-assisted-agency-mobile.png",
+          "synthetic": true
+        }
+      ],
+      "legal": {
+        "classification": "synthetic",
+        "contains_secrets": false,
+        "contains_personal_data": false
+      }
+    }
+  ]
+}

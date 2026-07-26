@@ -1,0 +1,41 @@
+{
+  "name": "Synthetic Riverkind Nonprofit",
+  "document": {
+    "id": "0:0", "name": "Document", "type": "DOCUMENT", "children": [
+      {"id": "2:0", "name": "Website Concepts", "type": "CANVAS", "children": [
+        {"id": "2:1", "name": "Home Freeform", "type": "FRAME", "absoluteBoundingBox": {"x": 0, "y": 0, "width": 1440, "height": 3900}, "children": [
+          {"id": "110:1", "name": "Hero collage", "type": "GROUP", "absoluteBoundingBox": {"x": 0, "y": 0, "width": 1440, "height": 820}, "children": [
+            {"id": "110:2", "name": "River photo", "type": "RECTANGLE", "fills": [{"type": "IMAGE", "imageRef": "synthetic-river"}], "absoluteBoundingBox": {"x": 680, "y": 80, "width": 620, "height": 620}},
+            {"id": "110:3", "name": "Headline", "type": "TEXT", "characters": "Healthy rivers. Strong communities.", "absoluteBoundingBox": {"x": 120, "y": 220, "width": 620, "height": 180}},
+            {"id": "110:4", "name": "Body", "type": "TEXT", "characters": "Local volunteers restore the waterways that connect us.", "absoluteBoundingBox": {"x": 120, "y": 430, "width": 520, "height": 70}},
+            {"id": "110:5", "name": "Donate", "type": "TEXT", "characters": "Support the work", "absoluteBoundingBox": {"x": 120, "y": 540, "width": 180, "height": 52}}
+          ]},
+          {"id": "120:1", "name": "Impact numbers", "type": "GROUP", "absoluteBoundingBox": {"x": 80, "y": 860, "width": 1280, "height": 300}, "children": [
+            {"id": "121:1", "name": "Miles value", "type": "TEXT", "characters": "48"}, {"id": "121:2", "name": "Miles label", "type": "TEXT", "characters": "miles restored"},
+            {"id": "122:1", "name": "Volunteers value", "type": "TEXT", "characters": "1,200"}, {"id": "122:2", "name": "Volunteers label", "type": "TEXT", "characters": "volunteers"},
+            {"id": "123:1", "name": "Projects value", "type": "TEXT", "characters": "36"}, {"id": "123:2", "name": "Projects label", "type": "TEXT", "characters": "active projects"}
+          ]},
+          {"id": "130:1", "name": "Programs collage", "type": "GROUP", "absoluteBoundingBox": {"x": 80, "y": 1220, "width": 1280, "height": 920}, "children": [
+            {"id": "130:2", "name": "Programs heading", "type": "TEXT", "characters": "Work rooted in place"},
+            {"id": "131:1", "name": "Cleanup image", "type": "RECTANGLE", "fills": [{"type": "IMAGE", "imageRef": "synthetic-cleanup"}]}, {"id": "131:2", "name": "Cleanup title", "type": "TEXT", "characters": "Community cleanups"},
+            {"id": "132:1", "name": "Habitat image", "type": "RECTANGLE", "fills": [{"type": "IMAGE", "imageRef": "synthetic-habitat"}]}, {"id": "132:2", "name": "Habitat title", "type": "TEXT", "characters": "Habitat renewal"},
+            {"id": "133:1", "name": "Learning image", "type": "RECTANGLE", "fills": [{"type": "IMAGE", "imageRef": "synthetic-learning"}]}, {"id": "133:2", "name": "Learning title", "type": "TEXT", "characters": "Watershed learning"}
+          ]},
+          {"id": "140:1", "name": "Story overlap", "type": "GROUP", "absoluteBoundingBox": {"x": 0, "y": 2200, "width": 1440, "height": 760}, "children": [
+            {"id": "140:2", "name": "Portrait", "type": "ELLIPSE", "fills": [{"type": "IMAGE", "imageRef": "synthetic-volunteer"}]},
+            {"id": "140:3", "name": "Quote", "type": "TEXT", "characters": "I joined for one Saturday and found a community."},
+            {"id": "140:4", "name": "Author", "type": "TEXT", "characters": "Jordan, volunteer captain"}
+          ]},
+          {"id": "150:1", "name": "Volunteer CTA", "type": "GROUP", "absoluteBoundingBox": {"x": 80, "y": 3050, "width": 1280, "height": 520}, "children": [
+            {"id": "150:2", "name": "Heading", "type": "TEXT", "characters": "There is a place for you by the water."},
+            {"id": "150:3", "name": "Primary action", "type": "TEXT", "characters": "Find an event"},
+            {"id": "151:1", "name": "Weekday crews", "type": "TEXT", "characters": "Weekday crews"},
+            {"id": "152:1", "name": "Weekend crews", "type": "TEXT", "characters": "Weekend crews"}
+          ]}
+        ]}
+      ]}
+    ]
+  },
+  "components": {}, "styles": {},
+  "images": {"synthetic-river": "synthetic://river", "synthetic-cleanup": "synthetic://cleanup", "synthetic-habitat": "synthetic://habitat", "synthetic-learning": "synthetic://learning", "synthetic-volunteer": "synthetic://volunteer"}
+}

@@ -1,0 +1,42 @@
+{
+  "schema_version": "1.0",
+  "baseline_id": "legacy-sections-2026-07-16",
+  "implementation": "vanjaro_cli.migration.sections.extract_sections",
+  "fixture_manifest": "manifest.json",
+  "measurement_policy": {
+    "volatile_fields_excluded": [],
+    "role_comparison": "Exact semantic equivalence; legacy generic content/cards labels do not receive credit for a more specific expected role.",
+    "content_comparison": "Exact expected visitor-facing value present in stable JSON serialization of legacy output.",
+    "asset_comparison": "Exact source reference present in stable JSON serialization of legacy output.",
+    "unavailable_metrics": "Reported as not_measurable or not_supported, never coerced to a passing zero or one.",
+    "regression_tolerance": 0.02
+  },
+  "aggregate": {
+    "scope": "three live_html cases only",
+    "section_boundary_precision": {"value": 1.0, "true_positive": 14, "predicted": 14},
+    "section_boundary_recall": {"value": 0.9333, "true_positive": 14, "expected": 15},
+    "semantic_role_accuracy": {"value": 0.2857, "correct": 4, "matched_sections": 14},
+    "visitor_content_retention": {"value": 0.8293, "retained": 68, "expected": 82},
+    "asset_association_accuracy": {"value": 0.8889, "retained": 8, "expected": 9},
+    "group_field_association_accuracy": {"status": "not_measurable", "reason": "Legacy output flattens content into positional arrays and does not emit relationship-aware field bindings."},
+    "responsive_observation_coverage": {"value": 0.0, "covered_sections": 0, "expected_sections": 15}
+  },
+  "cases": [
+    {"case_id": "html-bootstrap-agency", "status": "measured", "expected_sections": 5, "predicted_sections": 4, "role_matches": 3, "content_retained": 18, "content_expected": 27, "assets_retained": 3, "assets_expected": 4},
+    {"case_id": "html-elementor-studio", "status": "measured", "expected_sections": 5, "predicted_sections": 5, "role_matches": 1, "content_retained": 25, "content_expected": 30, "assets_retained": 3, "assets_expected": 3},
+    {"case_id": "html-dnn-services", "status": "measured", "expected_sections": 5, "predicted_sections": 5, "role_matches": 0, "content_retained": 25, "content_expected": 25, "assets_retained": 2, "assets_expected": 2},
+    {"case_id": "figma-auto-layout-saas", "status": "not_supported", "reason": "Legacy Figma integration exports assets and tokens but has no section adapter."},
+    {"case_id": "figma-freeform-nonprofit", "status": "not_supported", "reason": "Legacy Figma integration exports assets and tokens but has no section adapter."}
+  ],
+  "non_portable_evidence": [
+    {"path": "artifacts/keys-to-success/section-inventory.json", "purpose": "Historical section and template annotation shape; not a benchmark input."},
+    {"path": "artifacts/keys-to-success/qa/visual-report-v4.md", "purpose": "Historical visual score evidence (86 overall); not copied into the corpus."}
+  ],
+  "known_gaps": [
+    "No accepted Design Translation v2 score exists until adapters and metrics runner consume this corpus.",
+    "Synthetic SVG references are structural visual targets, not pixel-accurate browser captures.",
+    "Tablet references are deferred; annotations still require tablet observations where layout changes at that breakpoint.",
+    "Legacy section-boundary correspondence was reviewed against these synthetic top-level fixtures; the future metrics runner must derive it automatically."
+  ]
+}
+

@@ -1,0 +1,71 @@
+{
+  "schema_version": "1.0", "case_id": "figma-freeform-nonprofit", "source_kind": "figma",
+  "page": {"id": "riverkind.home", "source_locator": "2:1", "title": "Riverkind Nonprofit", "slug": "home", "breakpoints": ["desktop", "tablet", "mobile"]},
+  "expected": {"sections": [
+    {
+      "id": "riverkind.hero", "order": 1, "boundary": {"kind": "figma_node_id", "value": "110:1"}, "semantic_role": "hero",
+      "content": [
+        {"id": "rk-hero-media", "kind": "image", "role": "hero_media", "order": 1, "value": "synthetic-river", "group_id": null, "attributes": {"figma_node_id": "110:2", "alt": "Volunteers beside a restored river"}},
+        {"id": "rk-hero-title", "kind": "heading", "role": "section_title", "order": 2, "value": "Healthy rivers. Strong communities.", "group_id": null, "attributes": {"figma_node_id": "110:3"}},
+        {"id": "rk-hero-body", "kind": "text", "role": "body", "order": 3, "value": "Local volunteers restore the waterways that connect us.", "group_id": null, "attributes": {"figma_node_id": "110:4"}},
+        {"id": "rk-hero-action", "kind": "button", "role": "primary_action", "order": 4, "value": "Support the work", "group_id": null, "attributes": {"figma_node_id": "110:5"}}
+      ], "groups": [], "assets": [{"element_id": "rk-hero-media", "role": "hero_media", "source_ref": "synthetic-river"}],
+      "responsive": [{"breakpoint": "mobile", "observations": {"media_position": "top", "overlap": false, "columns": 1}}], "acceptable_templates": ["split-hero", "split-media-reverse"]
+    },
+    {
+      "id": "riverkind.stats", "order": 2, "boundary": {"kind": "figma_node_id", "value": "120:1"}, "semantic_role": "stats",
+      "content": [
+        {"id": "rk-stat-1-value", "kind": "stat", "role": "stat_value", "order": 1, "value": "48", "group_id": "rk-stat-items", "attributes": {"figma_node_id": "121:1"}},
+        {"id": "rk-stat-1-label", "kind": "text", "role": "stat_label", "order": 2, "value": "miles restored", "group_id": "rk-stat-items", "attributes": {"figma_node_id": "121:2"}},
+        {"id": "rk-stat-2-value", "kind": "stat", "role": "stat_value", "order": 3, "value": "1,200", "group_id": "rk-stat-items", "attributes": {"figma_node_id": "122:1"}},
+        {"id": "rk-stat-2-label", "kind": "text", "role": "stat_label", "order": 4, "value": "volunteers", "group_id": "rk-stat-items", "attributes": {"figma_node_id": "122:2"}},
+        {"id": "rk-stat-3-value", "kind": "stat", "role": "stat_value", "order": 5, "value": "36", "group_id": "rk-stat-items", "attributes": {"figma_node_id": "123:1"}},
+        {"id": "rk-stat-3-label", "kind": "text", "role": "stat_label", "order": 6, "value": "active projects", "group_id": "rk-stat-items", "attributes": {"figma_node_id": "123:2"}}
+      ], "groups": [{"id": "rk-stat-items", "kind": "stat", "items": [
+        {"id": "rk-stat-item-1", "fields": {"value": "rk-stat-1-value", "label": "rk-stat-1-label"}},
+        {"id": "rk-stat-item-2", "fields": {"value": "rk-stat-2-value", "label": "rk-stat-2-label"}},
+        {"id": "rk-stat-item-3", "fields": {"value": "rk-stat-3-value", "label": "rk-stat-3-label"}}
+      ]}], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"columns": 1}}], "acceptable_templates": ["stats-band-3up"]
+    },
+    {
+      "id": "riverkind.programs", "order": 3, "boundary": {"kind": "figma_node_id", "value": "130:1"}, "semantic_role": "feature_cards",
+      "content": [
+        {"id": "rk-programs-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Work rooted in place", "group_id": null, "attributes": {"figma_node_id": "130:2"}},
+        {"id": "rk-program-1-media", "kind": "image", "role": "card_media", "order": 1, "value": "synthetic-cleanup", "group_id": "rk-program-cards", "attributes": {"figma_node_id": "131:1", "alt": "Neighbors collecting litter"}},
+        {"id": "rk-program-1-title", "kind": "heading", "role": "card_title", "order": 2, "value": "Community cleanups", "group_id": "rk-program-cards", "attributes": {"figma_node_id": "131:2"}},
+        {"id": "rk-program-2-media", "kind": "image", "role": "card_media", "order": 3, "value": "synthetic-habitat", "group_id": "rk-program-cards", "attributes": {"figma_node_id": "132:1", "alt": "New plants along a stream"}},
+        {"id": "rk-program-2-title", "kind": "heading", "role": "card_title", "order": 4, "value": "Habitat renewal", "group_id": "rk-program-cards", "attributes": {"figma_node_id": "132:2"}},
+        {"id": "rk-program-3-media", "kind": "image", "role": "card_media", "order": 5, "value": "synthetic-learning", "group_id": "rk-program-cards", "attributes": {"figma_node_id": "133:1", "alt": "Students testing river water"}},
+        {"id": "rk-program-3-title", "kind": "heading", "role": "card_title", "order": 6, "value": "Watershed learning", "group_id": "rk-program-cards", "attributes": {"figma_node_id": "133:2"}}
+      ], "groups": [{"id": "rk-program-cards", "kind": "card", "items": [
+        {"id": "rk-program-card-1", "fields": {"media": "rk-program-1-media", "title": "rk-program-1-title"}},
+        {"id": "rk-program-card-2", "fields": {"media": "rk-program-2-media", "title": "rk-program-2-title"}},
+        {"id": "rk-program-card-3", "fields": {"media": "rk-program-3-media", "title": "rk-program-3-title"}}
+      ]}], "assets": [
+        {"element_id": "rk-program-1-media", "role": "card_media", "source_ref": "synthetic-cleanup"},
+        {"element_id": "rk-program-2-media", "role": "card_media", "source_ref": "synthetic-habitat"},
+        {"element_id": "rk-program-3-media", "role": "card_media", "source_ref": "synthetic-learning"}
+      ], "responsive": [{"breakpoint": "mobile", "observations": {"columns": 1, "overlap": false}}], "acceptable_templates": ["feature-cards-3up", "gallery-3up"]
+    },
+    {
+      "id": "riverkind.story", "order": 4, "boundary": {"kind": "figma_node_id", "value": "140:1"}, "semantic_role": "testimonial_feature",
+      "content": [
+        {"id": "rk-story-media", "kind": "image", "role": "author_media", "order": 1, "value": "synthetic-volunteer", "group_id": null, "attributes": {"figma_node_id": "140:2", "alt": "Volunteer captain Jordan"}},
+        {"id": "rk-story-quote", "kind": "quote", "role": "testimonial_quote", "order": 2, "value": "I joined for one Saturday and found a community.", "group_id": null, "attributes": {"figma_node_id": "140:3"}},
+        {"id": "rk-story-author", "kind": "text", "role": "author", "order": 3, "value": "Jordan, volunteer captain", "group_id": null, "attributes": {"figma_node_id": "140:4"}}
+      ], "groups": [], "assets": [{"element_id": "rk-story-media", "role": "author_media", "source_ref": "synthetic-volunteer"}],
+      "responsive": [{"breakpoint": "mobile", "observations": {"overlap": false, "media_position": "top"}}], "acceptable_templates": ["split-media", "bio-about"]
+    },
+    {
+      "id": "riverkind.cta", "order": 5, "boundary": {"kind": "figma_node_id", "value": "150:1"}, "semantic_role": "call_to_action",
+      "content": [
+        {"id": "rk-cta-title", "kind": "heading", "role": "section_title", "order": 1, "value": "There is a place for you by the water.", "group_id": null, "attributes": {"figma_node_id": "150:2"}},
+        {"id": "rk-cta-action", "kind": "button", "role": "primary_action", "order": 2, "value": "Find an event", "group_id": null, "attributes": {"figma_node_id": "150:3"}},
+        {"id": "rk-crew-weekday", "kind": "list_item", "role": "event_type", "order": 1, "value": "Weekday crews", "group_id": "rk-crew-items", "attributes": {"figma_node_id": "151:1"}},
+        {"id": "rk-crew-weekend", "kind": "list_item", "role": "event_type", "order": 2, "value": "Weekend crews", "group_id": "rk-crew-items", "attributes": {"figma_node_id": "152:1"}}
+      ], "groups": [{"id": "rk-crew-items", "kind": "event_type", "items": [
+        {"id": "rk-crew-item-1", "fields": {"label": "rk-crew-weekday"}}, {"id": "rk-crew-item-2", "fields": {"label": "rk-crew-weekend"}}
+      ]}], "assets": [], "responsive": [{"breakpoint": "mobile", "observations": {"button_width": "100%", "direction": "vertical"}}], "acceptable_templates": ["cta-banner", "cta-split"]
+    }
+  ]}
+}

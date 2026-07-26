@@ -1,0 +1,80 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://vanjaro.dev/schemas/design-benchmark-annotation-v1.json",
+  "title": "Vanjaro Design Benchmark Annotation v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema_version", "case_id", "source_kind", "page", "expected"],
+  "properties": {
+    "schema_version": {"const": "1.0"},
+    "case_id": {"type": "string"},
+    "source_kind": {"enum": ["live_html", "figma", "image"]},
+    "page": {
+      "type": "object",
+      "required": ["id", "source_locator", "title", "slug", "breakpoints"],
+      "properties": {
+        "id": {"type": "string"}, "source_locator": {"type": "string"},
+        "title": {"type": "string"}, "slug": {"type": "string"},
+        "breakpoints": {"type": "array", "items": {"enum": ["desktop", "tablet", "mobile"]}, "uniqueItems": true}
+      }
+    },
+    "expected": {
+      "type": "object",
+      "required": ["sections"],
+      "properties": {
+        "sections": {
+          "type": "array",
+          "minItems": 1,
+          "items": {"$ref": "#/$defs/section"}
+        }
+      }
+    }
+  },
+  "$defs": {
+    "section": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "order", "boundary", "semantic_role", "content", "groups", "assets", "responsive", "acceptable_templates"],
+      "properties": {
+        "id": {"type": "string"}, "order": {"type": "integer", "minimum": 1},
+        "boundary": {
+          "type": "object", "required": ["kind", "value"],
+          "properties": {"kind": {"enum": ["css_selector", "figma_node_id", "image_evidence_id"]}, "value": {"type": "string"}}
+        },
+        "semantic_role": {"type": "string"},
+        "content": {"type": "array", "items": {"$ref": "#/$defs/content"}},
+        "groups": {"type": "array", "items": {"$ref": "#/$defs/group"}},
+        "assets": {"type": "array", "items": {"$ref": "#/$defs/asset"}},
+        "responsive": {"type": "array", "items": {"$ref": "#/$defs/responsive"}},
+        "acceptable_templates": {"type": "array", "minItems": 1, "uniqueItems": true, "items": {"type": "string"}}
+      }
+    },
+    "content": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "role", "order", "value", "group_id"],
+      "properties": {
+        "id": {"type": "string"}, "kind": {"type": "string"}, "role": {"type": "string"},
+        "order": {"type": "integer", "minimum": 1}, "value": {"type": ["string", "null"]},
+        "group_id": {"type": ["string", "null"]}, "attributes": {"type": "object"}
+      }
+    },
+    "group": {
+      "type": "object", "additionalProperties": false,
+      "required": ["id", "kind", "items"],
+      "properties": {
+        "id": {"type": "string"}, "kind": {"type": "string"},
+        "items": {"type": "array", "minItems": 1, "items": {"type": "object", "required": ["id", "fields"], "properties": {"id": {"type": "string"}, "fields": {"type": "object", "additionalProperties": {"type": "string"}}}}
+      }
+    },
+    "asset": {
+      "type": "object", "additionalProperties": false,
+      "required": ["element_id", "role", "source_ref"],
+      "properties": {"element_id": {"type": "string"}, "role": {"type": "string"}, "source_ref": {"type": "string"}}
+    },
+    "responsive": {
+      "type": "object", "additionalProperties": false,
+      "required": ["breakpoint", "observations"],
+      "properties": {"breakpoint": {"enum": ["desktop", "tablet", "mobile"]}, "observations": {"type": "object", "minProperties": 1}}
+    }
+  }
+}

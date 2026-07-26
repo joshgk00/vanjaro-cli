@@ -1,0 +1,73 @@
+{
+  "schema_version": "1.0",
+  "case_id": "image-assisted-agency",
+  "source_kind": "image",
+  "page": {
+    "id": "standard-studio.home",
+    "source_locator": "synthetic://standard-studio/reference-images",
+    "title": "Standard Studio",
+    "slug": "home",
+    "breakpoints": ["desktop", "mobile"]
+  },
+  "expected": {
+    "sections": [
+      {
+        "id": "image-navigation",
+        "order": 1,
+        "boundary": {"kind": "image_evidence_id", "value": "navigation"},
+        "semantic_role": "navigation",
+        "content": [
+          {"id": "brand", "kind": "text", "role": "brand", "order": 1, "value": "STANDARD STUDIO", "group_id": null},
+          {"id": "nav-services", "kind": "text", "role": "navigation_item", "order": 2, "value": "SERVICES", "group_id": null},
+          {"id": "nav-about", "kind": "text", "role": "navigation_item", "order": 3, "value": "ABOUT", "group_id": null},
+          {"id": "nav-contact", "kind": "text", "role": "navigation_item", "order": 4, "value": "CONTACT", "group_id": null}
+        ],
+        "groups": [],
+        "assets": [],
+        "responsive": [{"breakpoint": "mobile", "observations": {"kind": "stack", "direction": "vertical"}}],
+        "acceptable_templates": ["new:global-navbar"]
+      },
+      {
+        "id": "image-hero",
+        "order": 2,
+        "boundary": {"kind": "image_evidence_id", "value": "hero"},
+        "semantic_role": "hero",
+        "content": [
+          {"id": "hero-title", "kind": "heading", "role": "section_title", "order": 1, "value": "BUILD WITH EVIDENCE", "group_id": null},
+          {"id": "hero-body", "kind": "text", "role": "body", "order": 2, "value": "Reusable blocks. Predictable editing.", "group_id": null},
+          {"id": "hero-action", "kind": "button", "role": "primary_action", "order": 3, "value": "START NOW", "group_id": null}
+        ],
+        "groups": [],
+        "assets": [],
+        "responsive": [{"breakpoint": "mobile", "observations": {"alignment": "center", "columns": 1}}],
+        "acceptable_templates": ["centered-hero", "photo-band", "split-hero"]
+      },
+      {
+        "id": "image-services",
+        "order": 3,
+        "boundary": {"kind": "image_evidence_id", "value": "services"},
+        "semantic_role": "feature_cards",
+        "content": [
+          {"id": "services-title", "kind": "heading", "role": "section_title", "order": 1, "value": "SERVICES", "group_id": null},
+          {"id": "service-fast", "kind": "heading", "role": "card_title", "order": 2, "value": "FAST SETUP", "group_id": "service-cards"},
+          {"id": "service-standard", "kind": "heading", "role": "card_title", "order": 3, "value": "STANDARD BLOCKS", "group_id": "service-cards"},
+          {"id": "service-editing", "kind": "heading", "role": "card_title", "order": 4, "value": "EASY EDITING", "group_id": "service-cards"}
+        ],
+        "groups": [
+          {
+            "id": "service-cards",
+            "kind": "card",
+            "items": [
+              {"id": "service-card-fast", "fields": {"title": "service-fast"}},
+              {"id": "service-card-standard", "fields": {"title": "service-standard"}},
+              {"id": "service-card-editing", "fields": {"title": "service-editing"}}
+            ]
+          }
+        ],
+        "assets": [],
+        "responsive": [{"breakpoint": "mobile", "observations": {"columns": 1, "direction": "vertical"}}],
+        "acceptable_templates": ["feature-cards-3up", "feature-cards-4up", "icon-feature-list"]
+      }
+    ]
+  }
+}

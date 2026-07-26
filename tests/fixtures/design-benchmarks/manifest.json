@@ -1,0 +1,66 @@
+{
+  "schema_version": "1.0",
+  "corpus": {
+    "name": "Vanjaro Design Translation Offline Corpus",
+    "license": "Project test-fixture license; synthetic content only",
+    "synthetic_only": true,
+    "regression_tolerance": 0.02
+  },
+  "viewports": {
+    "desktop": {"width": 1440, "height": 900},
+    "tablet": {"width": 768, "height": 1024},
+    "mobile": {"width": 390, "height": 844}
+  },
+  "cases": [
+    {
+      "id": "html-bootstrap-agency", "title": "Northstar Agency", "source_kind": "live_html", "adapter_profile": "semantic_bootstrap",
+      "source": {"path": "cases/html-bootstrap-agency/source.html", "format": "html", "synthetic": true},
+      "annotations": "cases/html-bootstrap-agency/annotations.json",
+      "references": [
+        {"breakpoint": "desktop", "width": 1440, "height": 900, "path": "references/html-bootstrap-agency-desktop.svg", "synthetic": true},
+        {"breakpoint": "mobile", "width": 390, "height": 844, "path": "references/html-bootstrap-agency-mobile.svg", "synthetic": true}
+      ],
+      "legal": {"classification": "synthetic", "contains_secrets": false, "contains_personal_data": false}
+    },
+    {
+      "id": "html-elementor-studio", "title": "Juniper Studio", "source_kind": "live_html", "adapter_profile": "nested_elementor_like",
+      "source": {"path": "cases/html-elementor-studio/source.html", "format": "html", "synthetic": true},
+      "annotations": "cases/html-elementor-studio/annotations.json",
+      "references": [
+        {"breakpoint": "desktop", "width": 1440, "height": 900, "path": "references/html-elementor-studio-desktop.svg", "synthetic": true},
+        {"breakpoint": "mobile", "width": 390, "height": 844, "path": "references/html-elementor-studio-mobile.svg", "synthetic": true}
+      ],
+      "legal": {"classification": "synthetic", "contains_secrets": false, "contains_personal_data": false}
+    },
+    {
+      "id": "html-dnn-services", "title": "Harbor Services", "source_kind": "live_html", "adapter_profile": "dnn_panes_modules",
+      "source": {"path": "cases/html-dnn-services/source.html", "format": "html", "synthetic": true},
+      "annotations": "cases/html-dnn-services/annotations.json",
+      "references": [
+        {"breakpoint": "desktop", "width": 1440, "height": 900, "path": "references/html-dnn-services-desktop.svg", "synthetic": true},
+        {"breakpoint": "mobile", "width": 390, "height": 844, "path": "references/html-dnn-services-mobile.svg", "synthetic": true}
+      ],
+      "legal": {"classification": "synthetic", "contains_secrets": false, "contains_personal_data": false}
+    },
+    {
+      "id": "figma-auto-layout-saas", "title": "Orbit SaaS", "source_kind": "figma", "adapter_profile": "figma_auto_layout",
+      "source": {"path": "cases/figma-auto-layout-saas/source.json", "format": "figma_api_json", "synthetic": true},
+      "annotations": "cases/figma-auto-layout-saas/annotations.json",
+      "references": [
+        {"breakpoint": "desktop", "width": 1440, "height": 900, "path": "references/figma-auto-layout-saas-desktop.svg", "synthetic": true},
+        {"breakpoint": "mobile", "width": 390, "height": 844, "path": "references/figma-auto-layout-saas-mobile.svg", "synthetic": true}
+      ],
+      "legal": {"classification": "synthetic", "contains_secrets": false, "contains_personal_data": false}
+    },
+    {
+      "id": "figma-freeform-nonprofit", "title": "Riverkind Nonprofit", "source_kind": "figma", "adapter_profile": "figma_freeform_no_auto_layout",
+      "source": {"path": "cases/figma-freeform-nonprofit/source.json", "format": "figma_api_json", "synthetic": true},
+      "annotations": "cases/figma-freeform-nonprofit/annotations.json",
+      "references": [
+        {"breakpoint": "desktop", "width": 1440, "height": 900, "path": "references/figma-freeform-nonprofit-desktop.svg", "synthetic": true},
+        {"breakpoint": "mobile", "width": 390, "height": 844, "path": "references/figma-freeform-nonprofit-mobile.svg", "synthetic": true}
+      ],
+      "legal": {"classification": "synthetic", "contains_secrets": false, "contains_personal_data": false}
+    }
+  ]
+}
