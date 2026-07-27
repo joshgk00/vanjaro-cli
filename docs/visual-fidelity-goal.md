@@ -316,3 +316,27 @@ case untestable and produced two false passes. Fixed with an explicit sentinel.
 
 Verification: 1,591 non-integration tests pass, up from 1,567. The five-case
 offline benchmark passes with no threshold or regression failures.
+
+### 2026-07-26 — VF-003 colour metric
+
+- Added `design/fidelity_color.py` (317 lines): sRGB to linear RGB to CIE XYZ
+  under D65 to CIE L*a*b*, then full CIEDE2000 including the hue-rotation term.
+  Standard library only; no dependency added.
+- **Validated against twelve published CIEDE2000 reference pairs (Sharma et
+  al.) to within 0.0002**, covering the blue-region and hue-rotation cases that
+  a plausible-but-wrong implementation gets wrong. A self-consistent formula
+  that ranks colours incorrectly would otherwise pass every internal test.
+- Background, text, and accent are scored separately and weighted 0.45 / 0.35 /
+  0.20 by perceived area, so a correct background cannot mask a wrong accent
+  and the detail names which role drifted.
+- Perceptual distance maps to score by linear falloff to zero at ΔE 25. Under
+  ΔE 1 is imperceptible, so ordinary drift stays in the upper range while an
+  unrelated hue separates clearly. The cap is part of the frozen regime.
+- A role missing on either side is unmeasured and excluded, consistent with
+  VF-001. Palettes sharing no role return an unavailable score rather than a
+  default.
+- Greyscale is covered explicitly: neutrals carry near-zero a/b, so only the
+  lightness term can move, and a colour swapped for grey is penalised.
+
+Verification: 1,643 non-integration tests pass, up from 1,591. The five-case
+offline benchmark passes with no threshold or regression failures.
