@@ -397,3 +397,27 @@ Remaining in scope are VF-006 capture and VF-007 gate wiring.
 
 Verification: 1,700 non-integration tests pass, up from 1,673. The five-case
 offline benchmark passes with no threshold or regression failures.
+
+### 2026-07-26 — VF-006 three-breakpoint capture
+
+- Added `design/fidelity_capture.py` (221 lines) producing source/output pairs
+  at the canonical 1440x900, 768x1024, and 390x844 viewports.
+- **Reuses the existing Playwright harness** rather than adding a second
+  browser stack. `migration.visual._settle` already loads fonts, injects the
+  animation-disabling stylesheet, and walks the page to trigger lazy images,
+  which is exactly the stability evidence the gate requires. `design` already
+  imports from `migration.visual` in `html_adapter`, so no new boundary is
+  crossed.
+- Browser work sits behind a `PageRenderer` protocol, so sequencing, warnings,
+  and partial-failure behaviour are fully tested without a browser. Playwright
+  is imported lazily inside the renderer, so the module loads without it.
+- **An unsettled capture is discarded, not scored.** A screenshot taken before
+  fonts settle or lazy images load silently measures a half-loaded page, which
+  is worse than no measurement. Each of the three settle flags is covered.
+- **Partial failure preserves successful captures.** A mobile timeout leaves
+  desktop and tablet usable and records a warning. The gate then refuses the
+  incomplete set through `resolve_visual_captures`. Capture reports what it
+  got; the gate decides whether that is enough. Both halves are tested.
+
+Verification: 1,718 non-integration tests pass, up from 1,700. The five-case
+offline benchmark passes with no threshold or regression failures.
