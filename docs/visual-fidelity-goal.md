@@ -368,3 +368,32 @@ exact resulting score instead of merely "not perfect".
 
 Verification: 1,673 non-integration tests pass, up from 1,643. The five-case
 offline benchmark passes with no threshold or regression failures.
+
+### 2026-07-26 — VF-005 media and integrity metrics
+
+- Added `design/fidelity_media.py` (262 lines) producing the media and
+  integrity dimension scores. Media sub-weights are aspect 0.40, focal 0.35,
+  crop 0.25; integrity penalties are overflow 40, empty slot 15 each, console
+  error 10 each. All are frozen regime values.
+- **Placeholder leakage sets `forces_zero`**, driving the whole section score
+  to zero through the VF-001 contract. Shipping `Lorem ipsum` or a stock
+  placeholder is never an acceptable build at any score. A test confirms a
+  section that is otherwise perfect still scores zero when a placeholder leaks.
+- Focal point is scored by normalized distance with a cap at half the image,
+  which catches a correctly sourced image cropped through its subject. Neither
+  geometry nor colour detects that failure.
+- A designed image absent from the build scores zero rather than reading as
+  absent evidence, matching the VF-002 rule for missing sections. Media that
+  exists but cannot be measured is unavailable.
+- Integrity with no observations at all returns unavailable rather than 100.
+  An unobserved page is not a clean page, and defaulting to clean would let a
+  capture failure certify a broken build.
+- Placeholder leaks are reported in sorted order so the detail is deterministic
+  regardless of detection order.
+
+**Wave 1 metrics are complete.** All six dimensions declared in VF-001 now have
+implementations: layout, colour, typography, spacing, media, and integrity.
+Remaining in scope are VF-006 capture and VF-007 gate wiring.
+
+Verification: 1,700 non-integration tests pass, up from 1,673. The five-case
+offline benchmark passes with no threshold or regression failures.

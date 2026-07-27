@@ -178,6 +178,7 @@ def test_fidelity_scoring_is_pure() -> None:
         "fidelity_layout.py",
         "fidelity_color.py",
         "fidelity_type.py",
+        "fidelity_media.py",
     ):
         imported = _imports(DESIGN_ROOT / module)
         assert imported.isdisjoint(forbidden), (module, sorted(imported & forbidden))
