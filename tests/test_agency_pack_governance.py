@@ -231,7 +231,7 @@ def test_pack_generator_never_rewrites_digest_locked_history(tmp_path: Path) -> 
         for issue in check_repository_pack_artifacts(registry_root=registry)
     )
 
-    current = family / "packs" / "1.1.0.json"
+    current = family / "packs" / "1.2.0.json"
     tampered = current.read_bytes() + b" "
     current.write_bytes(tampered)
     with pytest.raises(ValueError, match="refusing to rewrite published"):

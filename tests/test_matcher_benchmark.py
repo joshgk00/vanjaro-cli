@@ -219,7 +219,7 @@ def test_matcher_meets_offline_annotation_accuracy_gates() -> None:
     high_precision = sum(item["selected"] in item["acceptable"] for item in high) / len(high)
     failures = [item for item in outcomes if item["selected"] not in item["acceptable"]]
 
-    assert len(outcomes) == 24
+    assert len(outcomes) == 25
     assert high, "benchmark must exercise at least one high-confidence match"
     assert top_one >= 0.85, {"top_one": top_one, "failures": failures}
     assert top_three >= 0.95, {"top_three": top_three, "failures": failures}

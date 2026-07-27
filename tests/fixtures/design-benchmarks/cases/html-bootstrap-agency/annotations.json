@@ -1,86 +1,530 @@
 {
-  "schema_version": "1.0", "case_id": "html-bootstrap-agency", "source_kind": "live_html",
-  "page": {"id": "northstar.home", "source_locator": "synthetic://northstar/", "title": "Northstar Agency", "slug": "home", "breakpoints": ["desktop", "tablet", "mobile"]},
-  "expected": {"sections": [
-    {
-      "id": "northstar.nav", "order": 1, "boundary": {"kind": "css_selector", "value": "#site-nav"}, "semantic_role": "navigation",
-      "content": [
-        {"id": "ns-nav-brand", "kind": "link", "role": "brand", "order": 1, "value": "Northstar", "group_id": null, "attributes": {"href": "/"}},
-        {"id": "ns-nav-work", "kind": "link", "role": "navigation_item", "order": 1, "value": "Work", "group_id": "ns-nav-links", "attributes": {"href": "#work"}},
-        {"id": "ns-nav-services", "kind": "link", "role": "navigation_item", "order": 2, "value": "Services", "group_id": "ns-nav-links", "attributes": {"href": "#services"}},
-        {"id": "ns-nav-about", "kind": "link", "role": "navigation_item", "order": 3, "value": "About", "group_id": "ns-nav-links", "attributes": {"href": "#about"}},
-        {"id": "ns-nav-contact", "kind": "link", "role": "navigation_item", "order": 4, "value": "Contact", "group_id": "ns-nav-links", "attributes": {"href": "#contact"}}
-      ],
-      "groups": [{"id": "ns-nav-links", "kind": "navigation_item", "items": [
-        {"id": "ns-nav-item-1", "fields": {"label": "ns-nav-work"}}, {"id": "ns-nav-item-2", "fields": {"label": "ns-nav-services"}},
-        {"id": "ns-nav-item-3", "fields": {"label": "ns-nav-about"}}, {"id": "ns-nav-item-4", "fields": {"label": "ns-nav-contact"}}
-      ]}], "assets": [],
-      "responsive": [{"breakpoint": "mobile", "observations": {"navigation": "collapsed", "direction": "vertical"}}],
-      "acceptable_templates": ["new:global-navbar"]
-    },
-    {
-      "id": "northstar.hero", "order": 2, "boundary": {"kind": "css_selector", "value": "#hero"}, "semantic_role": "hero",
-      "content": [
-        {"id": "ns-hero-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Make complex ideas clear.", "group_id": null, "attributes": {"level": 1}},
-        {"id": "ns-hero-body", "kind": "text", "role": "body", "order": 2, "value": "Strategy and design for useful digital products.", "group_id": null},
-        {"id": "ns-hero-action", "kind": "button", "role": "primary_action", "order": 3, "value": "See our work", "group_id": null, "attributes": {"href": "#work"}},
-        {"id": "ns-hero-bg", "kind": "image", "role": "background_media", "order": 4, "value": "/synthetic/northstar-hero.jpg", "group_id": null, "attributes": {"decorative": true, "alt": ""}}
-      ], "groups": [], "assets": [{"element_id": "ns-hero-bg", "role": "background_media", "source_ref": "/synthetic/northstar-hero.jpg"}],
-      "responsive": [{"breakpoint": "mobile", "observations": {"min_height": "520px", "background_position": "65% 50%"}}],
-      "acceptable_templates": ["centered-hero", "photo-band"]
-    },
-    {
-      "id": "northstar.services", "order": 3, "boundary": {"kind": "css_selector", "value": "#services"}, "semantic_role": "feature_cards",
-      "content": [
-        {"id": "ns-services-title", "kind": "heading", "role": "section_title", "order": 1, "value": "What we do", "group_id": null, "attributes": {"level": 2}},
-        {"id": "ns-service-1-media", "kind": "image", "role": "card_media", "order": 1, "value": "/synthetic/strategy.svg", "group_id": "ns-service-cards", "attributes": {"alt": "Compass"}},
-        {"id": "ns-service-1-title", "kind": "heading", "role": "card_title", "order": 2, "value": "Strategy", "group_id": "ns-service-cards", "attributes": {"level": 3}},
-        {"id": "ns-service-1-body", "kind": "text", "role": "card_body", "order": 3, "value": "Align the team around a practical roadmap.", "group_id": "ns-service-cards"},
-        {"id": "ns-service-2-media", "kind": "image", "role": "card_media", "order": 4, "value": "/synthetic/design.svg", "group_id": "ns-service-cards", "attributes": {"alt": "Layout grid"}},
-        {"id": "ns-service-2-title", "kind": "heading", "role": "card_title", "order": 5, "value": "Design", "group_id": "ns-service-cards", "attributes": {"level": 3}},
-        {"id": "ns-service-2-body", "kind": "text", "role": "card_body", "order": 6, "value": "Shape accessible experiences people understand.", "group_id": "ns-service-cards"},
-        {"id": "ns-service-3-media", "kind": "image", "role": "card_media", "order": 7, "value": "/synthetic/build.svg", "group_id": "ns-service-cards", "attributes": {"alt": "Code brackets"}},
-        {"id": "ns-service-3-title", "kind": "heading", "role": "card_title", "order": 8, "value": "Build", "group_id": "ns-service-cards", "attributes": {"level": 3}},
-        {"id": "ns-service-3-body", "kind": "text", "role": "card_body", "order": 9, "value": "Deliver maintainable systems that teams can own.", "group_id": "ns-service-cards"}
-      ],
-      "groups": [{"id": "ns-service-cards", "kind": "card", "items": [
-        {"id": "ns-service-card-1", "fields": {"media": "ns-service-1-media", "title": "ns-service-1-title", "body": "ns-service-1-body"}},
-        {"id": "ns-service-card-2", "fields": {"media": "ns-service-2-media", "title": "ns-service-2-title", "body": "ns-service-2-body"}},
-        {"id": "ns-service-card-3", "fields": {"media": "ns-service-3-media", "title": "ns-service-3-title", "body": "ns-service-3-body"}}
-      ]}],
-      "assets": [
-        {"element_id": "ns-service-1-media", "role": "card_media", "source_ref": "/synthetic/strategy.svg"},
-        {"element_id": "ns-service-2-media", "role": "card_media", "source_ref": "/synthetic/design.svg"},
-        {"element_id": "ns-service-3-media", "role": "card_media", "source_ref": "/synthetic/build.svg"}
-      ],
-      "responsive": [{"breakpoint": "tablet", "observations": {"columns": 2}}, {"breakpoint": "mobile", "observations": {"columns": 1}}],
-      "acceptable_templates": ["feature-cards-3up", "icon-feature-list"]
-    },
-    {
-      "id": "northstar.testimonials", "order": 4, "boundary": {"kind": "css_selector", "value": "#testimonials"}, "semantic_role": "testimonials",
-      "content": [
-        {"id": "ns-test-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Trusted by focused teams", "group_id": null, "attributes": {"level": 2}},
-        {"id": "ns-test-1-quote", "kind": "quote", "role": "testimonial_quote", "order": 1, "value": "Northstar made our product easier to explain.", "group_id": "ns-test-items"},
-        {"id": "ns-test-1-author", "kind": "text", "role": "author", "order": 2, "value": "Amir, Atlas Labs", "group_id": "ns-test-items"},
-        {"id": "ns-test-2-quote", "kind": "quote", "role": "testimonial_quote", "order": 3, "value": "We launched with confidence and a system we can edit.", "group_id": "ns-test-items"},
-        {"id": "ns-test-2-author", "kind": "text", "role": "author", "order": 4, "value": "Reese, Fieldwork", "group_id": "ns-test-items"}
-      ], "groups": [{"id": "ns-test-items", "kind": "testimonial", "items": [
-        {"id": "ns-test-item-1", "fields": {"quote": "ns-test-1-quote", "author": "ns-test-1-author"}},
-        {"id": "ns-test-item-2", "fields": {"quote": "ns-test-2-quote", "author": "ns-test-2-author"}}
-      ]}], "assets": [],
-      "responsive": [{"breakpoint": "mobile", "observations": {"columns": 1, "carousel": true}}],
-      "acceptable_templates": ["testimonial-cards-3up"]
-    },
-    {
-      "id": "northstar.contact", "order": 5, "boundary": {"kind": "css_selector", "value": "#contact"}, "semantic_role": "call_to_action",
-      "content": [
-        {"id": "ns-cta-title", "kind": "heading", "role": "section_title", "order": 1, "value": "Ready to find your north?", "group_id": null, "attributes": {"level": 2}},
-        {"id": "ns-cta-body", "kind": "text", "role": "body", "order": 2, "value": "Tell us what you are building.", "group_id": null},
-        {"id": "ns-cta-action", "kind": "button", "role": "primary_action", "order": 3, "value": "Start a project", "group_id": null, "attributes": {"href": "/contact"}}
-      ], "groups": [], "assets": [],
-      "responsive": [{"breakpoint": "mobile", "observations": {"alignment": "center", "button_width": "100%"}}],
-      "acceptable_templates": ["cta-banner", "contact-section"]
-    }
-  ]}
+  "schema_version": "1.0",
+  "case_id": "html-bootstrap-agency",
+  "source_kind": "live_html",
+  "page": {
+    "id": "northstar.home",
+    "source_locator": "synthetic://northstar/",
+    "title": "Northstar Agency",
+    "slug": "home",
+    "breakpoints": [
+      "desktop",
+      "tablet",
+      "mobile"
+    ]
+  },
+  "expected": {
+    "sections": [
+      {
+        "id": "northstar.nav",
+        "order": 1,
+        "boundary": {
+          "kind": "css_selector",
+          "value": "#site-nav"
+        },
+        "semantic_role": "navigation",
+        "content": [
+          {
+            "id": "ns-nav-brand",
+            "kind": "link",
+            "role": "brand",
+            "order": 1,
+            "value": "Northstar",
+            "group_id": null,
+            "attributes": {
+              "href": "/"
+            }
+          },
+          {
+            "id": "ns-nav-work",
+            "kind": "link",
+            "role": "navigation_item",
+            "order": 1,
+            "value": "Work",
+            "group_id": "ns-nav-links",
+            "attributes": {
+              "href": "#work"
+            }
+          },
+          {
+            "id": "ns-nav-services",
+            "kind": "link",
+            "role": "navigation_item",
+            "order": 2,
+            "value": "Services",
+            "group_id": "ns-nav-links",
+            "attributes": {
+              "href": "#services"
+            }
+          },
+          {
+            "id": "ns-nav-about",
+            "kind": "link",
+            "role": "navigation_item",
+            "order": 3,
+            "value": "About",
+            "group_id": "ns-nav-links",
+            "attributes": {
+              "href": "#about"
+            }
+          },
+          {
+            "id": "ns-nav-contact",
+            "kind": "link",
+            "role": "navigation_item",
+            "order": 4,
+            "value": "Contact",
+            "group_id": "ns-nav-links",
+            "attributes": {
+              "href": "#contact"
+            }
+          }
+        ],
+        "groups": [
+          {
+            "id": "ns-nav-links",
+            "kind": "navigation_item",
+            "items": [
+              {
+                "id": "ns-nav-item-1",
+                "fields": {
+                  "label": "ns-nav-work"
+                }
+              },
+              {
+                "id": "ns-nav-item-2",
+                "fields": {
+                  "label": "ns-nav-services"
+                }
+              },
+              {
+                "id": "ns-nav-item-3",
+                "fields": {
+                  "label": "ns-nav-about"
+                }
+              },
+              {
+                "id": "ns-nav-item-4",
+                "fields": {
+                  "label": "ns-nav-contact"
+                }
+              }
+            ]
+          }
+        ],
+        "assets": [],
+        "responsive": [
+          {
+            "breakpoint": "mobile",
+            "observations": {
+              "navigation": "collapsed",
+              "direction": "vertical"
+            }
+          }
+        ],
+        "acceptable_templates": [
+          "navbar-brand-links",
+          "navbar-brand-links-cta"
+        ]
+      },
+      {
+        "id": "northstar.hero",
+        "order": 2,
+        "boundary": {
+          "kind": "css_selector",
+          "value": "#hero"
+        },
+        "semantic_role": "hero",
+        "content": [
+          {
+            "id": "ns-hero-title",
+            "kind": "heading",
+            "role": "section_title",
+            "order": 1,
+            "value": "Make complex ideas clear.",
+            "group_id": null,
+            "attributes": {
+              "level": 1
+            }
+          },
+          {
+            "id": "ns-hero-body",
+            "kind": "text",
+            "role": "body",
+            "order": 2,
+            "value": "Strategy and design for useful digital products.",
+            "group_id": null
+          },
+          {
+            "id": "ns-hero-action",
+            "kind": "button",
+            "role": "primary_action",
+            "order": 3,
+            "value": "See our work",
+            "group_id": null,
+            "attributes": {
+              "href": "#work"
+            }
+          },
+          {
+            "id": "ns-hero-bg",
+            "kind": "image",
+            "role": "background_media",
+            "order": 4,
+            "value": "/synthetic/northstar-hero.jpg",
+            "group_id": null,
+            "attributes": {
+              "decorative": true,
+              "alt": ""
+            }
+          }
+        ],
+        "groups": [],
+        "assets": [
+          {
+            "element_id": "ns-hero-bg",
+            "role": "background_media",
+            "source_ref": "/synthetic/northstar-hero.jpg"
+          }
+        ],
+        "responsive": [
+          {
+            "breakpoint": "mobile",
+            "observations": {
+              "min_height": "520px",
+              "background_position": "65% 50%"
+            }
+          }
+        ],
+        "acceptable_templates": [
+          "centered-hero",
+          "photo-band"
+        ]
+      },
+      {
+        "id": "northstar.services",
+        "order": 3,
+        "boundary": {
+          "kind": "css_selector",
+          "value": "#services"
+        },
+        "semantic_role": "feature_cards",
+        "content": [
+          {
+            "id": "ns-services-title",
+            "kind": "heading",
+            "role": "section_title",
+            "order": 1,
+            "value": "What we do",
+            "group_id": null,
+            "attributes": {
+              "level": 2
+            }
+          },
+          {
+            "id": "ns-service-1-media",
+            "kind": "image",
+            "role": "card_media",
+            "order": 1,
+            "value": "/synthetic/strategy.svg",
+            "group_id": "ns-service-cards",
+            "attributes": {
+              "alt": "Compass"
+            }
+          },
+          {
+            "id": "ns-service-1-title",
+            "kind": "heading",
+            "role": "card_title",
+            "order": 2,
+            "value": "Strategy",
+            "group_id": "ns-service-cards",
+            "attributes": {
+              "level": 3
+            }
+          },
+          {
+            "id": "ns-service-1-body",
+            "kind": "text",
+            "role": "card_body",
+            "order": 3,
+            "value": "Align the team around a practical roadmap.",
+            "group_id": "ns-service-cards"
+          },
+          {
+            "id": "ns-service-2-media",
+            "kind": "image",
+            "role": "card_media",
+            "order": 4,
+            "value": "/synthetic/design.svg",
+            "group_id": "ns-service-cards",
+            "attributes": {
+              "alt": "Layout grid"
+            }
+          },
+          {
+            "id": "ns-service-2-title",
+            "kind": "heading",
+            "role": "card_title",
+            "order": 5,
+            "value": "Design",
+            "group_id": "ns-service-cards",
+            "attributes": {
+              "level": 3
+            }
+          },
+          {
+            "id": "ns-service-2-body",
+            "kind": "text",
+            "role": "card_body",
+            "order": 6,
+            "value": "Shape accessible experiences people understand.",
+            "group_id": "ns-service-cards"
+          },
+          {
+            "id": "ns-service-3-media",
+            "kind": "image",
+            "role": "card_media",
+            "order": 7,
+            "value": "/synthetic/build.svg",
+            "group_id": "ns-service-cards",
+            "attributes": {
+              "alt": "Code brackets"
+            }
+          },
+          {
+            "id": "ns-service-3-title",
+            "kind": "heading",
+            "role": "card_title",
+            "order": 8,
+            "value": "Build",
+            "group_id": "ns-service-cards",
+            "attributes": {
+              "level": 3
+            }
+          },
+          {
+            "id": "ns-service-3-body",
+            "kind": "text",
+            "role": "card_body",
+            "order": 9,
+            "value": "Deliver maintainable systems that teams can own.",
+            "group_id": "ns-service-cards"
+          }
+        ],
+        "groups": [
+          {
+            "id": "ns-service-cards",
+            "kind": "card",
+            "items": [
+              {
+                "id": "ns-service-card-1",
+                "fields": {
+                  "media": "ns-service-1-media",
+                  "title": "ns-service-1-title",
+                  "body": "ns-service-1-body"
+                }
+              },
+              {
+                "id": "ns-service-card-2",
+                "fields": {
+                  "media": "ns-service-2-media",
+                  "title": "ns-service-2-title",
+                  "body": "ns-service-2-body"
+                }
+              },
+              {
+                "id": "ns-service-card-3",
+                "fields": {
+                  "media": "ns-service-3-media",
+                  "title": "ns-service-3-title",
+                  "body": "ns-service-3-body"
+                }
+              }
+            ]
+          }
+        ],
+        "assets": [
+          {
+            "element_id": "ns-service-1-media",
+            "role": "card_media",
+            "source_ref": "/synthetic/strategy.svg"
+          },
+          {
+            "element_id": "ns-service-2-media",
+            "role": "card_media",
+            "source_ref": "/synthetic/design.svg"
+          },
+          {
+            "element_id": "ns-service-3-media",
+            "role": "card_media",
+            "source_ref": "/synthetic/build.svg"
+          }
+        ],
+        "responsive": [
+          {
+            "breakpoint": "tablet",
+            "observations": {
+              "columns": 2
+            }
+          },
+          {
+            "breakpoint": "mobile",
+            "observations": {
+              "columns": 1
+            }
+          }
+        ],
+        "acceptable_templates": [
+          "feature-cards-3up",
+          "icon-feature-list"
+        ]
+      },
+      {
+        "id": "northstar.testimonials",
+        "order": 4,
+        "boundary": {
+          "kind": "css_selector",
+          "value": "#testimonials"
+        },
+        "semantic_role": "testimonials",
+        "content": [
+          {
+            "id": "ns-test-title",
+            "kind": "heading",
+            "role": "section_title",
+            "order": 1,
+            "value": "Trusted by focused teams",
+            "group_id": null,
+            "attributes": {
+              "level": 2
+            }
+          },
+          {
+            "id": "ns-test-1-quote",
+            "kind": "quote",
+            "role": "testimonial_quote",
+            "order": 1,
+            "value": "Northstar made our product easier to explain.",
+            "group_id": "ns-test-items"
+          },
+          {
+            "id": "ns-test-1-author",
+            "kind": "text",
+            "role": "author",
+            "order": 2,
+            "value": "Amir, Atlas Labs",
+            "group_id": "ns-test-items"
+          },
+          {
+            "id": "ns-test-2-quote",
+            "kind": "quote",
+            "role": "testimonial_quote",
+            "order": 3,
+            "value": "We launched with confidence and a system we can edit.",
+            "group_id": "ns-test-items"
+          },
+          {
+            "id": "ns-test-2-author",
+            "kind": "text",
+            "role": "author",
+            "order": 4,
+            "value": "Reese, Fieldwork",
+            "group_id": "ns-test-items"
+          }
+        ],
+        "groups": [
+          {
+            "id": "ns-test-items",
+            "kind": "testimonial",
+            "items": [
+              {
+                "id": "ns-test-item-1",
+                "fields": {
+                  "quote": "ns-test-1-quote",
+                  "author": "ns-test-1-author"
+                }
+              },
+              {
+                "id": "ns-test-item-2",
+                "fields": {
+                  "quote": "ns-test-2-quote",
+                  "author": "ns-test-2-author"
+                }
+              }
+            ]
+          }
+        ],
+        "assets": [],
+        "responsive": [
+          {
+            "breakpoint": "mobile",
+            "observations": {
+              "columns": 1,
+              "carousel": true
+            }
+          }
+        ],
+        "acceptable_templates": [
+          "testimonial-cards-3up"
+        ]
+      },
+      {
+        "id": "northstar.contact",
+        "order": 5,
+        "boundary": {
+          "kind": "css_selector",
+          "value": "#contact"
+        },
+        "semantic_role": "call_to_action",
+        "content": [
+          {
+            "id": "ns-cta-title",
+            "kind": "heading",
+            "role": "section_title",
+            "order": 1,
+            "value": "Ready to find your north?",
+            "group_id": null,
+            "attributes": {
+              "level": 2
+            }
+          },
+          {
+            "id": "ns-cta-body",
+            "kind": "text",
+            "role": "body",
+            "order": 2,
+            "value": "Tell us what you are building.",
+            "group_id": null
+          },
+          {
+            "id": "ns-cta-action",
+            "kind": "button",
+            "role": "primary_action",
+            "order": 3,
+            "value": "Start a project",
+            "group_id": null,
+            "attributes": {
+              "href": "/contact"
+            }
+          }
+        ],
+        "groups": [],
+        "assets": [],
+        "responsive": [
+          {
+            "breakpoint": "mobile",
+            "observations": {
+              "alignment": "center",
+              "button_width": "100%"
+            }
+          }
+        ],
+        "acceptable_templates": [
+          "cta-banner",
+          "contact-section"
+        ]
+      }
+    ]
+  }
 }
-

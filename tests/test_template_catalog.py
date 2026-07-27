@@ -81,6 +81,12 @@ EXPECTED_FIELDS_BY_TEMPLATE = {
     "Navigation/footer-4col.json": {
         "brand.title", "brand.body", "column.title", "column.links", "contact_title", "contact_items"
     },
+    "Navigation/navbar-brand-links.json": {
+        "brand.title", "item.action"
+    },
+    "Navigation/navbar-brand-links-cta.json": {
+        "brand.title", "item.action", "action"
+    },
 }
 
 
@@ -132,7 +138,7 @@ def _write_template(root: Path, relative_path: str, name: str, capabilities: dic
 def test_all_tracked_templates_have_valid_unique_capabilities() -> None:
     catalog = load_template_catalog(TEMPLATES_DIR)
 
-    assert len(catalog) == 29
+    assert len(catalog) == 31
     assert len({entry.name.casefold() for entry in catalog}) == len(catalog)
     assert all(entry.capabilities.fields for entry in catalog)
     assert all(entry.capabilities.schema_version == "1.1" for entry in catalog)

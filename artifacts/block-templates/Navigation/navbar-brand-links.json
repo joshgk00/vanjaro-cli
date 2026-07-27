@@ -1,0 +1,432 @@
+{
+  "name": "Navbar (Brand + Links)",
+  "category": "Navigation",
+  "description": "Primary site header with a brand mark and horizontal navigation that collapses behind a native Bootstrap toggler below the large breakpoint.",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "navigation",
+      "primary_navigation",
+      "site_header"
+    ],
+    "layout": {
+      "kind": "navigation",
+      "columns": [
+        1
+      ],
+      "media_positions": [
+        "none"
+      ],
+      "alignment": [
+        "left"
+      ]
+    },
+    "repeat_group": {
+      "kind": "navigation_item",
+      "minimum": 1,
+      "default": 6,
+      "maximum": 12,
+      "expandable": true
+    },
+    "fields": {
+      "brand.title": "required",
+      "item.action": "required"
+    },
+    "physical_fields": {
+      "brand.title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "item.action": {
+        "owner": "repeat_item",
+        "slot_type": "link",
+        "slots": [
+          "link_1",
+          "link_2",
+          "link_3",
+          "link_4",
+          "link_5",
+          "link_6"
+        ],
+        "slots_per_owner": 1
+      }
+    },
+    "responsive": {
+      "desktop_columns": 1,
+      "tablet_columns": 1,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "link",
+      "collapse"
+    ],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "band-color",
+      "spacing",
+      "divider"
+    ]
+  },
+  "template": {
+    "type": "section",
+    "classes": [
+      {
+        "name": "vj-section",
+        "active": false
+      },
+      {
+        "name": "py-2",
+        "active": false
+      }
+    ],
+    "attributes": {
+      "id": "tpl-nav-s1"
+    },
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {
+            "name": "container",
+            "active": false
+          }
+        ],
+        "attributes": {
+          "id": "tpl-nav-g1"
+        },
+        "components": [
+          {
+            "type": "default",
+            "tagName": "nav",
+            "classes": [
+              {
+                "name": "navbar",
+                "active": false
+              },
+              {
+                "name": "navbar-light",
+                "active": false
+              },
+              {
+                "name": "navbar-expand-lg",
+                "active": false
+              },
+              {
+                "name": "flex-lg-nowrap",
+                "active": false
+              },
+              {
+                "name": "w-100",
+                "active": false
+              },
+              {
+                "name": "p-0",
+                "active": false
+              }
+            ],
+            "attributes": {
+              "id": "tpl-nav-navbar",
+              "aria-label": "Primary navigation"
+            },
+            "components": [
+              {
+                "type": "heading",
+                "tagName": "h1",
+                "content": "Brand",
+                "classes": [
+                  {
+                    "name": "navbar-brand",
+                    "active": false
+                  },
+                  {
+                    "name": "me-2",
+                    "active": false
+                  },
+                  {
+                    "name": "flex-shrink-0",
+                    "active": false
+                  },
+                  {
+                    "name": "h5",
+                    "active": false
+                  },
+                  {
+                    "name": "mb-0",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-nav-h1"
+                }
+              },
+              {
+                "type": "default",
+                "tagName": "button",
+                "classes": [
+                  {
+                    "name": "navbar-toggler",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-nav-toggler",
+                  "type": "button",
+                  "data-bs-toggle": "collapse",
+                  "data-bs-target": "#tpl-nav-collapse",
+                  "aria-controls": "tpl-nav-collapse",
+                  "aria-expanded": "false",
+                  "aria-label": "Toggle navigation"
+                },
+                "components": [
+                  {
+                    "type": "default",
+                    "tagName": "span",
+                    "classes": [
+                      {
+                        "name": "navbar-toggler-icon",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-nav-toggler-icon"
+                    }
+                  }
+                ]
+              },
+              {
+                "type": "default",
+                "tagName": "div",
+                "classes": [
+                  {
+                    "name": "collapse",
+                    "active": false
+                  },
+                  {
+                    "name": "navbar-collapse",
+                    "active": false
+                  },
+                  {
+                    "name": "justify-content-lg-end",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-nav-collapse"
+                },
+                "components": [
+                  {
+                    "type": "default",
+                    "tagName": "ul",
+                    "classes": [
+                      {
+                        "name": "navbar-nav",
+                        "active": false
+                      },
+                      {
+                        "name": "align-items-lg-center",
+                        "active": false
+                      },
+                      {
+                        "name": "flex-lg-nowrap",
+                        "active": false
+                      },
+                      {
+                        "name": "gap-lg-2",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-nav-list"
+                    },
+                    "components": [
+                      {
+                        "type": "default",
+                        "tagName": "li",
+                        "classes": [
+                          {
+                            "name": "nav-item",
+                            "active": false
+                          }
+                        ],
+                        "attributes": {
+                          "id": "tpl-nav-li1"
+                        },
+                        "components": [
+                          {
+                            "type": "link",
+                            "content": "Home",
+                            "classes": [
+                              {
+                                "name": "nav-link",
+                                "active": false
+                              }
+                            ],
+                            "attributes": {
+                              "id": "tpl-nav-a1",
+                              "href": "#"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "default",
+                        "tagName": "li",
+                        "classes": [
+                          {
+                            "name": "nav-item",
+                            "active": false
+                          }
+                        ],
+                        "attributes": {
+                          "id": "tpl-nav-li2"
+                        },
+                        "components": [
+                          {
+                            "type": "link",
+                            "content": "Services",
+                            "classes": [
+                              {
+                                "name": "nav-link",
+                                "active": false
+                              }
+                            ],
+                            "attributes": {
+                              "id": "tpl-nav-a2",
+                              "href": "#"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "default",
+                        "tagName": "li",
+                        "classes": [
+                          {
+                            "name": "nav-item",
+                            "active": false
+                          }
+                        ],
+                        "attributes": {
+                          "id": "tpl-nav-li3"
+                        },
+                        "components": [
+                          {
+                            "type": "link",
+                            "content": "About",
+                            "classes": [
+                              {
+                                "name": "nav-link",
+                                "active": false
+                              }
+                            ],
+                            "attributes": {
+                              "id": "tpl-nav-a3",
+                              "href": "#"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "default",
+                        "tagName": "li",
+                        "classes": [
+                          {
+                            "name": "nav-item",
+                            "active": false
+                          }
+                        ],
+                        "attributes": {
+                          "id": "tpl-nav-li4"
+                        },
+                        "components": [
+                          {
+                            "type": "link",
+                            "content": "Contact",
+                            "classes": [
+                              {
+                                "name": "nav-link",
+                                "active": false
+                              }
+                            ],
+                            "attributes": {
+                              "id": "tpl-nav-a4",
+                              "href": "#"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "default",
+                        "tagName": "li",
+                        "classes": [
+                          {
+                            "name": "nav-item",
+                            "active": false
+                          }
+                        ],
+                        "attributes": {
+                          "id": "tpl-nav-li5"
+                        },
+                        "components": [
+                          {
+                            "type": "link",
+                            "content": "Work",
+                            "classes": [
+                              {
+                                "name": "nav-link",
+                                "active": false
+                              }
+                            ],
+                            "attributes": {
+                              "id": "tpl-nav-a5",
+                              "href": "#"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "default",
+                        "tagName": "li",
+                        "classes": [
+                          {
+                            "name": "nav-item",
+                            "active": false
+                          }
+                        ],
+                        "attributes": {
+                          "id": "tpl-nav-li6"
+                        },
+                        "components": [
+                          {
+                            "type": "link",
+                            "content": "Team",
+                            "classes": [
+                              {
+                                "name": "nav-link",
+                                "active": false
+                              }
+                            ],
+                            "attributes": {
+                              "id": "tpl-nav-a6",
+                              "href": "#"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

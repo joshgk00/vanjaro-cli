@@ -86,6 +86,7 @@ def _kind_for_catalog(value: str) -> RepeatGroupKind:
         "stat": RepeatGroupKind.STAT,
         "feature": RepeatGroupKind.OTHER,
         "navigation_column": RepeatGroupKind.NAVIGATION_ITEM,
+        "navigation_item": RepeatGroupKind.NAVIGATION_ITEM,
     }[value]
 
 

@@ -24,14 +24,16 @@ from vanjaro_cli.design.template_catalog import (
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_REGISTRY = _PROJECT_ROOT / "artifacts" / "agency-packs"
 _PACK_NAME = "clicks-and-mortars"
-_TEMPLATE_VERSION = "1.1.0"
+_TEMPLATE_VERSION = "1.2.0"
 _MODIFIER_VERSION = "1.0.0"
-_PACK_VERSION = "1.1.0"
+_PACK_VERSION = "1.2.0"
 _HISTORICAL_DIGESTS = {
     "templates/1.0.0.json": "c4e1316345e4c275ae9fb99312a3c2014de1ce39781a547b6a2d8685f42c8a73",
     "modifiers/1.0.0.json": "331b7c14af6ae87ac9d04a6559ff9ae3ed4c252a21be80c6fa5159c1f720f087",
     "packs/1.0.0.json": "6fd9eff9da5767d088cfc462ec9925fef3d16168b4c060f6cd83e99efc88b225",
     "packs/1.0.1.json": "4fb2524b0ff1489381e59807831cb26318c903232c3789422027f500c7806f6a",
+    "templates/1.1.0.json": "10214b4da51feeabdccac7e4257a829e9750ed3692381a356cde7694fba76ebf",
+    "packs/1.1.0.json": "4b7f293560e30839cecc1f680f46ef0e37b5c197dab1a0adec489a97698d7893",
 }
 _AUDITED_EXECUTABLE_DIGESTS = {
     "CTAs/cta-banner": "f1af9e60b5086e510411ac5548097bdcfc5530ee1d474caa55cb04f3c2fe3028",
@@ -63,6 +65,8 @@ _AUDITED_EXECUTABLE_DIGESTS = {
     "Lists/icon-feature-list": "7cb204d6824f3b5bebabdd28a161d76b408a864e9a5841a7ceec3d00965c9a39",
     "Navigation/footer-3col": "3a136c0341de8406a4c5a49c41c646a8b37fcdd2243e4ecf1e73908f2bc1e5ec",
     "Navigation/footer-4col": "d08141a70fd7756668d187e6a469a071f7ad587d7fa3177a5bedecf61305c9c1",
+    "Navigation/navbar-brand-links": "8cbc596fa0fb8bf624c991d5b2c9650afca8c08d6429f46ae0ead9b22b414bfd",
+    "Navigation/navbar-brand-links-cta": "abcdb46ee27f6ffd6642e8c3d4747e2c025ff3c07a736d517f6c4205ecf49e0f",
 }
 _REVIEWED_EXECUTABLE_CHANGES = (
     "Cards/gallery-3up",
@@ -70,8 +74,8 @@ _REVIEWED_EXECUTABLE_CHANGES = (
     "Lists/icon-feature-list",
 )
 _CURRENT_RELEASE_DIGESTS = {
-    "templates/1.1.0.json": "10214b4da51feeabdccac7e4257a829e9750ed3692381a356cde7694fba76ebf",
-    "packs/1.1.0.json": "4b7f293560e30839cecc1f680f46ef0e37b5c197dab1a0adec489a97698d7893",
+    "packs/1.2.0.json": "88a092ce6413f0197b0f16aafd311539252fe699453ffb19df114e29c6b6c86a",
+    "templates/1.2.0.json": "3999dc0f9ec3848b150fc11738269b4062818a42dc5390626ce769105da8cd40",
 }
 
 

@@ -59,7 +59,7 @@ def _report(root: Path):
     manifest = load_manifest(root)
     return registry, plan_agency_pack_upgrade(
         registry.resolve(manifest.agency_pack.name, manifest.agency_pack.version),
-        registry.resolve(manifest.agency_pack.name, "1.1.0"),
+        registry.resolve(manifest.agency_pack.name, "1.2.0"),
         read_project_pack_usage(
             root / "plans" / "composition-plan.json",
             replan_inputs=(
@@ -103,14 +103,14 @@ def test_reviewed_apply_replans_real_project_and_invalidates_every_approval(
     result = apply_agency_pack_upgrade(
         root,
         registry=registry,
-        to_version="1.1.0",
+        to_version="1.2.0",
         accepted_fingerprint=report.fingerprint,
         reviewed_by="agency-reviewer",
     )
 
     updated = load_manifest(root)
     assert result["state"] == "committed"
-    assert updated.agency_pack.version == "1.1.0"
+    assert updated.agency_pack.version == "1.2.0"
     assert updated.agency_pack.digest == result["pack_digest"]
     assert updated.stages["plan"].status.value == "completed"
     assert all(
@@ -135,7 +135,7 @@ def test_stale_acceptance_and_blocked_project_are_zero_write(tmp_path: Path) -> 
         apply_agency_pack_upgrade(
             compatible,
             registry=registry,
-            to_version="1.1.0",
+            to_version="1.2.0",
             accepted_fingerprint="0" * 64,
             reviewed_by="reviewer",
         )
@@ -150,7 +150,7 @@ def test_stale_acceptance_and_blocked_project_are_zero_write(tmp_path: Path) -> 
         apply_agency_pack_upgrade(
             compatible,
             registry=registry,
-            to_version="1.1.0",
+            to_version="1.2.0",
             accepted_fingerprint=accepted_report.fingerprint,
             reviewed_by="reviewer",
         )
@@ -165,7 +165,7 @@ def test_stale_acceptance_and_blocked_project_are_zero_write(tmp_path: Path) -> 
         apply_agency_pack_upgrade(
             blocked,
             registry=blocked_registry,
-            to_version="1.1.0",
+            to_version="1.2.0",
             accepted_fingerprint=blocked_report.fingerprint,
             reviewed_by="reviewer",
         )
@@ -191,7 +191,7 @@ def test_planning_failure_restores_every_mutable_file_byte_for_byte(
         apply_agency_pack_upgrade(
             root,
             registry=registry,
-            to_version="1.1.0",
+            to_version="1.2.0",
             accepted_fingerprint=report.fingerprint,
             reviewed_by="failure-test",
         )
