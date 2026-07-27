@@ -421,3 +421,45 @@ offline benchmark passes with no threshold or regression failures.
 
 Verification: 1,718 non-integration tests pass, up from 1,700. The five-case
 offline benchmark passes with no threshold or regression failures.
+
+### 2026-07-26 — VF-007 gate wired into project verification
+
+- Added `design/fidelity_evaluation.py` (220 lines) assembling the six metrics
+  into `SectionFidelityScore` records and providing the gate's `score_hook`.
+  Expected and observed observations share one shape, so a Figma frame and a
+  live page produce the same bundle and the comparison stays source-neutral.
+- Added `orchestration/project_fidelity.py` (170 lines) reading
+  `qa/fidelity-evidence.json`, running `evaluate_visual_gate` at draft level,
+  and returning the report plus blockers.
+- `draft-verification.json` advances to schema 1.1 with a `visual_fidelity`
+  block carrying overall score, per-viewport scores, per-section aggregates,
+  and failures. Because that file is already a fingerprinted stage artifact, a
+  score change invalidates downstream publish approval through existing
+  machinery; no new invalidation path was needed.
+- A section absent from the build now fails every comparable dimension rather
+  than reducing to a single layout zero, so one missing section cannot be
+  diluted by four unmeasured dimensions.
+- Degraded builds are covered by tests: a shifted and recoloured build scores
+  below the draft floor, a placeholder leak zeroes an otherwise perfect build,
+  and a missing section fails the gate.
+
+**Behaviour change worth review.** Absent fidelity evidence is now a publish
+blocker, not a silent pass. Two existing tests asserted `valid is True` for
+builds with no visual evidence; they were updated to assert the new behaviour
+rather than relaxed, since weakening the gate is prohibited. Until an
+observation-extraction step exists to populate `qa/fidelity-evidence.json`,
+every project will report `valid: false` with a single `not_scored` blocker.
+That is intentional — an unmeasured build has not been shown to be correct —
+but it changes what `project verify` reports today and should be confirmed.
+
+**Wave 1 in-scope work is complete.** VF-010 and VF-001 through VF-007 are
+done. VF-008 requires dedicated per-site portals that do not exist yet, so the
+autonomous loop halts here as instructed.
+
+Remaining before the loop can resume: stand up the per-site portals, then add
+the observation-extraction step that converts a rendered page and a Design
+Document into the `PageObservation` bundles this gate consumes. That extraction
+is the real remaining gap and overlaps VF-203/VF-204.
+
+Verification: 1,737 non-integration tests pass, up from 1,718. The five-case
+offline benchmark passes with no threshold or regression failures.

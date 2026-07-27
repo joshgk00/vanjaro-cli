@@ -12,6 +12,7 @@ from vanjaro_cli.design.serialization import read_design_document
 from vanjaro_cli.migration.audit import audit_page
 from vanjaro_cli.migration.text_match import fuzzy_set_match
 from vanjaro_cli.orchestration.portal_identity import verify_project_portal
+from vanjaro_cli.orchestration.project_fidelity import evaluate_project_fidelity
 from vanjaro_cli.project.stage_engine import StageContext, StageResult
 
 
@@ -183,12 +184,16 @@ def verify_project_drafts(context: StageContext) -> StageResult:
             f"{len(missing_action_urls)} source action(s) have no URL mapping"
         )
 
+    visual_fidelity, fidelity_blockers = evaluate_project_fidelity(context.root)
+    blockers.extend(fidelity_blockers)
+
     report_relative = "verify/draft-verification.json"
     _write_json(
         context.root / report_relative,
         {
-            "schema_version": "1.0",
+            "schema_version": "1.1",
             "valid": not blockers,
+            "visual_fidelity": visual_fidelity,
             "target": verified.as_dict(),
             "page_count": len(pages),
             "global_count": len(global_details),
