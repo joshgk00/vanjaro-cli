@@ -463,3 +463,57 @@ is the real remaining gap and overlaps VF-203/VF-204.
 
 Verification: 1,737 non-integration tests pass, up from 1,718. The five-case
 offline benchmark passes with no threshold or regression failures.
+
+### 2026-07-27 — VF-203/204 scoping: the 1.00 target is unreachable
+
+VF-203 and VF-204 are being run ahead of the VF-102/103 ledger. The ledger needs
+corpus scores, which need the portals VF-008 is blocked on, while the offline
+benchmark already ranks the extraction metrics objectively. Responsive coverage
+is 25 of the 32 remaining benchmark failures, so it is the top-ranked work by
+the evidence available today.
+
+Before implementing, the 25 responsive failures were audited against the
+fixtures that must supply their evidence. **Coverage cannot reach 1.00 by
+improving the adapters, because five expectations have no evidence in the
+corpus at all.**
+
+All three HTML fixtures contain no `<style>` element, no `<link>` stylesheet,
+and no `@media` query. Both Figma fixtures contain only a desktop frame
+(`Home / Desktop` at 1440 and `Home Freeform`); there is no mobile frame to
+pair.
+
+| Category | Count | Status |
+|---|---:|---|
+| No evidence, not inferable | 5 | Unreachable |
+| Genuinely derivable | 20 | Implementable |
+
+Unreachable: `min_height` `520px` and `600px`, `background_position`
+`65% 50%`, and `carousel: true` on two sections. The pixel values appear in no
+stylesheet, and the testimonial markup is plain `<figure>` elements with no
+carousel. No honest adapter can produce these.
+
+**Realistic ceiling is 39/44 = 0.8864**, not 1.00.
+
+Three ways to reach 1.00 were considered and rejected. Editing annotations or
+thresholds is prohibited outright. Adding `@media` blocks and a mobile Figma
+frame to the fixtures would raise the number while measuring nothing new,
+because the same author would be writing both the question and the answer —
+the precise false-signal failure this goal exists to prevent. The corpus is
+under-specified relative to its own annotations; that is a corpus defect and
+should be fixed deliberately by someone authoring realistic sources without the
+answer key in view, not silently inside a coverage-raising loop.
+
+The 20 derivable observations map to standard responsive rules that a
+design-translation tool should encode regardless of this benchmark, and which
+DT-132 already specifies:
+
+- Alignment read from utility classes such as `text-center` (observed, 3)
+- Multi-column grids collapsing at tablet and mobile (6)
+- Media moving above or below content by its desktop source order (3)
+- Full-width buttons at mobile (4)
+- Overlapping decorative layers flattening at mobile (2)
+- Logo bars wrapping (1), horizontal action rows stacking vertically (1)
+
+Implementation of those follows in the next iteration, targeting 19/44 → 39/44.
+
+No code changed in this iteration; the finding is the deliverable.
