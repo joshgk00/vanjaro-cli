@@ -266,6 +266,53 @@ def enrich_section_from_static_dom(
     add_inferred_static_responsive(section, root, provenance)
 
 
+_CENTERING_CLASSES = ("text-center", "text-md-center", "has-text-centered", "align-center")
+_END_CLASSES = ("text-end", "text-right")
+_ACTION_CLASS_HINTS = ("btn", "button", "cta")
+
+
+def _static_alignment(root: Tag) -> str:
+    """Derive a section's text alignment from explicit utility classes.
+
+    Absence of a centering utility is itself evidence: the section inherits the
+    document default, which is left in every supported source. Mobile keeps the
+    desktop alignment unless a breakpoint rule overrides it.
+    """
+
+    classes = " ".join(root.get("class", []) or [])
+    for descendant in [root, *root.find_all(True, recursive=False)]:
+        classes += " " + " ".join(descendant.get("class", []) or [])
+    if any(token in classes for token in _CENTERING_CLASSES):
+        return "center"
+    if any(token in classes for token in _END_CLASSES):
+        return "right"
+    return "left"
+
+
+_ACTION_ROLES = {"cta", "call_to_action", "contact", "contact_cta", "hero"}
+
+
+def _has_action(root: Tag, role: str) -> bool:
+    """Report whether the section contains a call-to-action control.
+
+    A styled button is unambiguous. In a section whose whole purpose is a call
+    to action, an unstyled anchor is the call to action too — several builders
+    emit a bare link and carry the styling on an ancestor ID.
+    """
+
+    anchors = root.find_all(["a", "button"])
+    if role in _ACTION_ROLES and anchors:
+        return True
+    for anchor in anchors:
+        classes = " ".join(anchor.get("class", []) or [])
+        if any(hint in classes for hint in _ACTION_CLASS_HINTS):
+            return True
+        parent_classes = " ".join((anchor.parent.get("class", []) or []) if anchor.parent else [])
+        if any(hint in parent_classes for hint in _ACTION_CLASS_HINTS):
+            return True
+    return False
+
+
 def add_inferred_static_responsive(
     section: dict[str, JsonValue], root: Tag, provenance: dict[str, JsonValue]
 ) -> None:
@@ -280,16 +327,30 @@ def add_inferred_static_responsive(
         items = groups[0].get("items")
         item_count = len(items) if isinstance(items, list) else 0
     changes: dict[BreakpointName, dict[str, JsonValue]] = {}
+
+    def record(breakpoint: BreakpointName, **values: JsonValue) -> None:
+        changes.setdefault(breakpoint, {}).update(values)
+
     if role == "navigation" and any("navbar-expand" in value for value in root.get("class", [])):
-        changes[BreakpointName.MOBILE] = {"navigation": "collapsed", "direction": "vertical"}
+        record(BreakpointName.MOBILE, navigation="collapsed", direction="vertical")
     elif role == "process_steps" and item_count > 1:
-        changes[BreakpointName.MOBILE] = {"direction": "vertical"}
+        record(BreakpointName.MOBILE, direction="vertical")
     elif item_count > 1 and role in {"feature_cards", "project_gallery", "testimonials", "stats"}:
-        changes[BreakpointName.MOBILE] = {"columns": 1}
+        record(BreakpointName.MOBILE, columns=1)
         if item_count >= 3:
-            changes[BreakpointName.TABLET] = {"columns": 2}
+            record(BreakpointName.TABLET, columns=2)
     elif role in {"hero", "split_feature"} and root.find("img") is not None:
-        changes[BreakpointName.MOBILE] = {"columns": 1, "media_position": "top"}
+        record(BreakpointName.MOBILE, columns=1, media_position="top")
+
+    # Alignment and button width are independent of the structural rules above,
+    # so they are recorded additively rather than as another exclusive branch.
+    # A hero can both stack its media and keep its left-aligned copy.
+    if role != "navigation":
+        record(BreakpointName.MOBILE, alignment=_static_alignment(root))
+        if _has_action(root, role):
+            # Full-width actions are the near-universal mobile treatment for a
+            # section's primary call to action.
+            record(BreakpointName.MOBILE, button_width="100%")
     responsive: list[dict[str, JsonValue]] = []
     for breakpoint in (BreakpointName.TABLET, BreakpointName.MOBILE):
         if breakpoint not in changes:

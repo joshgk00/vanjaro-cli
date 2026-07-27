@@ -517,3 +517,45 @@ DT-132 already specifies:
 Implementation of those follows in the next iteration, targeting 19/44 → 39/44.
 
 No code changed in this iteration; the finding is the deliverable.
+
+### 2026-07-27 — VF-203/204 implemented: coverage 19/44 to 36/44
+
+Coverage rose from **0.4318 (19/44) to 0.8182 (36/44)** with no threshold or
+regression failures. No annotation, fixture, or threshold was touched.
+
+VF-203, static HTML (`html_ownership.py`): alignment and button width are now
+derived additively rather than as further branches of the exclusive elif chain,
+because a hero can both stack its media and keep left-aligned copy.
+
+- Alignment reads centering utilities such as `text-center`. **Absence of a
+  centering utility is itself evidence** — the section inherits the document
+  default — which is what `juniper.hero` and `juniper.contact` expect.
+- Full-width mobile actions trigger on a styled button, or on any anchor inside
+  a section whose role is a call to action. The DNN fixture carries its styling
+  on an ancestor `id`, not a class, so a class-only check missed it.
+
+VF-204, Figma (`figma_adapter.py`): the desktop-only path emitted no tablet
+observation at all, and mobile emitted only deltas.
+
+- Tablet observations are now emitted, halving grids wider than two columns.
+- **Mobile inference now describes the layout at mobile rather than only what
+  changed.** Emitting deltas alone silently omits facts true at 390px
+  regardless of the desktop value: a single-column section is still single
+  column, and nothing overlaps. This is a modelling correction, not a fitting
+  exercise — both statements hold for any mobile viewport.
+- Logo bars keep a two-column wrapped grid instead of a long single-file list.
+- Call-to-action sections stack vertically, and gain full-width buttons when
+  they actually contain an action element.
+
+Not implemented, deliberately: the three remaining `media_position`
+expectations (`orbit.hero` bottom, `riverkind.hero` and `riverkind.story` top).
+The adapter derives `MediaPosition.NONE` for those sections, so emitting a
+position would assert placement it never detected. Real media-placement
+derivation from freeform and flex geometry is the honest fix and is larger than
+this task.
+
+Remaining 8 of 44: five unreachable per the audit above, three requiring that
+media-placement work.
+
+Verification: 1,750 non-integration tests pass, up from 1,737. Matcher metrics
+are unchanged at top-1 0.9167 and top-3 1.0000.

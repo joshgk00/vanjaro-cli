@@ -99,3 +99,85 @@ def test_segment_frame_infers_flat_painted_bands_deterministically() -> None:
         ["hero-title"],
         ["cta-title"],
     ]
+
+
+def _figma_section(role: str, *, kind: str = "flex", columns: int | None = None,
+                   overlap: bool | None = None, with_action: bool = False):
+    from vanjaro_cli.design.models import (
+        ContentElement, ContentKind, LayoutKind, LayoutObservation, Section,
+    )
+    content = []
+    if with_action:
+        content.append(ContentElement(
+            id="s.action.1", kind=ContentKind.BUTTON, role="action", order=0,
+            value="Donate", confidence=0.9, provenance=[],
+        ))
+    metadata = {} if overlap is None else {"overlap": overlap}
+    return Section(
+        id=f"s.{role}", order=0, semantic_role=role, role_confidence=0.9,
+        candidate_roles=[], content=content, groups=[],
+        layout=LayoutObservation(kind=LayoutKind(kind), contained=True,
+                                 columns=columns, metadata=metadata),
+        style={}, responsive=[], decorative_layers=[], interactions=[], provenance=[],
+    )
+
+
+def test_mobile_inference_collapses_any_grid_to_one_column() -> None:
+    from vanjaro_cli.design.figma_adapter import _infer_mobile
+
+    changes = _infer_mobile(_figma_section("feature_cards", kind="grid", columns=3))
+
+    assert changes["columns"]["to"] == 1
+
+
+def test_mobile_inference_reports_single_column_state_when_columns_unknown() -> None:
+    from vanjaro_cli.design.figma_adapter import _infer_mobile
+
+    # A responsive observation records the state at that breakpoint, so an
+    # unknown desktop column count still yields one column on mobile.
+    changes = _infer_mobile(_figma_section("stats", kind="freeform"))
+
+    assert changes["columns"]["to"] == 1
+
+
+def test_logo_bars_keep_two_columns_and_wrap_on_mobile() -> None:
+    from vanjaro_cli.design.figma_adapter import _infer_mobile
+
+    changes = _infer_mobile(_figma_section("logo_cloud", columns=3))
+
+    assert changes["columns"]["to"] == 2
+    assert changes["wrap"]["to"] is True
+
+
+def test_freeform_overlap_always_flattens_on_mobile() -> None:
+    from vanjaro_cli.design.figma_adapter import _infer_mobile
+
+    overlapping = _infer_mobile(_figma_section("hero", kind="freeform", overlap=True))
+    flat = _infer_mobile(_figma_section("hero", kind="freeform", overlap=False))
+
+    assert overlapping["overlap"] == {"from": True, "to": False}
+    assert flat["overlap"] == {"from": False, "to": False}
+
+
+def test_call_to_action_stacks_vertically_and_fills_width() -> None:
+    from vanjaro_cli.design.figma_adapter import _infer_mobile
+
+    changes = _infer_mobile(_figma_section("call_to_action", with_action=True))
+
+    assert changes["direction"]["to"] == "vertical"
+    assert changes["button_width"]["to"] == "100%"
+
+
+def test_call_to_action_without_an_action_omits_button_width() -> None:
+    from vanjaro_cli.design.figma_adapter import _infer_mobile
+
+    changes = _infer_mobile(_figma_section("call_to_action"))
+
+    assert "button_width" not in changes
+
+
+def test_tablet_inference_halves_wide_grids_only() -> None:
+    from vanjaro_cli.design.figma_adapter import _infer_tablet
+
+    assert _infer_tablet(_figma_section("feature_cards", columns=4))["columns"]["to"] == 2
+    assert _infer_tablet(_figma_section("split_feature", columns=2)) == {}

@@ -1341,17 +1341,63 @@ def _layout_changes(base: Section, other: Section) -> dict[str, Any]:
     return changes
 
 
+_LOGO_ROLES = {"logo_bar", "logo_cloud", "partner_logos", "client_logos"}
+_FIGMA_ACTION_ROLES = {"cta", "call_to_action", "contact", "contact_cta"}
+
+
 def _infer_mobile(section: Section) -> dict[str, Any]:
+    """Describe the section's layout *at* mobile, not only its delta.
+
+    A responsive observation records the state at that breakpoint. Emitting
+    only changed properties silently omits facts that are true at mobile
+    regardless of the desktop value — a single-column section is still single
+    column, and nothing overlaps on a 390px viewport.
+    """
+
     changes: dict[str, Any] = {}
-    if section.layout.columns and section.layout.columns > 1:
-        changes["columns"] = {"from": section.layout.columns, "to": 1}
+    columns = section.layout.columns
+    # Logo bars keep a compact grid rather than becoming a very long
+    # single-file list; everything else collapses to one column.
+    target = 2 if section.semantic_role in _LOGO_ROLES else 1
+    changes["columns"] = {"from": columns if columns else target, "to": target}
+    if section.semantic_role in _LOGO_ROLES:
+        changes["wrap"] = {"from": False, "to": True}
     if section.layout.direction == "row" or section.layout.kind == LayoutKind.SPLIT:
         changes["direction"] = {"from": section.layout.direction or "row", "to": "column"}
     if section.layout.media_position in {MediaPosition.LEFT, MediaPosition.RIGHT}:
         changes["media_position"] = {"from": section.layout.media_position.value, "to": "top"}
-    if section.layout.kind == LayoutKind.FREEFORM and section.layout.metadata.get("overlap"):
-        changes["overlap"] = {"from": True, "to": False}
+    elif section.layout.media_position is MediaPosition.BOTTOM:
+        # Media already trailing the copy stays trailing when the split stacks.
+        changes["media_position"] = {"from": "bottom", "to": "bottom"}
+    elif section.layout.media_position is MediaPosition.TOP:
+        changes["media_position"] = {"from": "top", "to": "top"}
+    if section.layout.kind == LayoutKind.FREEFORM:
+        # Overlapping decoration cannot survive a 390px viewport, whether or
+        # not the desktop layout overlapped.
+        overlapped = bool(section.layout.metadata.get("overlap"))
+        changes["overlap"] = {"from": overlapped, "to": False}
+    if section.semantic_role in _FIGMA_ACTION_ROLES:
+        changes.setdefault("direction", {"from": "horizontal", "to": "vertical"})
+        if _has_action_element(section):
+            changes["button_width"] = {"from": "auto", "to": "100%"}
     return changes or {"review_required": True}
+
+
+def _infer_tablet(section: Section) -> dict[str, Any]:
+    """Halve wide grids at tablet; narrower layouts survive unchanged."""
+
+    changes: dict[str, Any] = {}
+    columns = section.layout.columns
+    if columns and columns > 2:
+        changes["columns"] = {"from": columns, "to": 2}
+    return changes
+
+
+def _has_action_element(section: Section) -> bool:
+    return any(
+        element.kind in {ContentKind.BUTTON, ContentKind.LINK}
+        for element in section.content
+    )
 
 
 def _typography_tokens(pages: list[Page], node_index: Mapping[str, Mapping[str, Any]], file_key: str, font_sources: Mapping[str, str] | None, warnings: list[DesignWarning]) -> list[TypographyToken]:
@@ -1514,6 +1560,21 @@ def analyze_figma_document(
                 path=page_id, provenance=page_provenance,
             ))
             for section in sections:
+                tablet_changes = _infer_tablet(section)
+                if tablet_changes and BreakpointName.TABLET not in observed_breakpoints:
+                    section.responsive.append(ResponsiveObservation(
+                        breakpoint=BreakpointName.TABLET,
+                        viewport=_BREAKPOINT_VIEWPORTS[BreakpointName.TABLET],
+                        status=EvidenceStatus.INFERRED,
+                        layout_changes=tablet_changes,
+                        provenance=[Provenance(
+                            source_kind=SourceKind.FIGMA, method=ObservationMethod.INFERRED,
+                            viewport=BreakpointName.TABLET, file_key=file_key,
+                            page_node_id=base_canvas, frame_node_id=str(base_frame.get("id")),
+                            element_node_id=str(section.metadata.get("figma_node_id")),
+                            metadata={"inference": "desktop_to_tablet_default", "confidence": 0.55},
+                        )],
+                    ))
                 section.responsive.append(ResponsiveObservation(
                     breakpoint=BreakpointName.MOBILE,
                     viewport=_BREAKPOINT_VIEWPORTS[BreakpointName.MOBILE],

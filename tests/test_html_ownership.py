@@ -15,6 +15,32 @@ def _provenance() -> dict:
     }
 
 
+def _section_from_html(static_html: str, *, role: str) -> dict:
+    section = {
+        "id": f"home.section.{role}",
+        "semantic_role": role,
+        "layout": {},
+        "content": [],
+        "groups": [],
+        "responsive": [],
+    }
+    enrich_section_from_static_dom(
+        section,
+        static_html,
+        source_url="https://agency.example/",
+        assets={},
+        provenance=_provenance(),
+    )
+    return section
+
+
+def _responsive_changes(section: dict, breakpoint: str) -> dict:
+    for entry in section["responsive"]:
+        if entry["breakpoint"] == breakpoint:
+            return entry["layout_changes"]
+    return {}
+
+
 def test_card_ownership_preserves_item_fields_assets_and_responsive_evidence() -> None:
     static_html = """
     <section id='services'>
@@ -56,9 +82,11 @@ def test_card_ownership_preserves_item_fields_assets_and_responsive_evidence() -
         "full_bleed": False,
     }
     assert [item["breakpoint"] for item in section["responsive"]] == ["tablet", "mobile"]
+    # Column collapse is structural; alignment is derived independently from
+    # utility classes, so mobile carries both (VF-203).
     assert [item["layout_changes"] for item in section["responsive"]] == [
         {"columns": 2},
-        {"columns": 1},
+        {"columns": 1, "alignment": "left"},
     ]
 
 
@@ -109,3 +137,66 @@ def test_asset_registration_is_deterministic_and_enriches_existing_record() -> N
     assert len(assets) == 1
     assert assets[first]["alt_text"] == "Editorial image"
     assert assets[first]["provenance"] == [_provenance()]
+
+
+def test_centering_utility_class_yields_center_alignment() -> None:
+    section = _section_from_html(
+        '<section class="container text-center"><h2>Ready?</h2>'
+        '<a class="btn btn-dark" href="/contact">Start</a></section>',
+        role="contact",
+    )
+
+    assert _responsive_changes(section, "mobile")["alignment"] == "center"
+
+
+def test_absent_centering_utility_yields_left_alignment() -> None:
+    section = _section_from_html(
+        '<section class="container"><h2>Start a conversation</h2>'
+        "<p>Share your timeline.</p></section>",
+        role="contact",
+    )
+
+    # Absence of a centering utility is evidence, not missing evidence: the
+    # section inherits the document default.
+    assert _responsive_changes(section, "mobile")["alignment"] == "left"
+
+
+def test_styled_button_yields_full_width_action_on_mobile() -> None:
+    section = _section_from_html(
+        '<section class="container"><h2>Ready?</h2>'
+        '<a class="btn btn-primary" href="/x">Go</a></section>',
+        role="rich_text",
+    )
+
+    assert _responsive_changes(section, "mobile")["button_width"] == "100%"
+
+
+def test_bare_anchor_in_a_cta_section_counts_as_an_action() -> None:
+    section = _section_from_html(
+        '<div id="cta-module"><h2>Bring calm.</h2>'
+        '<a href="/contact">Book an introduction</a></div>',
+        role="cta",
+    )
+
+    assert _responsive_changes(section, "mobile")["button_width"] == "100%"
+
+
+def test_section_without_any_action_omits_button_width() -> None:
+    section = _section_from_html(
+        '<section class="container"><h2>About</h2><p>Copy.</p></section>',
+        role="rich_text",
+    )
+
+    assert "button_width" not in _responsive_changes(section, "mobile")
+
+
+def test_navigation_keeps_its_collapse_rule_without_alignment() -> None:
+    section = _section_from_html(
+        '<header class="navbar navbar-expand-lg"><a class="navbar-brand" href="/">B</a>'
+        '<nav><a href="#a">A</a></nav></header>',
+        role="navigation",
+    )
+    changes = _responsive_changes(section, "mobile")
+
+    assert changes["navigation"] == "collapsed"
+    assert "alignment" not in changes
