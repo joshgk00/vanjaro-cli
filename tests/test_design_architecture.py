@@ -173,6 +173,11 @@ def test_fidelity_scoring_is_pure() -> None:
         "vanjaro_cli.portal",
     }
 
-    for module in ("fidelity.py", "fidelity_layout.py", "fidelity_color.py"):
+    for module in (
+        "fidelity.py",
+        "fidelity_layout.py",
+        "fidelity_color.py",
+        "fidelity_type.py",
+    ):
         imported = _imports(DESIGN_ROOT / module)
         assert imported.isdisjoint(forbidden), (module, sorted(imported & forbidden))

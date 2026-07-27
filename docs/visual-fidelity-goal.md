@@ -340,3 +340,31 @@ offline benchmark passes with no threshold or regression failures.
 
 Verification: 1,643 non-integration tests pass, up from 1,591. The five-case
 offline benchmark passes with no threshold or regression failures.
+
+### 2026-07-26 — VF-004 typography and spacing metrics
+
+- Added `design/fidelity_type.py` (283 lines) producing both the typography and
+  spacing dimension scores. Typography sub-weights are family 0.40, size 0.40,
+  weight 0.20; spacing is padding 0.60, rhythm 0.40. Both are frozen regime
+  values.
+- **A refused font substitution scores as unavailable, not as a failure.** When
+  the theme planner declines to guess at an unavailable family, that is correct
+  behaviour; scoring it as a miss would punish the pipeline for its honesty and
+  push the fix loop toward fabricating a substitute. A refusal now scores
+  strictly higher than a wrong substitute, which is covered by a test.
+- Font stacks normalize to their primary family, so quoting and fallback lists
+  are not treated as fidelity differences.
+- `type_scale_ratio` exposes the scale itself, so a uniformly shrunk design can
+  be told apart from a compressed one during diagnosis. Under compression the
+  larger roles drift more, and the section score sits between the extremes.
+- Sizes and weights score by ratio rather than exact match, keeping a gradient
+  for the fix loop to climb.
+
+Caught during implementation: the ratio helper initially treated a measured
+**zero** as missing evidence, so a section whose padding was stripped entirely
+would have dropped out of the score rather than failing it. Zero is a
+measurement; only `None` is an absence. Fixed, and the test now asserts the
+exact resulting score instead of merely "not perfect".
+
+Verification: 1,673 non-integration tests pass, up from 1,643. The five-case
+offline benchmark passes with no threshold or regression failures.
