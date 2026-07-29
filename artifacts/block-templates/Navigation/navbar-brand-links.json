@@ -29,11 +29,11 @@
       "expandable": true
     },
     "fields": {
-      "brand.title": "required",
-      "item.action": "required"
+      "brand": "required",
+      "item.navigation_item": "required"
     },
     "physical_fields": {
-      "brand.title": {
+      "brand": {
         "owner": "section",
         "slot_type": "heading",
         "slots": [
@@ -41,7 +41,7 @@
         ],
         "slots_per_owner": 1
       },
-      "item.action": {
+      "item.navigation_item": {
         "owner": "repeat_item",
         "slot_type": "link",
         "slots": [

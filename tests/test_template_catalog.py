@@ -82,10 +82,10 @@ EXPECTED_FIELDS_BY_TEMPLATE = {
         "brand.title", "brand.body", "column.title", "column.links", "contact_title", "contact_items"
     },
     "Navigation/navbar-brand-links.json": {
-        "brand.title", "item.action"
+        "brand", "item.navigation_item"
     },
     "Navigation/navbar-brand-links-cta.json": {
-        "brand.title", "item.action", "action"
+        "brand", "item.navigation_item", "action"
     },
 }
 

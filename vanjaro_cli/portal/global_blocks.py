@@ -17,7 +17,7 @@ from vanjaro_cli.portal.global_block_reconciliation import (
     preview_project_global_blocks,
     reconcile_project_global_blocks,
 )
-from vanjaro_cli.portal.global_header import build_project_header
+from vanjaro_cli.portal.global_header_matching import compose_header_block
 from vanjaro_cli.portal.pages import namespace_component_payload
 from vanjaro_cli.utils.grapesjs import render_components, render_styles
 
@@ -44,7 +44,7 @@ def compose_project_global_blocks(
             raise ProjectGlobalBlockError(f"global source section is missing: {section_id}")
         kind = entry.get("kind")
         if kind == "header":
-            built = build_project_header(
+            built = compose_header_block(
                 section,
                 assets,
                 brand_text=_project_brand_text(document, section, project_id),
@@ -81,6 +81,8 @@ def compose_project_global_blocks(
                 "html": html,
                 "desired_hash": _hash(state),
                 "warnings": list(built.get("warnings", [])),
+                "composition_path": built.get("composition_path", "composer"),
+                "template_id": built.get("template_id"),
             }
         )
     return desired

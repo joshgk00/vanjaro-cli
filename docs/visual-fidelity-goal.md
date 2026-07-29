@@ -617,3 +617,43 @@ portal run confirms parity, remains outstanding.
 
 Verification: 1,752 non-integration tests pass, up from 1,750. The benchmark
 reports no threshold or regression failures.
+
+### Iteration — VF-206 routing (header composition through matching)
+
+**Matcher accuracy:** top-1 1.0000 before and after; top-3 1.0000 before and
+after. The measurable change is confidence, not selection: high-confidence
+matches rose 11 → 12, all correct in both states. The nav section itself moved
+from 0.8363 / medium to 0.9680 / high.
+
+**The real blocker was vocabulary, not routing.** Matching the header was never
+the problem — the navbar already won its section. Binding was. The template
+declared `brand.title` and `item.action`, but the observed IR emits a section
+element with role `brand` and repeat-item fields keyed `label`. Neither leaf had
+an alias covering those, so `bind_section` raised on every required field and
+the field subscore sat at 0.383. Fixed in `design/semantics.py`, the audited
+place for exactly this mapping: new `brand` and `navigation_item` leaves with
+their aliases and slot types, plus secondary item aliases so an observed `label`
+or `navigation_item` can reach a navbar's repeat field. Both leaves are new, so
+no existing template's scoring can shift — confirmed by the corpus being
+unchanged at top-1 1.0000. The navbar templates were renamed onto that
+vocabulary (`brand`, `item.navigation_item`).
+
+**Routing.** `portal/global_header_matching.py` matches the header section
+against the navigation-role subset of the catalog and composes from the winner
+when it clears medium confidence and binds cleanly. Unfilled template slots are
+blanked before composition so the navbar's six sample links never ship. Every
+result carries `composition_path` and `template_id`, which `global_blocks.py`
+now records on the desired entry — that is what a portal parity run will compare.
+
+**The composer is still the fallback, deliberately.** A header with no repeat
+group, a low-confidence match, or a binding failure routes to
+`build_project_header` unchanged. Per Josh's decision the bespoke composer stays
+until a portal run confirms parity; this iteration makes that comparison
+possible rather than assuming its outcome. VF-206's acceptance criterion "the
+bespoke composer is removed, not left in parallel" is therefore still open.
+
+**Agency pack bumped to 1.3.0.** Renaming capability fields changes the template
+digests, so 1.2.0 is now locked into immutable history.
+
+Verification: 1,757 non-integration tests pass, up from 1,752. The benchmark
+reports no threshold or regression failures.
