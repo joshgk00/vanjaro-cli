@@ -10,6 +10,7 @@ from vanjaro_cli.commands.figma_cmd import figma
 from vanjaro_cli.commands.global_blocks_cmd import global_blocks
 from vanjaro_cli.commands.modules_cmd import modules
 from vanjaro_cli.commands.pages_cmd import pages
+from vanjaro_cli.commands.portal_cmd import portal
 from vanjaro_cli.commands.profile_cmd import profile
 from vanjaro_cli.commands.project_cmd import project
 from vanjaro_cli.commands.site_cmd import site
@@ -44,4 +45,5 @@ except ImportError as _migrate_import_error:  # pragma: no cover - exercised via
         )
         context.exit(1)
 
-__all__ = ["api_key", "assets", "auth", "blocks", "branding", "build", "content", "custom_blocks", "figma", "global_blocks", "migrate", "modules", "pages", "profile", "project", "site", "templates", "theme"]
+__all__ = ["api_key", "assets", "auth", "blocks", "branding", "build", "content", "custom_blocks", "figma", "global_blocks", "migrate", "modules", "pages", "portal",
+    "profile", "project", "site", "templates", "theme"]
