@@ -824,3 +824,44 @@ Recording the expectation alone would let the gate score a build against nothing
 **Remaining in this goal:** VF-208 (vocabulary coverage audit) and VF-209 (media
 placement from geometry) are both unblocked. The first real fidelity numbers
 need a portal.
+
+### 2026-08-04 — VF-208 vocabulary coverage audit
+
+**Matcher:** top-1 1.0000, top-3 1.0000, unchanged. High-confidence matches
+12 → 13, precision still 1.0000 — strictly better, nothing displaced. Benchmark
+clean. Suite 1,833 → 1,839.
+
+**Five real gaps, found by running the adapters rather than reading them.**
+Static scanning of the adapter modules was useless: roles come from lookup
+tables and classifiers, not string literals. Running the real adapters over
+every corpus fixture through `analyze_source` produced the actual emitted
+vocabulary, and comparing it to the catalog's declared fields exposed five
+item-field names that could never bind:
+
+| Emitted name | Now reaches | Why it was invisible |
+|---|---|---|
+| `benefit` | `item.features`, `item.body` | Resolved to `item.benefit`, which nothing declares |
+| `number` | `item.value` | Same |
+| `text` | `item.body` | Same |
+| `type` | `item.tag`, `item.meta` | Same |
+| `event_type` | `item.tag`, `item.meta` | Same |
+
+Every one is a **new key**, so no existing template's scoring could shift —
+confirmed by the corpus holding at 1.0000. Closing `benefit` also removed
+`pricing-cards-3up: item.features` from the unsatisfiable list, which is the
+audit working in both directions at once.
+
+**Nine unsatisfiable required fields remain, and they are deliberately not
+"fixed".** `faq-accordion` wants a question and an answer; `pricing-cards-3up`
+wants a price; both footers want column titles, column links, and a contact
+title. No corpus fixture contains an FAQ, a price, or a multi-column footer, so
+nothing can satisfy them. That is a **corpus coverage gap, not a vocabulary
+defect** — inventing aliases to clear the list would map real content onto
+fields it does not belong in, which is the exact failure this audit exists to
+catch. The standing test pins the list, so adding such a fixture makes the entry
+disappear rather than requiring a new alias.
+
+**The standing test closes the detection hole.** VF-206's failure mode — a
+section matching on every subscore while binding nothing — now fails at
+authoring time. `tests/test_design_vocabulary_audit.py` runs the real adapters
+over the corpus and asserts no emitted role is unreachable.

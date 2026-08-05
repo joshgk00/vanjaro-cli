@@ -105,6 +105,14 @@ _ITEM_CAPABILITY_ALIASES: Final = MappingProxyType({
     "navigation_item": ("item.navigation_item", "item.action"),
     "stat_label": ("item.label",),
     "features": ("item.features",),
+    # VF-208: every entry below is a new key, so no existing template's scoring
+    # can shift — these names previously resolved to `item.<name>`, which no
+    # template declares, and bound nothing.
+    "benefit": ("item.features", "item.body"),
+    "number": ("item.value",),
+    "text": ("item.body",),
+    "type": ("item.tag", "item.meta"),
+    "event_type": ("item.tag", "item.meta"),
     "action": ("item.action",),
     "primary_action": ("item.action",),
     "tag": ("item.tag", "item.meta"),
