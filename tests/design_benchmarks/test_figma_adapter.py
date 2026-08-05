@@ -561,3 +561,127 @@ def _walk(node: dict):
     yield node
     for child in node.get("children", []):
         yield from _walk(child)
+
+
+def _mobile_media_position(document, section_index: int):
+    section = document.pages[0].sections[section_index]
+    for observation in section.responsive:
+        if observation.breakpoint is BreakpointName.MOBILE:
+            change = observation.layout_changes.get("media_position")
+            return change["to"] if isinstance(change, dict) else change
+    return None
+
+
+@pytest.mark.parametrize(
+    ("case_id", "section_index", "expected"),
+    [
+        ("figma-freeform-nonprofit", 0, "top"),
+        ("figma-freeform-nonprofit", 3, "top"),
+        ("figma-auto-layout-saas", 0, "bottom"),
+    ],
+)
+def test_mobile_media_position_follows_content_order_when_stacking(
+    case_id, section_index, expected
+):
+    """Media order in the source decides where it lands once the section stacks.
+
+    These sections have no horizontal media position at desktop — an
+    auto-layout frame and two freeform collages — so the desktop composition
+    says nothing about the mobile order. Content order does.
+    """
+
+    source, _ = _case(case_id)
+    document = analyze_figma_document(source, file_key=case_id, captured_at=CAPTURED_AT)
+
+    assert _mobile_media_position(document, section_index) == expected
+
+
+def test_media_position_is_not_derived_from_horizontal_geometry():
+    """A collage can place media on the right and still lead with it on mobile.
+
+    riverkind.hero measures its image at x=680 in a 1440 frame — the right
+    half — while its copy sits at x=120. A geometry rule would stack it to the
+    bottom; the design stacks it to the top. Geometry describes the desktop
+    composition, not the stacking decision.
+    """
+
+    source, _ = _case("figma-freeform-nonprofit")
+    document = analyze_figma_document(
+        source, file_key="figma-freeform-nonprofit", captured_at=CAPTURED_AT
+    )
+    section = document.pages[0].sections[0]
+
+    media_box = next(
+        record.bounds
+        for element in section.content
+        if element.kind is ContentKind.IMAGE
+        for record in element.provenance
+        if record.bounds is not None
+    )
+
+    assert media_box.x > 640  # right of centre in a 1440-wide frame
+    assert _mobile_media_position(document, 0) == "top"
+
+
+def test_a_section_without_media_reports_no_stacking_position():
+    source, _ = _case("figma-auto-layout-saas")
+    document = analyze_figma_document(
+        source, file_key="figma-auto-layout-saas", captured_at=CAPTURED_AT
+    )
+    section = document.pages[0].sections[2]
+
+    assert not any(
+        element.kind is ContentKind.IMAGE for element in section.content
+    )
+    assert _mobile_media_position(document, 2) is None
+
+
+def _hero_children(payload):
+    return payload["document"]["children"][0]["children"][0]["children"][0]["children"]
+
+
+def test_media_interleaved_with_copy_stays_unavailable():
+    """An ambiguous order is not evidence, so nothing is emitted."""
+
+    source, _ = _case("figma-freeform-nonprofit")
+    payload = deepcopy(source)
+    children = _hero_children(payload)
+    children.insert(2, children.pop(0))
+    document = analyze_figma_document(
+        payload, file_key="figma-freeform-nonprofit", captured_at=CAPTURED_AT
+    )
+
+    assert _mobile_media_position(document, 0) is None
+
+
+def test_media_declared_after_the_copy_stacks_to_the_bottom():
+    source, _ = _case("figma-freeform-nonprofit")
+    payload = deepcopy(source)
+    children = _hero_children(payload)
+    children.append(children.pop(0))
+    document = analyze_figma_document(
+        payload, file_key="figma-freeform-nonprofit", captured_at=CAPTURED_AT
+    )
+
+    assert _mobile_media_position(document, 0) == "bottom"
+
+
+def test_vertical_position_does_not_decide_the_stacking_order():
+    """Content order is declared child order; the measured y is not consulted.
+
+    The image keeps y=80 — above every text block — but is declared last, and
+    stacks to the bottom. Auto-layout frames record no element bounds at all,
+    so a y-position rule would have nothing to read there anyway.
+    """
+
+    source, _ = _case("figma-freeform-nonprofit")
+    payload = deepcopy(source)
+    children = _hero_children(payload)
+    image = children[0]
+    assert image["absoluteBoundingBox"]["y"] == 80
+    children.append(children.pop(0))
+    document = analyze_figma_document(
+        payload, file_key="figma-freeform-nonprofit", captured_at=CAPTURED_AT
+    )
+
+    assert _mobile_media_position(document, 0) == "bottom"

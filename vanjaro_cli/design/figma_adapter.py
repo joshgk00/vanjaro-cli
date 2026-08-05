@@ -1371,6 +1371,10 @@ def _infer_mobile(section: Section) -> dict[str, Any]:
         changes["media_position"] = {"from": "bottom", "to": "bottom"}
     elif section.layout.media_position is MediaPosition.TOP:
         changes["media_position"] = {"from": "top", "to": "top"}
+    else:
+        stacked = _stacked_media_position(section)
+        if stacked is not None:
+            changes["media_position"] = {"from": "none", "to": stacked}
     if section.layout.kind == LayoutKind.FREEFORM:
         # Overlapping decoration cannot survive a 390px viewport, whether or
         # not the desktop layout overlapped.
@@ -1381,6 +1385,59 @@ def _infer_mobile(section: Section) -> dict[str, Any]:
         if _has_action_element(section):
             changes["button_width"] = {"from": "auto", "to": "100%"}
     return changes or {"review_required": True}
+
+
+_TEXTUAL_KINDS = frozenset(
+    {
+        ContentKind.HEADING,
+        ContentKind.TEXT,
+        ContentKind.QUOTE,
+        ContentKind.BUTTON,
+        ContentKind.LINK,
+        ContentKind.STAT,
+    }
+)
+
+
+def _stacked_media_position(section: Section) -> str | None:
+    """Derive where media lands once a section collapses to one column.
+
+    A desktop composition with no horizontal media position — an auto-layout
+    frame or a freeform collage — still has a defined mobile order, because
+    stacking preserves content order. That is the same stacking model the
+    template capabilities declare as `stacking_order: "source"`, so deriving
+    from it here keeps the adapter and the templates on one rule.
+
+    Content order here is the declared child order of the Figma node, which is
+    the order a designer arranged the layers in — and stacking preserves it.
+
+    Geometry is deliberately not used, for two independent reasons. Horizontal
+    position is the wrong signal: `riverkind.hero` places its image to the
+    right of the copy (x=680 against x=120) and still leads with it on mobile,
+    so an x-position rule would stack it to the bottom and be wrong. Vertical
+    position is simply unavailable: auto-layout frames such as `orbit.hero`
+    record no per-element bounds at all, so a y-position rule would have
+    nothing to read.
+
+    Media interleaved with copy returns None, so the observation stays
+    unavailable rather than guessed.
+    """
+
+    media = [
+        element.order
+        for element in section.content
+        if element.kind in {ContentKind.IMAGE, ContentKind.VIDEO}
+    ]
+    text = [
+        element.order for element in section.content if element.kind in _TEXTUAL_KINDS
+    ]
+    if not media or not text:
+        return None
+    if max(media) < min(text):
+        return "top"
+    if min(media) > max(text):
+        return "bottom"
+    return None
 
 
 def _infer_tablet(section: Section) -> dict[str, Any]:

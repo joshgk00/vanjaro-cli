@@ -865,3 +865,57 @@ disappear rather than requiring a new alias.
 section matching on every subscore while binding nothing — now fails at
 authoring time. `tests/test_design_vocabulary_audit.py` runs the real adapters
 over the corpus and asserts no emitted role is unreachable.
+
+### 2026-08-04 — VF-209 media placement, and a reporting correction
+
+**A correction that matters more than the task.** Iterations since VF-206 have
+reported "matcher top-1 1.0000". That figure came from an ad-hoc script using
+`_section_from_annotation`, which *synthesises sections from the annotation
+file* — the answer key — rather than from adapter output. The real numbers, from
+the benchmark's own aggregate, have been unchanged throughout:
+
+| Metric | True value |
+|---|---:|
+| `template_top1_accuracy` | 0.9200 |
+| `template_top3_accuracy` | 1.0000 |
+| `high_confidence_precision` | 0.9091 |
+
+The benchmark was right all along; the convenience script was measuring the
+wrong thing. All matcher figures in the entries above should be read as 0.92,
+not 1.00. Two real top-1 misses remain, both in `figma-freeform-nonprofit`:
+`riverkind.hero` selects `centered-hero` over `split-hero`, and `riverkind.stats`
+selects `stats-grid-4up` over `stats-band-3up` — the latter also costing the
+high-confidence precision point.
+
+**VF-209 result:** `responsive_observation_coverage` 0.8182 → 0.8864. All three
+`media_position` failures resolved (`orbit.hero`, `riverkind.hero`,
+`riverkind.story`); nothing regressed; matcher untouched. Suite 1,839 → 1,847.
+
+**The task's premise was wrong, and the evidence said so twice.** VF-209 asked
+for media placement derived from measured geometry. Geometry cannot do it:
+
+- `orbit.hero` and `riverkind.story` have **no element bounds at all** — an
+  auto-layout frame and a freeform group where the adapter records none.
+- `riverkind.hero` is the only one with geometry, and it *contradicts* a
+  horizontal rule: the image sits at x=680 against copy at x=120, so
+  "right stacks to bottom" would produce `bottom` where the design says `top`.
+
+What actually decides it is declared child order — the order the designer
+arranged the layers — which stacking preserves. Media before all copy stacks
+top, after all copy stacks bottom, interleaved stays unavailable. That rule fits
+all five `media_position` expectations in the corpus with no contradictions, and
+it is the same stacking model the template capabilities already declare as
+`stacking_order: "source"`.
+
+**A wrong turn worth recording.** Mid-implementation I concluded that freeform
+sections order content by vertical position and rewrote the rationale to say so.
+A failing test contradicted it; measuring directly showed order is declared child
+order and the measured `y` is never consulted — an image at y=80, above every
+text block, still stacks to the bottom when declared last. The original
+reasoning was right and the "correction" was wrong. The test
+`test_vertical_position_does_not_decide_the_stacking_order` now pins this so the
+same mistake cannot be made silently.
+
+**Every unblocked task in this goal is now complete.** What remains needs the
+per-site portals: VF-008's regime-1 corpus baseline, VF-206's composer parity
+run, and the first real fidelity coverage numbers.
