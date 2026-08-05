@@ -783,3 +783,44 @@ comparing unrelated slots.
 it currently scores nothing. That is correct — a design cannot say how much of a
 source image a build cropped away — and it is recorded here so the asymmetry
 does not later look like a bug.
+
+### 2026-08-04 — VF-009 complete: the gate scores real evidence
+
+**Matcher:** top-1 1.0000, top-3 1.0000, untouched. Benchmark clean. Suite
+1,800 → 1,833.
+
+**`evaluate_project_fidelity` now returns `scored` with no blockers**, proven by
+a test that records evidence and reads it back through the real gate. A degraded
+build recorded through the same path returns `scored` with blockers. The
+`not_scored` path that has been reported since VF-007 is no longer the only
+outcome the pipeline can produce.
+
+**Coverage on a real project is still 0, and only a portal changes that.**
+Everything is injected — renderer and measurer both — so the sequencing, pairing,
+and failure rules are tested offline. But producing genuine numbers needs a built
+page to measure, which needs the per-site portals VF-008 is blocked on. This is
+the halt condition, reached honestly: the code path is complete and the first
+real measurement is a portal run away.
+
+**The browser reports, Python decides.** `MEASURE_SCRIPT` returns geometry,
+computed styles, and raw text — no thresholds, no classification. Placeholder
+detection in particular reuses the planner's regex rather than growing a second
+copy in JavaScript where it could drift unnoticed. Every rule about what a
+measurement *means* lives in `parse_measured_page`, which is why 24 of this
+iteration's tests need no browser.
+
+**Two measurements that would have been fabrications:**
+
+- A transparent computed background is dropped rather than reported. `rgba(0,0,0,0)`
+  means the section inherits what is behind it; recording it as black would have
+  scored a colour the page never painted.
+- A zero-sized image yields no media sample at all, because a zero box is not a
+  measurement of an aspect ratio.
+
+**Half a comparison is never recorded.** If a viewport renders but fails to
+measure, neither the design side nor the capture is written for that breakpoint.
+Recording the expectation alone would let the gate score a build against nothing.
+
+**Remaining in this goal:** VF-208 (vocabulary coverage audit) and VF-209 (media
+placement from geometry) are both unblocked. The first real fidelity numbers
+need a portal.
