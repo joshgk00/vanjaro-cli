@@ -705,3 +705,45 @@ digests, so 1.2.0 is now locked into immutable history.
 
 Verification: 1,757 non-integration tests pass, up from 1,752. The benchmark
 reports no threshold or regression failures.
+
+### 2026-08-04 — VF-009 part one: the expected-side extractor
+
+**Matcher:** top-1 1.0000, top-3 1.0000, unchanged — this iteration touches no
+matching code. Benchmark: no threshold or regression failures. Suite 1,757 →
+1,780.
+
+**Fidelity coverage is still zero, by design.** This is half of VF-009. The
+expected side now exists; nothing yet reads a rendered page, so the gate still
+reports `not_scored` and `evaluate_project_fidelity` still blocks on absent
+evidence. That number moves in the next iteration, not this one.
+
+`design/fidelity_extraction.py` turns a Design Document page into
+`PageObservation` bundles. Three decisions in it are worth recording because
+each one chose a smaller honest score over a larger invented one:
+
+**Inferred geometry is dropped, not scored.** `SectionGeometry` has no field for
+the observation method, so once an inferred box is in the bundle it is
+indistinguishable from a measured one — and bounds carry 0.60 of the layout
+dimension. Rather than change a scoring contract (a regime bump) or let a guess
+score as a measurement, only `RENDERED` and `API` provenance supplies bounds.
+The practical cost: image-adapter sources contribute no geometry at all, and
+statically-parsed HTML never did. That is the correct answer, but it means
+layout will be measured on fewer sections than it looks like from the outside.
+
+**Geometry is never borrowed across viewports.** A desktop box is not evidence
+about mobile. A viewportless record is treated as the desktop base layout and
+only there.
+
+**Inferred style values are excluded too**, for the same reason: the colour and
+type metrics have no way to weight a reconstruction differently once it is in
+the bundle.
+
+Focal point and crop coverage stay unavailable — both describe how a build
+placed an image, so a design cannot supply either side of that comparison. Only
+aspect ratio, from asset intrinsics, is knowable up front.
+
+**One bug caught before it shipped.** The first draft treated a measured zero as
+missing evidence, so a section with its padding stripped would have dropped out
+of the spacing dimension instead of failing it. That is the same defect fixed in
+the spacing metric during VF-004, reintroduced from the opposite side. Now
+`_pixels` accepts zero and only font size uses the positive-only reader.
