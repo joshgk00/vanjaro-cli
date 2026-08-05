@@ -219,6 +219,54 @@ a measurement fault and takes priority over any fix.
 **Never** publish, mutate a shared portal, weaken a threshold, edit a benchmark
 annotation to pass, or invent visitor content or action URLs.
 
+## Active goal — close the measurement gap (2026-08-04)
+
+The scoring stack is built and unfed. Six deterministic metrics, a capture hook,
+a gate, and a project-verify blocker all exist and are tested, but no code turns
+a rendered page into the observations they consume. Until that changes, every
+fidelity number in this document describes the matcher and the adapters, not the
+built site — and the loop that VM4 is supposed to run has nothing to rank.
+
+**Scope, in order:**
+
+1. **VF-009 — observation extraction.** The one task that converts a large,
+   already-paid-for investment into a working measurement. Everything else in
+   this goal is gated behind it.
+2. **VF-208 — vocabulary coverage audit.** Cheap, and the last instance of this
+   bug class moved a section from 0.836/medium to 0.968/high. Run it while
+   VF-009's design settles.
+3. **VF-209 — media placement from geometry.** Closes the last three responsive
+   failures, which are real but small.
+
+**Out of scope and why.** VF-008's corpus baseline and VF-206's parity run both
+need the dedicated per-site portals. Those are decided but not stood up, and
+standing them up is Josh's action, not an autonomous one. Do not attempt either
+task, and do not substitute the shared portal — a shared portal invalidates the
+run, which is worse than not having it.
+
+**Order discipline.** VF-009 before VF-209: media placement is one of the
+signals extraction consumes, and fixing it first means fixing it blind.
+
+**Halt and report, rather than proceeding, when:**
+
+- Extraction cannot obtain a signal a metric requires. Emit unavailable and say
+  so. Never default, never zero-fill, never infer a value the page did not show.
+- Closing a vocabulary gap would require widening an existing leaf's aliases and
+  the corpus moves. A new leaf is safe; widening a shared one is a scoring
+  change wearing a binding change's clothes.
+- The first real scores arrive and they are bad. That is a finding, not a
+  failure — report the number. Do not tune the metric toward a nicer one.
+- Any task's remaining work needs a portal.
+
+**Per iteration:** implement with tests, run the non-integration suite and
+`vanjaro migrate benchmark` to a fresh path, report the matcher figures and the
+fidelity coverage before and after, commit only on green, and append here.
+
+**Every prohibition in VF-5 and in the loop definition above still applies.**
+Most relevant to this scope: never edit a benchmark annotation, fixture, or
+threshold to make a metric move. Coverage rises only because extraction
+genuinely derives more evidence.
+
 ## Completion rule
 
 Passing tests, or raising one site's score, does not complete this goal. It

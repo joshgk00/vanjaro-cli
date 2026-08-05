@@ -130,6 +130,66 @@ paths pointed at a non-existent `.Codex/` directory. It was removed;
 
 **Tests:** passing build, degraded build, missing captures, schema round-trip.
 
+### VF-009 — Observation extraction from a rendered page
+
+**Dependencies:** VF-002 through VF-007
+
+**Problem**
+
+The scoring stack is complete and unfed. Nothing produces `PageObservation`
+bundles from a rendered page plus its Design Document, so
+`score_hook_from_observations` is never reachable, `evaluate_project_fidelity`
+finds no evidence, and the VF-007 gate reports `not_scored` on every build.
+Every fidelity claim made today is eyeballed.
+
+**Acceptance criteria**
+
+- A pure extraction module turns one captured viewport plus the Design Document
+  into a `PageObservation` of `SectionObservation` records.
+- Both sides are produced: the expected observation from the Design Document and
+  the observed one from the render. `score_section_fidelity` compares two
+  bundles of the same shape, so an extractor for only one side scores nothing.
+- Section identity is resolved by the Design Document's own boundaries, not by
+  re-guessing structure from the DOM.
+- Geometry, colour roles, type samples, and media placement are read from the
+  rendered page; anything the page cannot supply is emitted as unavailable,
+  never as a default or a zero.
+- A section present in the document but absent from the render is reported
+  absent, so it fails every comparable dimension rather than dropping out.
+- `run_visual_quality_gate` produces real per-section scores end to end and
+  writes them to `qa/fidelity-evidence.json`.
+- Extraction is deterministic: the same capture and document yield byte-identical
+  observations.
+
+**Tests:** exact-match page, shifted/resized sections, missing section, absent
+geometry, unavailable colour and type evidence, determinism, and one end-to-end
+gate run producing scored output rather than `not_scored`.
+
+**Design notes (survey, 2026-08-04)**
+
+Signal sources on the expected side, confirmed by reading the metric models
+against `design/models.py`:
+
+- **Geometry is available, but not where it looks.** `Section` carries no
+  bounding box. Geometry lives on `Provenance.bounds`, which all three adapters
+  populate — Figma from the node's absolute frame, HTML from rendered
+  measurement, image from inference. Extraction reads it from the section's
+  provenance, matched to the requested viewport.
+- **Not every bounds value is equal.** The HTML adapter only measures under the
+  rendered method — static parsing yields none — and the image adapter marks its
+  bounds `ObservationMethod.INFERRED`. Extraction must carry the method through,
+  because bounds carry 0.60 of the layout dimension and scoring inferred
+  geometry as if it were observed would launder a guess into a measurement.
+- **Colour, typography, and spacing** come from `StyleSet.observations`, whose
+  `StyleProperty` enum covers `background_color`, `text_color`, `font_family`,
+  `font_size`, `font_weight`, `padding`, `row_gap`, and `column_gap` — every
+  signal the colour, type, and spacing metrics ask for.
+- **Media** aspect ratio derives from `AssetRecord.width`/`height`; focal point
+  and crop coverage have no design-side source and must be emitted unavailable
+  unless the render supplies both sides.
+- **Integrity has no expected side at all** and is already typed
+  `IntegrityObservation | None` — only the build can be defective.
+
 ### VF-008 — Establish the regime-1 corpus baseline
 
 **Dependencies:** VF-007
@@ -254,6 +314,56 @@ Ordered by the ledger, not by this document. Expected order below.
 
 - `northstar.nav` resolves to a navigation template.
 - Top-1 >= 0.90 and top-3 >= 0.97 across the corpus.
+
+### VF-208 — Semantic vocabulary coverage audit
+
+**Dependencies:** VF-205
+
+**Problem**
+
+VF-206 found the navbar could be matched but not bound: the observed roles
+`brand` and `label` had no alias reaching the fields the template declared, so
+every required field failed and the field subscore sat at 0.383. That was one
+instance of a class. A role the adapters emit but the vocabulary cannot map is
+invisible — matching still scores, binding just quietly produces nothing.
+
+**Acceptance criteria**
+
+- Every role and item-field name any adapter can emit is enumerated from the
+  adapters themselves, not from a hand-written list.
+- Every field any catalog template declares is enumerated from the catalog.
+- Unreachable pairs are reported: roles no template field accepts, and required
+  template fields no observed role can satisfy.
+- Genuine gaps are closed in `design/semantics.py`; each addition states which
+  adapter emits the role and which template needs it.
+- Widening an existing leaf's aliases requires showing the corpus is unchanged;
+  a new leaf needs no such proof because nothing else can reference it.
+
+**Tests:** a standing test that fails when an adapter emits a role no template
+field can accept, so the next gap surfaces at authoring time rather than in a
+portal run.
+
+### VF-209 — Media placement from rendered geometry
+
+**Dependencies:** VF-203, VF-204
+
+**Problem**
+
+Three responsive expectations still fail — `orbit.hero`, `riverkind.hero`, and
+`riverkind.story`, all on `media_position`. The adapters infer media placement
+from markup order and utility classes, which freeform and flex layouts do not
+encode.
+
+**Acceptance criteria**
+
+- Media position is derived from measured geometry, not markup order, when
+  geometry is available.
+- Derived values stay labelled distinctly from observed ones.
+- The three named failures resolve; no currently passing expectation regresses.
+- Sections without measurable geometry still yield unavailable, not a guess.
+
+**Tests:** the three named sections, a left/right/top/background matrix, and an
+absent-geometry case.
 
 ## Wave 4 — VM4 prove sustained improvement
 
