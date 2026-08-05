@@ -747,3 +747,39 @@ missing evidence, so a section with its padding stripped would have dropped out
 of the spacing dimension instead of failing it. That is the same defect fixed in
 the spacing metric during VF-004, reintroduced from the opposite side. Now
 `_pixels` accepts zero and only font size uses the positive-only reader.
+
+### 2026-08-04 — VF-009 part two: the observed side scores end to end
+
+**Matcher:** top-1 1.0000, top-3 1.0000, untouched. Benchmark clean. Suite
+1,780 → 1,800.
+
+**Fidelity coverage: still 0 in a real project, but the scoring path now works.**
+A faithful build scores 100.0, a degraded build 0.0, and a section that was
+never built fails all five comparable dimensions — all proven by test, not by
+inspection. What remains before a project reports a number is the browser
+measurer that fills `RenderedPage` from a live page.
+
+**Section identity is stated by the build, not guessed.** Every component the
+pipeline composes already carries `data-agency-section` with the design section
+ID (`portal/page_composition._namespace_components`). The observed side reads
+that attribute rather than re-deriving structure from the DOM, so the two
+bundles line up by construction. This was the main open risk in VF-009 and it
+turned out to be already solved.
+
+**The capture harness measures nothing structural.** `fidelity_capture` produces
+screenshots and settle evidence only. Geometry, computed colour, type, padding,
+and overflow cannot come from a PNG, so `PageMeasurer` is a second protocol
+alongside `PageRenderer` — not a second browser stack. The pure conversion from
+`RenderedPage` to observations is fully testable without a browser, which is
+where all twenty of this iteration's tests live.
+
+**Media keying.** Both sides number images in document order, so `media_2` means
+the second image in the design and in the build. That is the only correspondence
+available without round-tripping element identity through the composer, and it
+degrades predictably: an inserted image shifts the pairing rather than silently
+comparing unrelated slots.
+
+`crop_coverage` is measured on the build but stays unavailable on the design, so
+it currently scores nothing. That is correct — a design cannot say how much of a
+source image a build cropped away — and it is recorded here so the asymmetry
+does not later look like a bug.
