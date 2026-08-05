@@ -49,7 +49,7 @@ def test_a_measured_section_carries_every_signal_the_metrics_need() -> None:
     assert section.section_id == "home.s1"
     assert section.bounds is not None and section.bounds.height == 560
     assert section.columns == 3
-    assert section.background_color == "rgb(255, 255, 255)"
+    assert section.background_color == "#ffffff"
     assert section.typography["heading"].size_px == 48
     assert section.padding_top == 64
     assert section.element_gap == 24
@@ -73,10 +73,23 @@ def test_non_colours_are_unavailable_rather_than_measured(declared: str) -> None
     assert _parse(background_color=declared).sections[0].background_color is None
 
 
-def test_an_opaque_colour_with_alpha_is_still_a_measurement() -> None:
-    assert _parse(background_color="rgba(0, 0, 0, 0.5)").sections[0].background_color == (
-        "rgba(0, 0, 0, 0.5)"
-    )
+def test_an_opaque_colour_with_alpha_keeps_its_channels() -> None:
+    # What partial alpha composites against is not knowable from this element,
+    # so the RGB channels are the honest measurement.
+    assert _parse(background_color="rgba(0, 0, 0, 0.5)").sections[0].background_color == "#000000"
+
+
+def test_computed_rgb_is_normalized_to_the_hex_the_palette_contract_requires() -> None:
+    # Browsers report rgb(); the design side carries hex. Unit tests using hex
+    # fixtures never caught this — only a real page did.
+    section = _parse(background_color="rgb(255, 255, 255)", text_color="rgb(17, 17, 17)").sections[0]
+
+    assert section.background_color == "#ffffff"
+    assert section.text_color == "#111111"
+
+
+def test_an_unrecognized_colour_form_is_not_a_measurement() -> None:
+    assert _parse(background_color="color(display-p3 1 0 0)").sections[0].background_color is None
 
 
 def test_measured_zero_padding_survives_the_round_trip() -> None:

@@ -919,3 +919,54 @@ same mistake cannot be made silently.
 **Every unblocked task in this goal is now complete.** What remains needs the
 per-site portals: VF-008's regime-1 corpus baseline, VF-206's composer parity
 run, and the first real fidelity coverage numbers.
+
+### 2026-08-05 — First real fidelity score: 63.0, and what it actually measures
+
+**The measurement path works end to end.** A build on a dedicated portal was
+captured, measured, scored, and gated. `evaluate_project_fidelity` returned
+`scored` with an overall of **63.0** against a draft minimum of 75, and blocked.
+That is the first fidelity number this pipeline has ever produced from a real
+build rather than a fixture.
+
+**The number is honest but narrow, and must not be read as "the site is 63%
+right".** Per-section, per-breakpoint:
+
+| Section | Score | Dimensions with evidence |
+|---|---:|---|
+| section.1 (nav) | 0.00 | all five scored 0 — absent from the build |
+| sections 2–5 | 78.75 | layout 75, integrity 90 |
+
+Colour, typography, spacing, and media were **unavailable on every section** —
+four of six dimensions contributed nothing. The cause is on the design side: a
+statically parsed HTML source carries no geometry and no observed style values,
+so there is nothing to compare against. VF-009 predicted exactly this when it
+restricted geometry to `RENDERED` and `API` provenance; this run is the
+confirmation. **A meaningful corpus baseline (VF-008) therefore requires
+rendered source analysis, not static parsing.** Layout scored 75 on column and
+order agreement alone, with the bounds subscore — 0.60 of that dimension —
+dropping out.
+
+`section.1` scores 0 because the nav was split into a global block and the
+`global_blocks` build stage failed: the Northstar fixture has a nav but no
+footer, and page chrome requires exactly one of each. The section the design
+expects is genuinely absent from the build, so scoring it 0 across every
+comparable dimension is correct behaviour, not a defect.
+
+**Two integration bugs that only a real page could find.** Both were invisible
+to 1,800 passing unit tests because the fixtures agreed with the code:
+
+- **Computed colours are `rgb()`, not hex.** Browsers report
+  `rgb(255, 255, 255)`; `SectionPalette` requires hex; every unit test used hex
+  fixtures on both sides. The first real measurement raised a `ValidationError`.
+  Normalization now happens in `fidelity_measure`, where the browser's dialect
+  is translated — an unrecognized colour form is unavailable rather than guessed.
+- **A draft page renders no content to a visitor.** Authenticated, Vanjaro
+  serves the editor chrome; anonymous, an empty shell. `data-agency-section`
+  never reaches the DOM either way, and the recorder correctly reported "no
+  measurable sections" rather than inventing a score. Measuring a build requires
+  publishing it, which Josh authorized for the isolated pilot portal only.
+
+**Portals.** Six dedicated benchmark portals plus a measurement pilot portal now
+exist on `vanjarocli.local`, created through the new `vanjaro portal create` so
+the setup is reproducible. VF-008 is unblocked in tooling terms; it now needs
+rendered-source analysis to produce numbers worth baselining.

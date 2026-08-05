@@ -198,22 +198,45 @@ def _columns(value: Any) -> int | None:
     return columns if columns >= 1 else None
 
 
-def _color(value: Any) -> str | None:
-    """Drop fully transparent colours: they are not the painted colour.
+_RGB_FUNCTION = re.compile(
+    r"^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([0-9.]+)\s*)?\)$",
+    re.IGNORECASE,
+)
 
-    A transparent background means the section inherits whatever is behind it,
-    which the page cannot attribute to this section. Reporting `rgba(0,0,0,0)`
-    as black would be a fabricated measurement.
+
+def _color(value: Any) -> str | None:
+    """Normalize a computed colour to hex, or report it as unmeasured.
+
+    Browsers report computed colours as `rgb()`/`rgba()` while the design side
+    carries hex, and the palette contract is hex — so the conversion belongs
+    here rather than in the scoring metric.
+
+    A fully transparent colour is dropped: it means the section inherits
+    whatever is behind it, which the page cannot attribute to this section, and
+    reporting `rgba(0,0,0,0)` as black would be a fabricated measurement.
+    Partial alpha keeps its RGB channels, because what it composites against is
+    not knowable from this element alone.
     """
 
     if not isinstance(value, str) or not value.strip():
         return None
     text = value.strip()
-    if re.fullmatch(r"rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*0(?:\.0+)?\s*\)", text):
-        return None
     if text.casefold() in {"transparent", "none"}:
         return None
-    return text
+    match = _RGB_FUNCTION.match(text)
+    if match:
+        alpha = match.group(4)
+        if alpha is not None and float(alpha) == 0.0:
+            return None
+        channels = [int(match.group(index)) for index in (1, 2, 3)]
+        if any(channel > 255 for channel in channels):
+            return None
+        return "#" + "".join(f"{channel:02x}" for channel in channels)
+    if re.fullmatch(r"#(?:[0-9a-fA-F]{3}|[0-9a-fA-F]{6})", text):
+        return text
+    # An unrecognized colour form is not a measurement; guessing one would put
+    # a fabricated value into the score.
+    return None
 
 
 def _typography(value: Any) -> dict[str, RenderedText]:
