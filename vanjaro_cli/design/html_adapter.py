@@ -991,6 +991,40 @@ def _navigation_metadata(
     return {"navigation_collapsed": states} if states else {}
 
 
+def _drop_dangling_interaction_targets(section: dict[str, JsonValue]) -> None:
+    """Keep interaction targets pointing at elements the section actually has.
+
+    Interaction targets are built from the raw crawl, where a video carries a
+    `.video.N` identifier. Element identifiers are rebuilt from the classified
+    semantic role, so a video the classifier reads as section media becomes
+    `.section-media.N` and the original target no longer resolves — which the
+    Design Document validator rightly rejects.
+
+    The interaction itself is still real: the page does embed a video. Only the
+    unresolvable pointer is dropped, so the observation survives without
+    claiming an element that is not there.
+    """
+
+    content = section.get("content")
+    interactions = section.get("interactions")
+    if not isinstance(content, list) or not isinstance(interactions, list):
+        return
+    existing = {
+        element["id"]
+        for element in content
+        if isinstance(element, dict) and isinstance(element.get("id"), str)
+    }
+    for interaction in interactions:
+        if not isinstance(interaction, dict):
+            continue
+        targets = interaction.get("target_element_ids")
+        if not isinstance(targets, list):
+            continue
+        interaction["target_element_ids"] = [
+            target for target in targets if target in existing
+        ]
+
+
 def _build_document(
     *,
     source_kind: str,
@@ -1093,6 +1127,7 @@ def _build_document(
                 warnings=warnings,
                 artifact_path=str(raw_section.get("_artifact_path") or page_input.url),
             )
+            _drop_dangling_interaction_targets(section)
             confidence_values.append(float(section["role_confidence"]))
             sections.append(section)
 

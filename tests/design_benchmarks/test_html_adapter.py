@@ -90,3 +90,30 @@ def test_static_responsive_evidence_is_conservative_and_explicitly_inferred() ->
         for failure in report.failures
     )
 
+
+
+def test_video_reclassified_as_media_does_not_leave_a_dangling_interaction():
+    """A video the classifier reads as section media must not break the document.
+
+    Interaction targets come from the raw crawl (`.video.N`) while element IDs
+    are rebuilt from the classified role (`.section-media.N`). When those
+    disagree the target cannot resolve, and the Design Document validator
+    rejects the whole document. The interaction is still real, so only the
+    unresolvable pointer is dropped.
+    """
+
+    html = """
+    <html><body>
+      <section id="promo">
+        <h2>See how it works</h2>
+        <video src="/promo.mp4"></video>
+      </section>
+    </body></html>
+    """
+
+    document = design_document_from_html(html, source_url="https://agency.example/")
+
+    section = document.pages[0].sections[0]
+    element_ids = {element.id for element in section.content}
+    for interaction in section.interactions:
+        assert set(interaction.target_element_ids) <= element_ids
