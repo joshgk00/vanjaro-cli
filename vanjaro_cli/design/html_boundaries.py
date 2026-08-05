@@ -83,20 +83,49 @@ def _normalized_words(value: str) -> set[str]:
     return set(re.findall(r"[a-z0-9%]+", value.casefold()))
 
 
+# Content keys holding visitor-facing text. Asset keys are excluded on purpose:
+# an image URL like `/Portals/0/adam/Content/hero.png` tokenizes into words that
+# collide with real copy, so a section with no text at all can outscore the
+# boundary that genuinely contains it.
+_TEXT_CONTENT_KEYS = (
+    "headings",
+    "paragraphs",
+    "buttons",
+    "links",
+    "list_items",
+    "blockquotes",
+    "tables",
+)
+
+
 def _raw_section_words(raw_section: Mapping[str, JsonValue]) -> set[str]:
+    """Collect the visitor-facing words a raw section claims.
+
+    Matching a raw section to a DOM boundary compares words, so only words a
+    visitor would read may count. Including asset URLs let a text-free hero
+    score against an unrelated pane on a shared path token and take the
+    boundary that held the page's actual copy.
+    """
+
     content = raw_section.get("content")
     if not isinstance(content, dict):
         return set()
     values: list[str] = []
-    for value in content.values():
-        if isinstance(value, str):
-            values.append(value)
-        elif isinstance(value, list):
-            for item in value:
-                if isinstance(item, str):
-                    values.append(item)
-                elif isinstance(item, dict):
-                    values.extend(str(part) for part in item.values() if isinstance(part, str))
+    for key in _TEXT_CONTENT_KEYS:
+        raw_values = content.get(key)
+        if not isinstance(raw_values, list):
+            continue
+        for item in raw_values:
+            if isinstance(item, str):
+                values.append(item)
+            elif isinstance(item, dict):
+                values.extend(
+                    str(part)
+                    for name, part in item.items()
+                    if isinstance(part, str) and name in {"text", "label", "citation", "title"}
+                )
+            elif isinstance(item, list):
+                values.extend(str(cell) for cell in item if isinstance(cell, str))
     return _normalized_words(" ".join(values))
 
 

@@ -117,3 +117,39 @@ def test_video_reclassified_as_media_does_not_leave_a_dangling_interaction():
     element_ids = {element.id for element in section.content}
     for interaction in section.interactions:
         assert set(interaction.target_element_ids) <= element_ids
+
+
+def test_asset_urls_do_not_win_a_boundary_from_the_section_that_holds_the_copy():
+    """Boundary matching compares visitor-facing words only.
+
+    A text-free band still carries an image URL, and URL path tokens collide
+    with real copy. Scoring those let an empty section outscore the pane that
+    actually contained the page's text and take it, leaving the real content
+    section bound to the wrong boundary with nothing to place.
+    """
+
+    from vanjaro_cli.design.html_boundaries import prepare_static_sections
+
+    html = """
+    <html><body>
+      <div id="dnn_BannerPane" class="Pane">
+        <img src="/Portals/0/adam/Content/banner.png" alt="">
+      </div>
+      <div id="dnn_TopPane" class="Pane">
+        <h2>Who is Adam Consulting?</h2>
+        <p>Adam Consulting brings organisations together for shared outcomes.</p>
+      </div>
+    </body></html>
+    """
+    raw = [
+        {"type": "hero", "content": {"headings": [], "paragraphs": [],
+         "images": [{"src": "/Portals/0/adam/Content/banner.png", "alt": ""}]}},
+        {"type": "bio", "content": {"headings": ["Who is Adam Consulting?"],
+         "paragraphs": ["Adam Consulting brings organisations together for shared outcomes."],
+         "images": []}},
+    ]
+
+    prepared = prepare_static_sections(html, raw)
+
+    assert prepared[0]["_static_selector"] == "#dnn_BannerPane"
+    assert prepared[1]["_static_selector"] == "#dnn_TopPane"
