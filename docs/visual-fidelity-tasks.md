@@ -588,3 +588,46 @@ reverted rather than left in as apparent coverage.
 **Tests:** a section whose image has no resolvable asset, a section whose
 template declares no media field, and a section where both hold; each reports a
 distinct reason and none changes plan validity.
+
+### VF-215 — The navbar brand loses its link, and the composer duplicates it
+
+**Dependencies:** VF-205, VF-206
+
+**Problem**
+
+VF-206 has been waiting on a portal run to confirm the matched navbar reaches
+parity with `portal/global_header.py`. The pilot build supplies it, and the
+answer is that **neither path is correct**.
+
+The Northstar source declares one brand element: kind `link`, role `brand`,
+value `Northstar`, `href="/"`.
+
+| | links rendered | brand markup |
+|---|---:|---|
+| bespoke composer | 5 | brand also emitted as the **first nav link** (`href="/"`, `class="nav-link"`) |
+| template match | 4 | `<h1 class="navbar-brand">Northstar</h1>` — **not a link** |
+
+So the composer duplicates the brand into the navigation list, and the template
+drops the destination the source declared: clicking the logo no longer goes
+home. The template also renders the brand as an `<h1>`, which on an interior
+page competes with the page's own heading.
+
+**This is why VF-206 stays open.** The composer cannot be retired in favour of a
+path that loses a link, and it should not be kept as-is either.
+
+**Acceptance criteria**
+
+- The navbar template's brand slot accepts an action, so a brand that declares a
+  destination renders as a link to it.
+- A brand with no declared destination renders as text, not as a link to `#`.
+- The brand never also appears in the navigation item list.
+- The brand's element is not an `<h1>`.
+- Parity is demonstrated on a portal run, not on unit tests: same source, both
+  paths, matching link count and destinations.
+
+**Note.** Changing a navbar template's slot contract is a capability change and
+trips the M4 governance gates, so it needs a pack version bump — Josh's call,
+like VF-214's static-slot decision.
+
+**Tests:** a brand with a destination, a brand without one, and an assertion
+that the brand is absent from the repeat items.

@@ -2104,3 +2104,49 @@ introduced two iterations ago used a JS regex inside a non-raw Python string,
 which emitted `SyntaxWarning: invalid escape sequence` on every import. It is
 now a plain string comparison, and `python -W error::SyntaxWarning` imports both
 modules cleanly.
+
+### 2026-08-06 — VF-206's parity run: neither header path is correct
+
+**No code changed. The finding is the deliverable.** Suite 2,004, benchmark
+clean, matcher unchanged.
+
+Media is blocked on Josh, and colour's remaining 1.400 is the Northstar fixture
+painting no background anywhere — the ancestor walk added two iterations ago is
+correct, and no honest measurement can extract a colour from a page that paints
+none. So this iteration took the one substantial item that the pilot portal
+finally unblocked: **VF-206's parity run**, open since 2026-07-27 pending exactly
+this evidence.
+
+The pilot's header was composed through template matching —
+`composition_path: template`, `Navigation/navbar-brand-links`, zero warnings,
+and every accessibility attribute VF-205 specified. That establishes the matched
+path works. Parity, though, means comparing it against what the composer would
+have produced from the same section, and that comparison fails.
+
+The source declares one brand: kind `link`, role `brand`, value `Northstar`,
+`href="/"`.
+
+| | links | brand markup |
+|---|---:|---|
+| bespoke composer | 5 | brand **also** emitted as the first nav link |
+| template match | 4 | `<h1 class="navbar-brand">` — **no link** |
+
+**Neither is right.** The composer duplicates the brand into the navigation
+list; the template drops the destination the source declared, so clicking the
+logo no longer goes home, and renders it as an `<h1>` that competes with the
+page heading on any interior page.
+
+**So VF-206 stays open, now for a reason rather than out of caution.** Josh's
+standing decision was that the composer stays until a portal run confirms
+parity. The run happened; it did not confirm parity; and it also showed the
+composer is not the correct target to match. Filed as **VF-215**.
+
+Fixing it means giving the navbar template's brand slot an action, which is a
+capability change that trips the M4 governance gates and needs a pack version
+bump — Josh's call, exactly like VF-214's static-slot question.
+
+**Every remaining item now needs that same decision.** Media (2.250, VF-214) and
+the navbar brand (VF-215) are both template-library changes; colour's residual
+1.400 is a corpus limitation this fixture cannot exercise. The loop has run out
+of work it can complete on its own, which is the stop condition the goal
+defines: the top clusters are all blocked.
