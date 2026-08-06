@@ -508,3 +508,147 @@ def test_rendered_styles_override_static_and_emit_responsive_deltas() -> None:
         "desktop": False,
         "mobile": True,
     }
+
+
+PAIRING_HTML = """
+<html><head><title>Pairing</title></head>
+<body>
+  <header><nav id="site-nav"><a href="/">Home</a><a href="/about">About</a></nav></header>
+  <main>
+    <section id="hero"><h1>Find your north</h1><p>We build measured systems.</p></section>
+    <section id="services"><h2>What we do</h2><p>Design, build, measure.</p></section>
+    <section id="contact"><h2>Ready?</h2><a class="btn" href="/contact">Start</a></section>
+  </main>
+</body></html>
+"""
+
+
+def _pairing_section(selector: str, y: float) -> RenderedSectionObservation:
+    return RenderedSectionObservation(
+        selector=selector,
+        bounds=BoundingBox(x=0.0, y=y, width=1440.0, height=200.0),
+        hidden=False,
+        styles={"background_color": "#101820"},
+    )
+
+
+def _desktop_observation(
+    sections: tuple[RenderedSectionObservation, ...],
+) -> RenderedPageObservation:
+    return RenderedPageObservation(
+        breakpoint=BreakpointName.DESKTOP,
+        viewport=CANONICAL_VIEWPORTS[BreakpointName.DESKTOP],
+        html=PAIRING_HTML,
+        sections=sections,
+    )
+
+
+def _bounds_by_role(document) -> dict[str, float | None]:
+    return {
+        str(section.semantic_role): (
+            section.provenance[0].bounds.y
+            if section.provenance[0].bounds is not None
+            else None
+        )
+        for section in document.pages[0].sections
+    }
+
+
+def test_rendered_evidence_pairs_by_identity_not_position() -> None:
+    """The browser skips header content, so the lists differ in length.
+
+    Pairing by position would put the hero's geometry on the nav and shift every
+    later section onto its neighbour — a measurement of the wrong element that
+    still looks like evidence.
+    """
+
+    document = design_document_from_html(
+        PAIRING_HTML,
+        "https://pairing.test/",
+        captured_at=CAPTURE_TIME,
+        rendered_observations=(
+            _desktop_observation(
+                (
+                    _pairing_section("#contact", 700.0),
+                    _pairing_section("#hero", 60.0),
+                )
+            ),
+        ),
+    )
+
+    bounds = _bounds_by_role(document)
+    assert bounds["hero"] == 60.0
+    assert bounds["call_to_action"] == 700.0
+    assert bounds["rich_text"] is None
+    assert any(
+        warning.code == "rendered_section_unmatched" for warning in document.warnings
+    )
+
+
+def test_equal_length_lists_still_pair_by_position_without_identity() -> None:
+    document = design_document_from_html(
+        PAIRING_HTML,
+        "https://pairing.test/",
+        captured_at=CAPTURE_TIME,
+        rendered_observations=(
+            _desktop_observation(
+                tuple(
+                    _pairing_section(f"rendered-section-{index + 1}", index * 100.0)
+                    for index in range(3)
+                )
+            ),
+        ),
+    )
+
+    bounds = _bounds_by_role(document)
+    assert bounds["hero"] == 0.0
+    assert bounds["rich_text"] == 100.0
+    assert bounds["call_to_action"] == 200.0
+
+
+def test_unidentifiable_lists_of_different_lengths_attach_no_geometry() -> None:
+    """Without identity and without matching counts there is no correspondence.
+
+    Attaching geometry anyway would guess which rendered box belongs to which
+    section, and a wrong box scores worse than an absent one.
+    """
+
+    document = design_document_from_html(
+        PAIRING_HTML,
+        "https://pairing.test/",
+        captured_at=CAPTURE_TIME,
+        rendered_observations=(
+            _desktop_observation(
+                (
+                    _pairing_section("rendered-section-1", 0.0),
+                    _pairing_section("rendered-section-2", 100.0),
+                )
+            ),
+        ),
+    )
+
+    assert all(value is None for value in _bounds_by_role(document).values())
+    assert any(
+        warning.code == "rendered_section_unmatched" for warning in document.warnings
+    )
+
+
+def test_duplicate_rendered_selectors_are_not_used_for_pairing() -> None:
+    document = design_document_from_html(
+        PAIRING_HTML,
+        "https://pairing.test/",
+        captured_at=CAPTURE_TIME,
+        rendered_observations=(
+            _desktop_observation(
+                (
+                    _pairing_section("#hero", 60.0),
+                    _pairing_section("#hero", 300.0),
+                    _pairing_section("#contact", 700.0),
+                )
+            ),
+        ),
+    )
+
+    bounds = _bounds_by_role(document)
+    assert bounds["hero"] is None
+    assert bounds["call_to_action"] == 700.0

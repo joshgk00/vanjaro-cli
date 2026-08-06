@@ -366,3 +366,31 @@ def test_global_sections_are_removed_from_body_plan_without_guessing_templates()
     assert global_plan["section_count"] == 2
     assert global_plan["ready"] is True
     assert issues == ()
+
+
+def test_render_is_part_of_the_analyze_fingerprint(runner, tmp_path: Path) -> None:
+    """Switching to rendered analysis must re-run, not resume.
+
+    Rendered evidence changes what the Design Document contains, so resuming a
+    static analysis under --render would report success while leaving the
+    fidelity metrics with nothing to compare against.
+    """
+
+    root = tmp_path / "render-fingerprint"
+    _init_local_html_project(runner, root)
+
+    analyzed = runner.invoke(cli, ["project", "analyze", str(root), "--json"])
+    assert analyzed.exit_code == 0, analyzed.output
+    static_fingerprint = json.loads(analyzed.output)["execution"]["input_fingerprint"]
+
+    resumed = runner.invoke(cli, ["project", "analyze", str(root), "--json"])
+    assert json.loads(resumed.output)["execution"]["status"] == "resumed"
+
+    rendered = runner.invoke(
+        cli, ["project", "analyze", str(root), "--render", "--dry-run", "--json"]
+    )
+    assert rendered.exit_code == 0, rendered.output
+    rendered_execution = json.loads(rendered.output)["execution"]
+    assert rendered_execution["status"] == "dry_run"
+    assert rendered_execution["action"] == "execute"
+    assert rendered_execution["input_fingerprint"] != static_fingerprint

@@ -1026,3 +1026,71 @@ to 1,800 passing unit tests because the fixtures agreed with the code:
 exist on `vanjarocli.local`, created through the new `vanjaro portal create` so
 the setup is reproducible. VF-008 is unblocked in tooling terms; it now needs
 rendered-source analysis to produce numbers worth baselining.
+
+### 2026-08-05 — VF-210: rendered source analysis, and an off-by-one that looked like evidence
+
+**Matcher:** top-1 0.9200, top-3 1.0000, high-confidence precision 0.9091 —
+unchanged, correctly, since no matching or inference code was touched. Responsive
+coverage holds at 0.8864 (39/44). Benchmark clean. Suite 1,859 → 1,872.
+
+**On a real project the four dark dimensions now have evidence.** Analyzing the
+Northstar pilot source both ways:
+
+| | Static | Rendered |
+|---|---:|---:|
+| Sections with measured bounds | 0/5 | 4/5 |
+| Fidelity-relevant style values | 0/40 | 32/40 |
+
+The rendered path was already built — `capture_rendered_observations` and the
+whole rendered-provenance branch of `_build_document` existed and were tested.
+Nothing reachable from `analyze` ever called them. This task was wiring plus one
+correctness fix, not new measurement machinery.
+
+`project analyze --render` is the explicit opt-in, and it is part of the stage
+fingerprint, so switching to rendered analysis re-runs rather than resuming a
+static result. A workspace-local source renders from its `file://` URI, never
+from the recorded live `source_url`, so analysing a local file cannot silently
+reach the network.
+
+**The bug this found is the reason to be glad it ran on a real page.** The
+browser's observation script skips anything inside a `header` or `footer`, so
+Northstar's nav — which the static parser *does* extract — has no rendered
+counterpart. Rendered sections were paired to static sections **by index**:
+
+| Static section | Was given | Should have been |
+|---|---|---|
+| navigation | `#hero` geometry | nothing |
+| hero | `#services` geometry | `#hero` |
+| feature_cards | `#testimonials` geometry | `#services` |
+| testimonials | `#contact` geometry | `#testimonials` |
+| call_to_action | nothing | `#contact` |
+
+Every section carried a real, correctly-measured box belonging to a different
+section. Nothing was missing, no warning fired for four of the five, and the
+scores would have looked measured. **A wrong box scores worse than an absent
+one, because absence is reported and mis-attribution is not.**
+
+`_pair_rendered_sections` now matches on the selector both sides already carry
+(`_static_selector` against the rendered `#id`). Position is used only when the
+two lists are the same length, where it is the sole available correspondence and
+cannot be off by one; when identity is absent and the counts differ, no geometry
+is attached at all. Duplicate rendered selectors are discarded rather than
+guessed between. The nav now correctly reports unmatched, which is honest: the
+browser genuinely did not measure it.
+
+**Not fixed, deliberately.** The nav is unmeasurable through this path at all,
+because the observation script excludes header content by design. Widening that
+query affects what every rendered crawl considers a section, which is a change
+to the evidence base rather than to this task's wiring, and it should be its own
+task with its own before/after. The static nav evidence is unaffected.
+
+**One test bug caught, of a familiar shape.** The first rendered-section helper
+wrote `styles=styles or {...}`, so passing `{}` — "the browser reported no
+styles" — silently substituted the full default set and the test asserting the
+absence of measured styles passed vacuously. This is the third appearance of
+empty-or-zero being confused with absent, after VF-004's padding and VF-009's
+`_pixels`. It keeps arriving from a new direction; only `None` is absence.
+
+**Still not a new fidelity score.** VF-210 supplies the design side. Producing an
+updated number needs a build and a publish on the pilot portal, which is VF-008's
+territory and the next iteration's work.

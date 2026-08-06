@@ -1025,6 +1025,52 @@ def _drop_dangling_interaction_targets(section: dict[str, JsonValue]) -> None:
         ]
 
 
+def _pair_rendered_sections(
+    raw_sections: Sequence[Mapping[str, JsonValue]],
+    observation: RenderedPageObservation,
+) -> dict[int, RenderedSectionObservation]:
+    """Map static section indexes to the rendered sections that are the same section.
+
+    The browser and the static parser do not always find the same sections: the
+    observation script skips anything inside a header or footer, so a page whose
+    nav sits outside ``main`` yields one fewer rendered section. Pairing those
+    two lists by position then shifts every section's geometry onto its
+    neighbour — a measurement of the wrong element, which scores worse than no
+    measurement because it looks like evidence.
+
+    Identity wins when both sides expose it. Position is used only when the two
+    lists are the same length, where it is the only correspondence available and
+    cannot be silently off by one.
+    """
+
+    rendered_by_selector: dict[str, RenderedSectionObservation] = {}
+    duplicated: set[str] = set()
+    for rendered in observation.sections:
+        if not rendered.selector.startswith("#"):
+            continue
+        if rendered.selector in rendered_by_selector:
+            duplicated.add(rendered.selector)
+            continue
+        rendered_by_selector[rendered.selector] = rendered
+    for selector in duplicated:
+        rendered_by_selector.pop(selector, None)
+
+    paired: dict[int, RenderedSectionObservation] = {}
+    for index, raw_section in enumerate(raw_sections):
+        static_selector = raw_section.get("_static_selector")
+        if not static_selector:
+            continue
+        rendered = rendered_by_selector.get(str(static_selector))
+        if rendered is not None:
+            paired[index] = rendered
+    if paired:
+        return paired
+
+    if len(observation.sections) == len(raw_sections):
+        return dict(enumerate(observation.sections))
+    return {}
+
+
 def _build_document(
     *,
     source_kind: str,
@@ -1089,22 +1135,26 @@ def _build_document(
             ).html,
             raw_sections,
         )
+        paired_by_breakpoint = {
+            breakpoint: _pair_rendered_sections(raw_sections, observation)
+            for breakpoint, observation in observations_by_breakpoint.items()
+        }
         sections: list[dict[str, JsonValue]] = []
         for section_index, raw_section in enumerate(raw_sections):
             rendered_for_section = {
-                breakpoint: observation.sections[section_index]
-                for breakpoint, observation in observations_by_breakpoint.items()
-                if section_index < len(observation.sections)
+                breakpoint: paired[section_index]
+                for breakpoint, paired in paired_by_breakpoint.items()
+                if section_index in paired
             }
             rendered_viewports_for_section = {
-                breakpoint: observation.viewport
-                for breakpoint, observation in observations_by_breakpoint.items()
-                if section_index < len(observation.sections)
+                breakpoint: observations_by_breakpoint[breakpoint].viewport
+                for breakpoint, paired in paired_by_breakpoint.items()
+                if section_index in paired
             }
             missing = [
                 breakpoint.value
-                for breakpoint, observation in observations_by_breakpoint.items()
-                if section_index >= len(observation.sections)
+                for breakpoint, paired in paired_by_breakpoint.items()
+                if section_index not in paired
             ]
             if missing:
                 warnings.append(
@@ -1227,6 +1277,7 @@ def design_document_from_html(
     slug: str | None = None,
     captured_at: datetime | None = None,
     rendered_observations: Sequence[RenderedPageObservation] = (),
+    rendered_warnings: Sequence[DesignWarning] = (),
 ) -> DesignDocument:
     """Convert one static HTML page, optionally enriched by rendered evidence."""
 
@@ -1259,7 +1310,7 @@ def design_document_from_html(
         initial_assets=[],
         global_metadata={},
         rendered_observations={source_url: rendered_observations},
-        initial_warnings=[],
+        initial_warnings=list(rendered_warnings),
     )
 
 

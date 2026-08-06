@@ -129,8 +129,15 @@ def run_project_analysis(
     *,
     html_fetcher: Callable[[str], str] | None = None,
     figma_client_factory: Callable[[], _FigmaClient] | None = None,
+    render: bool = False,
 ) -> StageResult:
-    """Analyze all declared inputs, retain per-source evidence, and merge deterministically."""
+    """Analyze all declared inputs, retain per-source evidence, and merge deterministically.
+
+    ``render`` drives HTML sources through a browser so the Design Document
+    carries measured geometry and computed styles. Without it the fidelity
+    metrics have no design-side evidence for colour, typography, spacing, or
+    media, and layout scores without its bounds subscore.
+    """
 
     fetch_html = html_fetcher or fetch_url_text
     make_figma_client = figma_client_factory or FigmaClient
@@ -147,6 +154,7 @@ def run_project_analysis(
                 captured_at=context.manifest.project.created_at,
                 html_fetcher=fetch_html,
                 figma_client_factory=make_figma_client,
+                render=render,
             )
         except ImageAcquisitionError as exc:
             raise ProjectAnalysisError(
@@ -254,21 +262,26 @@ def _analyze_source(
     captured_at: Any,
     html_fetcher: Callable[[str], str],
     figma_client_factory: Callable[[], _FigmaClient],
+    render: bool = False,
 ) -> tuple[DesignDocument, tuple[str, ...]]:
     local = _local_reference(root, source.reference)
     if source.kind == SourceKind.LIVE_HTML:
         if local is None:
             html = html_fetcher(source.reference)
             source_url = source.reference
+            render_url = source.reference
         else:
             html = local.read_text(encoding="utf-8")
             source_url = _string_metadata(source, "source_url") or local.as_uri()
+            render_url = local.as_uri()
         return (
             analyze_source(HtmlSourceRequest(
                 html=html,
                 source_url=source_url,
                 title=_string_metadata(source, "title"),
                 slug=source.page_reference or _string_metadata(source, "slug"),
+                render=render,
+                render_url=render_url,
             )),
             (),
         )

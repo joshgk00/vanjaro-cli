@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from datetime import datetime, timezone
+from functools import partial
 from pathlib import Path
 
 import click
@@ -224,11 +225,21 @@ def project_status(directory: Path, as_json: bool) -> None:
         "workspace-local inputs are validated and hashed."
     ),
 )
+@click.option(
+    "--render",
+    is_flag=True,
+    help=(
+        "Render HTML sources in a browser to record measured geometry and "
+        "computed styles. Required for the colour, typography, spacing, and "
+        "media fidelity dimensions to have any design-side evidence."
+    ),
+)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
 def analyze_project(
     directory: Path,
     refresh: bool,
     dry_run: bool,
+    render: bool,
     as_json: bool,
 ) -> None:
     """Analyze every declared source into project Design Document artifacts."""
@@ -243,10 +254,10 @@ def analyze_project(
         execution = engine.execute(
             ProjectStage.ANALYZE,
             StageInputs(
-                data={"refresh_token": refresh_token},
+                data={"refresh_token": refresh_token, "render": render},
                 files=files,
             ),
-            run_project_analysis,
+            partial(run_project_analysis, render=render),
             dry_run=dry_run,
         )
     except ProjectAnalysisError as exc:
