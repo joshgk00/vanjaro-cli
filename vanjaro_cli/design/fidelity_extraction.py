@@ -247,11 +247,39 @@ def _type_sample(style: StyleSet) -> TypeSample | None:
     )
 
 
-def _spacing(section: Section, breakpoint: BreakpointName) -> SectionSpacing:
-    style = section.style
+def _effective_style(section: Section, breakpoint: BreakpointName) -> StyleSet:
+    """Section styles with a breakpoint's measured changes applied.
+
+    A rendered crawl records responsive styles as *changes from desktop*, so a
+    property absent from the delta was measured and found equal — not left
+    unknown. Replacing the whole set with the delta discarded every unchanged
+    property, which is why spacing scored at desktop only while tablet and
+    mobile were measured and thrown away.
+
+    Only rendered observations are merged, because only that adapter computes
+    the delta. Absence carries no such meaning from a source without the
+    contract, and importing desktop values there would be the cross-viewport
+    borrow VF-009 refuses.
+    """
+
+    merged = {
+        observation.property: observation for observation in section.style.observations
+    }
     for observation in section.responsive:
-        if observation.breakpoint == breakpoint and observation.style.observations:
-            style = observation.style
+        if observation.breakpoint != breakpoint:
+            continue
+        if not any(
+            record.method is ObservationMethod.RENDERED
+            for record in observation.provenance
+        ):
+            continue
+        for entry in observation.style.observations:
+            merged[entry.property] = entry
+    return StyleSet(observations=list(merged.values()))
+
+
+def _spacing(section: Section, breakpoint: BreakpointName) -> SectionSpacing:
+    style = _effective_style(section, breakpoint)
     top, bottom = _padding(_style_value(style, StyleProperty.PADDING))
     gap = _pixels(_style_value(style, StyleProperty.ROW_GAP))
     return SectionSpacing(

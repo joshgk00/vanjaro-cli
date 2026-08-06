@@ -1757,3 +1757,45 @@ with an unresolvable asset (reported now). The required case was always loud.
 
 Three tests: the unresolvable image records its reason alongside the raise, a
 resolvable one binds and reports nothing, and the sink never changes binding.
+
+### 2026-08-06 — Coverage is uniform across breakpoints for the first time
+
+**Matcher unchanged** (0.9200 / 1.0000 / 0.9091; responsive 0.8864). Benchmark
+clean. Suite 1,969 → 1,973.
+
+| | desktop | tablet | mobile |
+|---|---:|---:|---:|
+| coverage before | 0.733 | 0.600 | 0.600 |
+| **coverage after** | **0.733** | **0.733** | **0.733** |
+| score | 59.14 | 65.95 → 60.40 | 56.62 → 52.17 |
+
+Overall 60.57 → 57.24. **All three breakpoints now measure the same six-sixths
+of the regime**, which is the first time the per-breakpoint numbers have been
+comparable to each other at all. Every previous cross-breakpoint comparison in
+this log was between differently-measured things.
+
+**`_spacing` replaced the style set instead of merging it.** A rendered crawl
+records responsive styles as *changes from desktop* — `changed_styles` in
+`html_adapter` is computed by diffing each viewport against the desktop values.
+So a property absent from the delta was measured and found equal, not left
+unknown. Replacing the section style with the delta discarded every unchanged
+property: at tablet the delta was `{width}` alone, so padding vanished and
+spacing scored at desktop only, while tablet and mobile had been measured and
+thrown away.
+
+**Merging is not the borrow VF-009 forbids, and the difference is the delta
+contract.** For geometry there is no such contract, so a desktop box says
+nothing about mobile and is correctly refused. For rendered styles, absence is
+positive evidence of equality because the adapter computed it that way. The
+merge is therefore restricted to observations with `RENDERED` provenance; an
+inferred responsive observation merges nothing, and a test pins that.
+
+**The score fell again, and again because more is measured.** Spacing now scores
+at tablet and mobile, where it scores the same 0.00 it already scored at
+desktop — the design expects `padding: 0px` from a stylesheet-less fixture and
+the build renders the template's 48px. That gap was always there; two of the
+three breakpoints simply were not looking at it.
+
+That is now four consecutive iterations where the number fell because the
+measurement improved. The pilot's *build* has changed once in that time (VF-213);
+everything else has been the measurement catching up to it.

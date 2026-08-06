@@ -449,3 +449,81 @@ def test_the_section_provenance_still_wins_when_it_names_the_breakpoint() -> Non
     )
 
     assert _observe(section, BreakpointName.MOBILE).geometry.bounds.width == 390
+
+
+def _named_style(**values: str) -> StyleSet:
+    return StyleSet(
+        observations=[
+            StyleObservation(property=StyleProperty(name), value=value)
+            for name, value in values.items()
+        ]
+    )
+
+
+def _responsive_style(
+    breakpoint: BreakpointName,
+    style: StyleSet,
+    *,
+    method: ObservationMethod = ObservationMethod.RENDERED,
+) -> ResponsiveObservation:
+    return ResponsiveObservation(
+        breakpoint=breakpoint,
+        viewport=Viewport(width=768, height=1024),
+        status=EvidenceStatus.OBSERVED,
+        style=style,
+        provenance=[_provenance(method=method, viewport=breakpoint)],
+    )
+
+
+def test_a_property_absent_from_the_delta_keeps_its_desktop_value() -> None:
+    """A rendered crawl records responsive styles as changes from desktop, so a
+    property absent from the delta was measured and found equal. Replacing the
+    whole set instead of merging discarded every unchanged property, and spacing
+    scored at desktop only while tablet and mobile were measured and thrown away.
+    """
+
+    section = _section(
+        style=_named_style(padding="48px", row_gap="16px"),
+        responsive=[_responsive_style(BreakpointName.TABLET, _named_style(width="752px"))],
+    )
+
+    desktop = _observe(section, BreakpointName.DESKTOP).spacing.spacing
+    tablet = _observe(section, BreakpointName.TABLET).spacing.spacing
+
+    assert desktop.padding_top == 48.0
+    assert tablet.padding_top == 48.0
+    assert tablet.element_gap == 16.0
+
+
+def test_a_measured_change_overrides_the_desktop_value() -> None:
+    section = _section(
+        style=_named_style(padding="48px"),
+        responsive=[_responsive_style(BreakpointName.MOBILE, _named_style(padding="16px"))],
+    )
+
+    assert _observe(section, BreakpointName.DESKTOP).spacing.spacing.padding_top == 48.0
+    assert _observe(section, BreakpointName.MOBILE).spacing.spacing.padding_top == 16.0
+
+
+def test_a_non_rendered_responsive_observation_is_not_merged() -> None:
+    """Only the rendered adapter computes the delta. Absence means nothing
+    elsewhere, and importing desktop values would be a cross-viewport borrow."""
+
+    section = _section(
+        style=_named_style(padding="48px"),
+        responsive=[
+            _responsive_style(
+                BreakpointName.MOBILE,
+                _named_style(width="374px"),
+                method=ObservationMethod.INFERRED,
+            )
+        ],
+    )
+
+    assert _observe(section, BreakpointName.MOBILE).spacing.spacing.padding_top == 48.0
+
+
+def test_a_breakpoint_with_no_observation_still_reads_the_base_style() -> None:
+    section = _section(style=_named_style(padding="48px"), responsive=[])
+
+    assert _observe(section, BreakpointName.MOBILE).spacing.spacing.padding_top == 48.0
