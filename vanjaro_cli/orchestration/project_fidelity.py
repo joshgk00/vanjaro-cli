@@ -22,6 +22,7 @@ from vanjaro_cli.design.fidelity import UnavailableScoreError
 from vanjaro_cli.design.fidelity_evaluation import (
     PageObservation,
     score_hook_from_observations,
+    score_section_fidelity,
 )
 from vanjaro_cli.design.models import BreakpointName
 from vanjaro_cli.design.visual_gate import (
@@ -162,9 +163,52 @@ def evaluate_project_fidelity(root: Path) -> tuple[dict[str, Any], list[str]]:
 
     report = json.loads(serialize_visual_gate_result(result))
     report["status"] = "scored"
+    report["dimension_coverage"] = _dimension_coverage(expected, observed)
 
     blockers = [
         f"visual fidelity gate failed: {failure['message']}"
         for failure in report.get("failures", [])
     ]
     return report, blockers
+
+
+def _dimension_coverage(
+    expected: dict[BreakpointName, Any],
+    observed: dict[BreakpointName, Any],
+) -> dict[str, float]:
+    """Report how much of the regime each breakpoint's score was built from.
+
+    A viewport score is a weighted mean over the dimensions that could be
+    measured, renormalized so absent evidence never reads as a poor build. That
+    is right for scoring and misleading for comparing: on this corpus the design
+    side supplies geometry and spacing only at desktop, so tablet and mobile
+    score higher on two dimensions than desktop does on four. Without this
+    number, "mobile 83" reads as confidence when it means "we measured less".
+
+    It matters most at mobile, which has its own floor on the ship gate.
+    """
+
+    coverage: dict[str, float] = {}
+    for breakpoint, expected_page in expected.items():
+        observed_page = observed.get(breakpoint)
+        if observed_page is None:
+            continue
+        observed_by_id = {
+            section.section_id: section for section in observed_page.sections
+        }
+        scores = [
+            score_section_fidelity(
+                section,
+                observed_by_id.get(section.section_id),
+                breakpoint=breakpoint,
+                expected_viewport_width=expected_page.viewport_width,
+                observed_viewport_width=observed_page.viewport_width,
+                section_count=len(expected_page.sections),
+            )
+            for section in expected_page.sections
+        ]
+        if scores:
+            coverage[breakpoint.value] = round(
+                sum(entry.dimension_coverage for entry in scores) / len(scores), 4
+            )
+    return coverage

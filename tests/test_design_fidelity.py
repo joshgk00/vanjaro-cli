@@ -283,3 +283,105 @@ class TestStructuralValidation:
             DimensionScore(
                 dimension=FidelityDimension.LAYOUT, score=1.0, unexpected=True
             )
+
+
+def _dimension(dimension: FidelityDimension, score: float | None) -> DimensionScore:
+    return DimensionScore(dimension=dimension, score=score)
+
+
+def _section_with(scores: dict[FidelityDimension, float | None]) -> SectionFidelityScore:
+    return SectionFidelityScore(
+        regime_version=CURRENT_REGIME_VERSION,
+        section_id="page.section.1",
+        breakpoint=BreakpointName.DESKTOP,
+        dimensions=tuple(
+            _dimension(dimension, score) for dimension, score in scores.items()
+        ),
+    )
+
+
+def test_coverage_counts_only_the_dimensions_that_contributed() -> None:
+    section = _section_with(
+        {
+            FidelityDimension.LAYOUT: 80.0,
+            FidelityDimension.COLOR: 60.0,
+            FidelityDimension.TYPOGRAPHY: None,
+            FidelityDimension.SPACING: None,
+            FidelityDimension.MEDIA: None,
+            FidelityDimension.INTEGRITY: 90.0,
+        }
+    )
+
+    assert section.measured_dimensions == 3
+    assert section.dimension_coverage == 0.5
+
+
+def test_a_higher_score_on_less_evidence_is_distinguishable() -> None:
+    """The reason this exists: renormalizing hides how much was measured.
+
+    A viewport scoring 90 on two dimensions must not read as more trustworthy
+    than one scoring 60 on five, which is what the score alone implies.
+    """
+
+    thin = _section_with(
+        {FidelityDimension.LAYOUT: 90.0, FidelityDimension.INTEGRITY: 90.0}
+    )
+    thorough = _section_with(
+        {
+            FidelityDimension.LAYOUT: 60.0,
+            FidelityDimension.COLOR: 60.0,
+            FidelityDimension.TYPOGRAPHY: 60.0,
+            FidelityDimension.SPACING: 60.0,
+            FidelityDimension.INTEGRITY: 60.0,
+        }
+    )
+
+    assert thin.score > thorough.score
+    assert thin.dimension_coverage < thorough.dimension_coverage
+
+
+def test_a_section_measuring_nothing_reports_zero_coverage() -> None:
+    section = _section_with(
+        {FidelityDimension.LAYOUT: None, FidelityDimension.COLOR: None}
+    )
+
+    assert section.score is None
+    assert section.measured_dimensions == 0
+    assert section.dimension_coverage == 0.0
+
+
+def test_breakpoint_coverage_is_the_mean_of_its_sections() -> None:
+    full = _section_with(
+        {dimension: 70.0 for dimension in FidelityDimension}
+    )
+    half = _section_with(
+        {
+            FidelityDimension.LAYOUT: 70.0,
+            FidelityDimension.COLOR: 70.0,
+            FidelityDimension.TYPOGRAPHY: 70.0,
+            FidelityDimension.SPACING: None,
+            FidelityDimension.MEDIA: None,
+            FidelityDimension.INTEGRITY: None,
+        }
+    )
+    half = half.model_copy(update={"section_id": "page.section.2"})
+
+    aggregated = aggregate_breakpoint(BreakpointName.DESKTOP, [full, half])
+
+    assert aggregated.dimension_coverage == 0.75
+
+
+def test_coverage_does_not_change_any_score() -> None:
+    """Coverage reports the regime; it must never participate in it."""
+
+    section = _section_with(
+        {FidelityDimension.LAYOUT: 80.0, FidelityDimension.COLOR: 40.0}
+    )
+
+    assert section.score == pytest.approx(
+        (80.0 * DIMENSION_WEIGHTS[FidelityDimension.LAYOUT]
+         + 40.0 * DIMENSION_WEIGHTS[FidelityDimension.COLOR])
+        / (DIMENSION_WEIGHTS[FidelityDimension.LAYOUT]
+           + DIMENSION_WEIGHTS[FidelityDimension.COLOR]),
+        abs=0.01,
+    )

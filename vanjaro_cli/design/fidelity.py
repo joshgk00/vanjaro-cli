@@ -169,6 +169,28 @@ class SectionFidelityScore(_FidelityModel):
     def measured(self) -> bool:
         return self.score is not None
 
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def measured_dimensions(self) -> int:
+        """How many of the regime's dimensions actually contributed.
+
+        A score built from two dimensions and one built from six are not
+        comparable, and the weighted mean hides the difference by renormalizing.
+        Reporting the count keeps "we measured little" from reading as "this
+        scored well" — which matters most at mobile, where the ship gate has its
+        own floor and the expected side usually supplies the least evidence.
+
+        Derived from dimensions already present, so this reports the regime
+        rather than changing it.
+        """
+
+        return sum(1 for entry in self.dimensions if entry.score is not None)
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def dimension_coverage(self) -> float:
+        return _round(self.measured_dimensions / len(DIMENSION_WEIGHTS))
+
     def require_score(self) -> float:
         """Return the score, or raise when nothing could be measured."""
 
@@ -238,6 +260,18 @@ class BreakpointFidelityScore(_FidelityModel):
     def unmeasured_section_ids(self) -> tuple[str, ...]:
         return tuple(
             section.section_id for section in self.sections if section.score is None
+        )
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def dimension_coverage(self) -> float:
+        """Mean share of the regime's dimensions measured across this viewport."""
+
+        if not self.sections:
+            return 0.0
+        return _round(
+            sum(section.dimension_coverage for section in self.sections)
+            / len(self.sections)
         )
 
 

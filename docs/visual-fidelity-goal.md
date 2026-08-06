@@ -1496,3 +1496,52 @@ scored zero. The new test asserts the design's section ID reaches
 stage fingerprint, so every fix in this iteration needed
 `project analyze --refresh` to cascade. That is correct for input-based
 fingerprints and wrong for a pipeline whose behaviour lives in code.
+
+### 2026-08-06 — The desktop gap is a measurement artifact, not a build defect
+
+**Matcher unchanged.** Benchmark clean. Suite 1,949 → 1,954. **No score changed.**
+
+The task was "close the desktop gap": desktop 59.91 against tablet and mobile at
+83.25. Breaking the pilot down by dimension shows there is no gap to close.
+
+| | desktop | tablet | mobile |
+|---|---|---|---|
+| expected bounds | **yes** | no | no |
+| expected padding | **yes** | no | no |
+| layout score (s2–s5) | 53–64 | 100 | 100 |
+| **dimension coverage** | **0.600** | 0.467 | 0.467 |
+
+**Tablet and mobile score higher because less was measured.** VF-009 restricts
+geometry to the viewport that supplied it, so the design side carries bounds and
+padding only at desktop. At tablet and mobile the layout dimension loses its
+bounds subscore — 0.60 of the dimension — and scores 100 on column and order
+agreement alone, while spacing drops out entirely. Desktop is the only
+breakpoint where those two dimensions are genuinely compared.
+
+**This is a measurement-integrity fault, and the ship gate has a mobile-specific
+floor.** Mobile is the least-measured breakpoint and the one carrying its own
+release threshold, so the floor was being cleared partly by absence of evidence.
+By this goal's own stop condition, that outranks the fix-loop work it was found
+during, and chasing "desktop parity" would have been optimising toward a number
+produced by measuring less.
+
+`dimension_coverage` is now reported per section, per breakpoint, and in
+`draft-verification.json` beside every score. It is a derived property over
+dimensions already present — it reports the regime rather than changing it, so
+no regime bump and no re-baseline. A test asserts a thin 90 is distinguishable
+from a thorough 60, and another asserts coverage never touches a score.
+
+**The spacing zero is real and is a corpus limitation.** Desktop spacing scores
+exactly 0.00 on sections 2–5: the design expects `padding: 0px` and the build
+renders 48px. The Northstar fixture has no stylesheet, so its computed padding
+is the CSS initial value, while the block templates carry deliberate padding.
+VF-212 established that a computed initial value states no *intent* — but VF-004
+deliberately established the opposite for *scoring*, that zero is a measurement
+and only `None` is absence. Reconciling those by treating expected `0px` as
+absent would raise the score, and it would be fitting the rule to one
+under-specified fixture. Left alone, and recorded here instead.
+
+**Corrected expectation for the next iteration.** Raising the mobile and tablet
+scores is not progress while their coverage sits at 0.467. Raising *coverage*
+is, and that means responsive evidence on the design side — which is VF-203/204
+territory, already at its honest ceiling for this corpus.
