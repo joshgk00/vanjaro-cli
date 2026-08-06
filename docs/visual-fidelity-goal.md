@@ -2195,3 +2195,52 @@ silently stopped exercising it after any bump; they now derive the version.
 The pilot re-scores at **56.89**, coverage 0.6967 / 0.7167 / 0.6967 — a small
 drop from 57.21 as the newly-bound media slots register as empty rather than
 absent, which is the more accurate reading.
+
+### 2026-08-06 — Every rendered analysis so far measured an unstyled page
+
+**Matcher unchanged** (0.9200 / 1.0000 / 0.9091). Benchmark clean. Suite
+2,006 → 2,009.
+
+With media unblocked, the ranking still put it at 2.250 and colour at 1.400 —
+both entirely unmeasured. Applying the standing rule, neither side had anything
+to sample, so the question became whether that is a code limit or a fixture one.
+**Running the pipeline against a real source answered it, and the answer was
+worse than either.**
+
+`artifacts/projects/edca-pilot` holds 93KB of real markup from a live DNN site.
+Analysed with `--render`:
+
+| | sections | assets with intrinsics | sections with a background |
+|---|---:|---:|---:|
+| EDCA (real) | 4 | 0 | **0** |
+
+Zero backgrounds on a real site is not plausible, and the cause is not the
+adapter. The page declares **13 external stylesheets**, all root-relative
+(`/Portals/...`, `/Resources/...`). **A root-relative URL cannot resolve from a
+`file://` document** — there is no site root to resolve against — so the browser
+painted its own defaults. `getComputedStyle(document.body).fontFamily` came back
+`"Times New Roman"`.
+
+**That is the browser default, and it is what this log has been calling a
+"fixture artifact" since typography first scored.** The Times-New-Roman heading
+mismatch was never a property of the source. It was the signature of CSS that
+never loaded, on every rendered analysis this project has run.
+
+**The detection is the address, not the sheet.** A failed `file://` load still
+produces a `link.sheet` object, and reading its `cssRules` throws exactly as a
+legitimately cross-origin sheet does — neither distinguishes failure. What does
+is the href: on a `file:` document, a root-relative stylesheet cannot resolve.
+Protocol-relative (`//host/...`) still can, and is excluded.
+
+An unresolved sheet now raises `rendered_stylesheets_unresolved`, naming the
+count and saying plainly what it invalidates: *colour, typography and spacing
+describe nothing the author chose*. On EDCA that is 10 stylesheets per
+breakpoint; on the synthetic fixture, which declares none, it stays silent.
+
+**This does not fix the evidence, and it is not meant to.** Measuring a real
+site's design needs the render to reach its stylesheets — a live URL, or a
+local copy with its assets. What changes is that an unstyled render can no
+longer be presented as design evidence without saying so.
+
+**It also reframes the standing gaps.** Media at 2.250 and colour at 1.400 are
+not waiting on code. They are waiting on a source whose CSS loads.

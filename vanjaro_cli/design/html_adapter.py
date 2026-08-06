@@ -297,7 +297,28 @@ _RENDERED_OBSERVATION_JS = r"""() => {
         const toggleVisible = toggle && getComputedStyle(toggle).display !== 'none';
         navigationCollapsed = navStyle.display === 'none' || Boolean(toggleVisible);
     }
-    return {sections: snapshots, navigation_collapsed: navigationCollapsed};
+    // A stylesheet that declared itself and did not load means this render is
+    // missing the design it was supposed to measure. A saved page whose sheets
+    // are root-relative cannot resolve them from a file:// URI, so the browser
+    // paints browser defaults and the evidence looks measured while describing
+    // nothing the author chose.
+    // A root-relative stylesheet cannot resolve from a file:// document: there
+    // is no site root to resolve against. The browser still creates a sheet
+    // object, so `link.sheet` is truthy and reading `cssRules` throws the same
+    // way a legitimately cross-origin sheet does — neither is a usable signal.
+    // The address is.
+    let unresolvedStylesheets = 0;
+    if (location.protocol === 'file:') {
+        document.querySelectorAll('link[rel~="stylesheet"]').forEach((link) => {
+            const href = link.getAttribute('href') || '';
+            if (href.startsWith('/') && !href.startsWith('//')) unresolvedStylesheets += 1;
+        });
+    }
+    return {
+        sections: snapshots,
+        navigation_collapsed: navigationCollapsed,
+        unresolved_stylesheets: unresolvedStylesheets,
+    };
 }"""
 
 
@@ -501,6 +522,19 @@ def capture_rendered_observations(
                                 if isinstance(raw_section.get("action"), dict)
                                 else {}
                             ),
+                        )
+                    )
+                unresolved = raw_snapshot.get("unresolved_stylesheets")
+                if isinstance(unresolved, int) and unresolved > 0:
+                    warnings.append(
+                        DesignWarning(
+                            code="rendered_stylesheets_unresolved",
+                            message=(
+                                f"{unresolved} stylesheet(s) declared by {url} did not load at "
+                                f"{breakpoint.value}; the render shows browser defaults, so its "
+                                "colour, typography and spacing describe nothing the author chose"
+                            ),
+                            path=url,
                         )
                     )
                 collapsed = raw_snapshot.get("navigation_collapsed")

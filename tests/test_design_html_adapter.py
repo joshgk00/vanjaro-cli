@@ -860,3 +860,39 @@ def test_only_the_first_action_element_carries_the_sample() -> None:
     ]
 
     assert len(stamped) == 1
+
+
+def test_the_script_reports_stylesheets_a_file_render_cannot_resolve() -> None:
+    """A saved page's root-relative sheets cannot resolve from file://, so the
+    browser paints its own defaults and the evidence looks measured while
+    describing nothing the author chose. On the real EDCA source that is 10
+    stylesheets, and every rendered analysis before this reported none."""
+
+    script = html_adapter._RENDERED_OBSERVATION_JS
+
+    assert "unresolved_stylesheets" in script
+    assert "location.protocol === 'file:'" in script
+    # Protocol-relative URLs do resolve; only root-relative ones cannot.
+    assert "!href.startsWith('//')" in script
+
+
+def test_link_sheet_is_not_used_as_the_signal() -> None:
+    """The browser creates a sheet object for a failed file:// load, so
+    `link.sheet` is truthy and reading cssRules throws exactly as it does for a
+    legitimately cross-origin sheet. Neither distinguishes failure."""
+
+    script = html_adapter._RENDERED_OBSERVATION_JS
+    block = script[script.index("unresolvedStylesheets = 0") :]
+
+    assert "cssRules" not in block
+    assert "getAttribute('href')" in block
+
+
+def test_an_unresolved_stylesheet_warning_names_what_it_invalidates() -> None:
+    from vanjaro_cli.design import html_adapter as adapter
+    import inspect
+
+    source = inspect.getsource(adapter.capture_rendered_observations)
+
+    assert "rendered_stylesheets_unresolved" in source
+    assert "colour, typography and spacing" in source
