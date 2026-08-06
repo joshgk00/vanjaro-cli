@@ -115,15 +115,41 @@ def _string_value(value: Any) -> str:
     return str(value)
 
 
+_URL_SCHEME = re.compile(r"^[a-z][a-z0-9+.\-]*:", re.IGNORECASE)
+
+
+def _page_usable_source(candidate: str) -> str:
+    """Return a reference a built page can actually load, or an empty string.
+
+    Only a relative path or a data URI works in a portal page. An absolute
+    source is either hotlinking someone else's origin (http/https/figma) or
+    unloadable from a served document — `file://` most of all, which a browser
+    refuses outright and which reached a live pilot page as
+    `Not allowed to load local resource`, one console error per visitor.
+
+    Blanking here is what makes the drop visible: an empty source is reported
+    by the binding sink as an asset that resolved to nothing, rather than being
+    shipped as a URL that can never load.
+    """
+
+    text = candidate.strip()
+    if not text:
+        return ""
+    match = _URL_SCHEME.match(text)
+    if match is None:
+        return text
+    return text if text.casefold().startswith("data:") else ""
+
+
 def _asset_value(element: ContentElement, assets: Mapping[str, AssetRecord]) -> tuple[str, str]:
     asset = assets.get(element.asset_id or "")
     if asset is None:
         candidate = _string_value(element.attributes.get("src") or element.value)
-        location = "" if candidate.casefold().startswith(("http://", "https://", "figma://")) else candidate
-        return location, _string_value(element.attributes.get("alt") or "")
-    source = asset.source_url or ""
-    safe_source = "" if source.casefold().startswith(("http://", "https://", "figma://")) else source
-    location = asset.local_path or safe_source
+        return (
+            _page_usable_source(candidate),
+            _string_value(element.attributes.get("alt") or ""),
+        )
+    location = asset.local_path or _page_usable_source(asset.source_url or "")
     alt = asset.alt_text or _string_value(element.attributes.get("alt") or "")
     return location, alt
 

@@ -46,6 +46,7 @@ from vanjaro_cli.design.models import (
 )
 from vanjaro_cli.design.planner import (
     PlanningError,
+    _page_usable_source,
     bind_section,
     emit_library_plan,
     plan_design_document,
@@ -493,3 +494,73 @@ def test_the_sink_is_optional_and_never_changes_binding() -> None:
         bind_section(section, _entry("gallery-3up.json"), assets=assets)
 
     assert with_sink.value.issues == without.value.issues
+
+
+@pytest.mark.parametrize(
+    ("source", "expected"),
+    [
+        ("assets/photo.jpg", "assets/photo.jpg"),
+        ("/Portals/8/photo.jpg", "/Portals/8/photo.jpg"),
+        ("data:image/png;base64,AAAA", "data:image/png;base64,AAAA"),
+        ("file:///synthetic/hero.jpg", ""),
+        ("https://elsewhere.test/hero.jpg", ""),
+        ("figma://node/1", ""),
+        ("blob:http://host/abc", ""),
+        ("   ", ""),
+    ],
+)
+def test_only_a_relative_path_or_data_uri_is_page_usable(
+    source: str, expected: str
+) -> None:
+    """A built page can load a relative path or a data URI. Everything else is
+    hotlinking or unloadable — `file://` most of all, which reached a live pilot
+    page as `Not allowed to load local resource`, one console error per
+    visitor."""
+
+    assert _page_usable_source(source) == expected
+
+
+def test_a_file_url_asset_is_dropped_and_reported_rather_than_shipped() -> None:
+    """Blanking is what makes the loss visible: the binding sink reports an
+    asset that resolved to nothing, instead of a URL that can never load."""
+
+    asset = AssetRecord(
+        id="asset-1",
+        kind=AssetKind.IMAGE,
+        role="editorial",
+        source_url="file:///synthetic/hero.jpg",
+        local_path=None,
+    )
+    dropped: list[str] = []
+
+    with pytest.raises(PlanningError):
+        bind_section(
+            _gallery_section_with_image("asset-1"),
+            _entry("gallery-3up.json"),
+            assets={"asset-1": asset},
+            dropped=dropped,
+        )
+
+    assert len(dropped) == 1
+    assert "no usable source" in dropped[0]
+
+
+def test_a_local_path_still_wins_over_an_unusable_source() -> None:
+    asset = AssetRecord(
+        id="asset-1",
+        kind=AssetKind.IMAGE,
+        role="editorial",
+        source_url="file:///synthetic/hero.jpg",
+        local_path="assets/hero.jpg",
+    )
+    dropped: list[str] = []
+
+    bindings = bind_section(
+        _gallery_section_with_image("asset-1"),
+        _entry("gallery-3up.json"),
+        assets={"asset-1": asset},
+        dropped=dropped,
+    )
+
+    assert [b for b in bindings if b.semantic_field == "item.media"]
+    assert dropped == []

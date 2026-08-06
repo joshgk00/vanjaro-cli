@@ -1847,3 +1847,50 @@ captured at y=8.0 with 33 style properties, and the section re-analysed with
 **Five consecutive iterations of the score falling as measurement improved**,
 from 75.47 to 50.56. The build has not changed since VF-213. Coverage over the
 same span went 0.600/0.467/0.467 to 0.800 across the board.
+
+### 2026-08-06 — A `file://` URL was shipped to a live page; 50.56 → 54.73
+
+**Matcher unchanged** (0.9200 / 1.0000 / 0.9091; responsive 0.8864). Benchmark
+clean. Suite 1,975 → 1,985.
+
+**The first score rise since VF-213, and the first one not confounded by a
+measurement change.** Coverage held at 0.800 across all three breakpoints while
+the score rose 4.17 points, so this is the build genuinely improving rather than
+the measurement moving underneath it.
+
+| | before | after |
+|---|---:|---:|
+| overall | 50.56 | **54.73** |
+| desktop | 52.18 | 56.35 |
+| tablet | 53.91 | 58.08 |
+| mobile | 45.58 | 49.75 |
+| coverage | 0.800 | 0.800 |
+
+**Found by reading a number nobody had read.** Every section reported integrity
+90 with `detail: 1 console error(s)`. The error was
+`Not allowed to load local resource: file:///synthetic/northstar-hero.jpg` —
+**the build had shipped a `file://` URL into a live page.** A browser refuses it
+outright, so on a real site that is a broken hero and one console error for
+every visitor.
+
+`_asset_value` blanked `http`, `https`, and `figma` sources to avoid hotlinking
+but let every other scheme through. `file://` is the worst case and the one a
+workspace-local source produces by default, so any project analysing local files
+with unresolved assets shipped them.
+
+The rule is now stated positively: a built page can load a **relative path or a
+data URI**, and nothing else. Absolute schemes blank, which is what makes the
+loss *visible* — the binding sink from two iterations ago now reports
+`its asset resolved to no usable source` instead of the pipeline shipping a URL
+that can never load. Reporting built one iteration became the diagnosis for a
+defect found in another.
+
+Verified live: console errors 0, `file://` references 0.
+
+**This is also the first iteration where the fix loop did what it was designed
+to do** — an existing measurement pointed at a specific defect, the defect was
+real, fixing it raised the score, and coverage stayed put so the rise is
+attributable. Ten iterations of measurement work made that possible.
+
+Still unmeasured and needing Josh: media (VF-214), and typography on the nav,
+which genuinely has no heading or paragraph to sample.
