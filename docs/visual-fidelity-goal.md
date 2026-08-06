@@ -2244,3 +2244,40 @@ longer be presented as design evidence without saying so.
 
 **It also reframes the standing gaps.** Media at 2.250 and colour at 1.400 are
 not waiting on code. They are waiting on a source whose CSS loads.
+
+### 2026-08-06 — Serve the saved page instead of rendering it from `file://`
+
+**Matcher unchanged.** Benchmark clean. Suite 2,009 → 2,012.
+
+Last iteration found that a saved page's root-relative stylesheets cannot
+resolve from `file://`. The fix is to give them a root: `serve_local_directory`
+puts the source directory on loopback for the duration of the render.
+
+Proven end to end on a purpose-built copy, rather than asserted:
+
+| transport | background | body font | warnings |
+|---|---|---|---:|
+| `file://` | none | browser default | 3 |
+| `http://127.0.0.1` | `rgb(171, 205, 239)` | Georgia | **0** |
+
+Loopback only, an ephemeral port, the source directory alone, shut down on exit.
+It resolves the page's own references and reaches no network, which is the
+property that made rendering a local file safe in the first place.
+
+**Serving silently broke the detector, and that mattered more than the fix.**
+The address test — "root-relative on `file:` cannot resolve" — is exactly wrong
+once the page is served: the address now resolves, to a 404 for an asset the
+saved copy never included. EDCA went from 3 warnings to **0** while its ten
+stylesheets still failed, which is worse than before: a false all-clear rather
+than a loud problem.
+
+Chromium creates a `link.sheet` object for a 404 too, so that signal fails on
+both transports. **The response status is the only thing that distinguishes it**,
+and only the capture session can see it. `capture_rendered_observations` now
+watches responses and counts stylesheet requests returning 400 or above. EDCA
+reports its ten again; the complete copy stays silent.
+
+**EDCA still yields no rendered evidence**, because its assets were never saved
+alongside it — the warning now says so instead of the pipeline pretending
+otherwise. Media at 2.250 and colour at 1.400 remain waiting on a source whose
+assets are present, and that is a corpus question, not a code one.

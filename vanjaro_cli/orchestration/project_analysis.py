@@ -16,6 +16,7 @@ from vanjaro_cli.design.composite import (
 )
 from vanjaro_cli.design.models import DesignDocument, SourceKind
 from vanjaro_cli.design.serialization import serialize_design_document
+from vanjaro_cli.design.html_adapter import serve_local_directory
 from vanjaro_cli.design.sources import (
     FigmaSourceRequest,
     HtmlSourceRequest,
@@ -274,15 +275,27 @@ def _analyze_source(
             html = local.read_text(encoding="utf-8")
             source_url = _string_metadata(source, "source_url") or local.as_uri()
             render_url = local.as_uri()
+        request_fields = {
+            "html": html,
+            "source_url": source_url,
+            "title": _string_metadata(source, "title"),
+            "slug": source.page_reference or _string_metadata(source, "slug"),
+            "render": render,
+        }
+        if render and local is not None:
+            # Serve the saved copy rather than rendering it from `file://`: its
+            # stylesheets are usually root-relative and cannot resolve without a
+            # site root, so a file render paints browser defaults and describes
+            # nothing the author chose. Loopback only, and it reaches no network.
+            with serve_local_directory(local) as served_url:
+                return (
+                    analyze_source(
+                        HtmlSourceRequest(**request_fields, render_url=served_url)
+                    ),
+                    (),
+                )
         return (
-            analyze_source(HtmlSourceRequest(
-                html=html,
-                source_url=source_url,
-                title=_string_metadata(source, "title"),
-                slug=source.page_reference or _string_metadata(source, "slug"),
-                render=render,
-                render_url=render_url,
-            )),
+            analyze_source(HtmlSourceRequest(**request_fields, render_url=render_url)),
             (),
         )
     if source.kind == SourceKind.FIGMA:

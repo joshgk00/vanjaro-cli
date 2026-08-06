@@ -12,8 +12,11 @@ from __future__ import annotations
 import json
 import re
 from collections.abc import Callable, Mapping, Sequence
-from contextlib import AbstractContextManager
+from contextlib import AbstractContextManager, contextmanager
 from dataclasses import dataclass, field
+from functools import partial
+from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from threading import Thread
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Protocol
@@ -63,6 +66,7 @@ __all__ = [
     "StylesheetCache",
     "analyze_html_pages",
     "capture_rendered_observations",
+    "serve_local_directory",
     "convert_legacy_crawl",
     "design_document_from_html",
 ]
@@ -308,12 +312,21 @@ _RENDERED_OBSERVATION_JS = r"""() => {
     // way a legitimately cross-origin sheet does — neither is a usable signal.
     // The address is.
     let unresolvedStylesheets = 0;
-    if (location.protocol === 'file:') {
-        document.querySelectorAll('link[rel~="stylesheet"]').forEach((link) => {
-            const href = link.getAttribute('href') || '';
+    const isFile = location.protocol === 'file:';
+    document.querySelectorAll('link[rel~="stylesheet"]').forEach((link) => {
+        const href = link.getAttribute('href') || '';
+        if (isFile) {
+            // A failed file:// load still yields a truthy `link.sheet` whose
+            // cssRules throw exactly as a cross-origin sheet's do, so only the
+            // address distinguishes it: there is no site root to resolve against.
             if (href.startsWith('/') && !href.startsWith('//')) unresolvedStylesheets += 1;
-        });
-    }
+            return;
+        }
+        // Served over http, a sheet that did not load leaves `link.sheet` null,
+        // which catches a 404 for an asset the saved copy never included —
+        // invisible to the address test, because the address is now resolvable.
+        if (!link.sheet) unresolvedStylesheets += 1;
+    });
     return {
         sections: snapshots,
         navigation_collapsed: navigationCollapsed,
@@ -457,6 +470,35 @@ class StylesheetCache:
         return "\n".join(chunks)
 
 
+@contextmanager
+def serve_local_directory(path: Path):
+    """Serve one saved page's directory on loopback and yield its URL.
+
+    A saved page's stylesheets are usually root-relative, and a root-relative
+    URL cannot resolve from a `file://` document — there is no site root. The
+    browser then paints its own defaults and the render describes nothing the
+    author chose. Serving the copy gives those paths a root to resolve against,
+    so assets saved alongside the page load exactly as they did on the site.
+
+    Loopback only, an ephemeral port, the source directory alone, and shut down
+    on exit: this resolves the page's own references and reaches no network.
+    """
+
+    directory = path.parent if path.is_file() else path
+    handler = partial(SimpleHTTPRequestHandler, directory=str(directory))
+    server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
+    thread = Thread(target=server.serve_forever, daemon=True)
+    thread.start()
+    try:
+        port = server.server_address[1]
+        name = path.name if path.is_file() else ""
+        yield f"http://127.0.0.1:{port}/{name}"
+    finally:
+        server.shutdown()
+        server.server_close()
+        thread.join(timeout=5)
+
+
 def capture_rendered_observations(
     url: str,
     *,
@@ -480,6 +522,23 @@ def capture_rendered_observations(
     for breakpoint, viewport in viewports.items():
         try:
             with session_factory((viewport.width, viewport.height)) as page:
+                # Neither `link.sheet` nor `cssRules` distinguishes a stylesheet
+                # that 404'd over http: Chromium creates a sheet object either
+                # way. The response status does, and only the session can see it.
+                failed_styles: list[str] = []
+                listen = getattr(page, "on", None)
+                if callable(listen):
+                    def _record(response, _sink=failed_styles):
+                        try:
+                            if response.status >= 400 and (
+                                ".css" in response.url.lower()
+                                or "stylesheet" in (response.request.resource_type or "")
+                            ):
+                                _sink.append(response.url)
+                        except Exception:  # noqa: BLE001 - telemetry must never fail a capture
+                            pass
+
+                    listen("response", _record)
                 html = render(page, url, timeout_seconds)
                 raw_snapshot = page.evaluate(_RENDERED_OBSERVATION_JS)
                 if not isinstance(raw_snapshot, dict):
@@ -525,7 +584,10 @@ def capture_rendered_observations(
                         )
                     )
                 unresolved = raw_snapshot.get("unresolved_stylesheets")
-                if isinstance(unresolved, int) and unresolved > 0:
+                if not isinstance(unresolved, int):
+                    unresolved = 0
+                unresolved += len(dict.fromkeys(failed_styles))
+                if unresolved > 0:
                     warnings.append(
                         DesignWarning(
                             code="rendered_stylesheets_unresolved",

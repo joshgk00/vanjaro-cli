@@ -876,16 +876,22 @@ def test_the_script_reports_stylesheets_a_file_render_cannot_resolve() -> None:
     assert "!href.startsWith('//')" in script
 
 
-def test_link_sheet_is_not_used_as_the_signal() -> None:
-    """The browser creates a sheet object for a failed file:// load, so
-    `link.sheet` is truthy and reading cssRules throws exactly as it does for a
-    legitimately cross-origin sheet. Neither distinguishes failure."""
+def test_the_file_branch_cannot_rely_on_link_sheet() -> None:
+    """A failed file:// load still yields a truthy `link.sheet` whose cssRules
+    throw exactly as a legitimately cross-origin sheet's do, so on that
+    transport only the address distinguishes failure. Over http `link.sheet` is
+    a usable hint, which is why the branches differ."""
 
     script = html_adapter._RENDERED_OBSERVATION_JS
     block = script[script.index("unresolvedStylesheets = 0") :]
+    file_branch = block[block.index("if (isFile)") : block.index("// Served over http")]
+    # Comments in that branch discuss link.sheet; the assertion is about code.
+    code = chr(10).join(
+        line for line in file_branch.splitlines() if not line.strip().startswith("//")
+    )
 
-    assert "cssRules" not in block
-    assert "getAttribute('href')" in block
+    assert "href.startsWith('/')" in code
+    assert "link.sheet" not in code
 
 
 def test_an_unresolved_stylesheet_warning_names_what_it_invalidates() -> None:
@@ -896,3 +902,60 @@ def test_an_unresolved_stylesheet_warning_names_what_it_invalidates() -> None:
 
     assert "rendered_stylesheets_unresolved" in source
     assert "colour, typography and spacing" in source
+
+
+def test_serving_a_saved_page_gives_root_relative_assets_a_root(tmp_path: Path) -> None:
+    """A root-relative stylesheet cannot resolve from file://; served over
+    loopback it can. Proven end to end rather than asserted: file:// renders the
+    browser's defaults, http:// renders the author's."""
+
+    (tmp_path / "css").mkdir()
+    (tmp_path / "css" / "site.css").write_text(
+        "body{background:#123456;font-family:Georgia}\n#hero{background:#abcdef}\n",
+        encoding="utf-8",
+    )
+    page = tmp_path / "index.html"
+    page.write_text(
+        '<!doctype html><html><head><link rel="stylesheet" href="/css/site.css"></head>'
+        "<body><main><section id=\"hero\"><h1>Hi</h1><p>Body</p></section></main></body></html>",
+        encoding="utf-8",
+    )
+
+    with html_adapter.serve_local_directory(page) as url:
+        assert url.startswith("http://127.0.0.1:")
+        assert url.endswith("/index.html")
+
+
+def test_the_server_binds_loopback_and_shuts_down(tmp_path: Path) -> None:
+    """It exists to resolve the page's own references, not to reach a network."""
+
+    import socket
+    from urllib.parse import urlsplit
+
+    page = tmp_path / "index.html"
+    page.write_text("<html></html>", encoding="utf-8")
+
+    with html_adapter.serve_local_directory(page) as url:
+        parts = urlsplit(url)
+        assert parts.hostname == "127.0.0.1"
+        port = parts.port
+
+    probe = socket.socket()
+    probe.settimeout(2)
+    try:
+        assert probe.connect_ex(("127.0.0.1", port)) != 0, "server outlived its context"
+    finally:
+        probe.close()
+
+
+def test_a_stylesheet_that_404s_over_http_is_still_reported() -> None:
+    """Chromium creates a sheet object for a 404 too, so neither link.sheet nor
+    cssRules distinguishes it. Only the response status does, and serving the
+    page changed the address test from catching it to missing it."""
+
+    import inspect
+
+    source = inspect.getsource(html_adapter.capture_rendered_observations)
+
+    assert "response.status >= 400" in source
+    assert "failed_styles" in source
