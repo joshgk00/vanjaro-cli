@@ -15,6 +15,9 @@ from vanjaro_cli.utils.grapesjs import render_components, render_styles
 
 GLOBAL_BLOCK_WRAPPER_TYPE_GUID = "7a4be0f2-56ab-410a-9422-6bc91b488150"
 
+# Order matters: the header wraps above the body and the footer below it.
+CHROME_KINDS = ("header", "footer")
+
 
 class ProjectPageError(ValueError):
     """Raised when a project page cannot be assembled or reconciled safely."""
@@ -140,22 +143,50 @@ def namespace_component_payload(
 def attach_global_wrappers(
     desired_pages: list[dict[str, Any]],
     global_records: list[dict[str, Any]],
-) -> list[dict[str, Any]]:
-    """Attach deterministic header/footer references to complete page drafts."""
+) -> tuple[list[dict[str, Any]], tuple[str, ...]]:
+    """Attach deterministic header/footer references to complete page drafts.
 
-    by_kind = {record.get("kind"): record for record in global_records}
-    if set(by_kind) != {"header", "footer"}:
-        raise ProjectPageError("page chrome requires exactly one header and one footer")
+    A source that supplies only one of the two builds the chrome it has, and
+    the absent element is reported. Failing the stage instead drops the element
+    the source did supply, which is how a page whose nav was extracted still
+    reached the portal with no nav at all. Nothing is invented to fill the gap:
+    a fabricated footer puts made-up links in front of a visitor.
+
+    Absence is tolerated. Ambiguity is not — two headers give no basis to
+    choose between them.
+    """
+
+    by_kind: dict[str, dict[str, Any]] = {}
+    duplicated: list[str] = []
+    for record in global_records:
+        kind = record.get("kind")
+        if kind not in CHROME_KINDS:
+            raise ProjectPageError(f"unsupported global chrome kind: {kind!r}")
+        if kind in by_kind:
+            duplicated.append(str(kind))
+            continue
+        by_kind[str(kind)] = record
+    if duplicated:
+        raise ProjectPageError(
+            "page chrome allows at most one of each element; duplicated: "
+            + ", ".join(sorted(set(duplicated)))
+        )
+
+    warnings = tuple(
+        f"no global {kind} was planned; pages build without one"
+        for kind in CHROME_KINDS
+        if kind not in by_kind
+    )
     output = copy.deepcopy(desired_pages)
     for page in output:
         wrappers = {
-            kind: _global_wrapper(page["key"], kind, by_kind[kind])
-            for kind in ("header", "footer")
+            kind: _global_wrapper(page["key"], kind, record)
+            for kind, record in by_kind.items()
         }
         page["components"] = [
-            wrappers["header"],
+            *([wrappers["header"]] if "header" in wrappers else []),
             *page["components"],
-            wrappers["footer"],
+            *([wrappers["footer"]] if "footer" in wrappers else []),
         ]
         css = render_styles(page["styles"])
         html = render_components(page["components"])
@@ -165,7 +196,7 @@ def attach_global_wrappers(
         page["content_hash"] = page_content_hash(
             page["components"], page["styles"], html
         )
-    return output
+    return output, warnings
 
 
 def page_content_hash(components: object, styles: object, html: object) -> str:

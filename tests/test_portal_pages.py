@@ -23,6 +23,7 @@ from vanjaro_cli.design.models import (
 )
 from vanjaro_cli.portal.pages import (
     ProjectPageError,
+    attach_global_wrappers,
     compose_project_pages,
     preview_project_pages,
     reconcile_project_pages,
@@ -264,3 +265,85 @@ def test_page_assembly_wraps_uploaded_image_variants() -> None:
     picture = section["components"][0]
     assert picture["type"] == "image-box"
     assert "/.versions/" in desired[0]["content_html"]
+
+
+def _chrome_page(key: str = "home") -> dict:
+    return {
+        "key": key,
+        "components": [{"type": "text", "content": "Body"}],
+        "styles": [],
+    }
+
+
+def _chrome_record(kind: str) -> dict:
+    return {"kind": kind, "guid": f"{kind}-guid-0001"}
+
+
+def _wrapper_names(page: dict) -> list[str]:
+    return [
+        component["name"]
+        for component in page["components"]
+        if component.get("type") == "globalblockwrapper"
+    ]
+
+
+def test_both_chrome_elements_wrap_the_body_in_order() -> None:
+    pages, warnings = attach_global_wrappers(
+        [_chrome_page()], [_chrome_record("header"), _chrome_record("footer")]
+    )
+
+    assert _wrapper_names(pages[0]) == ["Global: Header", "Global: Footer"]
+    assert pages[0]["components"][1]["content"] == "Body"
+    assert warnings == ()
+
+
+def test_a_source_with_a_header_and_no_footer_still_builds_its_header() -> None:
+    """The Northstar failure: the stage refused, so the nav it did have was lost."""
+
+    pages, warnings = attach_global_wrappers(
+        [_chrome_page()], [_chrome_record("header")]
+    )
+
+    assert _wrapper_names(pages[0]) == ["Global: Header"]
+    assert pages[0]["components"][-1]["content"] == "Body"
+    assert warnings == ("no global footer was planned; pages build without one",)
+
+
+def test_a_source_with_a_footer_and_no_header_still_builds_its_footer() -> None:
+    pages, warnings = attach_global_wrappers(
+        [_chrome_page()], [_chrome_record("footer")]
+    )
+
+    assert _wrapper_names(pages[0]) == ["Global: Footer"]
+    assert pages[0]["components"][0]["content"] == "Body"
+    assert warnings == ("no global header was planned; pages build without one",)
+
+
+def test_a_source_with_no_chrome_builds_the_body_and_reports_both() -> None:
+    pages, warnings = attach_global_wrappers([_chrome_page()], [])
+
+    assert _wrapper_names(pages[0]) == []
+    assert pages[0]["components"] == [{"type": "text", "content": "Body"}]
+    assert warnings == (
+        "no global header was planned; pages build without one",
+        "no global footer was planned; pages build without one",
+    )
+
+
+def test_missing_chrome_is_never_fabricated() -> None:
+    pages, _ = attach_global_wrappers([_chrome_page()], [_chrome_record("header")])
+
+    assert "footer" not in json.dumps(pages).casefold()
+
+
+def test_duplicate_chrome_of_one_kind_is_still_an_error() -> None:
+    with pytest.raises(ProjectPageError, match="at most one of each"):
+        attach_global_wrappers(
+            [_chrome_page()],
+            [_chrome_record("header"), _chrome_record("header")],
+        )
+
+
+def test_an_unknown_chrome_kind_is_rejected() -> None:
+    with pytest.raises(ProjectPageError, match="unsupported global chrome kind"):
+        attach_global_wrappers([_chrome_page()], [{"kind": "sidebar", "guid": "g"}])

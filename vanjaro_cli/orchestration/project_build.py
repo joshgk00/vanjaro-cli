@@ -263,7 +263,7 @@ def reconcile_project_global_stage(context: StageContext) -> StageResult:
     )
     if any(not isinstance(item, dict) for item in page_desired):
         raise ValueError("desired page catalog contains a non-object entry")
-    with_globals = attach_global_wrappers(page_desired, global_records)  # type: ignore[arg-type]
+    with_globals, chrome_warnings = attach_global_wrappers(page_desired, global_records)  # type: ignore[arg-type]
     _write_json(context.root / pages_desired_relative, with_globals)
     global_page_manifest = context.root / pages_manifest_relative
     page_seed = json.loads(
@@ -289,6 +289,7 @@ def reconcile_project_global_stage(context: StageContext) -> StageResult:
             "total": len(page_records),
             "published": False,
             "pages": page_records,
+            "warnings": list(chrome_warnings),
         },
     )
     return StageResult(
@@ -303,6 +304,7 @@ def reconcile_project_global_stage(context: StageContext) -> StageResult:
         message=(
             f"Reconciled {len(global_records)} unpublished global block(s) and "
             f"attached them to {len(page_records)} page draft(s)."
+            + ("".join(f" Warning: {warning}." for warning in chrome_warnings))
         ),
     )
 

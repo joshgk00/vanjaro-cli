@@ -1094,3 +1094,42 @@ empty-or-zero being confused with absent, after VF-004's padding and VF-009's
 **Still not a new fidelity score.** VF-210 supplies the design side. Producing an
 updated number needs a build and a publish on the pilot portal, which is VF-008's
 territory and the next iteration's work.
+
+### 2026-08-06 — VF-211: page chrome tolerance, and a duplicate that was never caught
+
+**Matcher:** top-1 0.9200, top-3 1.0000, high-confidence precision 0.9091 —
+unchanged; no matching code was touched. Responsive coverage holds at 0.8864
+(39/44). Benchmark clean. Suite 1,872 → 1,879.
+
+`attach_global_wrappers` required `set(by_kind) == {"header", "footer"}` and
+raised otherwise. The Northstar fixture has a nav and no footer, so the stage
+refused, and **the nav the source did supply never reached the portal at all.**
+That is what scored `section.1` zero in the 63.0 run. Scoring it zero was
+correct — the section was genuinely absent from the build — but the build should
+never have dropped it.
+
+A page now builds the chrome it has. The absent element is reported as a warning
+on the stage message and in `pages-with-globals-result.json`, and nothing is
+invented to fill it: a fabricated footer puts made-up links in front of a
+visitor, which VF-5 prohibits outright. A source with neither element builds its
+body and reports both.
+
+**The old guard was weaker than it looked, in the other direction.** `by_kind`
+was built as a dict comprehension over the records, so two headers silently
+collapsed to whichever came last and the stage carried on. The check that read
+as strict enforced presence and ignored ambiguity — the harder of the two to
+recover from, because there is no basis for choosing between two headers.
+Duplicates now raise, and an unrecognised chrome kind raises rather than being
+dropped on the floor.
+
+So this task relaxed absence and tightened ambiguity at the same time. Those are
+opposite moves, and it was the same single expression that got both wrong.
+
+**No test covered this function before.** The full suite passed against the old
+behaviour and would have passed against the new one; nothing pinned either. The
+seven tests added here cover header-only, footer-only, both, neither, the
+no-fabrication rule, duplicates, and an unknown kind.
+
+**Not re-scored.** Confirming that `section.1` now scores above zero needs a
+build and a publish on the pilot portal, which is VF-008's work and the next
+iteration's.
