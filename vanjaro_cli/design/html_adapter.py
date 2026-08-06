@@ -128,7 +128,14 @@ _RENDERED_OBSERVATION_JS = r"""() => {
         seen.add(el);
         candidates.push(el);
     };
-    document.querySelectorAll('main > section, main > article, body > section, [role="main"] > section')
+    // Sectioning elements at any depth, not only as direct children of main or
+    // body. A real Vanjaro or DNN page nests its sections inside layout divs and
+    // has no <main> at all, so the direct-child query matched nothing: a live
+    // themed site with 13 <section> elements produced zero candidates, and
+    // rendered analysis silently yielded nothing on every real page.
+    const sectioning = Array.from(document.querySelectorAll('section, article'));
+    sectioning
+        .filter((el) => !sectioning.some((other) => other !== el && other.contains(el)))
         .forEach(add);
     if (!candidates.length) {
         const main = document.querySelector('main, [role="main"]');

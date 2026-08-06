@@ -631,3 +631,36 @@ like VF-214's static-slot decision.
 
 **Tests:** a brand with a destination, a brand without one, and an assertion
 that the brand is absent from the repeat items.
+
+### VF-216 — Static sections and DOM candidates do not match on a Vanjaro page
+
+**Dependencies:** VF-210
+
+**Problem**
+
+Rendered analysis now finds sections on a real page, and still pairs with none
+of them. On a live themed site (`keys-to-success`, 11 static sections, 13
+rendered candidates), every section comes back `method: static` with
+`rendered_section_unmatched`.
+
+The cause is upstream of pairing. `prepare_static_sections` matches each
+extracted section to a DOM candidate from `static_boundary_candidates` by word
+overlap, and on this page **no section matches any candidate**: `_static_selector`,
+`_static_html`, and `_static_role` are all absent. With no locator on the static
+side, identity pairing has nothing to key on, and the counts differ (11 vs 13)
+so position pairing is correctly refused.
+
+EDCA matches 5 of 5, so the failure is specific to how a Vanjaro-built page
+nests its content, not general.
+
+**Acceptance criteria**
+
+- A section extracted from a Vanjaro-built page resolves to the DOM element it
+  came from, so provenance records a selector.
+- The selector resolves in the browser to that same element; a locator that
+  does not resolve is reported, not recorded.
+- Sections that genuinely have no counterpart stay unmatched and say so.
+- No change to `section_boundary_precision` or `recall`, both 1.0 today.
+
+**Tests:** a Vanjaro-shaped fixture, a DNN-shaped one, and an assertion that
+every recorded selector resolves to exactly one element in its own document.

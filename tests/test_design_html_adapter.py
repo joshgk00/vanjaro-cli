@@ -595,16 +595,19 @@ def test_equal_length_lists_still_pair_by_position_without_identity() -> None:
             _desktop_observation(
                 tuple(
                     _pairing_section(f"rendered-section-{index + 1}", index * 100.0)
-                    for index in range(3)
+                    for index in range(4)
                 )
             ),
         ),
     )
 
+    # Four, not three: the nav is extracted as a section too, and position
+    # pairing is only offered when the two lists are the same length.
     bounds = _bounds_by_role(document)
-    assert bounds["hero"] == 0.0
-    assert bounds["rich_text"] == 100.0
-    assert bounds["call_to_action"] == 200.0
+    assert bounds["navigation"] == 0.0
+    assert bounds["hero"] == 100.0
+    assert bounds["rich_text"] == 200.0
+    assert bounds["call_to_action"] == 300.0
 
 
 def test_unidentifiable_lists_of_different_lengths_attach_no_geometry() -> None:
@@ -959,3 +962,45 @@ def test_a_stylesheet_that_404s_over_http_is_still_reported() -> None:
 
     assert "response.status >= 400" in source
     assert "failed_styles" in source
+
+
+def test_sectioning_elements_are_found_at_any_depth() -> None:
+    """A real Vanjaro or DNN page nests its sections inside layout divs and has
+    no <main>, so a direct-child query matched nothing: a live themed site with
+    13 <section> elements produced zero candidates and rendered analysis
+    silently yielded nothing on every real page."""
+
+    script = html_adapter._RENDERED_OBSERVATION_JS
+
+    assert "querySelectorAll('section, article')" in script
+    # Only the outermost: a nested section is part of its parent, not a peer.
+    assert "other.contains(el)" in script
+
+
+def test_a_section_without_an_id_still_gets_a_locator() -> None:
+    """Without one, provenance recorded nothing and the browser had no way to
+    find the element the static extractor had chosen."""
+
+    from vanjaro_cli.design.html_boundaries import css_selector_for
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(
+        "<html><body><div><div></div><section>One</section></div></body></html>",
+        "html.parser",
+    )
+    section = soup.find("section")
+
+    selector = css_selector_for(section)
+
+    assert selector is not None
+    assert "nth-of-type" in selector
+    assert soup.select_one(selector) is section
+
+
+def test_an_id_still_wins_over_the_structural_path() -> None:
+    from vanjaro_cli.design.html_boundaries import css_selector_for
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup('<html><body><section id="hero"></section></body></html>', "html.parser")
+
+    assert css_selector_for(soup.find("section")) == "#hero"

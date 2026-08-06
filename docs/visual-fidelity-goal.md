@@ -2281,3 +2281,44 @@ reports its ten again; the complete copy stays silent.
 alongside it — the warning now says so instead of the pipeline pretending
 otherwise. Media at 2.250 and colour at 1.400 remain waiting on a source whose
 assets are present, and that is a corpus question, not a code one.
+
+### 2026-08-06 — Rendered analysis found nothing on any real page
+
+**Matcher unchanged** (0.9200 / 1.0000); boundary precision and recall both
+1.0. Benchmark clean. Suite 2,012 → 2,015.
+
+The standing gaps needed a source whose assets load. The local instance serves
+one: `keys-to-success`, a fully built and themed site — 46KB, a real stylesheet,
+18 images, reachable, and analysing it is a read-only GET.
+
+**It exposed a gap that had nothing to do with assets.** The rendered candidate
+query was `main > section, main > article, body > section` — direct children
+only. That page has **13 `<section>` elements, no `<main>`, and none directly
+under `<body>`**: they are nested in layout divs. Zero candidates. EDCA found 2
+of 4 the same way.
+
+**So rendered analysis has produced nothing on every real page it has ever been
+run against**, and the synthetic fixture — hand-written with `main > section` —
+is the only shape it ever handled. Widened to outermost `section, article` at
+any depth: 0 → 13 candidates, with real backgrounds (`rgb(255, 252, 246)`,
+`rgb(240, 112, 157)`) and the real theme font, Poppins. The synthetic fixture
+still yields the same 5, so nothing regressed.
+
+**A second locator gap, fixed.** `css_selector_for` returned `None` for any
+element without an id or `data-id`, so a section the extractor had chosen could
+not be pointed at. It now falls back to an `nth-of-type` chain, stable across
+the only span it is used for — the static parse and the render happen on the
+same HTML. EDCA's first section had no locator and now has one.
+
+**Pairing still fails on that page, and the reason is upstream.** Filed as
+**VF-216**: `prepare_static_sections` matches sections to DOM candidates by word
+overlap, and on a Vanjaro-built page **none of the 11 sections match any
+candidate** — no `_static_selector`, no `_static_html`, no `_static_role`. With
+no locator, identity pairing has nothing to key on; counts differ, so position
+pairing is correctly refused. EDCA matches 5 of 5, so this is specific to how a
+Vanjaro page nests content.
+
+**One test changed its answer honestly.** The position-pairing test supplied
+three rendered sections; the fixture now yields four, because the nav is
+extracted as a section too and equal length is the precondition for position
+pairing. Updated to four rather than relaxed.

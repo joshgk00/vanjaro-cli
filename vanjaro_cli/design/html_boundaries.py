@@ -44,7 +44,34 @@ def css_selector_for(element: Tag) -> str | None:
     if isinstance(data_id, str) and data_id.strip():
         escaped = data_id.strip().replace("\\", "\\\\").replace("'", "\\'")
         return f"[data-id='{escaped}']"
-    return None
+    return _structural_selector(element)
+
+
+def _structural_selector(element: Tag) -> str | None:
+    """Locate an element by position when it names itself no other way.
+
+    A real page's sections carry no id, so provenance recorded nothing and the
+    browser had no way to find the element the static extractor had chosen.
+    Rendered measurement then paired with nothing on every real site.
+
+    An `nth-of-type` chain is stable across the only span it is used for: the
+    static parse and the render happen on the same HTML.
+    """
+
+    steps: list[str] = []
+    node = element
+    while isinstance(node, Tag) and node.name not in (None, "[document]", "html"):
+        parent = node.parent
+        if not isinstance(parent, Tag):
+            break
+        siblings = parent.find_all(node.name, recursive=False)
+        if node not in siblings:
+            return None
+        steps.append(f"{node.name}:nth-of-type({siblings.index(node) + 1})")
+        node = parent
+    if not steps:
+        return None
+    return " > ".join(reversed(steps))
 
 
 def static_boundary_candidates(html: str) -> list[Tag]:
