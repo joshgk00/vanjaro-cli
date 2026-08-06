@@ -164,6 +164,9 @@ def evaluate_project_fidelity(root: Path) -> tuple[dict[str, Any], list[str]]:
     report = json.loads(serialize_visual_gate_result(result))
     report["status"] = "scored"
     report["dimension_coverage"] = _dimension_coverage(expected, observed)
+    report["evidence_coverage"] = _dimension_coverage(
+        expected, observed, signal_level=True
+    )
 
     blockers = [
         f"visual fidelity gate failed: {failure['message']}"
@@ -175,6 +178,8 @@ def evaluate_project_fidelity(root: Path) -> tuple[dict[str, Any], list[str]]:
 def _dimension_coverage(
     expected: dict[BreakpointName, Any],
     observed: dict[BreakpointName, Any],
+    *,
+    signal_level: bool = False,
 ) -> dict[str, float]:
     """Report how much of the regime each breakpoint's score was built from.
 
@@ -208,7 +213,9 @@ def _dimension_coverage(
             for section in expected_page.sections
         ]
         if scores:
-            coverage[breakpoint.value] = round(
-                sum(entry.dimension_coverage for entry in scores) / len(scores), 4
-            )
+            values = [
+                entry.evidence_coverage if signal_level else entry.dimension_coverage
+                for entry in scores
+            ]
+            coverage[breakpoint.value] = round(sum(values) / len(values), 4)
     return coverage

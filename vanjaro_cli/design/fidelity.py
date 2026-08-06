@@ -108,6 +108,20 @@ class DimensionScore(_FidelityModel):
     # dimensions, such as leaked placeholder content (VF-005).
     forces_zero: bool = False
     detail: str | None = None
+    # How many of this dimension's own subscores contributed. A dimension counts
+    # as "measured" as soon as one subscore lands, so layout scoring on column
+    # agreement alone looks identical to layout comparing real boxes. Recording
+    # the split is what keeps `dimension_coverage` from overstating evidence.
+    measured_subscores: int | None = Field(default=None, ge=0)
+    total_subscores: int | None = Field(default=None, ge=1)
+
+    @property
+    def subscore_coverage(self) -> float | None:
+        """Share of this dimension's subscores that contributed, if reported."""
+
+        if self.measured_subscores is None or self.total_subscores is None:
+            return None
+        return _round(self.measured_subscores / self.total_subscores)
 
     @model_validator(mode="after")
     def zero_requires_detail(self) -> "DimensionScore":
@@ -190,6 +204,35 @@ class SectionFidelityScore(_FidelityModel):
     @property
     def dimension_coverage(self) -> float:
         return _round(self.measured_dimensions / len(DIMENSION_WEIGHTS))
+
+    @computed_field  # type: ignore[prop-decorator]
+    @property
+    def evidence_coverage(self) -> float:
+        """Weighted share of the regime's *signals* that contributed.
+
+        `dimension_coverage` counts dimensions and cannot tell a layout scored
+        on three subscores from one scored on two — which is exactly how a
+        quarter of the layout dimension stayed dark on every section while
+        coverage read 0.800. This counts signals, weighted as the regime weights
+        the dimensions they belong to.
+
+        A dimension that reports no split counts as fully measured when it
+        scored, which is the conservative reading: it can only make this number
+        higher, never invent evidence.
+        """
+
+        total = 0.0
+        measured = 0.0
+        for entry in self.dimensions:
+            weight = DIMENSION_WEIGHTS[entry.dimension]
+            total += weight
+            if entry.score is None:
+                continue
+            share = entry.subscore_coverage
+            measured += weight * (1.0 if share is None else share)
+        if total == 0:
+            return 0.0
+        return _round(measured / total)
 
     def require_score(self) -> float:
         """Return the score, or raise when nothing could be measured."""

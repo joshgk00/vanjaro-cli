@@ -314,4 +314,6 @@ def score_section_color(
         dimension=FidelityDimension.COLOR,
         score=score,
         detail="; ".join(details) if details else None,
+        measured_subscores=len(ColorRole) - len(unmeasured),
+        total_subscores=len(ColorRole),
     )

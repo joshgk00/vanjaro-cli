@@ -220,6 +220,8 @@ def score_section_typography(
         dimension=FidelityDimension.TYPOGRAPHY,
         score=_mean(scored),
         detail="; ".join(details) if details else None,
+        measured_subscores=len(scored),
+        total_subscores=max(1, len(scored) + len(set(unmeasured))),
     )
 
 
@@ -278,6 +280,11 @@ def score_section_spacing(
     if unmeasured:
         detail = "no spacing evidence for " + ", ".join(sorted(set(unmeasured)))
 
+    subscores = (padding, rhythm)
     return DimensionScore(
-        dimension=FidelityDimension.SPACING, score=score, detail=detail
+        dimension=FidelityDimension.SPACING,
+        score=score,
+        detail=detail,
+        measured_subscores=sum(1 for entry in subscores if entry is not None),
+        total_subscores=len(subscores),
     )

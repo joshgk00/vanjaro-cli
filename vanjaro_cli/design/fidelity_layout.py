@@ -209,8 +209,13 @@ def score_section_layout(
     if unavailable:
         detail = "no geometry evidence for " + ", ".join(unavailable)
 
+    subscores = (bounds_subscore, columns_subscore, order_subscore)
     return DimensionScore(
-        dimension=FidelityDimension.LAYOUT, score=score, detail=detail
+        dimension=FidelityDimension.LAYOUT,
+        score=score,
+        detail=detail,
+        measured_subscores=sum(1 for entry in subscores if entry is not None),
+        total_subscores=len(subscores),
     )
 
 

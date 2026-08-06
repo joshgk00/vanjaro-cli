@@ -385,3 +385,95 @@ def test_coverage_does_not_change_any_score() -> None:
            + DIMENSION_WEIGHTS[FidelityDimension.COLOR]),
         abs=0.01,
     )
+
+
+def _split(dimension: FidelityDimension, score: float | None, measured: int, total: int):
+    return DimensionScore(
+        dimension=dimension,
+        score=score,
+        measured_subscores=measured,
+        total_subscores=total,
+    )
+
+
+def _section_from(dimensions) -> SectionFidelityScore:
+    return SectionFidelityScore(
+        regime_version=CURRENT_REGIME_VERSION,
+        section_id="page.section.1",
+        breakpoint=BreakpointName.DESKTOP,
+        dimensions=tuple(dimensions),
+    )
+
+
+def test_a_dimension_reports_how_many_of_its_subscores_contributed() -> None:
+    entry = _split(FidelityDimension.LAYOUT, 80.0, 2, 3)
+
+    assert entry.subscore_coverage == 0.6667
+
+
+def test_evidence_coverage_sees_what_dimension_coverage_cannot() -> None:
+    """A quarter of layout stayed dark on every section while dimension
+    coverage read 0.800, because a dimension counts as measured as soon as one
+    subscore lands."""
+
+    thin = _section_from(
+        [
+            _split(FidelityDimension.LAYOUT, 90.0, 1, 3),
+            _split(FidelityDimension.INTEGRITY, 90.0, 1, 1),
+        ]
+    )
+    thorough = _section_from(
+        [
+            _split(FidelityDimension.LAYOUT, 90.0, 3, 3),
+            _split(FidelityDimension.INTEGRITY, 90.0, 1, 1),
+        ]
+    )
+
+    assert thin.dimension_coverage == thorough.dimension_coverage
+    assert thin.evidence_coverage < thorough.evidence_coverage
+
+
+def test_a_dimension_with_no_split_counts_as_fully_measured() -> None:
+    """The conservative reading: it can only raise this number, never invent
+    evidence that was not there."""
+
+    section = _section_from(
+        [
+            DimensionScore(dimension=FidelityDimension.LAYOUT, score=90.0),
+            _split(FidelityDimension.COLOR, None, 0, 3),
+        ]
+    )
+
+    layout_weight = DIMENSION_WEIGHTS[FidelityDimension.LAYOUT]
+    total = layout_weight + DIMENSION_WEIGHTS[FidelityDimension.COLOR]
+    assert section.evidence_coverage == pytest.approx(layout_weight / total, abs=0.001)
+
+
+def test_an_unmeasured_dimension_contributes_no_evidence() -> None:
+    section = _section_from(
+        [
+            _split(FidelityDimension.LAYOUT, None, 0, 3),
+            _split(FidelityDimension.COLOR, None, 0, 3),
+        ]
+    )
+
+    assert section.evidence_coverage == 0.0
+    assert section.dimension_coverage == 0.0
+
+
+def test_evidence_coverage_never_exceeds_dimension_coverage() -> None:
+    section = _section_from(
+        [
+            _split(FidelityDimension.LAYOUT, 70.0, 1, 3),
+            _split(FidelityDimension.COLOR, 70.0, 1, 3),
+            _split(FidelityDimension.SPACING, None, 0, 2),
+        ]
+    )
+
+    assert section.evidence_coverage <= section.dimension_coverage
+
+
+def test_coverage_still_changes_no_score() -> None:
+    section = _section_from([_split(FidelityDimension.LAYOUT, 64.0, 1, 3)])
+
+    assert section.score == 64.0

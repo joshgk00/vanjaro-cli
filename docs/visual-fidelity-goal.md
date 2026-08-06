@@ -1943,3 +1943,43 @@ the strongest argument yet for making the metric subscore-aware.
 The script only runs in a browser, so the three new tests pin its intent and the
 guards; behaviour is verified live above — 3 columns on the card sections at
 desktop and tablet, 1 everywhere at mobile.
+
+### 2026-08-06 — Coverage was overstating by a fifth: 0.800 dimensions, 0.592 signals
+
+**Matcher unchanged.** Benchmark clean. Suite 1,988 → 1,994. **No score changed.**
+
+| | desktop | tablet | mobile |
+|---|---:|---:|---:|
+| `dimension_coverage` | 0.800 | 0.800 | 0.800 |
+| **`evidence_coverage`** | **0.5917** | **0.5917** | **0.5917** |
+
+The previous iteration demonstrated the flaw rather than predicting it: a
+quarter of the layout dimension was dark on all fifteen section-breakpoint
+pairs, and coverage never moved, because a dimension counts as measured the
+moment one subscore lands. Layout scoring on column agreement alone read
+identically to layout comparing real boxes.
+
+`DimensionScore` now records `measured_subscores` / `total_subscores`, populated
+by layout (bounds, columns, order), colour (background, text, accent),
+typography (per sample), and spacing (padding, rhythm). `evidence_coverage`
+aggregates them **weighted as the regime weights the dimensions they belong to**,
+so a signal inside a heavy dimension counts for more than one inside a light
+one — the same weighting the score itself uses.
+
+**A dimension that reports no split counts as fully measured when it scored.**
+That is the conservative reading: it can only make the number higher, never
+invent evidence. Integrity has a single signal and is honestly 1/1.
+
+`dimension_coverage` keeps its meaning exactly. Two numbers, each saying one
+thing: how many dimensions contributed, and how much of the evidence they wanted
+was actually there. Both now appear in the verification report.
+
+**What this reveals about the last nineteen iterations.** Every "coverage rose"
+claim in this log was measuring the coarser number. The real signal figure has
+been lower throughout, and 0.592 is the first honest reading of how much of the
+regime the pilot actually exercises. The direction of travel was right; the
+distance was overstated.
+
+Six tests, including that a thin layout stays distinguishable from a thorough
+one at identical dimension coverage, that an unreported split cannot lower the
+number, and that coverage still changes no score.
