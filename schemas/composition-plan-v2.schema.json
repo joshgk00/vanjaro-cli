@@ -588,6 +588,7 @@
         "template_modifier",
         "agency_utility",
         "scoped_css",
+        "measurement_only",
         "manual"
       ],
       "title": "TranslationLayer",

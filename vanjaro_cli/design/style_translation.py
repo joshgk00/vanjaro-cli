@@ -16,6 +16,7 @@ from pydantic import BaseModel, ConfigDict, Field
 from vanjaro_cli.design.models import (
     BreakpointName,
     EvidenceStatus,
+    ObservationMethod,
     ResponsiveObservation,
     StyleObservation,
     StyleProperty,
@@ -41,6 +42,7 @@ class TranslationLayer(str, Enum):
     TEMPLATE_MODIFIER = "template_modifier"
     AGENCY_UTILITY = "agency_utility"
     SCOPED_CSS = "scoped_css"
+    MEASUREMENT_ONLY = "measurement_only"
     MANUAL = "manual"
 
 
@@ -133,6 +135,56 @@ _CSS_PROPERTY_NAMES: dict[StyleProperty, str] = {
     StyleProperty.FLEX_WRAP: "flex-wrap",
     StyleProperty.ORDER: "order",
     StyleProperty.COLUMN_COUNT: "column-count",
+}
+
+# A browser reports the *complete* computed style for every section, because the
+# fidelity metrics need it to compare. Only some of it is design intent worth
+# reproducing. Emitting the rest as scoped CSS pins a block to one browser's
+# layout and works against the native-component and editable-coverage ratios.
+#
+# This set governs translation only. Scoring still reads every measured
+# property. Non-rendered sources are unaffected: a Figma frame that declares
+# min-height is stating intent, while a browser reporting min-height is not.
+_RENDERED_REPRODUCIBLE_PROPERTIES: frozenset[StyleProperty] = frozenset(
+    {
+        StyleProperty.BACKGROUND_COLOR,
+        StyleProperty.BACKGROUND_IMAGE,
+        StyleProperty.BACKGROUND_POSITION,
+        StyleProperty.TEXT_COLOR,
+        StyleProperty.OVERLAY_COLOR,
+        StyleProperty.FONT_FAMILY,
+        StyleProperty.FONT_SIZE,
+        StyleProperty.FONT_WEIGHT,
+        StyleProperty.LINE_HEIGHT,
+        StyleProperty.LETTER_SPACING,
+        StyleProperty.PADDING,
+        StyleProperty.ROW_GAP,
+        StyleProperty.COLUMN_GAP,
+        StyleProperty.TEXT_ALIGN,
+        StyleProperty.ITEM_ALIGN,
+        StyleProperty.BORDER_RADIUS,
+        StyleProperty.BOX_SHADOW,
+        StyleProperty.OBJECT_FIT,
+        StyleProperty.OBJECT_POSITION,
+    }
+)
+
+# A computed value equal to the CSS initial value is the absence of a decision,
+# not a decision to use the default. Reproducing it costs a rule and says
+# nothing. Keyed by CSS property name so one entry covers every alias.
+_CSS_INITIAL_VALUES: dict[str, frozenset[str]] = {
+    "background-image": frozenset({"none"}),
+    "background-position": frozenset({"0% 0%", "0px 0px"}),
+    "border-radius": frozenset({"0px", "0"}),
+    "box-shadow": frozenset({"none"}),
+    "column-gap": frozenset({"normal", "0px"}),
+    "row-gap": frozenset({"normal", "0px"}),
+    "letter-spacing": frozenset({"normal"}),
+    "line-height": frozenset({"normal"}),
+    "object-fit": frozenset({"fill"}),
+    "object-position": frozenset({"50% 50%"}),
+    "padding": frozenset({"0px"}),
+    "text-align": frozenset({"start", "auto"}),
 }
 
 _UTILITY_VALUES: dict[StyleProperty, dict[str, str]] = {
@@ -361,6 +413,46 @@ def _agency_decision(
     )
 
 
+def _is_rendered(observation: StyleObservation) -> bool:
+    return any(
+        record.method is ObservationMethod.RENDERED for record in observation.provenance
+    )
+
+
+def _measurement_only_decision(
+    observation: StyleObservation,
+    value: str,
+    breakpoint: BreakpointName | None,
+) -> StyleDecision | None:
+    """Keep a measured value out of the build without discarding it.
+
+    Only rendered observations are filtered. A browser reports every computed
+    property whether or not anyone chose it, so its output needs a design-intent
+    filter that a Figma frame's declared values do not.
+    """
+
+    if not _is_rendered(observation):
+        return None
+    css_property = _CSS_PROPERTY_NAMES.get(observation.property)
+    if observation.property not in _RENDERED_REPRODUCIBLE_PROPERTIES:
+        reason = "measured for scoring; not design intent to reproduce"
+    elif value.strip().casefold() in _CSS_INITIAL_VALUES.get(css_property or "", ()):
+        reason = "measured value is the CSS initial value, so it states no intent"
+    else:
+        return None
+    return StyleDecision(
+        property=observation.property,
+        source_value=value,
+        layer=TranslationLayer.MEASUREMENT_ONLY,
+        target="measurement_only",
+        confidence=1.0,
+        distance=0.0,
+        reason=reason,
+        breakpoint=breakpoint,
+        evidence_status=observation.status,
+    )
+
+
 def _css_decision(
     observation: StyleObservation,
     value: str,
@@ -431,6 +523,7 @@ def _translate_observations(
             or _utility_decision(observation, value, breakpoint)
             or _modifier_decision(observation, value, capabilities, config, breakpoint)
             or _agency_decision(observation, value, config, breakpoint)
+            or _measurement_only_decision(observation, value, breakpoint)
         )
         if decision is not None:
             decisions.append(decision)

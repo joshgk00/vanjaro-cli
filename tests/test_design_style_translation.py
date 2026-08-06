@@ -5,7 +5,10 @@ from __future__ import annotations
 from vanjaro_cli.design.models import (
     BreakpointName,
     EvidenceStatus,
+    ObservationMethod,
+    Provenance,
     ResponsiveObservation,
+    SourceKind,
     StyleObservation,
     StyleProperty,
     StyleSet,
@@ -14,6 +17,9 @@ from vanjaro_cli.design.models import (
 from vanjaro_cli.design.style_translation import (
     StyleTranslationConfig,
     TranslationLayer,
+    _CSS_INITIAL_VALUES,
+    _CSS_PROPERTY_NAMES,
+    _RENDERED_REPRODUCIBLE_PROPERTIES,
     translate_responsive_observations,
     translate_style_set,
 )
@@ -181,3 +187,118 @@ def test_invalid_project_prefix_is_rejected():
         assert "project_prefix" in str(exc)
     else:  # pragma: no cover - assertion guard
         raise AssertionError("invalid prefix should fail")
+
+
+def _rendered_observation(
+    property_name: StyleProperty, value: str
+) -> StyleObservation:
+    return StyleObservation(
+        property=property_name,
+        value=value,
+        provenance=[
+            Provenance(
+                source_kind=SourceKind.LIVE_HTML,
+                source_url="https://northstar.test/",
+                method=ObservationMethod.RENDERED,
+            )
+        ],
+    )
+
+
+def _layer_for(result, property_name: StyleProperty) -> TranslationLayer:
+    return next(
+        decision.layer
+        for decision in result.decisions
+        if decision.property is property_name
+    )
+
+
+def test_incidental_computed_state_never_becomes_scoped_css():
+    """A browser reports every computed property. Most of it is not intent.
+
+    A native platform utility is still allowed to claim one, because a utility
+    class costs no scoped rule and leaves the block editable. The budget this
+    protects counts scoped CSS, and that must stay at zero here.
+    """
+
+    style = StyleSet(
+        observations=[
+            _rendered_observation(StyleProperty.DISPLAY, "block"),
+            _rendered_observation(StyleProperty.POSITION, "static"),
+            _rendered_observation(StyleProperty.OPACITY, "1"),
+            _rendered_observation(StyleProperty.TRANSFORM, "none"),
+            _rendered_observation(StyleProperty.ORDER, "0"),
+        ]
+    )
+
+    result = translate_style_set(style, _capabilities(), StyleTranslationConfig())
+
+    assert result.scoped_rule_count == 0
+    assert result.css_declarations == {}
+    for observed in (
+        StyleProperty.POSITION,
+        StyleProperty.OPACITY,
+        StyleProperty.TRANSFORM,
+        StyleProperty.ORDER,
+    ):
+        assert _layer_for(result, observed) is TranslationLayer.MEASUREMENT_ONLY
+
+
+def test_design_intent_measured_by_the_browser_is_still_reproduced():
+    style = StyleSet(
+        observations=[
+            _rendered_observation(StyleProperty.BACKGROUND_COLOR, "#0b1f3a"),
+            _rendered_observation(StyleProperty.PADDING, "96px"),
+        ]
+    )
+
+    result = translate_style_set(style, _capabilities(), StyleTranslationConfig())
+
+    assert result.scoped_rule_count == 2
+    assert "background-color" in result.css_declarations
+    assert "padding" in result.css_declarations
+
+
+def test_a_measured_css_initial_value_states_no_intent():
+    """`box-shadow: none` is the absence of a decision, not a decision."""
+
+    style = StyleSet(
+        observations=[
+            _rendered_observation(StyleProperty.BOX_SHADOW, "none"),
+            _rendered_observation(StyleProperty.LETTER_SPACING, "normal"),
+            _rendered_observation(StyleProperty.BORDER_RADIUS, "0px"),
+            _rendered_observation(StyleProperty.BOX_SHADOW, "0 2px 8px #0003"),
+        ]
+    )
+
+    result = translate_style_set(style, _capabilities(), StyleTranslationConfig())
+
+    assert result.css_declarations.get("box-shadow") == "0 2px 8px #0003"
+    assert "letter-spacing" not in result.css_declarations
+    assert "border-radius" not in result.css_declarations
+
+
+def test_a_declared_value_from_a_non_rendered_source_is_unaffected():
+    """Figma declaring min-height states intent. A browser reporting it does not."""
+
+    declared = StyleSet(observations=[_observation(StyleProperty.MIN_HEIGHT, "520px")])
+    measured = StyleSet(
+        observations=[_rendered_observation(StyleProperty.MIN_HEIGHT, "520px")]
+    )
+    config = StyleTranslationConfig()
+
+    declared_result = translate_style_set(declared, _capabilities(), config)
+    measured_result = translate_style_set(measured, _capabilities(), config)
+
+    assert declared_result.css_declarations.get("min-height") == "520px"
+    assert "min-height" not in measured_result.css_declarations
+
+
+def test_every_reproducible_property_has_a_css_name():
+    """A property declared translatable but absent from the CSS map is dead."""
+
+    assert _RENDERED_REPRODUCIBLE_PROPERTIES <= set(_CSS_PROPERTY_NAMES)
+
+
+def test_every_initial_value_key_is_a_real_css_property_name():
+    assert set(_CSS_INITIAL_VALUES) <= set(_CSS_PROPERTY_NAMES.values())
