@@ -1331,3 +1331,52 @@ contract and its validation, exercised entirely on constructed evidence. The
 VM2 milestone acceptance — that the ranked queue independently surfaces theme,
 responsive, and navigation as the top clusters — cannot be checked until VF-008
 produces real corpus scores, and VF-008 still waits on the two human gates.
+
+### 2026-08-06 — VF-103: the ranked queue, and the end of unblocked work
+
+**Matcher:** top-1 0.9200, top-3 1.0000, precision 0.9091; responsive coverage
+0.8864 (39/44) — unchanged. Benchmark clean. Suite 1,912 → 1,928.
+
+`design/finding_rank.py` implements the goal's formula directly:
+
+    value = (sites × sections × severity weight × breakpoint weight) / effort
+
+`vanjaro fidelity rank <ledger>` recomputes it from the file on every
+invocation and caches nothing, so the queue cannot report work the current
+evidence no longer supports. A test proves it by ranking, rewriting the ledger,
+and ranking again.
+
+**These weights are not part of the scoring regime.** Changing one changes which
+work comes first and nothing about what any build measured, so a change here
+needs no re-baseline. Keeping that boundary explicit matters: the regime is
+frozen precisely so scores stay comparable, and quietly attaching ranking
+weights to it would make every reprioritisation look like a measurement change.
+
+**The heaviest breakpoint decides, not the average.** Averaging would let two
+desktop occurrences dilute one mobile occurrence, which is backwards — the
+mobile instance is the one that can block a ship, because the gate has a
+mobile-specific floor.
+
+**Effort is an input, not a guess.** A cluster with no declared effort ranks at
+1.0 and is reported as `effort_is_default`, in JSON and in the human output. A
+declared effort of zero or less falls back with a warning. The alternative was a
+heuristic — file count, cluster size — which would have ordered real work by a
+number nobody measured and made the queue look better-informed than it is.
+
+**Blocked clusters sort last and keep their evidence** rather than disappearing,
+so the reason something was blocked stays in front of whoever reads the queue.
+Ties break on key, so the order never drifts between runs.
+
+**Wave 2 is now code-complete and entirely unexercised on real data.** VF-101,
+VF-102, and VF-103 were all built and tested against constructed evidence. That
+is three consecutive iterations of machinery that has never seen a corpus score,
+and the VM2 acceptance — that the queue independently surfaces theme,
+responsive, and navigation as the top clusters — is precisely the thing
+constructed evidence cannot check, because I would be writing both the question
+and the answer.
+
+**The loop stops here.** Every remaining task needs one of two things only Josh
+can provide: `project approval resolve` on the pilot workspace, and a publish,
+which today has no CLI entry point at all. Continuing would mean building more
+layers against fixtures, and the honest read of three straight iterations of
+that is that the next one adds less than the last.
