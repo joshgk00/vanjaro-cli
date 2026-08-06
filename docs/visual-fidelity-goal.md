@@ -1587,3 +1587,48 @@ introduced last iteration and is recorded here rather than quietly widened.
 Provenance still decides what counts: an inferred responsive box is refused, a
 box is never borrowed across breakpoints, and a section provenance record naming
 the breakpoint still wins. All four are tested.
+
+### 2026-08-06 — Typography measured at last: coverage 0.60/0.47/0.47 → 0.73/0.60/0.60
+
+**Matcher unchanged.** Benchmark clean. Suite 1,958 → 1,962.
+
+**Coverage moved for the first time**, which is what the last two iterations
+said to chase instead of the score:
+
+| | desktop | tablet | mobile |
+|---|---:|---:|---:|
+| coverage before | 0.600 | 0.467 | 0.467 |
+| **coverage after** | **0.733** | **0.600** | **0.600** |
+| score | 59.91 → 59.14 | 68.56 → 65.95 | 56.89 → 56.62 |
+
+Overall 61.79 → 60.57. Typography scored slightly below the dimensions already
+being measured, which moved the mean down a little while adding a sixth of the
+regime to every section. That trade is the point.
+
+**The asymmetry.** The build-side measure script samples fonts per element —
+`typeOf(node.querySelector('h1, h2, …'))` and `typeOf(node.querySelector('p'))`.
+The analysis script recorded computed styles on the section box only, and the
+typography metric reads each *element's* style. So the design side had no type
+evidence anywhere and the dimension was unavailable on every section of every
+breakpoint. The two sides were sampling different things.
+
+The analysis script now samples the same way, and the samples are stamped onto
+the first heading and first body element. Only the first of each: `querySelector`
+returns the first match, so stamping later elements would assert a measurement
+that was never taken.
+
+**A section-level fallback was considered and rejected.** The section's computed
+font is available and would have been a one-line change, but it is 16px regular
+— the section box inherits body type. Using it for the heading would have
+asserted "the design wants a 16px heading" and scored the build's 32px heading
+as wrong. That is inventing an expectation to fill a gap, which is worse than
+the gap.
+
+**A trap worth recording.** The first attempt stamped the elements before
+`enrich_section_from_static_dom`, which *replaces the content list wholesale*.
+The samples vanished with no error and no warning — the document simply came
+back unstamped. Anything that decorates section content must run after
+enrichment.
+
+**Still unmeasured: media, on both sides.** That is now the largest remaining
+gap, and the same asymmetry question applies before assuming it is a bug.

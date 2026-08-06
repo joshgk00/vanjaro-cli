@@ -103,6 +103,19 @@ _STYLE_CONTENT_KEYS = {
 _RENDERED_STYLE_KEYS = {style_property.value: style_property for style_property in StyleProperty}
 
 _RENDERED_OBSERVATION_JS = r"""() => {
+    // Mirrors the build-side measure script so both sides of the typography
+    // comparison are sampled the same way. Section-level computed font values
+    // describe the section box, not its heading, so sampling per element is the
+    // only way this dimension can be measured rather than assumed.
+    const typeOf = (el) => {
+        if (!el) return null;
+        const s = getComputedStyle(el);
+        return {
+            font_family: s.fontFamily || null,
+            font_size: s.fontSize || null,
+            font_weight: s.fontWeight || null,
+        };
+    };
     const candidates = [];
     const seen = new Set();
     const add = (el) => {
@@ -128,6 +141,10 @@ _RENDERED_OBSERVATION_JS = r"""() => {
             selector: el.id ? `#${CSS.escape(el.id)}` : `rendered-section-${index + 1}`,
             bounds: {x: rect.x, y: rect.y + window.scrollY, width: rect.width, height: rect.height},
             hidden: cs.display === 'none' || cs.visibility === 'hidden',
+            typography: {
+                heading: typeOf(el.querySelector('h1, h2, h3, h4, h5, h6')),
+                body: typeOf(el.querySelector('p')),
+            },
             styles: {
                 background_color: cs.backgroundColor,
                 background_image: cs.backgroundImage,
@@ -209,6 +226,10 @@ class RenderedSectionObservation:
     bounds: BoundingBox
     hidden: bool
     styles: Mapping[str, JsonValue] = field(default_factory=dict)
+    # Per-element font samples, keyed "heading" and "body". The section's own
+    # computed font describes the section box, not its heading, so the
+    # typography dimension needs these to be measured rather than assumed.
+    typography: Mapping[str, Mapping[str, JsonValue]] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -345,6 +366,15 @@ def capture_rendered_observations(
                     raw_styles = raw_section.get("styles", {})
                     if not isinstance(raw_bounds, dict) or not isinstance(raw_styles, dict):
                         continue
+                    raw_type = raw_section.get("typography")
+                    typography = {
+                        str(key): {
+                            str(field_name): field_value
+                            for field_name, field_value in sample.items()
+                        }
+                        for key, sample in (raw_type or {}).items()
+                        if isinstance(sample, dict)
+                    } if isinstance(raw_type, dict) else {}
                     sections.append(
                         RenderedSectionObservation(
                             selector=str(
@@ -354,6 +384,7 @@ def capture_rendered_observations(
                             bounds=BoundingBox.model_validate(raw_bounds),
                             hidden=bool(raw_section.get("hidden", False)),
                             styles={str(key): value for key, value in raw_styles.items()},
+                            typography=typography,
                         )
                     )
                 collapsed = raw_snapshot.get("navigation_collapsed")
@@ -477,6 +508,53 @@ def _tokens_from_legacy(raw: JsonValue) -> dict[str, JsonValue]:
         "spacing": {},
         "raw": raw,
     }
+
+
+_TYPE_SAMPLE_KINDS = {"heading": "heading", "body": "text"}
+
+
+def _attach_type_samples(
+    elements: list[dict[str, JsonValue]],
+    samples: Mapping[str, Mapping[str, JsonValue]],
+    provenance: dict[str, JsonValue],
+) -> None:
+    """Give the first heading and first body element their measured fonts.
+
+    The typography metric reads each element's own style, while a rendered
+    crawl records computed values on the section box. Without this the design
+    side has no type evidence at all and the dimension scores nothing, on every
+    section of every breakpoint.
+
+    Only the first element of each kind is stamped, matching what the browser
+    sampled: `querySelector` returns the first match, so claiming the value for
+    later elements would assert a measurement that was never taken.
+    """
+
+    rendered_provenance = {**provenance, "method": "rendered"}
+    for key, kind in _TYPE_SAMPLE_KINDS.items():
+        sample = samples.get(key)
+        if not isinstance(sample, Mapping):
+            continue
+        target = next(
+            (element for element in elements if element.get("kind") == kind), None
+        )
+        if target is None:
+            continue
+        observations = [
+            {
+                "property": prop,
+                "value": value,
+                "status": "observed",
+                "confidence": 1.0,
+                "provenance": [rendered_provenance],
+            }
+            for prop in ("font_family", "font_size", "font_weight")
+            for value in (sample.get(prop),)
+            if value not in (None, "")
+        ]
+        if observations:
+            style = target.setdefault("style", {"observations": [], "raw": {}})
+            style["observations"] = observations
 
 
 def _style_from_content(
@@ -977,6 +1055,12 @@ def _section_from_legacy(
             assets=assets,
             provenance=provenance,
         )
+    # After enrichment, which replaces the content list wholesale. Stamping
+    # before this point loses the samples silently.
+    if desktop and desktop.typography:
+        content = result.get("content")
+        if isinstance(content, list):
+            _attach_type_samples(content, desktop.typography, provenance)
     return result
 
 

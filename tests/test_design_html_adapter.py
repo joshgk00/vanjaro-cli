@@ -652,3 +652,98 @@ def test_duplicate_rendered_selectors_are_not_used_for_pairing() -> None:
     bounds = _bounds_by_role(document)
     assert bounds["hero"] is None
     assert bounds["call_to_action"] == 700.0
+
+
+TYPOGRAPHY_HTML = """
+<html><head><title>Type</title></head><body><main>
+  <section id="hero"><h1>Find your north</h1><p>First body copy.</p>
+    <h2>Second heading</h2><p>Second body copy.</p></section>
+</main></body></html>
+"""
+
+
+def _type_observation(samples: dict) -> RenderedPageObservation:
+    return RenderedPageObservation(
+        breakpoint=BreakpointName.DESKTOP,
+        viewport=CANONICAL_VIEWPORTS[BreakpointName.DESKTOP],
+        html=TYPOGRAPHY_HTML,
+        sections=(
+            RenderedSectionObservation(
+                selector="#hero",
+                bounds=BoundingBox(x=0.0, y=0.0, width=1440.0, height=400.0),
+                hidden=False,
+                styles={},
+                typography=samples,
+            ),
+        ),
+    )
+
+
+def _font_props(element) -> dict[str, str]:
+    return {
+        observation.property.value: observation.value
+        for observation in element.style.observations
+    }
+
+
+def _typography_document(samples: dict):
+    return design_document_from_html(
+        TYPOGRAPHY_HTML,
+        "https://type.test/",
+        captured_at=CAPTURE_TIME,
+        rendered_observations=(_type_observation(samples),),
+    )
+
+
+SAMPLES = {
+    "heading": {"font_family": "Inter", "font_size": "32px", "font_weight": "700"},
+    "body": {"font_family": "Inter", "font_size": "16px", "font_weight": "400"},
+}
+
+
+def test_measured_fonts_reach_the_heading_and_body_elements() -> None:
+    """The typography metric reads each element's own style, while a rendered
+    crawl records computed values on the section box. Without this the design
+    side has no type evidence and the dimension scores nothing."""
+
+    document = _typography_document(SAMPLES)
+    content = document.pages[0].sections[0].content
+    heading = next(element for element in content if element.kind.value == "heading")
+    body = next(element for element in content if element.kind.value == "text")
+
+    assert _font_props(heading)["font_size"] == "32px"
+    assert _font_props(heading)["font_weight"] == "700"
+    assert _font_props(body)["font_size"] == "16px"
+
+
+def test_at_most_one_element_of_each_kind_carries_the_sample() -> None:
+    """`querySelector` returns the first match, so claiming the value for later
+    elements would assert a measurement that was never taken."""
+
+    document = _typography_document(SAMPLES)
+    content = document.pages[0].sections[0].content
+    stamped_kinds = [
+        element.kind.value for element in content if element.style.observations
+    ]
+
+    assert sorted(stamped_kinds) == ["heading", "text"]
+    assert len(stamped_kinds) == len(set(stamped_kinds))
+
+
+def test_a_missing_sample_leaves_that_element_unstamped() -> None:
+    document = _typography_document({"heading": SAMPLES["heading"]})
+    content = document.pages[0].sections[0].content
+    body = next(element for element in content if element.kind.value == "text")
+
+    assert _font_props(body) == {}
+
+
+def test_static_analysis_records_no_type_samples() -> None:
+    document = design_document_from_html(
+        TYPOGRAPHY_HTML, "https://type.test/", captured_at=CAPTURE_TIME
+    )
+
+    assert all(
+        not element.style.observations
+        for element in document.pages[0].sections[0].content
+    )
