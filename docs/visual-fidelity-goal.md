@@ -1545,3 +1545,45 @@ under-specified fixture. Left alone, and recorded here instead.
 scores is not progress while their coverage sits at 0.467. Raising *coverage*
 is, and that means responsive evidence on the design side — which is VF-203/204
 territory, already at its honest ceiling for this corpus.
+
+### 2026-08-06 — Per-breakpoint geometry was measured and discarded; 75.47 → 61.79
+
+**Matcher unchanged.** Benchmark clean. Suite 1,954 → 1,958.
+
+A rendered crawl measures all three viewports and records the non-desktop boxes
+on each section's **responsive observation**, because the section's own
+provenance describes its base layout. `_bounds` read only the section, so tablet
+and mobile had no geometry: layout lost its bounds subscore — 0.60 of the
+dimension — and scored 100 on column and order agreement alone. The evidence was
+being captured, written to the Design Document, and thrown away at extraction.
+
+| | before | after |
+|---|---:|---:|
+| overall | 75.47 | **61.79** |
+| desktop | 59.91 | 59.91 |
+| tablet | 83.25 | **68.56** |
+| mobile | 83.25 | **56.89** |
+
+**The score fell because the flattering numbers were the unmeasured ones**, which
+is what the previous iteration predicted. Desktop is unchanged — it was already
+comparing real boxes. Mobile fell furthest and is now the lowest breakpoint,
+which is the honest ordering: the build reflows and the source does not.
+
+**Two checks before trusting the drop.** The expected boxes come back with
+per-viewport widths (1424 / 752 / 374) but identical `y` and `height`, which
+looks like desktop geometry leaking. Measuring the fixture with plain Playwright,
+outside our harness entirely, returns the same numbers: this fixture's
+`#services` genuinely does not reflow vertically, because it is unstyled block
+content whose text does not rewrap. The harness is faithful and the drop is real.
+The observed side does vary (heights 201 / 249 / 460), and that difference is
+the finding: **the built page is responsive and the source is not.**
+
+**`dimension_coverage` did not move** — still 0.600 / 0.467 / 0.467. Layout was
+already counted as measured at every breakpoint; what changed is that it is now
+measured *properly* rather than on two subscores. The metric is dimension-level
+and cannot see subscore completeness, which is a real limitation of the number
+introduced last iteration and is recorded here rather than quietly widened.
+
+Provenance still decides what counts: an inferred responsive box is refused, a
+box is never borrowed across breakpoints, and a section provenance record naming
+the breakpoint still wins. All four are tested.

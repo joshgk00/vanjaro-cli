@@ -371,3 +371,81 @@ def test_extraction_is_deterministic() -> None:
 
     assert first is not None and second is not None
     assert first.model_dump_json() == second.model_dump_json()
+
+
+def _responsive_with_bounds(
+    breakpoint: BreakpointName,
+    box: BoundingBox,
+    *,
+    method: ObservationMethod = ObservationMethod.RENDERED,
+) -> ResponsiveObservation:
+    return ResponsiveObservation(
+        breakpoint=breakpoint,
+        viewport=Viewport(width=int(box.width), height=800),
+        status=EvidenceStatus.OBSERVED,
+        provenance=[_provenance(method=method, viewport=breakpoint, bounds=box)],
+    )
+
+
+def test_non_desktop_geometry_is_read_from_the_responsive_observation() -> None:
+    """A rendered crawl measures every breakpoint and records the non-desktop
+    boxes on the responsive observation, because the section's own provenance
+    describes its base layout. Reading only the section left tablet and mobile
+    with no geometry, so layout scored on columns and order alone."""
+
+    desktop_box = BoundingBox(x=8, y=196, width=1424, height=365)
+    tablet_box = BoundingBox(x=8, y=196, width=752, height=420)
+    section = _section(
+        provenance=[_provenance(viewport=BreakpointName.DESKTOP, bounds=desktop_box)],
+        responsive=[_responsive_with_bounds(BreakpointName.TABLET, tablet_box)],
+    )
+
+    assert _observe(section, BreakpointName.DESKTOP).geometry.bounds.width == 1424
+    assert _observe(section, BreakpointName.TABLET).geometry.bounds.width == 752
+    assert _observe(section, BreakpointName.MOBILE).geometry.bounds is None
+
+
+def test_a_responsive_box_is_never_borrowed_for_another_breakpoint() -> None:
+    section = _section(
+        provenance=[],
+        responsive=[
+            _responsive_with_bounds(
+                BreakpointName.TABLET, BoundingBox(x=0, y=0, width=752, height=400)
+            )
+        ],
+    )
+
+    assert _observe(section, BreakpointName.TABLET).geometry.bounds is not None
+    assert _observe(section, BreakpointName.MOBILE).geometry.bounds is None
+    assert _observe(section, BreakpointName.DESKTOP).geometry.bounds is None
+
+
+def test_an_inferred_responsive_box_is_still_refused() -> None:
+    """Provenance decides what counts, and the responsive path is no exception."""
+
+    section = _section(
+        provenance=[],
+        responsive=[
+            _responsive_with_bounds(
+                BreakpointName.MOBILE,
+                BoundingBox(x=0, y=0, width=374, height=500),
+                method=ObservationMethod.INFERRED,
+            )
+        ],
+    )
+
+    assert _observe(section, BreakpointName.MOBILE).geometry.bounds is None
+
+
+def test_the_section_provenance_still_wins_when_it_names_the_breakpoint() -> None:
+    exact = BoundingBox(x=0, y=0, width=390, height=700)
+    section = _section(
+        provenance=[_provenance(viewport=BreakpointName.MOBILE, bounds=exact)],
+        responsive=[
+            _responsive_with_bounds(
+                BreakpointName.MOBILE, BoundingBox(x=9, y=9, width=374, height=500)
+            )
+        ],
+    )
+
+    assert _observe(section, BreakpointName.MOBILE).geometry.bounds.width == 390

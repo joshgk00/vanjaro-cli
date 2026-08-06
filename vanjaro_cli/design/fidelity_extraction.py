@@ -138,6 +138,21 @@ def _bounds(section: Section, breakpoint: BreakpointName) -> LayoutBox | None:
             continue
         if record.viewport == breakpoint:
             return _to_layout_box(record.bounds)
+
+    # A rendered crawl measures every breakpoint and records the non-desktop
+    # boxes on the responsive observation rather than on the section, because
+    # the section's own provenance describes its base layout. Reading only the
+    # section left tablet and mobile with no geometry, so layout scored on
+    # columns and order alone — 100 on two subscores while desktop compared
+    # real boxes. That made the least-measured breakpoints look like the best
+    # ones, and mobile carries its own floor on the ship gate.
+    for observation in section.responsive:
+        if observation.breakpoint != breakpoint:
+            continue
+        for record in observation.provenance:
+            if record.bounds is not None and record.method in MEASURED_METHODS:
+                return _to_layout_box(record.bounds)
+
     # A record with no viewport describes the base layout, which is desktop.
     if breakpoint is BreakpointName.DESKTOP:
         for record in section.provenance:
