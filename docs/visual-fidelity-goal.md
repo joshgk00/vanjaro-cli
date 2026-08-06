@@ -1716,3 +1716,44 @@ still builds without its images, and it still would even with working assets,
 because `feature-cards-3up` has no editable media slot. Closing that is a
 template-library change with its own before/after, and the corpus's broken
 `/synthetic/*.svg` references remain a separate limitation on top.
+
+### 2026-08-06 — VF-214 part two: why, not just what — and the audit that shrank the task
+
+**Matcher unchanged** (0.9200 / 1.0000 / 0.9091; responsive 0.8864). Benchmark
+clean. Suite 1,966 → 1,969. No score changed.
+
+**The static-only report from part one is also an audit tool, and it made the
+task much smaller than it looked.** Across the 31-template catalog:
+
+| | |
+|---|---:|
+| templates with a static-only field | **3** (`feature-cards-3up`, `feature-cards-4up`, `icon-feature-list`) |
+| the field, in all three cases | `item.icon` |
+| templates with an *editable* media slot | 13 |
+
+So this is not a systemic library gap. It is three icon templates, and `media`
+and `icon` are deliberately cross-aliased in `semantics.py`. Both available
+fixes — adding editable media slots, or narrowing the alias — reshape what every
+card section builds and need a pack version bump and corpus evidence. **Neither
+is this iteration's to decide**, so neither was done.
+
+**What was done: the reverted sink, restored with the test that justifies it.**
+Last iteration it was reverted as dead code because it never fired on the pilot.
+That was true of the pilot and wrong in general: 13 templates have editable
+media slots, so an image can reach binding and fail there for a source reason
+rather than a library one.
+
+**And the honest finding is better than expected.** On `gallery-3up`, where
+`item.media` is *required*, an unresolvable image already raises
+`PlanningError: required field 'item.media' is missing or has no slot`. So that
+loss was never silent — but the message reads like a library gap when the real
+cause is an asset that resolved to nothing. The sink now records *why*
+alongside the existing error, and the two causes stay distinguishable because
+they need different fixes.
+
+**Which narrows where content can still vanish silently** to exactly two cases:
+a static-only slot (reported since part one) and an *optional* editable slot
+with an unresolvable asset (reported now). The required case was always loud.
+
+Three tests: the unresolvable image records its reason alongside the raise, a
+resolvable one binds and reports nothing, and the sink never changes binding.

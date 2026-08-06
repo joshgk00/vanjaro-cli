@@ -205,6 +205,7 @@ def _bind_element(
     owned_slots: deque[str] | None = None,
     assets: Mapping[str, AssetRecord],
     item_id: str | None,
+    dropped: list[str] | None = None,
 ) -> list[SemanticBinding]:
     leaf = semantic_field.rsplit(".", 1)[-1]
     preferred = semantic_slot_types(leaf) or _KIND_SLOT_TYPES[element.kind]
@@ -212,6 +213,20 @@ def _bind_element(
     if is_image:
         src, alt = _asset_value(element, assets)
         if not src or _is_placeholder(src):
+            # A designed image reaching an editable slot and still not binding
+            # is a source problem, not a library gap. The distinction matters:
+            # a missing slot is fixed in the template catalog, an unresolvable
+            # asset upstream. Neither is visible in the fidelity score, because
+            # the media dimension needs a sample on both sides.
+            if dropped is not None:
+                dropped.append(
+                    f"image {element.id} was not bound: "
+                    + (
+                        f"its source is a placeholder ({src})"
+                        if src
+                        else "its asset resolved to no usable source"
+                    )
+                )
             return []
     else:
         value = _string_value(element.value)
@@ -387,11 +402,16 @@ def bind_section(
     entry: TemplateCatalogEntry,
     *,
     assets: Mapping[str, AssetRecord] | None = None,
+    dropped: list[str] | None = None,
 ) -> tuple[SemanticBinding, ...]:
-    """Bind only capability-declared semantic fields to real template slots."""
+    """Bind only capability-declared semantic fields to real template slots.
+
+    ``dropped`` collects reasons a designed element produced no binding, so a
+    plan can report content that silently failed to reach the build.
+    """
 
     if entry.capabilities.physical_fields:
-        return _bind_section_physical(section, entry, assets=assets)
+        return _bind_section_physical(section, entry, assets=assets, dropped=dropped)
 
     asset_map = assets or {}
     elements = {element.id: element for element in section.content}
@@ -448,6 +468,7 @@ def bind_section(
                 queues=queues,
                 assets=asset_map,
                 item_id=None,
+                dropped=dropped,
             )
             if candidate
             else []
@@ -492,6 +513,7 @@ def bind_section(
                                 element=element,
                                 queues=queues,
                                 assets=asset_map,
+                                dropped=dropped,
                                 item_id=item.id,
                             )
                         )
@@ -518,6 +540,7 @@ def _bind_section_physical(
     entry: TemplateCatalogEntry,
     *,
     assets: Mapping[str, AssetRecord] | None = None,
+    dropped: list[str] | None = None,
 ) -> tuple[SemanticBinding, ...]:
     """Bind within exact per-field ownership chunks; content cannot shift owners."""
 
@@ -577,6 +600,7 @@ def _bind_section_physical(
                     owned_slots=owned[semantic_field],
                     assets=asset_map,
                     item_id=None,
+                    dropped=dropped,
                 )
             )
         if not created and requirement == "required":
@@ -633,6 +657,7 @@ def _bind_section_physical(
                                 owned_slots=owned[semantic_field],
                                 assets=asset_map,
                                 item_id=item.id,
+                                dropped=dropped,
                             )
                         )
                     consumed_slots = slots_before - len(owned[semantic_field])
@@ -834,8 +859,11 @@ def plan_design_document(
                 entry = by_id[selected.template_id.casefold()]
 
             binding_issues: tuple[str, ...] = ()
+            dropped_content: list[str] = []
             try:
-                bindings = bind_section(section, entry, assets=assets)
+                bindings = bind_section(
+                    section, entry, assets=assets, dropped=dropped_content
+                )
             except PlanningError as exc:
                 bindings = ()
                 binding_issues = exc.issues
@@ -919,10 +947,15 @@ def plan_design_document(
                     css_scope=_css_scope(resolved_style_config, section) if scoped_css else None,
                     scoped_css=scoped_css,
                     simplifications=simplifications,
+                    # Dropped content reports on the entry rather than as a
+                    # validation issue: it is worth seeing, but whether it
+                    # should block approval is a policy call, not this
+                    # function's to make.
                     warnings=tuple(
                         dict.fromkeys(
                             selected.missing_requirements
                             + binding_issues
+                            + tuple(dropped_content)
                             + base_style.warnings
                             + responsive_style.warnings
                         )

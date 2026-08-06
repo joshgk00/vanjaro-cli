@@ -22,6 +22,8 @@ from vanjaro_cli.design.composition import (
 )
 from vanjaro_cli.design.models import (
     Alignment,
+    AssetKind,
+    AssetRecord,
     ContentElement,
     ContentKind,
     DesignAnalysis,
@@ -390,3 +392,104 @@ def test_committed_composition_schema_matches_model() -> None:
     generated = json.loads(render_composition_plan_schema())
 
     assert committed == generated
+
+
+def _gallery_section_with_image(asset_id: str) -> Section:
+    image = ContentElement(
+        id="element-9",
+        kind=ContentKind.IMAGE,
+        role="card_media",
+        value=None,
+        asset_id=asset_id,
+        group_id="gallery",
+        order=1,
+        provenance=[],
+        confidence=1.0,
+    )
+    return Section(
+        id="home.gallery",
+        order=1,
+        semantic_role="gallery",
+        role_confidence=1.0,
+        candidate_roles=[],
+        layout=LayoutObservation(kind=LayoutKind.GRID, contained=True, columns=3),
+        content=[image],
+        groups=[
+            RepeatGroup(
+                id="gallery",
+                kind=RepeatGroupKind.GALLERY_ITEM,
+                items=[RepeatGroupItem(id="shot-1", fields={"media": image.id})],
+            )
+        ],
+        style=StyleSet(),
+        responsive=[],
+        decorative_layers=[],
+        interactions=[],
+        provenance=[],
+    )
+
+
+def _unresolvable_asset(asset_id: str) -> AssetRecord:
+    """An asset the crawl recorded but never resolved to a usable file."""
+
+    return AssetRecord(
+        id=asset_id,
+        kind=AssetKind.IMAGE,
+        role="editorial",
+        source_url="https://source.test/missing.jpg",
+        local_path=None,
+    )
+
+
+def test_an_unresolvable_image_records_why_alongside_the_existing_error() -> None:
+    """`gallery-3up` requires `item.media`, so the loss already raises. What it
+    never said was *why*: "missing or has no slot" reads like a library gap when
+    the real cause is an asset that resolved to nothing. The two need different
+    fixes."""
+
+    dropped: list[str] = []
+    with pytest.raises(PlanningError) as raised:
+        bind_section(
+            _gallery_section_with_image("asset-1"),
+            _entry("gallery-3up.json"),
+            assets={"asset-1": _unresolvable_asset("asset-1")},
+            dropped=dropped,
+        )
+
+    assert any("item.media" in issue for issue in raised.value.issues)
+    assert len(dropped) == 1
+    assert "element-9" in dropped[0]
+    assert "no usable source" in dropped[0]
+
+
+def test_a_resolvable_image_binds_and_reports_nothing() -> None:
+    resolved = AssetRecord(
+        id="asset-1",
+        kind=AssetKind.IMAGE,
+        role="editorial",
+        source_url="https://source.test/photo.jpg",
+        local_path="assets/photo.jpg",
+    )
+    dropped: list[str] = []
+
+    bindings = bind_section(
+        _gallery_section_with_image("asset-1"),
+        _entry("gallery-3up.json"),
+        assets={"asset-1": resolved},
+        dropped=dropped,
+    )
+
+    assert [b for b in bindings if b.semantic_field == "item.media"]
+    assert dropped == []
+
+
+def test_the_sink_is_optional_and_never_changes_binding() -> None:
+    section = _gallery_section_with_image("asset-1")
+    assets = {"asset-1": _unresolvable_asset("asset-1")}
+
+    with pytest.raises(PlanningError) as with_sink:
+        bind_section(section, _entry("gallery-3up.json"), assets=assets, dropped=[])
+    with pytest.raises(PlanningError) as without:
+        bind_section(section, _entry("gallery-3up.json"), assets=assets)
+
+    assert with_sink.value.issues == without.value.issues
