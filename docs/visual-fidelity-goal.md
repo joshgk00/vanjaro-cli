@@ -1632,3 +1632,47 @@ enrichment.
 
 **Still unmeasured: media, on both sides.** That is now the largest remaining
 gap, and the same asymmetry question applies before assuming it is a bug.
+
+### 2026-08-06 — Media is not an asymmetry; three images vanish and nothing says so
+
+**No code changed. The finding is the deliverable.** Suite 1,962, benchmark
+clean, matcher unchanged.
+
+The previous iteration set the question: is media unmeasured because the two
+sides sample differently, as typography was? **No.** Both sides report zero
+media samples, and the reason is worse than a sampling gap: the source has three
+images and the build has none.
+
+- `assets-result.json`: `managed_assets: 0`, `uploaded_this_run: 0`
+- `composed-blocks.json`: zero `<img>`
+- rendered build page: zero `<img>`; rendered source page: three
+
+**The media dimension structurally cannot catch this.** It needs a sample on
+both sides. The source's assets point at `/synthetic/*.svg` files that do not
+exist, so intrinsics are `None` and no aspect ratio is knowable, so the design
+side has no sample either. An image absent from the build reads as *absent
+evidence* rather than a missing image. **A build that drops every image scores
+identically to one that renders them perfectly.** VF-005's rule that a designed
+image absent from the build scores zero cannot fire, because there is nothing
+for it to be absent from.
+
+Traced to planning: `section.3` has three image elements with asset IDs, its
+entry binds only `item.title` and `item.body`, and its sole warning concerns
+`section_title`. The images are never mentioned and never offered to
+`_bind_element` at all.
+
+**A fix was written and reverted.** A `dropped` sink through `bind_section`
+correctly reports an image rejected for an unusable source — and never fires
+here, because these elements never reach that branch. A sink that never fires is
+dead code wearing the appearance of coverage, so it was reverted rather than
+committed. Filed as **VF-214** with the full trace.
+
+**Deliberately not scored.** The source's images are broken references, so the
+build could not have included them. Penalising the build would repeat the
+spacing mistake: scoring the build for the fixture's silence. What is missing is
+a *report*, not a penalty.
+
+**Two iterations, two different answers to the same question.** Typography was
+an asymmetry and a real fix. Media looked identical from the outside and is a
+content-loss bug with a corpus limitation on top. The question was worth asking
+both times, and worth asking again before the next dimension is assumed broken.

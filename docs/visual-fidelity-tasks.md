@@ -535,3 +535,56 @@ above any fix-loop work.
 
 **Tests:** a fixture whose nav sits inside `header`, both observation paths, and
 an assertion that an unmeasurable section is excluded rather than zeroed.
+
+### VF-214 — Designed images are dropped without a word
+
+**Dependencies:** None
+
+**Problem**
+
+The pilot source contains three images. The build contains **zero**, and nothing
+anywhere reports it. `assets-result.json` records `managed_assets: 0`,
+`composed-blocks.json` contains no `<img>`, and the rendered page has none.
+
+The media dimension cannot catch this. It needs a sample on **both** sides, and
+the design side has none either: the source's assets resolve to
+`/synthetic/*.svg` paths that do not exist, so `width`/`height`/`local_path` are
+all `None` and no aspect ratio is knowable. An image absent from the build
+therefore reads as *absent evidence*, not as a missing image, and scores
+nothing. **A build that drops every image scores exactly the same as one that
+renders them perfectly.**
+
+Traced to planning. For `section.3` (`Cards/feature-cards-3up`), the section has
+three image elements each carrying an `asset_id`, and the entry binds only
+`item.title` and `item.body`. Its only warning is
+`source field 'section_title' is not editable by template` — the images are not
+mentioned. So `unsupported_source` in `matcher.py` flags the unbindable heading
+but not the unbindable media, and `_bind_element`'s image branch is never
+reached, because those elements are never offered to it.
+
+Two candidate causes, not yet separated: `_observed_fields` may emit no label for
+image content, or it emits one the template appears to represent while no
+binding results.
+
+**An attempted fix was reverted.** A `dropped` sink threaded through
+`bind_section` into `_bind_element` correctly reports images rejected for an
+unusable source — but it never fires here, because the elements do not reach
+that code at all. Shipping a sink that never fires is dead code, so it was
+reverted rather than left in as apparent coverage.
+
+**Acceptance criteria**
+
+- A designed content element that produces no binding is reported on the plan
+  entry, naming the element and why, whatever the reason.
+- The report distinguishes "the template has nowhere to put this" from "the
+  asset could not be resolved" — the first is a library gap, the second a source
+  problem, and they need different fixes.
+- Scoring is unchanged. Attribution is not possible here: a build cannot include
+  an image whose source is a broken reference, so penalising it would repeat the
+  spacing mistake of scoring the build for the fixture's silence.
+- Whether dropped content should block approval is Josh's call and is **not**
+  decided by this task; report on the entry, not as a validation issue.
+
+**Tests:** a section whose image has no resolvable asset, a section whose
+template declares no media field, and a section where both hold; each reports a
+distinct reason and none changes plan validity.
