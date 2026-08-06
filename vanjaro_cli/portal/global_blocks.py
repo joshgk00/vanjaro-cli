@@ -54,10 +54,16 @@ def compose_project_global_blocks(
             built = build_footer_block(content)
         else:
             raise ProjectGlobalBlockError(f"unsupported global kind: {kind!r}")
+        # The section's identity is the design's section ID, not the block key.
+        # `data-agency-section` is how the fidelity measurer pairs a rendered
+        # element with the section the design described; stamping "global-header"
+        # made the nav unpairable, so it read as a section absent from the build
+        # and scored zero on a page where it was rendering correctly. The block
+        # key still identifies the *location* through `page_key`.
         components, styles = namespace_component_payload(
             built.get("components", []),
             built.get("styles", []),
-            owner_key=str(entry["id"]),
+            owner_key=str(section_id),
             project_id=project_id,
             page_key=f"global:{entry['id']}",
         )

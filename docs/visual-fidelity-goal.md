@@ -1440,3 +1440,59 @@ Only the observed side had been normalized, so recording evidence raised a
 `ValidationError` on `rgba(0, 0, 0, 0)`. The normalizer moved to
 `design/css_color.py` and both sides now call it — a second copy is exactly what
 would drift, and this bug is what that drift looks like.
+
+### 2026-08-06 — VF-213: the nav was rendering correctly and scoring zero
+
+**Matcher unchanged.** Benchmark clean. Suite 1,948 → 1,949.
+
+**Overall fidelity 48.84 → 75.47.** `section.1` went from 0.00 to **93.75** at
+every breakpoint. Desktop 59.91, tablet 83.25, mobile 83.25.
+
+| Section | desktop | tablet | mobile |
+|---|---:|---:|---:|
+| 1 (nav) | 93.8 | 93.8 | 93.8 |
+| 2 | 36.6 | 65.0 | 65.0 |
+| 3 | 58.1 | 85.8 | 85.8 |
+| 4 | 57.6 | 85.8 | 85.8 |
+| 5 | 53.5 | 85.8 | 85.8 |
+
+The gate still refuses the build — four sections sit below the 60 section floor
+at desktop — which is the floor doing its job. A 75.47 average must not hide a
+36.65 section.
+
+**The task's premise was wrong twice, and each wrong answer was one layer
+closer.** VF-213 was filed as "the measurer skips header content, so scoring the
+nav 0 is a measurement fault." Checking it:
+
+1. `MEASURE_SCRIPT` has no header exclusion at all — it selects
+   `[data-agency-section]`. That exclusion is in the *analysis* script, a
+   different file. The filed premise was simply wrong.
+2. The nav really was absent from the served page, so 0 was correct reporting.
+   It was absent because the page content was still **draft version 2 against
+   published version 1** — an unpublished global-block wrapper. Publishing the
+   block alone changed nothing; the page content had to be published too.
+3. With the nav rendering, `section.1` *still* scored 0. The global block
+   stamped `data-agency-section="global-header"` — its block key — while the
+   design expects the section ID. The measurer pairs on that attribute, so a
+   nav that was rendering perfectly could never pair with the section it came
+   from, and read as absent from the build.
+
+**The fix is one argument.** `compose_project_global_blocks` now passes
+`owner_key=section_id` instead of `entry["id"]`. A section's identity is the
+design's section ID; the block key describes *where* it lives, which `page_key`
+already records as `global:global-header`.
+
+**Publishing, correctly stated this time.** The page draft is reachable while
+`Hidden`, so a *page* need not be published to be measured — but its *content
+version* must be, or the measurer sees the previously published version. The
+last entry got this half right and half wrong. `content diff` is the check that
+settles it: it reports published versus draft version and what differs.
+
+**Nothing caught any of this.** 1,948 tests passed against a build whose nav
+scored zero. The new test asserts the design's section ID reaches
+`data-agency-section` and that the block key stays in `data-agency-page`.
+
+**Recurring friction worth its own task.** A code change never invalidates a
+stage fingerprint, so every fix in this iteration needed
+`project analyze --refresh` to cascade. That is correct for input-based
+fingerprints and wrong for a pipeline whose behaviour lives in code.

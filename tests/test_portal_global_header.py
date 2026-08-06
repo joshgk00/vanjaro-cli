@@ -339,3 +339,41 @@ def test_integrated_header_output_is_deterministic_and_rewrites_collapse_ids() -
     assert toggler["attributes"]["aria-controls"] == collapse["attributes"]["id"]
     assert "Keys To Success" in first[0]["html"]
     assert "no explicit usable logo asset" in first[0]["warnings"][0]
+
+
+def test_a_global_block_carries_the_design_section_id_not_the_block_key() -> None:
+    """`data-agency-section` is how the measurer pairs a rendered element with
+    the section the design described. Stamping the block key made the nav
+    unpairable, so a correctly rendering nav read as absent and scored zero."""
+
+    section = _section(
+        [_element("home-link", 0, ContentKind.LINK, "Home", attributes={"href": "/"})]
+    )
+    document = _document(section, [])
+    plan = {
+        "entries": [
+            {
+                "id": "global-header",
+                "kind": "header",
+                "status": "ready",
+                "source_section_id": section.id,
+                "name": "project / Site Header",
+                "category": "Agency - project",
+            }
+        ]
+    }
+
+    built = compose_project_global_blocks(document, plan, project_id="project")
+    markers = {
+        node.get("attributes", {}).get("data-agency-section")
+        for node in _walk(built[0]["components"])
+    }
+    pages = {
+        node.get("attributes", {}).get("data-agency-page")
+        for node in _walk(built[0]["components"])
+    }
+
+    assert markers == {section.id}
+    assert "global-header" not in markers
+    # The block key still records where the section lives.
+    assert pages == {"global:global-header"}
