@@ -1676,3 +1676,43 @@ a *report*, not a penalty.
 an asymmetry and a real fix. Media looked identical from the outside and is a
 content-loss bug with a corpus limitation on top. The question was worth asking
 both times, and worth asking again before the next dimension is assumed broken.
+
+### 2026-08-06 — VF-214 part one: the quietest content loss in the pipeline
+
+**Matcher figures unchanged** (top-1 0.9200, top-3 1.0000, precision 0.9091;
+responsive 0.8864). Benchmark clean. Suite 1,962 → 1,966. **No score changed.**
+
+Starting where the previous iteration said to — `_observed_fields` in
+`matcher.py` — the mechanism resolved completely on the pilot's `section.3`:
+
+| | |
+|---|---|
+| observed | `item.media`, aliases `('item.media', 'item.icon')` |
+| `feature-cards-3up` editable | `item.action`, `item.body`, `item.title` |
+| `feature-cards-3up` **static** | `item.icon` |
+
+`represented` is the union of editable and static, so `item.media` matched
+`item.icon` and counted as **represented**. It was therefore never listed in
+`unsupported_source`, and binding then skipped it because only *editable* fields
+bind. The section heading had no match at all and was duly reported; the three
+images matched a slot that cannot hold content and were reported nowhere.
+
+That is the whole mechanism, and it is worth naming: **a field that looks
+supported but cannot receive content is quieter than one that is unsupported.**
+The unsupported case is loud by design. This one passes every check.
+
+The matcher now reports it separately: `source field 'item.media' maps only to a
+static template slot, so its content cannot reach the build`. Separately,
+because the two failures need different fixes — a static-only match is a library
+gap, an unresolvable asset is a source problem.
+
+**Nothing about scoring moved.** `editable_coverage` already excluded static-only
+matches, so the metric was right the whole time and only the report was missing.
+The warning lands on the plan entry, non-blocking; whether dropped content should
+block approval stays Josh's call, per VF-214.
+
+**Still open in VF-214.** This reports the loss; it does not stop it. The pilot
+still builds without its images, and it still would even with working assets,
+because `feature-cards-3up` has no editable media slot. Closing that is a
+template-library change with its own before/after, and the corpus's broken
+`/synthetic/*.svg` references remain a separate limitation on top.

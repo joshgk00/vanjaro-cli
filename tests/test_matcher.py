@@ -369,3 +369,58 @@ def test_override_requires_auditable_author_reason_and_aware_time() -> None:
             reason="because",
             created_at=datetime(2026, 7, 16),
         )
+
+
+def _explanations(section: Section, filename: str) -> tuple[str, ...]:
+    return match_section(section, [_entry(filename)]).candidates[0].missing_requirements
+
+
+def test_a_field_matching_only_a_static_slot_is_reported() -> None:
+    """The quietest content loss in the pipeline.
+
+    `item.media` aliases to `item.icon`, which `feature-cards-3up` declares
+    static. That counted as represented, so it was never reported unsupported,
+    and binding then skipped it because only editable fields bind. Three
+    designed images left the pilot build this way with no warning at all.
+    """
+
+    section = _section(item_fields=("title", "body", "media"))
+
+    explanations = _explanations(section, "feature-cards-3up.json")
+
+    assert any(
+        "item.media" in message and "static template slot" in message
+        for message in explanations
+    )
+
+
+def test_a_field_with_no_slot_at_all_is_still_reported_separately() -> None:
+    """The two failures need different fixes, so they must read differently."""
+
+    section = _section(item_fields=("title", "body", "media"))
+
+    explanations = _explanations(section, "feature-cards-3up.json")
+    unsupported = [m for m in explanations if "is not editable by template" in m]
+    static_only = [m for m in explanations if "static template slot" in m]
+
+    assert unsupported and static_only
+    assert not set(unsupported) & set(static_only)
+
+
+def test_a_field_bound_to_an_editable_slot_is_not_reported() -> None:
+    section = _section(item_fields=("title", "body", "media"))
+
+    explanations = _explanations(section, "feature-cards-3up.json")
+
+    assert not any("item.title" in message for message in explanations)
+    assert not any("item.body" in message for message in explanations)
+
+
+def test_reporting_a_static_only_field_does_not_change_any_score() -> None:
+    """Editable coverage already excluded these; only the report was missing."""
+
+    section = _section(item_fields=("title", "body", "media"))
+    candidate = match_section(section, [_entry("feature-cards-3up.json")]).candidates[0]
+
+    assert candidate.subscores.fields < 1.0
+    assert 0.0 <= candidate.score <= 1.0

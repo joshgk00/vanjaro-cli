@@ -314,6 +314,17 @@ def _field_score(
         for label, alternatives in observed
         if not represented.intersection(alternatives)
     )
+    # Represented by a *static* slot only. These are the quietest content losses
+    # in the pipeline: the field looks supported, so it is never reported
+    # unsupported, and then binding skips it because only editable fields bind.
+    # Three designed images left the pilot build this way with no warning at all,
+    # and the media dimension could not see it either (VF-214).
+    static_only_source = sorted(
+        label
+        for label, alternatives in observed
+        if represented.intersection(alternatives)
+        and not editable.intersection(alternatives)
+    )
     required_fill = (
         1.0
         if not [name for name, value in capabilities.fields.items() if value == "required"]
@@ -325,6 +336,11 @@ def _field_score(
     missing = tuple(
         [f"required template field '{name}' has no source content" for name in missing_template_fields]
         + [f"source field '{name}' is not editable by template" for name in unsupported_source]
+        + [
+            f"source field '{name}' maps only to a static template slot, "
+            "so its content cannot reach the build"
+            for name in static_only_source
+        ]
     )
     return score, _bounded(editable_coverage), missing
 
