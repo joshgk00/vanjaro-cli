@@ -1894,3 +1894,52 @@ attributable. Ten iterations of measurement work made that possible.
 
 Still unmeasured and needing Josh: media (VF-214), and typography on the nav,
 which genuinely has no heading or paragraph to sample.
+
+### 2026-08-06 — Columns were never measured on the build; 54.73 → 57.59
+
+**Matcher unchanged** (0.9200 / 1.0000 / 0.9091; responsive 0.8864). Benchmark
+clean. Suite 1,985 → 1,988.
+
+Every section at every breakpoint reported `no geometry evidence for columns`.
+The observed side derived columns from `gridTemplateColumns` alone, which sees
+an explicit CSS grid and nothing else — and the build is Bootstrap flex
+throughout. **A quarter of the layout dimension was dark on all fifteen
+section-breakpoint pairs.**
+
+Columns are now measured from geometry: the widest run of children sharing a
+top edge, guarded so incidental pairings do not count — siblings must be of
+similar width (within 25% of their mean) and together span at least half the
+section. An explicit grid template still wins, because it states intent. A
+section that renders as a single stack reports **1**, not null, because that is
+what the design side states for a collapsed breakpoint and null would leave the
+subscore unmeasured exactly where the comparison matters most.
+
+| | before | after |
+|---|---:|---:|
+| overall | 54.73 | **57.59** |
+| desktop | 56.35 | 59.29 |
+| tablet | 58.08 | 60.59 |
+| mobile | 49.75 | 52.87 |
+| coverage | 0.800 | 0.800 |
+
+**This rise is a measurement change, not a build improvement, and it must not be
+read as one.** Unlike the previous iteration — where coverage held and the score
+rose because a real defect was fixed — nothing about the build changed here. A
+subscore that had never contributed started contributing, and it largely agrees:
+the build renders 3 columns where the design says 3, and 1 where the design says
+1. Mobile `section.4` went 20 → 44 on that agreement alone.
+
+**So measuring more can raise a score as easily as lower it.** Five earlier
+iterations lowered it and it was tempting to treat that as the rule. The
+direction depends entirely on whether the newly-measured evidence agrees, and
+neither direction is evidence about the build on its own.
+
+**And `dimension_coverage` cannot see any of this**, because it counts
+dimensions rather than subscores — layout was already "measured". From coverage
+alone this iteration looks like a free 2.86 points. That is the limitation
+recorded three iterations ago, now demonstrated rather than predicted, and it is
+the strongest argument yet for making the metric subscore-aware.
+
+The script only runs in a browser, so the three new tests pin its intent and the
+guards; behaviour is verified live above — 3 columns on the card sections at
+desktop and tablet, 1 everywhere at mobile.

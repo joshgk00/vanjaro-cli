@@ -259,3 +259,40 @@ def test_a_page_without_console_listeners_still_measures() -> None:
 
     assert result.console_error_count == 0
     assert result.sections
+
+
+def test_the_measure_script_counts_columns_from_geometry() -> None:
+    """`gridTemplateColumns` sees only an explicit grid. The build is Bootstrap
+    flex throughout, so the column subscore contributed on no section at any
+    breakpoint — a quarter of the layout dimension, dark everywhere.
+
+    The script only runs in a browser, so this pins its intent; the behaviour is
+    verified against the live pilot in the progress log.
+    """
+
+    script = MEASURE_SCRIPT
+
+    assert "const columnCount = (node, style) =>" in script
+    # An explicit grid still states the author's intent and wins.
+    assert "gridTemplateColumns.split(' ')" in script
+    # Otherwise measure what is actually side by side.
+    assert "getBoundingClientRect" in script
+
+
+def test_the_column_count_guards_against_incidental_pairings() -> None:
+    """Columns are siblings of similar width that together span the section. A
+    heading beside a badge fails the first guard, two inline links the second."""
+
+    block = MEASURE_SCRIPT[MEASURE_SCRIPT.index("const columnCount") :]
+
+    assert "mean * 0.25" in block
+    assert "sectionWidth * 0.5" in block
+
+
+def test_a_single_stack_reports_one_column_not_unmeasured() -> None:
+    """The design side states 1 for a collapsed breakpoint. Reporting null would
+    leave the subscore unmeasured exactly where the comparison matters most."""
+
+    block = MEASURE_SCRIPT[MEASURE_SCRIPT.index("const columnCount") :]
+
+    assert "hasContent ? 1 : null" in block

@@ -77,15 +77,64 @@ MEASURE_SCRIPT = """
       weight: num(style.fontWeight),
     };
   };
+  // Columns, measured rather than read from one style property. An explicit
+  // grid template states the author's intent and wins. Otherwise count what is
+  // actually side by side: the widest run of children sharing a top edge. Flex
+  // rows, floats, and tables are all invisible to gridTemplateColumns, and the
+  // build is Bootstrap flex throughout, so the column subscore never
+  // contributed on any section at any breakpoint.
+  const columnCount = (node, style) => {
+    if (style.gridTemplateColumns && style.gridTemplateColumns !== 'none') {
+      return style.gridTemplateColumns.split(' ').filter((part) => part.length).length;
+    }
+    const sectionWidth = node.getBoundingClientRect().width || 1;
+    let best = null;
+    const consider = (parent) => {
+      const kids = Array.from(parent.children).filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      });
+      if (kids.length < 2) return;
+      const rows = new Map();
+      kids.forEach((el) => {
+        const r = el.getBoundingClientRect();
+        const key = Math.round(r.top / 4);
+        if (!rows.has(key)) rows.set(key, []);
+        rows.get(key).push(r.width);
+      });
+      rows.forEach((widths) => {
+        if (widths.length < 2) return;
+        // Two guards keep incidental pairings out. Columns are siblings of
+        // similar width, and together they span most of the section: a heading
+        // beside a small badge fails the first, a pair of inline links the
+        // second.
+        const mean = widths.reduce((a, b) => a + b, 0) / widths.length;
+        if (!widths.every((w) => Math.abs(w - mean) <= mean * 0.25)) return;
+        const spanned = widths.reduce((a, b) => a + b, 0);
+        if (spanned < sectionWidth * 0.5) return;
+        if (best === null || widths.length > best) best = widths.length;
+      });
+    };
+    consider(node);
+    node.querySelectorAll('*').forEach(consider);
+    if (best !== null) return best;
+    // Nothing sits side by side. A section that renders content in a single
+    // stack is one column, which is what the design side states for a
+    // collapsed breakpoint; reporting null there would leave the subscore
+    // unmeasured precisely where the comparison matters most.
+    const hasContent = Array.from(node.children).some((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+    return hasContent ? 1 : null;
+  };
   return {
     console_error_count: null,
     sections: roots.map((node, index) => {
       const style = getComputedStyle(node);
       const rect = node.getBoundingClientRect();
       const action = node.querySelector('a, button');
-      const columns = style.gridTemplateColumns && style.gridTemplateColumns !== 'none'
-        ? style.gridTemplateColumns.split(' ').filter((part) => part.length).length
-        : null;
+      const columns = columnCount(node, style);
       return {
         section_id: node.getAttribute('data-agency-section'),
         order: index,
