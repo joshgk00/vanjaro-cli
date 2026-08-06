@@ -37,9 +37,9 @@
     "physical_fields": {
       "brand": {
         "owner": "section",
-        "slot_type": "heading",
+        "slot_type": "link",
         "slots": [
-          "heading_1"
+          "link_1"
         ],
         "slots_per_owner": 1
       },
@@ -55,12 +55,12 @@
         "owner": "repeat_item",
         "slot_type": "link",
         "slots": [
-          "link_1",
           "link_2",
           "link_3",
           "link_4",
           "link_5",
-          "link_6"
+          "link_6",
+          "link_7"
         ],
         "slots_per_owner": 1
       }
@@ -147,8 +147,8 @@
             },
             "components": [
               {
-                "type": "heading",
-                "tagName": "h1",
+                "type": "link",
+                "tagName": "a",
                 "content": "Brand",
                 "classes": [
                   {
@@ -162,18 +162,11 @@
                   {
                     "name": "flex-shrink-0",
                     "active": false
-                  },
-                  {
-                    "name": "h5",
-                    "active": false
-                  },
-                  {
-                    "name": "mb-0",
-                    "active": false
                   }
                 ],
                 "attributes": {
-                  "id": "tpl-navcta-h1"
+                  "id": "tpl-navcta-h1",
+                  "href": "/"
                 }
               },
               {

@@ -2150,3 +2150,48 @@ the navbar brand (VF-215) are both template-library changes; colour's residual
 1.400 is a corpus limitation this fixture cannot exercise. The loop has run out
 of work it can complete on its own, which is the stop condition the goal
 defines: the top clusters are all blocked.
+
+### 2026-08-06 — Both blockers cleared: pack 1.4.0 and 1.5.0
+
+**Josh authorized the template-library changes.** Suite 2,004 → 2,006. Benchmark
+clean, and **the corpus did not move**: top-1 0.9200, top-3 1.0000,
+high-confidence precision 0.9091, identical to the pre-change baseline.
+
+**VF-214 — the first fix was wrong, and the corpus said so.** Narrowing the
+`media → item.icon` alias took top-1 from 0.9200 to **0.8400** and precision from
+0.9091 to **0.8333**, both under their gates. The alias is load-bearing: it is
+how media-bearing sections reach icon templates when nothing better scores. It
+was reverted rather than argued with.
+
+The slot was the thing to fix. `feature-cards-3up`, `feature-cards-4up`, and
+`icon-feature-list` now declare an **optional `item.media`** with a real image
+slot. The decorative `item.icon` stays static, because it renders a Vanjaro
+vector component that a photograph cannot fill — which is exactly why aliasing
+media onto it was wrong in the first place.
+
+On the pilot, the three card images now **reach binding and report their real
+reason**: `its asset resolved to no usable source`, the fixture's broken
+`/synthetic/*.svg` references. Before, they vanished with no warning anywhere.
+The remaining failure is a corpus limitation, correctly attributed.
+
+**VF-215 — the brand keeps its destination.** The navbar templates rendered the
+brand as `<h1 class="navbar-brand">` with no link, and the vocabulary could not
+represent a destination at all: `brand` allowed `heading`, `text`, and `image`.
+It now allows `link`, and both navbar templates render `<a class="navbar-brand">`.
+
+Parity, measured on the same section:
+
+| | before | after |
+|---|---|---|
+| composer | 5 links: `/ #work #services #about #contact` | unchanged |
+| template | 4 links, brand not clickable | **5 links, identical set** |
+
+**The governance system worked exactly as designed and cost two versions.**
+Publishing 1.4.0 locked it immutably, so the navbar change could not amend it and
+required 1.5.0. Both are published with audited executable digests and locked
+history. Three tests pinned `1.3.0` as "the current release" and would have
+silently stopped exercising it after any bump; they now derive the version.
+
+The pilot re-scores at **56.89**, coverage 0.6967 / 0.7167 / 0.6967 — a small
+drop from 57.21 as the newly-bound media slots register as empty rather than
+absent, which is the more accurate reading.

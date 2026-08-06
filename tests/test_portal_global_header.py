@@ -341,6 +341,12 @@ def test_integrated_header_output_is_deterministic_and_rewrites_collapse_ids() -
     assert "no explicit usable logo asset" in first[0]["warnings"][0]
 
 
+def _render(built) -> str:
+    from vanjaro_cli.utils.grapesjs import render_components
+
+    return render_components(built.get("components", []))
+
+
 def test_a_global_block_carries_the_design_section_id_not_the_block_key() -> None:
     """`data-agency-section` is how the measurer pairs a rendered element with
     the section the design described. Stamping the block key made the nav
@@ -377,3 +383,35 @@ def test_a_global_block_carries_the_design_section_id_not_the_block_key() -> Non
     assert "global-header" not in markers
     # The block key still records where the section lives.
     assert pages == {"global:global-header"}
+
+
+def test_the_navbar_templates_declare_the_brand_as_a_link() -> None:
+    """VF-215: the templates rendered the brand as an <h1> with no link, so the
+    destination the source declared was dropped and clicking the logo went
+    nowhere. Asserted on the template contract, because routing to the matched
+    path needs a repeat group and this is a property of the templates."""
+
+    import json
+    from pathlib import Path
+
+    for name in ("navbar-brand-links", "navbar-brand-links-cta"):
+        path = (
+            Path(__file__).resolve().parents[1]
+            / "artifacts" / "block-templates" / "Navigation" / f"{name}.json"
+        )
+        data = json.loads(path.read_text(encoding="utf-8"))
+        contract = data["capabilities"]["physical_fields"]["brand"]
+        assert contract["slot_type"] == "link", name
+
+        rendered = json.dumps(data["template"])
+        assert "navbar-brand" in rendered
+        assert '\"tagName\": \"h1\"' not in rendered, f"{name} still renders an h1 brand"
+
+
+def test_a_brand_may_be_a_link_in_the_vocabulary() -> None:
+    """Without this the taxonomy could not represent a brand's destination at
+    all, which is why the slot was a heading in the first place."""
+
+    from vanjaro_cli.design.semantics import semantic_slot_types
+
+    assert "link" in semantic_slot_types("brand")

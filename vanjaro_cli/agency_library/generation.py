@@ -24,9 +24,9 @@ from vanjaro_cli.design.template_catalog import (
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_REGISTRY = _PROJECT_ROOT / "artifacts" / "agency-packs"
 _PACK_NAME = "clicks-and-mortars"
-_TEMPLATE_VERSION = "1.4.0"
+_TEMPLATE_VERSION = "1.5.0"
 _MODIFIER_VERSION = "1.0.0"
-_PACK_VERSION = "1.4.0"
+_PACK_VERSION = "1.5.0"
 _HISTORICAL_DIGESTS = {
     "templates/1.0.0.json": "c4e1316345e4c275ae9fb99312a3c2014de1ce39781a547b6a2d8685f42c8a73",
     "modifiers/1.0.0.json": "331b7c14af6ae87ac9d04a6559ff9ae3ed4c252a21be80c6fa5159c1f720f087",
@@ -38,6 +38,8 @@ _HISTORICAL_DIGESTS = {
     "packs/1.2.0.json": "88a092ce6413f0197b0f16aafd311539252fe699453ffb19df114e29c6b6c86a",
     "packs/1.3.0.json": "e41111c7e6bd3d1bb84051489e8ede5536b789579529123872c6e80467938e2e",
     "templates/1.3.0.json": "50c3251ba82f73d40b954ddda9802291075e3b00e996d2ce079d777c5dcd0fe1",
+    "templates/1.4.0.json": "b9a32bb8c35eb87d3d45d45f034282bcb1f893738df6bdc80530bc029bbcfc91",
+    "packs/1.4.0.json": "8d48806b62a7b87583b5737f4f8f526a906a1b04aeb47a228b8f7e319e963d53",
 }
 _AUDITED_EXECUTABLE_DIGESTS = {
     "CTAs/cta-banner": "f1af9e60b5086e510411ac5548097bdcfc5530ee1d474caa55cb04f3c2fe3028",
@@ -69,8 +71,8 @@ _AUDITED_EXECUTABLE_DIGESTS = {
     "Lists/icon-feature-list": "e1749c56d50da2ecd0bc29f01e1ab92ac8e87985dab1d32e30642ef388aae3b7",
     "Navigation/footer-3col": "3a136c0341de8406a4c5a49c41c646a8b37fcdd2243e4ecf1e73908f2bc1e5ec",
     "Navigation/footer-4col": "d08141a70fd7756668d187e6a469a071f7ad587d7fa3177a5bedecf61305c9c1",
-    "Navigation/navbar-brand-links": "8cbc596fa0fb8bf624c991d5b2c9650afca8c08d6429f46ae0ead9b22b414bfd",
-    "Navigation/navbar-brand-links-cta": "abcdb46ee27f6ffd6642e8c3d4747e2c025ff3c07a736d517f6c4205ecf49e0f",
+    "Navigation/navbar-brand-links": "f341f5b6b64bdac2d17101f2a77ba96e4674db6840912163d2a7d0e024857095",
+    "Navigation/navbar-brand-links-cta": "c2c4392bec479fbf6e76aab8fdeb7651e4965c7dfc448789f8d045d5866b311f",
 }
 _REVIEWED_EXECUTABLE_CHANGES = (
     "Cards/gallery-3up",
@@ -78,8 +80,8 @@ _REVIEWED_EXECUTABLE_CHANGES = (
     "Lists/icon-feature-list",
 )
 _CURRENT_RELEASE_DIGESTS = {
-    "templates/1.4.0.json": "b9a32bb8c35eb87d3d45d45f034282bcb1f893738df6bdc80530bc029bbcfc91",
-    "packs/1.4.0.json": "8d48806b62a7b87583b5737f4f8f526a906a1b04aeb47a228b8f7e319e963d53",
+    "templates/1.5.0.json": "15d8699632538337ae6f0ec54d4fa1267c9ad43df4cb89642d40695566b1a929",
+    "packs/1.5.0.json": "6107528f15d0b148aca207c87d8228e4b6c7f69df7ad123b8fceb94e0186236b",
 }
 
 

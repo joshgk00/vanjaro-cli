@@ -60,7 +60,10 @@ _SEMANTIC_SLOT_TYPES: Final = MappingProxyType({
     "background_media": ("section",),
     "icon": ("image",),
     "action": ("button", "link"),
-    "brand": ("heading", "text", "image"),
+    # A site brand normally links home, and the source declares that
+    # destination. Without "link" the taxonomy could not represent it, so the
+    # navbar rendered the brand as text and silently dropped the href (VF-215).
+    "brand": ("heading", "text", "image", "link"),
     "navigation_item": ("link", "button", "text"),
     "features": ("list-item", "text"),
     "contact_items": ("list-item", "text"),
