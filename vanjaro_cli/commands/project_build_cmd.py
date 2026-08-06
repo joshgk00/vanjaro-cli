@@ -9,6 +9,7 @@ import click
 from click.core import ParameterSource
 
 from vanjaro_cli.commands.helpers import exit_error
+from vanjaro_cli.orchestration.project_fidelity import FIDELITY_EVIDENCE_PATH
 from vanjaro_cli.orchestration import (
     PortalIdentityError,
     ProjectVerificationError,
@@ -177,6 +178,10 @@ def build_project(
                         Path("build/global-block-manifest.json"),
                         Path("build/global-page-manifest.json"),
                         Path("build/pages-with-globals-desired.json"),
+                        # The gate scores this file. Leaving it out let verify
+                        # resume and report a score the evidence no longer
+                        # supports, which is worse than not scoring at all.
+                        Path(FIDELITY_EVIDENCE_PATH),
                     ),
                 )
                 operation = verify_project_drafts

@@ -506,3 +506,32 @@ and editable-coverage ratios the same validation tracks.
 within budget, an assertion that the scoring property set is unchanged, and a
 standing test that a newly measured property does not reach the CSS map without
 being declared translatable.
+
+### VF-213 — The nav is unmeasurable, so scoring it zero is a measurement fault
+
+**Dependencies:** VF-210
+
+**Problem**
+
+`section.1` scores 0.00 at all three breakpoints on the pilot. The build is not
+at fault: VF-211 fixed the stage failure and the nav now reaches the portal.
+`MEASURE_SCRIPT` and the rendered observation script both skip anything inside a
+`header` or `footer`, so the nav is absent from the observed *and* the expected
+side. The gate then treats a section it never looked at as a section that failed.
+
+This is the same exclusion behind the VF-210 pairing bug, so fixing it retires
+two symptoms. It is a measurement fault, which this goal's stop condition ranks
+above any fix-loop work.
+
+**Acceptance criteria**
+
+- Page chrome that a design declares as a section is measurable on both sides,
+  or is explicitly reported as unmeasurable and excluded from the score.
+- A section nobody measured never scores 0. Absent evidence and a failed build
+  stay distinguishable, per VF-002.
+- Widening the observation query is reported with a before/after on the rendered
+  corpus, because it changes the evidence base for every rendered crawl.
+- The VF-210 index-pairing fallback is re-checked once counts can agree.
+
+**Tests:** a fixture whose nav sits inside `header`, both observation paths, and
+an assertion that an unmeasurable section is excluded rather than zeroed.

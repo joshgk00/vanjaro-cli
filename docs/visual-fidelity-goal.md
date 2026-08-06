@@ -1380,3 +1380,63 @@ can provide: `project approval resolve` on the pilot workspace, and a publish,
 which today has no CLI entry point at all. Continuing would mean building more
 layers against fixtures, and the honest read of three straight iterations of
 that is that the next one adds less than the last.
+
+### 2026-08-06 — The first honestly-evidenced score: 48.84, and three corrections
+
+**Matcher unchanged** (top-1 0.9200, top-3 1.0000, precision 0.9091; responsive
+0.8864). Benchmark clean. Suite 1,928 → 1,948.
+
+Josh approved the `portal_mutation` gate. The pilot rebuilt end to end on portal
+8 and **`global_blocks` completed**, where it previously failed — VF-211 proven
+on the real pipeline, with exactly the intended warning: `no global footer was
+planned; pages build without one`. VF-212 proven too: the same project replanned
+from 101 scoped rules and `valid: false` to **21 rules and `valid: true`**.
+
+**Overall fidelity is 48.84**, from freshly captured and measured evidence at all
+three breakpoints with zero warnings. Desktop 37.50, tablet 54.50, mobile 54.50.
+
+| Section | Score | |
+|---|---:|---|
+| section.1 (nav) | 0.00 | never measured — see below |
+| section.2 | 46.50 | |
+| section.3 | 67.54 | |
+| section.4 | 64.13 | |
+| section.5 | 66.00 | |
+
+**This is lower than the 63.0 previously reported, and that is the expected
+direction.** Four dimensions that used to contribute nothing now contribute, so
+there are four more ways to be measurably wrong. The number did not get worse;
+the measurement got honest.
+
+**Correction 1 — the 63.0 was stale, and the gate could not tell.**
+`qa/fidelity-evidence.json` was dated 2026-08-05 02:04, written before VF-210,
+VF-211, and VF-212. `project verify` scored it and reported 63.0 while the
+evidence on disk supported 48.84, because the evidence file was not one of the
+verify stage's input files. The stage resumed and published a number the
+evidence no longer supported — worse than reporting `not_scored`, because it
+looked current. The file is now a stage input, and verify re-executes when it
+changes.
+
+**Correction 2 — measuring does not require publishing.** Every prior entry, and
+the handoff memory, said a draft renders an empty shell so a build cannot be
+measured until it is published. Measuring page 187 directly, while it was still
+`Hidden` and unpublished, returned four sections with real geometry. `Hidden`
+keeps a page out of the menu; it does not make it unreachable. **No publish
+command was built, because publishing turned out not to be on the path to a
+score.** `ProjectStage.PUBLISH` remains unimplemented, and that is now a
+deliberate gap rather than a blocker.
+
+**Correction 3 — `section.1` scores 0 for a different reason than recorded.**
+The nav now builds. It is still never measured, because `MEASURE_SCRIPT` skips
+anything inside a `header` or `footer` — the same exclusion that produced the
+VF-210 pairing bug. So the nav is unmeasurable on both sides of the comparison,
+and scoring it 0 penalises the build for a gap in the measurer. That is a
+measurement fault, and by this goal's own stop condition it outranks the fix
+loop. **Filed as VF-213.**
+
+**One bug fixed on the way.** `SectionPalette` requires hex, and rendered
+analysis now puts the browser's `rgb()` and `rgba()` on the *design* side too.
+Only the observed side had been normalized, so recording evidence raised a
+`ValidationError` on `rgba(0, 0, 0, 0)`. The normalizer moved to
+`design/css_color.py` and both sides now call it — a second copy is exactly what
+would drift, and this bug is what that drift looks like.

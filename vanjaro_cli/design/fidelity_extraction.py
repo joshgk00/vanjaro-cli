@@ -24,6 +24,7 @@ from __future__ import annotations
 import re
 from collections.abc import Iterable, Mapping
 
+from vanjaro_cli.design.css_color import normalize_css_color
 from vanjaro_cli.design.fidelity_color import ColorRole, SectionPalette
 from vanjaro_cli.design.fidelity_evaluation import PageObservation, SectionObservation
 from vanjaro_cli.design.fidelity_layout import BoundingBox as LayoutBox
@@ -170,14 +171,22 @@ def _columns(section: Section, breakpoint: BreakpointName) -> int | None:
 
 
 def _palette(section: Section) -> SectionPalette:
+    """Build the expected palette, normalizing whatever dialect the source used.
+
+    A rendered Design Document carries the browser's `rgb()` values, so the
+    design side needs the same normalization the observed side has always had.
+    A colour that cannot be normalized is left out rather than guessed, which
+    costs one role and never fabricates one.
+    """
+
     colors: dict[ColorRole, str] = {}
-    background = _style_value(section.style, StyleProperty.BACKGROUND_COLOR)
-    if isinstance(background, str) and background.strip():
-        colors[ColorRole.BACKGROUND] = background.strip()
-    text = _style_value(section.style, StyleProperty.TEXT_COLOR)
-    if isinstance(text, str) and text.strip():
-        colors[ColorRole.TEXT] = text.strip()
-    accent = _accent(section)
+    background = normalize_css_color(_style_value(section.style, StyleProperty.BACKGROUND_COLOR))
+    if background is not None:
+        colors[ColorRole.BACKGROUND] = background
+    text = normalize_css_color(_style_value(section.style, StyleProperty.TEXT_COLOR))
+    if text is not None:
+        colors[ColorRole.TEXT] = text
+    accent = normalize_css_color(_accent(section))
     if accent is not None:
         colors[ColorRole.ACCENT] = accent
     return SectionPalette(colors=colors)

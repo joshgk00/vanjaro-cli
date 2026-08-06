@@ -25,6 +25,7 @@ from collections.abc import Callable, Iterable, Mapping
 from contextlib import AbstractContextManager
 from typing import Any
 
+from vanjaro_cli.design.css_color import normalize_css_color
 from vanjaro_cli.design.fidelity_layout import BoundingBox
 from vanjaro_cli.design.fidelity_observation import (
     RenderedMedia,
@@ -198,28 +199,15 @@ def _columns(value: Any) -> int | None:
     return columns if columns >= 1 else None
 
 
-_RGB_FUNCTION = re.compile(
-    r"^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*([0-9.]+)\s*)?\)$",
-    re.IGNORECASE,
-)
-
-
 def _color(value: Any) -> str | None:
     """Normalize a computed colour to hex, or report it as unmeasured.
 
-    Browsers report computed colours as `rgb()`/`rgba()` while the design side
-    carries hex, and the palette contract is hex — so the conversion belongs
-    here rather than in the scoring metric.
-
-    A fully transparent colour is dropped: it means the section inherits
-    whatever is behind it, which the page cannot attribute to this section, and
-    reporting `rgba(0,0,0,0)` as black would be a fabricated measurement.
-    Partial alpha keeps its RGB channels, because what it composites against is
-    not knowable from this element alone.
+    The browser's dialect is translated here, at the boundary where it arrives.
+    The rules live in `css_color` because the design side needs the same ones
+    since rendered analysis began recording computed values.
     """
 
-    if not isinstance(value, str) or not value.strip():
-        return None
+    return normalize_css_color(value)
     text = value.strip()
     if text.casefold() in {"transparent", "none"}:
         return None
