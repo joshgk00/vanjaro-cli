@@ -296,3 +296,28 @@ def test_a_single_stack_reports_one_column_not_unmeasured() -> None:
     block = MEASURE_SCRIPT[MEASURE_SCRIPT.index("const columnCount") :]
 
     assert "hasContent ? 1 : null" in block
+
+
+def test_body_copy_is_found_by_shape_not_by_tag() -> None:
+    """The source writes <p>; Vanjaro renders <div class="vj-text">, so a `p`
+    selector found nothing on the build and typography compared one sample of
+    two on every section. A <p> still wins when present, because it states the
+    author's intent."""
+
+    block = MEASURE_SCRIPT[MEASURE_SCRIPT.index("const bodyElement") :]
+
+    assert "root.querySelector('p')" in block
+    assert "el.children.length" in block
+    assert "H[1-6]|A|BUTTON" in block
+
+
+def test_both_scripts_define_body_copy_the_same_way() -> None:
+    """Three dimensions have now been dark because the two sides sampled
+    different things. They must agree by construction."""
+
+    from vanjaro_cli.design import html_adapter
+
+    for script in (MEASURE_SCRIPT, html_adapter._RENDERED_OBSERVATION_JS):
+        block = script[script.index("const bodyElement") :]
+        assert "root.querySelector('p')" in block
+        assert "H[1-6]|A|BUTTON" in block

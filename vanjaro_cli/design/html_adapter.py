@@ -156,6 +156,23 @@ _RENDERED_OBSERVATION_JS = r"""() => {
     // absence of a *decision*, not absence of a colour. Walking up measures what
     // the visitor actually sees. If nothing in the chain paints, that is honestly
     // unmeasured and stays null.
+    // Body copy, defined by what it is rather than by one tag. The source writes
+    // <p>; Vanjaro renders <div class="vj-text">, so a `p` selector found nothing
+    // on the build and typography compared one sample of two on every section.
+    // A <p> still wins when present, because it states the author's intent.
+    const bodyElement = (root) => {
+      const direct = root.querySelector('p');
+      if (direct) return direct;
+      const nodes = root.querySelectorAll('*');
+      for (let i = 0; i < nodes.length; i += 1) {
+        const el = nodes[i];
+        if (el.children.length) continue;
+        if (/^(H[1-6]|A|BUTTON|SCRIPT|STYLE|IMG|SVG)$/.test(el.tagName)) continue;
+        if (!(el.textContent || '').trim()) continue;
+        return el;
+      }
+      return null;
+    };
     const effectiveBackground = (el) => {
         let node = el;
         while (node) {
@@ -180,7 +197,7 @@ _RENDERED_OBSERVATION_JS = r"""() => {
             hidden: cs.display === 'none' || cs.visibility === 'hidden',
             typography: {
                 heading: typeOf(el.querySelector('h1, h2, h3, h4, h5, h6')),
-                body: typeOf(el.querySelector('p')),
+                body: typeOf(bodyElement(el)),
             },
             action: (() => {
                 const a = el.querySelector('a, button');

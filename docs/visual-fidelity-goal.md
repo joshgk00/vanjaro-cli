@@ -2029,3 +2029,40 @@ the design side could never supply an accent. It now samples the first
 which is the clearest justification yet for the previous iteration. The score
 fell because the accent now scores and disagrees: the source's default link blue
 against the build's theme colour. Real evidence, real disagreement.
+
+### 2026-08-06 — Body copy is a `div` in the build, so typography compared half a page
+
+**Matcher unchanged.** Benchmark clean. Suite 1,998 → 2,000.
+
+| | before | after |
+|---|---:|---:|
+| overall | 54.15 | **54.99** |
+| `dimension_coverage` | 0.800 | 0.800 |
+| **`evidence_coverage`** | 0.6317 | **0.6767** |
+
+The design side had body samples on three of five sections; the build had none
+on any. `typeOf(node.querySelector('p'))` finds nothing, because Vanjaro renders
+body copy as `<div class="vj-text paragraph-style-1">`. The build page contains
+**zero `<p>` elements**.
+
+**This is the third dimension darkened by the two sides sampling different
+things** — after typography's heading (per-section versus per-element) and media
+(design intrinsics versus rendered images). The pattern is now well enough
+established to state as a rule: *whenever a dimension reads unavailable, compare
+what each side is sampling before looking for a bug in either.*
+
+Body copy is now defined by shape rather than tag: the first leaf element with
+text that is not a heading, link, button, or script. A `<p>` still wins when
+present, because it states the author's intent, so the source side is
+unchanged and the fix is additive. Both scripts share the definition, and a test
+asserts they agree by construction rather than by review.
+
+The score moved little — 54.15 to 54.99 — because the newly compared body
+samples largely agree on size and weight while the family differs, which is the
+same Times-New-Roman-versus-theme-font gap the heading already reported. The
+coverage move is the real result: 0.6317 to 0.6767.
+
+**Remaining weighted gaps:** media 2.250 (blocked on Josh, VF-214), spacing
+0.750 (`element-gap` on all fifteen, plus the known corpus padding limitation),
+and the nav's typography, which is honestly unavailable — it has no heading and
+no body copy to sample.
