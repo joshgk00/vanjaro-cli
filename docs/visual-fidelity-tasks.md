@@ -758,3 +758,14 @@ sections 9 → 5. Remaining gap against the corpus is tracked here. Known
 imprecision: card body binds the first paragraph in the card, which on a real
 page was a short pill tag rather than the description beneath it — coverage
 counts it, a reader would not.
+
+**VF-218 done (iteration 30).** `_is_link_bar` classifies chrome structurally;
+navigation candidates are claimed rather than withheld, which removed a
+mispairing that put the footer's DOM on the header. Coverage 0.3977 → 0.4430,
+blocking 5 → 4, corpus unchanged.
+
+**Known limit, not fixed:** a footer that is *only* links, with no heading and
+no copyright line, would also read as a link bar and be prepended as chrome.
+Position is what separates a header from a footer, and the candidate index is
+not currently a reliable position signal. Worth its own task if a real page
+shows it.

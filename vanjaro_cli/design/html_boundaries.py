@@ -164,6 +164,36 @@ def _raw_section_words(raw_section: Mapping[str, JsonValue]) -> set[str]:
     return _normalized_words(" ".join(values))
 
 
+_NAVIGATION_MINIMUM_LINKS = 3
+_NAVIGATION_LINK_TEXT_SHARE = 0.8
+
+
+def _is_link_bar(element: Tag) -> bool:
+    """Report whether a boundary is a navigation bar wearing no nav markup.
+
+    A builder that emits its own chrome carries no `<header>` and no `<nav>`: a
+    real Vanjaro page put its entire site header in a plain `<section>`, which
+    then matched a CTA template that wanted a title the header does not have,
+    and blocked the plan.
+
+    What a navigation bar is, structurally, is a row of links and almost
+    nothing else. The two things it is most likely to be confused with both
+    fail that test: a footer carries headings and a copyright line, and a call
+    to action carries the prose that makes the call.
+    """
+
+    if element.find(["h1", "h2", "h3", "h4", "h5", "h6"]) is not None:
+        return False
+    links = element.find_all("a", href=True)
+    if len(links) < _NAVIGATION_MINIMUM_LINKS:
+        return False
+    total = len(element.get_text(" ", strip=True))
+    if not total:
+        return False
+    link_text = sum(len(link.get_text(" ", strip=True)) for link in links)
+    return link_text / total >= _NAVIGATION_LINK_TEXT_SHARE
+
+
 def static_role(element: Tag, section_index: int) -> str:
     """Classify a boundary from semantic structure and stable source hints."""
 
@@ -172,6 +202,8 @@ def static_role(element: Tag, section_index: int) -> str:
     text = element.get_text(" ", strip=True).casefold()
     hints = f"{selector} {classes}"
     if element.name in {"header", "nav"} or element.find("nav") is not None:
+        return "navigation"
+    if _is_link_bar(element):
         return "navigation"
     if "testimonial" in hints or element.find("blockquote") is not None:
         return "testimonials"
@@ -206,35 +238,53 @@ def prepare_static_sections(
     """Attach stable DOM provenance and subtrees to legacy extraction output."""
 
     candidates = static_boundary_candidates(html)
+    # Roles are keyed on document order, not on position within the shrinking
+    # candidate pool: `section_index` means "how far down the page", and a
+    # pool-relative index makes it drift as earlier candidates are claimed.
+    roles = {id(tag): static_role(tag, index) for index, tag in enumerate(candidates)}
     remaining = list(candidates)
     prepared: list[dict[str, JsonValue]] = []
+    claimed_navigation: set[int] = set()
     for raw in sections:
         raw_words = _raw_section_words(raw)
         scored = [
             (len(raw_words & _normalized_words(tag.get_text(" ", strip=True))), -index, tag)
             for index, tag in enumerate(remaining)
-            if static_role(tag, index) != "navigation"
         ]
         match = max(scored, default=(0, 0, None), key=lambda item: (item[0], item[1]))[2]
         copy = dict(raw)
         if isinstance(match, Tag):
             remaining.remove(match)
-            copy["_static_selector"] = css_selector_for(match)
-            copy["_static_html"] = str(match)
-            copy["_static_role"] = static_role(match, len(prepared))
+            role = roles[id(match)]
+            if role == "navigation":
+                # The extractor emitted this chrome as an ordinary section.
+                # Withholding the candidate instead would leave that section
+                # to match some other subtree, which is how a header came to
+                # wear the footer's DOM.
+                claimed_navigation.add(id(match))
+                copy = _navigation_section(match)
+            else:
+                copy["_static_selector"] = css_selector_for(match)
+                copy["_static_html"] = str(match)
+                copy["_static_role"] = role
         prepared.append(copy)
 
-    nav_candidates = [tag for tag in candidates if static_role(tag, 0) == "navigation"]
-    for nav in reversed(nav_candidates):
-        prepared.insert(0, {
-            "type": "navigation",
-            "template": "Site Header",
-            "content": {},
-            "_static_selector": css_selector_for(nav),
-            "_static_html": str(nav),
-            "_static_role": "navigation",
-        })
+    for nav in reversed(candidates):
+        if roles[id(nav)] != "navigation" or id(nav) in claimed_navigation:
+            continue
+        prepared.insert(0, _navigation_section(nav))
     return prepared
+
+
+def _navigation_section(nav: Tag) -> dict[str, JsonValue]:
+    return {
+        "type": "navigation",
+        "template": "Site Header",
+        "content": {},
+        "_static_selector": css_selector_for(nav),
+        "_static_html": str(nav),
+        "_static_role": "navigation",
+    }
 
 
 def _section_search_text(raw_section: Mapping[str, JsonValue]) -> str:

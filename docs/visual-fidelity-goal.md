@@ -2443,3 +2443,47 @@ for the coverage gap that remains against the corpus.
 **Known imprecision, not hidden:** card body picks the first paragraph, which
 on this page is a short pill tag rather than the description below it. Coverage
 counts it; a reader would not. Recorded in VF-217.
+
+### Iteration 30 — VF-218, the site header stops being a call to action
+
+**Result:** `editable_content_coverage` on `keys-to-success` 0.3977 → **0.4430**.
+Blocking sections 5 → **4**. Design warnings 0. Corpus unchanged on every
+metric: boundary precision and recall 1.0, semantic role accuracy 1.0, visitor
+content retention 1.0 (127/127), group-field association 1.0 (79/79), top-1
+0.92, high-confidence precision 0.909. Suite 2,029 → 2,036.
+
+`static_role` recognised navigation only by `<header>`, `<nav>`, or a
+descendant `<nav>`. A Vanjaro page puts its whole site header in a plain
+`<section>`, so the header was classified as a call to action and matched
+`CTAs/cta-banner`, which wants a title the header does not have and owns one
+action slot for its eight links.
+
+`_is_link_bar` adds the structural reading: **no heading, three or more links,
+and at least eighty per cent of the section's text inside those links.** The two
+things a link bar is most likely to be confused with both fail it — a footer
+carries headings and a copyright line, a call to action carries the prose that
+makes the call. On the real page the header measures 85 of 92 characters inside
+links; the footer measures 123 of 432.
+
+**A stale reading nearly became a false report.** The first measurement after
+the change showed no movement at all. The analyze stage had *resumed* — the
+input fingerprint covers the source, not the code, so a code-only change
+reproduces the cached artifact by design. `--refresh --render` is required to
+measure a code change against a real site, and every real-site figure in this
+log from here on is taken that way.
+
+**Fixing the classifier exposed a mispairing it had been hiding.** Navigation
+candidates were withheld from matching, but the extractor still emits the
+header as an ordinary section — so that section matched whatever subtree was
+left, and the header came to wear the *footer's* DOM. The footer then landed at
+position 2 and the last real section had no rendered match at all.
+
+Candidates are no longer withheld. A section whose best match is a navigation
+candidate *becomes* the navigation section, and only unclaimed chrome is
+prepended, so the header is recorded once and nothing is displaced. Section
+roles are also keyed on document order now rather than on position within the
+shrinking pool — `section_index` means "how far down the page", and the
+pool-relative index drifted as earlier candidates were claimed.
+
+The page now reads as it looks: navigation with eight items, footer last,
+no unmatched sections.

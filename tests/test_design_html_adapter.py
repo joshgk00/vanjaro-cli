@@ -1278,3 +1278,126 @@ def test_card_body_copy_survives_a_builder_that_never_emits_a_paragraph() -> Non
         "Lessons for all ages",
         "Lessons for adults",
     ]
+
+
+_LINK_BAR_PAGE = """
+<body>
+  <section id="chrome" class="vj-section">
+    <img src="/logo.png" alt="Keys to Success"/>
+    <a href="/">Home</a><a href="/studio">The Studio</a>
+    <a href="/lessons">Lessons</a><a href="/contact">Contact Us</a>
+  </section>
+  <section id="story" class="vj-section">
+    <h2>MUSIC IS MAGIC</h2>
+    <p>The values that come from studying music are miraculous.</p>
+  </section>
+</body>
+"""
+
+
+def _role_of(html: str, selector: str) -> str:
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.design.html_boundaries import static_boundary_candidates, static_role
+
+    candidates = static_boundary_candidates(html)
+    soup_ids = [tag.get("id") for tag in candidates]
+    index = soup_ids.index(selector)
+    return static_role(candidates[index], index)
+
+
+def test_a_link_bar_is_navigation_without_any_nav_markup() -> None:
+    """A builder that emits its own chrome carries no <header> and no <nav>, so
+    the site header matched a CTA template that wanted a title it lacks."""
+
+    assert _role_of(_LINK_BAR_PAGE, "chrome") == "navigation"
+
+
+def test_a_section_with_a_heading_is_not_a_link_bar() -> None:
+    """A footer carries headings and a copyright line; it is not the header."""
+
+    html = (
+        "<body><section id='foot'><h3>Visit</h3>"
+        "<a href='/a'>A</a><a href='/b'>B</a><a href='/c'>C</a>"
+        "<p>Copyright 2026 Keys to Success, all rights reserved.</p>"
+        "</section></body>"
+    )
+
+    assert _role_of(html, "foot") != "navigation"
+
+
+def test_a_call_to_action_with_links_is_not_a_link_bar() -> None:
+    """What makes the call is the prose, and a navigation bar has none."""
+
+    html = (
+        "<body><section id='cta'>"
+        "<p>Enrolment for the autumn term closes on Friday. Choose a class that "
+        "suits your child and reserve a place before it goes.</p>"
+        "<a href='/a'>Prelude</a><a href='/b'>Opening Notes</a><a href='/c'>Finale</a>"
+        "</section></body>"
+    )
+
+    assert _role_of(html, "cta") != "navigation"
+
+
+def test_a_section_of_only_two_links_is_not_a_link_bar() -> None:
+    html = "<body><section id='pair'><a href='/a'>A</a><a href='/b'>B</a></section></body>"
+
+    assert _role_of(html, "pair") != "navigation"
+
+
+def _prepared(html: str, sections: list[dict]) -> list[dict]:
+    from vanjaro_cli.design.html_boundaries import prepare_static_sections
+
+    return prepare_static_sections(html, sections)
+
+
+def _empty_content(**overrides) -> dict:
+    content = {key: [] for key in ("headings", "paragraphs", "images", "links", "buttons")}
+    content.update(overrides)
+    return content
+
+
+def test_a_section_that_matches_the_chrome_becomes_the_chrome() -> None:
+    """The extractor emits the header as an ordinary section. Withholding the
+    candidate instead left that section to match the footer's subtree."""
+
+    prepared = _prepared(
+        _LINK_BAR_PAGE,
+        [
+            {"type": "cta", "template": "CTA Banner", "content": _empty_content(
+                links=[{"text": "Home", "href": "/"}, {"text": "The Studio", "href": "/studio"}],
+            )},
+            {"type": "content", "template": "Rich Text Block", "content": _empty_content(
+                headings=["MUSIC IS MAGIC"],
+                paragraphs=["The values that come from studying music are miraculous."],
+            )},
+        ],
+    )
+
+    assert [entry["_static_role"] for entry in prepared] == ["navigation", "rich_text"]
+    assert prepared[0]["_static_selector"] == "#chrome"
+    assert prepared[1]["_static_selector"] == "#story"
+
+
+def test_the_chrome_is_not_recorded_twice() -> None:
+    prepared = _prepared(
+        _LINK_BAR_PAGE,
+        [{"type": "cta", "template": "CTA Banner", "content": _empty_content(
+            links=[{"text": "Home", "href": "/"}, {"text": "The Studio", "href": "/studio"}],
+        )}],
+    )
+
+    assert [entry["_static_role"] for entry in prepared].count("navigation") == 1
+
+
+def test_chrome_no_section_claimed_is_still_recorded() -> None:
+    prepared = _prepared(
+        _LINK_BAR_PAGE,
+        [{"type": "content", "template": "Rich Text Block", "content": _empty_content(
+            headings=["MUSIC IS MAGIC"],
+            paragraphs=["The values that come from studying music are miraculous."],
+        )}],
+    )
+
+    assert [entry["_static_role"] for entry in prepared] == ["navigation", "rich_text"]
