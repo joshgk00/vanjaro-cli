@@ -219,7 +219,14 @@ a measurement fault and takes priority over any fix.
 **Never** publish, mutate a shared portal, weaken a threshold, edit a benchmark
 annotation to pass, or invent visitor content or action URLs.
 
-## Active goal — close the measurement gap (2026-08-04)
+## Closed goal — close the measurement gap (2026-08-04, closed 2026-08-05)
+
+All three tasks below are complete. VF-009 landed in three parts, VF-208 found
+five real vocabulary gaps, and VF-209 resolved the last three `media_position`
+failures. The first real score followed immediately and is logged at the end of
+this document. Retained for the reasoning; see the active goal beneath it.
+
+
 
 The scoring stack is built and unfed. Six deterministic metrics, a capture hook,
 a gate, and a project-verify blocker all exist and are tested, but no code turns
@@ -266,6 +273,55 @@ fidelity coverage before and after, commit only on green, and append here.
 Most relevant to this scope: never edit a benchmark annotation, fixture, or
 threshold to make a metric move. Coverage rises only because extraction
 genuinely derives more evidence.
+
+## Active goal — make the measurement mean something (2026-08-05)
+
+The gate now scores real builds. It scored one, and returned 63.0 while four of
+its six dimensions had no evidence at all. The measurement path is real; the
+evidence feeding it is a third of what the metrics were designed to consume.
+Until that changes, a corpus baseline would freeze a number that mostly reflects
+how the source was parsed rather than how the site was built.
+
+**Scope, in order:**
+
+1. **VF-210 — rendered source analysis.** The unlock. A statically parsed HTML
+   source carries no geometry and no observed style values, so colour,
+   typography, spacing, and media are unavailable on every section and layout
+   loses its bounds subscore — 0.60 of the dimension. Everything else here is
+   gated behind it.
+2. **VF-211 — page chrome tolerance.** A source with a nav and no footer fails
+   the `global_blocks` stage, which is what scored `section.1` a zero in the
+   pilot run. The zero was correct reporting of a genuinely absent section; the
+   build failure behind it was not.
+3. **VF-008 — the regime-1 corpus baseline**, once 1 and 2 land and the numbers
+   are worth freezing. The dedicated portals now exist, so this is no longer
+   blocked on Josh.
+4. **VF-206 parity run** — retire the bespoke header composer once a portal run
+   confirms the matched navbar reaches parity.
+
+**Order discipline.** VF-210 before VF-008: baselining static-parse scores would
+establish a regime-1 baseline that a later rendering change invalidates, forcing
+either a re-baseline or a dishonest comparison. Do not start Wave 2 — the ledger
+and ranking consume corpus scores that do not exist yet.
+
+**Halt and report, rather than proceeding, when:**
+
+- Rendering a source is not possible for a source kind. Emit unavailable and say
+  so. An adapter that cannot render must not fall back to inference wearing
+  rendered provenance — that laundered guess is exactly what VF-009 refused.
+- The corpus baseline would need a shared portal, or publishing outside the
+  isolated pilot portal. Publishing was authorized for the pilot only.
+- Scores fall when rendered evidence arrives. More dimensions scoring means more
+  ways to be wrong, and a lower, better-evidenced number is progress. Report it.
+- Reproducing the prior baseline fails. That is a measurement fault and takes
+  priority over every fix in this list.
+
+**Per iteration:** implement with tests, run the non-integration suite and
+`vanjaro migrate benchmark` to a fresh path, report the matcher figures and the
+fidelity coverage before and after, commit only on green, append here, **and
+update the project memory handoff so it never goes stale.**
+
+**Every prohibition in VF-5 and in the loop definition above still applies.**
 
 ## Completion rule
 

@@ -365,6 +365,71 @@ encode.
 **Tests:** the three named sections, a left/right/top/background matrix, and an
 absent-geometry case.
 
+### VF-210 — Rendered source analysis
+
+**Dependencies:** VF-009
+
+**Problem**
+
+The first real fidelity run scored 63.0 with colour, typography, spacing, and
+media **unavailable on every section**, and layout missing its bounds subscore —
+0.60 of that dimension. The cause is entirely on the design side: the HTML
+adapter only records geometry and observed style values under the rendered
+method, and `analyze` parses statically. VF-009 restricted geometry to
+`RENDERED` and `API` provenance precisely so a guess could not score as a
+measurement; the consequence is that a statically parsed source can supply
+almost nothing to compare against.
+
+**Acceptance criteria**
+
+- `analyze` can render an HTML source and record `RENDERED`-provenance section
+  bounds plus observed `StyleProperty` values — background colour, text colour,
+  font family, font size, font weight, padding, row gap, column gap.
+- Rendering reuses the existing Playwright harness and its settle evidence
+  rather than adding a second browser stack, consistent with VF-006.
+- An unsettled render is discarded, not recorded. A source kind that cannot be
+  rendered emits unavailable and keeps its existing provenance — it never
+  relabels inferred values as rendered.
+- Static parsing remains available and is still the behaviour when rendering is
+  not requested or not possible; the choice is explicit, never silent.
+- The pilot project re-scores with colour, typography, spacing, and media
+  contributing real values on sections that have them.
+
+**Tests:** rendered vs static provenance on the same fixture, unsettled-render
+discard, unrenderable source kind, determinism of recorded observations, and
+that no inferred value acquires rendered provenance.
+
+**Note on the score.** The overall number may fall when these dimensions start
+contributing. That is the expected direction and is not a regression — more
+dimensions scoring means more ways to be measurably wrong. Report it; do not
+tune toward a nicer number.
+
+### VF-211 — Page chrome tolerance for partial sources
+
+**Dependencies:** None
+
+**Problem**
+
+The `global_blocks` build stage requires exactly one nav and one footer. The
+Northstar fixture has a nav and no footer, so the stage failed, the nav never
+reached the portal, and `section.1` scored 0 across all five comparable
+dimensions in the pilot run. Scoring that section zero was correct — it was
+genuinely absent from the build — but the build should not have dropped it.
+
+**Acceptance criteria**
+
+- A source supplying a nav but no footer, or a footer but no nav, builds the
+  chrome it actually has.
+- A missing chrome element is reported as a warning carrying which element was
+  absent, not as a stage failure.
+- Nothing is fabricated to fill the gap — no placeholder footer, no invented
+  links or action URLs.
+- Duplicate nav or footer sections remain an error; this task relaxes absence,
+  not ambiguity.
+
+**Tests:** nav-only, footer-only, both, neither, and the duplicate case still
+failing.
+
 ## Wave 4 — VM4 prove sustained improvement
 
 ### VF-301 — Autonomous loop runner
