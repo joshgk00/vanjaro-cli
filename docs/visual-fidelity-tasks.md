@@ -769,3 +769,33 @@ no copyright line, would also read as a link bar and be prepended as chrome.
 Position is what separates a header from a footer, and the candidate index is
 not currently a reliable position signal. Worth its own task if a real page
 shows it.
+
+**VF-219 done (iteration 31).** `implied_title` promotes the first short text
+block when no heading element exists, marked `implied: true`; the heading query
+now runs to `h6`. Coverage 0.4430 → 0.4444, blocking 4 → 3, corpus unchanged.
+
+### VF-220 — Three foot-of-page sections still block
+
+**Dependencies:** none
+
+**Problem**
+
+`keys-to-success` sections 9, 10 and 11 block. All three have a title and body
+copy, so this is not the extraction gap VF-217 through VF-219 closed. Sections 9
+and 10 are `call_to_action`; section 11 is `contact` with ten actions against a
+template that owns fewer slots — the same field-count mismatch that VF-218 fixed
+for the header, not a missing field.
+
+Section 7 also extracts no `section_title`: its only heading is absorbed into
+the card group, which is correct behaviour for a repeated heading but leaves the
+section untitled.
+
+**Acceptance criteria**
+
+- A section with more actions than its template owns reports the count it needs,
+  and matching prefers a template that can hold them.
+- A card section whose heading is genuinely its own keeps it.
+- No change to the ten corpus metrics.
+
+**Tests:** a CTA with six links, a contact section with a link list, and a card
+section with both a section heading and per-card headings.

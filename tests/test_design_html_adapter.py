@@ -1401,3 +1401,78 @@ def test_chrome_no_section_claimed_is_still_recorded() -> None:
     )
 
     assert [entry["_static_role"] for entry in prepared] == ["navigation", "rich_text"]
+
+
+_STYLED_HERO = """
+<section id="hero">
+  <div class="kts-hero-inner">
+    <div class="kts-hero-title"><span>MUSIC FOR</span><span>EVERYONE</span></div>
+    <p class="vj-text">Lorem ipsum dolor sit amet, consectetur adipiscing elit.</p>
+  </div>
+</section>
+"""
+
+
+def test_a_styled_div_is_read_as_the_heading_it_looks_like() -> None:
+    """A hero band carried its title in a div of two spans, so the section
+    reported body copy, no title, and blocked on a required field."""
+
+    section = _enriched(_STYLED_HERO, "hero")
+
+    titles = [element for element in section["content"] if element["role"] == "section_title"]
+    assert [element["value"] for element in titles] == ["MUSIC FOR EVERYONE"]
+    assert titles[0]["attributes"]["implied"] is True
+
+
+def test_a_promoted_title_is_not_also_body_copy() -> None:
+    section = _enriched(
+        "<section><p class='vj-text'>MUSIC FOR EVERYONE</p>"
+        "<p class='vj-text'>Lorem ipsum dolor sit amet.</p></section>",
+        "hero",
+    )
+
+    bodies = [element["value"] for element in section["content"] if element["role"] == "body"]
+    assert bodies == ["Lorem ipsum dolor sit amet."]
+
+
+def test_a_real_heading_is_preferred_and_not_marked_implied() -> None:
+    section = _enriched(
+        "<section><div class='eyebrow'>Our Classes</div>"
+        "<h2>MOST POPULAR CLASSES</h2><p>Copy.</p></section>",
+        "rich_text",
+    )
+
+    titles = [element for element in section["content"] if element["role"] == "section_title"]
+    assert [element["value"] for element in titles] == ["MOST POPULAR CLASSES"]
+    assert "implied" not in titles[0]["attributes"]
+
+
+def test_a_heading_below_h3_is_still_a_heading() -> None:
+    section = _enriched("<section><h4>Studio hours</h4><p>Copy.</p></section>", "rich_text")
+
+    titles = [element for element in section["content"] if element["role"] == "section_title"]
+    assert [element["value"] for element in titles] == ["Studio hours"]
+    assert titles[0]["attributes"]["level"] == 4
+
+
+def test_a_long_first_block_is_prose_not_a_title() -> None:
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.design.html_ownership import implied_title
+
+    root = BeautifulSoup(
+        "<section><div>" + "word " * 40 + "</div><div>More copy follows.</div></section>",
+        "html.parser",
+    ).find("section")
+
+    assert implied_title(root) is None
+
+
+def test_a_section_of_one_block_has_no_title_to_promote() -> None:
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.design.html_ownership import implied_title
+
+    root = BeautifulSoup("<section><div>MUSIC IS MAGIC</div></section>", "html.parser").find("section")
+
+    assert implied_title(root) is None

@@ -2487,3 +2487,38 @@ pool-relative index drifted as earlier candidates were claimed.
 
 The page now reads as it looks: navigation with eight items, footer last,
 no unmatched sections.
+
+### Iteration 31 — VF-219, a heading that is not a heading element
+
+**Result:** `editable_content_coverage` on `keys-to-success` 0.4430 → **0.4444**.
+Blocking sections 4 → **3**. Warnings 0. Corpus unchanged on every metric:
+boundary precision and recall 1.0, semantic role accuracy 1.0, visitor content
+retention 1.0 (127/127), group-field association 1.0 (79/79), top-1 0.92,
+high-confidence precision 0.909. Suite 2,036 → 2,042.
+
+The hero carried `MUSIC FOR EVERYONE` in a `div` of two spans. It is not a
+heading element and it is not a text leaf either, so neither the heading query
+nor iteration 28's normalization saw it: the section reported one body element,
+no title, and blocked on `Heroes/centered-hero`'s required field.
+
+`implied_title` promotes **the first text-bearing block in the section, when it
+is under eighty characters and more text follows.** The rule is positional
+rather than a guess at class names — naming `.hero-title` or `.vj-heading`
+would be the same mistake this loop keeps correcting. A section that is one
+block has no title to promote, and a long first block is prose. Nothing is
+promoted when a heading element exists.
+
+The promotion is recorded as `implied: true` on the element rather than passed
+off as an observation, and the promoted block is excluded from the body-copy
+sweep so it is not counted twice.
+
+**Two narrower fixes came out of the same read.** The heading query stopped at
+`h3`, so a section titled with an `h4` had no title at all; it now runs to
+`h6` and records the real level. And the phrasing-tag set used to keep card
+discovery off leaf nodes was reused here at first, which excluded `<p>` —
+a paragraph is not a card but it is certainly a text block. The two sets are
+now separate, with the reason written next to them.
+
+The page reads correctly end to end: navigation, hero with its title, four card
+sections, footer. Three sections still block, all `call_to_action` and
+`contact` variants at the foot of the page.

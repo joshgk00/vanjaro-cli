@@ -83,6 +83,56 @@ def repeating_subtrees(root: Tag, *, minimum: int = 2) -> list[Tag]:
     return min(ranked, key=lambda entry: entry[:2])[2]
 
 
+_TITLE_MAXIMUM_CHARACTERS = 80
+
+# Narrower than _INLINE_TAGS, which exists to keep card discovery off leaf
+# nodes. A paragraph is a text block even though it is never a card.
+_PHRASING_TAGS = frozenset(
+    {
+        "a", "abbr", "b", "br", "button", "cite", "code", "em", "i", "img",
+        "input", "label", "picture", "path", "small", "source", "span",
+        "strong", "svg", "time",
+    }
+)
+
+
+def _text_blocks(root: Tag) -> list[Tag]:
+    """Return the innermost block-level elements that carry text."""
+
+    blocks = [
+        element
+        for element in root.find_all(True)
+        if element.name not in _PHRASING_TAGS and element.get_text(strip=True)
+    ]
+    return [
+        element
+        for element in blocks
+        if not any(other is not element and other in element.descendants for other in blocks)
+    ]
+
+
+def implied_title(root: Tag) -> Tag | None:
+    """Find the block a reader would take as the title when no heading exists.
+
+    A builder can style a plain div to look like a heading, and often does — a
+    real hero band carried `MUSIC FOR EVERYONE` in a div of two spans, so the
+    section reported body copy, no title, and blocked on a required field.
+
+    The rule is positional rather than a guess at class names: the first
+    text-bearing block in the section, short enough to be a title, with more
+    text after it. A section that is only one block has no title to promote,
+    and a long first block is prose.
+    """
+
+    blocks = _text_blocks(root)
+    if len(blocks) < 2:
+        return None
+    first = blocks[0]
+    if len(first.get_text(" ", strip=True)) > _TITLE_MAXIMUM_CHARACTERS:
+        return None
+    return first
+
+
 def enrich_section_from_static_dom(
     section: dict[str, JsonValue],
     static_html: str,
@@ -209,11 +259,25 @@ def enrich_section_from_static_dom(
 
         repeated_nodes = {id(node) for item in repeat_items for node in [item, *item.find_all(True)]}
         title = next(
-            (heading for heading in root.find_all(["h1", "h2", "h3"]) if id(heading) not in repeated_nodes),
+            (
+                heading
+                for heading in root.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
+                if id(heading) not in repeated_nodes
+            ),
             None,
         )
+        inferred_title = implied_title(root) if title is None else None
+        if isinstance(inferred_title, Tag) and id(inferred_title) not in repeated_nodes:
+            title = inferred_title
+        else:
+            inferred_title = None
         if isinstance(title, Tag):
-            add("heading", "section_title", title.get_text(" ", strip=True), attributes={"level": int(title.name[1])})
+            attributes: dict[str, JsonValue] = {
+                "level": int(title.name[1]) if title.name[0] == "h" else 2
+            }
+            if inferred_title is not None:
+                attributes["implied"] = True
+            add("heading", "section_title", title.get_text(" ", strip=True), attributes=attributes)
 
         group_id = f"{section_id}.items"
         group_items: list[dict[str, JsonValue]] = []
@@ -291,7 +355,7 @@ def enrich_section_from_static_dom(
                 asset_id=asset_id,
             )
         for paragraph in root.find_all("p"):
-            if id(paragraph) not in repeated_nodes:
+            if id(paragraph) not in repeated_nodes and paragraph is not inferred_title:
                 add("text", "body", paragraph.get_text(" ", strip=True))
         for link in root.find_all("a", href=True):
             if id(link) in repeated_nodes:
