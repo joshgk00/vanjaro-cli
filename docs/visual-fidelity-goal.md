@@ -1288,3 +1288,46 @@ order the captures arrive in, so the output is stable to compare across runs.
 **No provider is wired yet.** This is the contract and the validation; the
 `VisionProvider` protocol has no production implementation in this commit, which
 is why every test runs without a model. VF-102 consumes these findings.
+
+### 2026-08-06 — VF-102: the corpus finding ledger
+
+**Matcher:** top-1 0.9200, top-3 1.0000, precision 0.9091; responsive coverage
+0.8864 (39/44) — unchanged. Benchmark clean. Suite 1,897 → 1,912.
+
+`design/finding_ledger.py` aggregates Layer 1 deficits and Layer 2 findings
+across every corpus site and clusters them by root cause. It is pure, and it
+ranks nothing — ranking is VF-103, and a ledger that sorted by value would
+preempt the decision VF-103 exists to make. A test pins that absence.
+
+**Deficits and findings are separate cluster kinds and never merge.** One is a
+measurement and the other is an opinion. Collapsing them would let a model's
+diagnosis inherit the authority of a deterministic score, which is the exact
+inversion VF-2 forbids. Deficits cluster by dimension. Findings cluster by
+`(pipeline_stage, category, source_file)` — the unit somebody would actually fix
+in one change.
+
+**An unmeasured dimension is not a defect.** `score is None` is excluded, so a
+dimension nobody could measure never enters the queue. Ranking "we could not
+look" alongside "it is broken" would send the loop to work that does not exist —
+and given how much of the corpus is currently unmeasured, that cluster would
+have outranked every real one. A forced zero *is* a deficit even with no score,
+because VF-005 sets it precisely when the section is invalid.
+
+**Mixed regimes raise.** `build_finding_ledger` refuses evidence spanning more
+than one `regime_version`, because clustering across regimes counts numbers that
+mean different things. This is the same false signal that moved a site from 79.4
+to 59.4 with no quality change.
+
+Determinism is by construction: clusters sort by kind and key, occurrences by
+site, section, and canonical breakpoint order. Feeding the same sites in reverse
+order produces the same ledger, which a test checks directly rather than by
+serializing twice.
+
+A finding with no section or breakpoint is reported in `warnings` and left out
+of the clusters, rather than being grouped under a placeholder.
+
+**No corpus data exists to run this on.** Like VF-101, this commit is the
+contract and its validation, exercised entirely on constructed evidence. The
+VM2 milestone acceptance — that the ranked queue independently surfaces theme,
+responsive, and navigation as the top clusters — cannot be checked until VF-008
+produces real corpus scores, and VF-008 still waits on the two human gates.
