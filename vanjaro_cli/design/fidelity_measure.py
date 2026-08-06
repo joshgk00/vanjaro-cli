@@ -83,6 +83,23 @@ MEASURE_SCRIPT = """
   // rows, floats, and tables are all invisible to gridTemplateColumns, and the
   // build is Bootstrap flex throughout, so the column subscore never
   // contributed on any section at any breakpoint.
+  // A section with a transparent background still shows a painted colour: the
+  // nearest ancestor that paints one. Reading the element's own value leaves
+  // background unmeasured on every section of an unstyled source, which is
+  // absence of a *decision*, not absence of a colour. Walking up measures what
+  // the visitor actually sees. If nothing in the chain paints, that is honestly
+  // unmeasured and stays null.
+  const effectiveBackground = (el) => {
+    let node = el;
+    while (node) {
+      const value = getComputedStyle(node).backgroundColor;
+      if (value && value !== 'transparent' && !/^rgba\(\s*0,\s*0,\s*0,\s*0\s*\)$/.test(value)) {
+        return value;
+      }
+      node = node.parentElement;
+    }
+    return null;
+  };
   const columnCount = (node, style) => {
     if (style.gridTemplateColumns && style.gridTemplateColumns !== 'none') {
       return style.gridTemplateColumns.split(' ').filter((part) => part.length).length;
@@ -145,7 +162,7 @@ MEASURE_SCRIPT = """
           height: rect.height,
         },
         columns: columns,
-        background_color: style.backgroundColor || null,
+        background_color: effectiveBackground(node),
         text_color: style.color || null,
         accent_color: action ? getComputedStyle(action).color : null,
         typography: {

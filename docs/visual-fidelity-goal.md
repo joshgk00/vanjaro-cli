@@ -1983,3 +1983,49 @@ distance was overstated.
 Six tests, including that a thin layout stays distinguishable from a thorough
 one at identical dimension coverage, that an unreported split cannot lower the
 number, and that coverage still changes no score.
+
+### 2026-08-06 — Colour: effective background and a sampled accent
+
+**Matcher unchanged.** Benchmark clean. Suite 1,994 → 1,998.
+
+The new signal-level metric picked this iteration's work, which is what VF-3 asks
+of the queue. Weighted missing evidence across the pilot:
+
+| dimension | missing |
+|---|---:|
+| media | 2.250 — blocked on Josh (VF-214) |
+| **colour** | **2.000** |
+| typography | 1.125 |
+| spacing | 0.750 |
+| layout / integrity | 0.000 |
+
+Colour reported `no colour evidence for background, accent` on all fifteen
+section-breakpoint pairs. Two separate causes.
+
+**Background: transparent is not unknown.** Both scripts read the element's own
+`backgroundColor`, which is `rgba(0,0,0,0)` for any section that does not paint
+its own. A transparent section still shows a colour — the nearest ancestor that
+paints one — so both sides now walk up to it. If nothing in the chain paints,
+that stays honestly unmeasured rather than assuming the UA canvas is white.
+
+**The Northstar fixture paints nowhere, so this changes nothing for the pilot.**
+Verified separately against a page with `body{background:#123456}`: sections
+report `rgb(18, 52, 86)` from the ancestor. Reachable and correct, just not
+exercised here — checked before keeping it, after iteration 13 reverted a change
+for looking dead when it was only dead on this one fixture.
+
+**Accent: the same asymmetry as typography.** `_accent` reads the first action
+element's own style, and the analysis script never sampled action elements, so
+the design side could never supply an accent. It now samples the first
+`a, button` and stamps it, matching what `querySelector` measured.
+
+| | before | after |
+|---|---:|---:|
+| overall | 57.59 | **54.15** |
+| `dimension_coverage` | 0.800 | 0.800 |
+| **`evidence_coverage`** | 0.5917 | **0.6317** |
+
+**This iteration is invisible to the old metric and visible to the new one** —
+which is the clearest justification yet for the previous iteration. The score
+fell because the accent now scores and disagrees: the source's default link blue
+against the build's theme colour. Real evidence, real disagreement.

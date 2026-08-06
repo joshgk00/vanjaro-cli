@@ -777,3 +777,86 @@ def test_the_observation_script_prefers_the_outermost_chrome_root() -> None:
 
     assert "querySelectorAll('header, footer')" in chrome_block
     assert "!el.closest('header, footer')" in chrome_block
+
+
+def test_both_scripts_measure_the_effective_background() -> None:
+    """A transparent section still shows a painted colour — the nearest
+    ancestor's. Reading the element's own value leaves background unmeasured on
+    every section of a source that paints on `body`, which is absence of a
+    decision, not absence of a colour."""
+
+    from vanjaro_cli.design import fidelity_measure
+
+    for script in (html_adapter._RENDERED_OBSERVATION_JS, fidelity_measure.MEASURE_SCRIPT):
+        assert "effectiveBackground" in script
+        assert "parentElement" in script
+    # Nothing painted anywhere stays honestly unmeasured.
+    assert "return null;" in html_adapter._RENDERED_OBSERVATION_JS
+
+
+def test_the_analysis_script_samples_the_first_action_colours() -> None:
+    script = html_adapter._RENDERED_OBSERVATION_JS
+
+    assert "el.querySelector('a, button')" in script
+    assert "text_color:" in script
+
+
+ACTION_HTML = """
+<html><head><title>Action</title></head><body><main>
+  <section id="cta"><h2>Ready?</h2>
+    <a class="btn" href="/start">Start</a><a class="btn" href="/more">More</a></section>
+</main></body></html>
+"""
+
+
+def _action_document(sample: dict):
+    observation = RenderedPageObservation(
+        breakpoint=BreakpointName.DESKTOP,
+        viewport=CANONICAL_VIEWPORTS[BreakpointName.DESKTOP],
+        html=ACTION_HTML,
+        sections=(
+            RenderedSectionObservation(
+                selector="#cta",
+                bounds=BoundingBox(x=0.0, y=0.0, width=1440.0, height=200.0),
+                hidden=False,
+                styles={},
+                action=sample,
+            ),
+        ),
+    )
+    return design_document_from_html(
+        ACTION_HTML,
+        "https://action.test/",
+        captured_at=CAPTURE_TIME,
+        rendered_observations=(observation,),
+    )
+
+
+def test_the_measured_action_colour_reaches_the_first_action_element() -> None:
+    document = _action_document(
+        {"text_color": "#ffffff", "background_color": "#0b5ed7"}
+    )
+    actions = [
+        element
+        for element in document.pages[0].sections[0].content
+        if element.kind.value in ("button", "link")
+    ]
+
+    assert actions
+    stamped = {
+        observation.property.value: observation.value
+        for observation in actions[0].style.observations
+    }
+    assert stamped["text_color"] == "#ffffff"
+    assert stamped["background_color"] == "#0b5ed7"
+
+
+def test_only_the_first_action_element_carries_the_sample() -> None:
+    document = _action_document({"text_color": "#ffffff"})
+    stamped = [
+        element
+        for element in document.pages[0].sections[0].content
+        if element.kind.value in ("button", "link") and element.style.observations
+    ]
+
+    assert len(stamped) == 1

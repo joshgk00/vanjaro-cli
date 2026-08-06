@@ -150,6 +150,23 @@ _RENDERED_OBSERVATION_JS = r"""() => {
         seen.add(el);
         candidates.push(el);
     });
+    // A section with a transparent background still shows a painted colour: the
+    // nearest ancestor that paints one. Reading the element's own value leaves
+    // background unmeasured on every section of an unstyled source, which is
+    // absence of a *decision*, not absence of a colour. Walking up measures what
+    // the visitor actually sees. If nothing in the chain paints, that is honestly
+    // unmeasured and stays null.
+    const effectiveBackground = (el) => {
+        let node = el;
+        while (node) {
+            const value = getComputedStyle(node).backgroundColor;
+            if (value && value !== 'transparent' && !/^rgba\(\s*0,\s*0,\s*0,\s*0\s*\)$/.test(value)) {
+                return value;
+            }
+            node = node.parentElement;
+        }
+        return null;
+    };
     const px = (value) => value || null;
     const snapshots = candidates.map((el, index) => {
         const cs = getComputedStyle(el);
@@ -165,8 +182,17 @@ _RENDERED_OBSERVATION_JS = r"""() => {
                 heading: typeOf(el.querySelector('h1, h2, h3, h4, h5, h6')),
                 body: typeOf(el.querySelector('p')),
             },
+            action: (() => {
+                const a = el.querySelector('a, button');
+                if (!a) return null;
+                const s = getComputedStyle(a);
+                return {
+                    text_color: s.color || null,
+                    background_color: effectiveBackground(a),
+                };
+            })(),
             styles: {
-                background_color: cs.backgroundColor,
+                background_color: effectiveBackground(el),
                 background_image: cs.backgroundImage,
                 background_position: cs.backgroundPosition,
                 text_color: cs.color,
@@ -250,6 +276,9 @@ class RenderedSectionObservation:
     # computed font describes the section box, not its heading, so the
     # typography dimension needs these to be measured rather than assumed.
     typography: Mapping[str, Mapping[str, JsonValue]] = field(default_factory=dict)
+    # First action element's colours. The accent role is read from an action
+    # element's own style, so without this the design side can never supply one.
+    action: Mapping[str, JsonValue] = field(default_factory=dict)
 
 
 @dataclass(frozen=True)
@@ -405,6 +434,14 @@ def capture_rendered_observations(
                             hidden=bool(raw_section.get("hidden", False)),
                             styles={str(key): value for key, value in raw_styles.items()},
                             typography=typography,
+                            action=(
+                                {
+                                    str(key): value
+                                    for key, value in raw_section["action"].items()
+                                }
+                                if isinstance(raw_section.get("action"), dict)
+                                else {}
+                            ),
                         )
                     )
                 collapsed = raw_snapshot.get("navigation_collapsed")
@@ -575,6 +612,50 @@ def _attach_type_samples(
         if observations:
             style = target.setdefault("style", {"observations": [], "raw": {}})
             style["observations"] = observations
+
+
+_ACTION_ELEMENT_KINDS = ("button", "link")
+
+
+def _attach_action_sample(
+    elements: list[dict[str, JsonValue]],
+    sample: Mapping[str, JsonValue],
+    provenance: dict[str, JsonValue],
+) -> None:
+    """Give the first action element its measured colours.
+
+    The accent role is read from an action element's own style, so a design
+    document without it can never supply an accent and the colour dimension
+    compares one role of three. Only the first element is stamped, matching the
+    `querySelector` the browser used.
+    """
+
+    rendered_provenance = {**provenance, "method": "rendered"}
+    target = next(
+        (
+            element
+            for element in elements
+            if element.get("kind") in _ACTION_ELEMENT_KINDS
+        ),
+        None,
+    )
+    if target is None:
+        return
+    observations = [
+        {
+            "property": prop,
+            "value": value,
+            "status": "observed",
+            "confidence": 1.0,
+            "provenance": [rendered_provenance],
+        }
+        for prop in ("background_color", "text_color")
+        for value in (sample.get(prop),)
+        if value not in (None, "")
+    ]
+    if observations:
+        style = target.setdefault("style", {"observations": [], "raw": {}})
+        style["observations"] = observations
 
 
 def _style_from_content(
@@ -1077,10 +1158,13 @@ def _section_from_legacy(
         )
     # After enrichment, which replaces the content list wholesale. Stamping
     # before this point loses the samples silently.
-    if desktop and desktop.typography:
+    if desktop and (desktop.typography or desktop.action):
         content = result.get("content")
         if isinstance(content, list):
-            _attach_type_samples(content, desktop.typography, provenance)
+            if desktop.typography:
+                _attach_type_samples(content, desktop.typography, provenance)
+            if desktop.action:
+                _attach_action_sample(content, desktop.action, provenance)
     return result
 
 
