@@ -1799,3 +1799,51 @@ three breakpoints simply were not looking at it.
 That is now four consecutive iterations where the number fell because the
 measurement improved. The pilot's *build* has changed once in that time (VF-213);
 everything else has been the measurement catching up to it.
+
+### 2026-08-06 — The nav was the least-measured section and the highest-scoring one
+
+**Matcher unchanged** (0.9200 / 1.0000 / 0.9091; responsive 0.8864; boundary
+precision 1.0). Benchmark clean. Suite 1,973 → 1,975.
+
+| | desktop | tablet | mobile |
+|---|---:|---:|---:|
+| coverage before | 0.733 | 0.733 | 0.733 |
+| **coverage after** | **0.800** | **0.800** | **0.800** |
+| score | 59.14 → 52.18 | 60.40 → 53.91 | 52.17 → 45.58 |
+
+Overall 57.24 → 50.56. **`section.1` fell from 93.75 to about 60**, and that is
+the whole story of this iteration: its 93.75 came from scoring two of six
+dimensions. The nav was the least-measured section on the page and therefore the
+best-looking one.
+
+**The analysis script could not reach page chrome.** Its candidate query is
+`main > section, main > article, body > section, [role="main"] > section` — none
+of which match a nav inside a header — with a second filter excluding anything
+under `header, footer`. So the nav carried `method: static`, no bounds, and zero
+style properties, while every body section carried 32. Colour, typography, and
+spacing were all unavailable on it.
+
+This is the half of VF-213's original premise that was correct. That task was
+filed as "the measurer skips header content"; the *measure* script has no such
+exclusion, but the *analysis* script does, and they are different files. Both
+halves of that confusion are now closed.
+
+**The chrome root is the outermost element, not the inner nav.** The first
+attempt preferred `header nav` and produced `rendered-section-5`, pairing with
+nothing: the fixture puts the id on `<header id="site-nav">`, which is also what
+the static extractor uses as its selector. Taking the outer element makes it
+`#site-nav` and it pairs. A dialog is still excluded — measuring chrome does not
+mean measuring everything.
+
+The `rendered_section_unmatched` warning that has appeared on every pilot run
+since VF-210 is now gone.
+
+**Verification note.** The observation script only runs in a browser, so the two
+new tests pin its intent — that chrome is queried and the outer root preferred —
+rather than its behaviour. The behaviour is verified live above: `#site-nav`
+captured at y=8.0 with 33 style properties, and the section re-analysed with
+`rendered` provenance, bounds, and 32 properties.
+
+**Five consecutive iterations of the score falling as measurement improved**,
+from 75.47 to 50.56. The build has not changed since VF-213. Coverage over the
+same span went 0.600/0.467/0.467 to 0.800 across the board.

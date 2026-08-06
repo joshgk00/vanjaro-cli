@@ -130,6 +130,26 @@ _RENDERED_OBSERVATION_JS = r"""() => {
         const main = document.querySelector('main, [role="main"]');
         if (main) Array.from(main.children).forEach(add);
     }
+    // Page chrome, added explicitly. The body query above cannot reach a nav
+    // inside a header, so the design side carried no styles and no geometry for
+    // it at all: the nav section scored on two of six dimensions while every
+    // body section scored five. Chrome is a section the design describes, so it
+    // needs measuring like any other. Pairing is by selector, so a candidate
+    // with no static counterpart is simply unmatched.
+    // The outermost chrome element is the one the static extractor treats as the
+    // section, and it is where the author puts the id, so it is what pairing
+    // matches on. An inner nav is only used when no header wraps it.
+    const chrome = [];
+    document.querySelectorAll('header, footer').forEach((el) => chrome.push(el));
+    document.querySelectorAll('body > nav').forEach((el) => {
+        if (!el.closest('header, footer')) chrome.push(el);
+    });
+    chrome.forEach((el) => {
+        if (el.closest('dialog, [role="dialog"]')) return;
+        if (seen.has(el)) return;
+        seen.add(el);
+        candidates.push(el);
+    });
     const px = (value) => value || null;
     const snapshots = candidates.map((el, index) => {
         const cs = getComputedStyle(el);

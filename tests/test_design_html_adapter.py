@@ -21,6 +21,7 @@ from vanjaro_cli.design.html_adapter import (
     convert_legacy_crawl,
     design_document_from_html,
 )
+from vanjaro_cli.design import html_adapter
 from vanjaro_cli.design.models import BoundingBox, BreakpointName
 
 
@@ -747,3 +748,32 @@ def test_static_analysis_records_no_type_samples() -> None:
         not element.style.observations
         for element in document.pages[0].sections[0].content
     )
+
+
+def test_the_observation_script_measures_page_chrome() -> None:
+    """The body query cannot reach a nav inside a header, so the design side
+    carried no styles and no geometry for it: the nav scored on two of six
+    dimensions while every body section scored five, and came out highest.
+
+    The script itself only runs in a browser, so this pins the intent; the
+    behaviour is verified against a live page in the progress log.
+    """
+
+    script = html_adapter._RENDERED_OBSERVATION_JS
+
+    assert "'header, footer'" in script
+    assert "body > nav" in script
+    # Chrome is measured, but a dialog is still not a section.
+    assert "dialog, [role=\"dialog\"]" in script
+
+
+def test_the_observation_script_prefers_the_outermost_chrome_root() -> None:
+    """The author's id sits on the header, and that is what pairing matches on.
+    Taking the inner nav instead produced `rendered-section-N` and paired with
+    nothing."""
+
+    script = html_adapter._RENDERED_OBSERVATION_JS
+    chrome_block = script[script.index("const chrome = []") :]
+
+    assert "querySelectorAll('header, footer')" in chrome_block
+    assert "!el.closest('header, footer')" in chrome_block
