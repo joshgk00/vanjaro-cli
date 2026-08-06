@@ -1245,3 +1245,46 @@ the only change is the new `measurement_only` enum member.
 
 **VF-008 is unblocked in tooling terms.** It still needs the two human gates:
 `project approval resolve`, and a publish path that has no CLI entry point.
+
+### 2026-08-06 — VF-101: the vision reviewer, and why it can only be advisory
+
+**Matcher:** top-1 0.9200, top-3 1.0000, precision 0.9091; responsive coverage
+0.8864 (39/44) — unchanged, as expected from a module nothing scores from.
+Benchmark clean. Suite 1,885 → 1,897.
+
+`design/vision_review.py` reviews the VF-006 captures and returns `ReportFinding`
+records: category, severity, section, breakpoint, `PipelineStage`, and the file
+most likely responsible. `ReportFinding` gained optional `breakpoint` and
+`source_file` fields. Both default to `None`, so every existing construction is
+unchanged, and both are typed rather than stuffed into `metadata` because VF-102
+clusters on exactly these two.
+
+**VF-2 is enforced, not just intended.** `VisionReviewOutcome` carries only
+`findings` and `warnings` — a test asserts that field set exactly, so a score
+cannot be added without the test failing. A second test parses all eleven
+scoring modules with `ast` and asserts none of them imports this one. The
+dependency runs the other way: the reviewer reads captures.
+
+**Provider output is untrusted, and repairing it would be worse than dropping
+it.** A model can name a section that does not exist, a category outside the
+vocabulary, or a stage that never ran. Each is dropped with a warning naming
+what was wrong. A finding attached to the wrong section is not a smaller
+problem than a missing finding — it is a work queue entry pointing somewhere no
+work exists, and VF-102 is going to rank on these.
+
+Dropped, each with its own test: an unknown `section_id`, an unrecognized
+severity, category, or stage, an empty message or recommendation, a
+non-object item, and a provider returning a bare string instead of a list.
+
+**A failure never propagates.** A provider raising at one breakpoint costs that
+breakpoint's findings and nothing else; desktop and mobile still return theirs.
+`review_captures` catches broadly on purpose — a diagnostic layer that can fail
+the run turns an advisory signal into a load-bearing one. Breakpoints that never
+captured are reported as unreviewed rather than passing silently.
+
+Findings come back in canonical desktop, tablet, mobile order regardless of the
+order the captures arrive in, so the output is stable to compare across runs.
+
+**No provider is wired yet.** This is the contract and the validation; the
+`VisionProvider` protocol has no production implementation in this commit, which
+is why every test runs without a model. VF-102 consumes these findings.

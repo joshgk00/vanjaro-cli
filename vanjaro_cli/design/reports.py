@@ -21,6 +21,7 @@ from vanjaro_cli.design.composition import (
     IssueSeverity,
     SimplificationKind,
 )
+from vanjaro_cli.design.models import BreakpointName
 from vanjaro_cli.design.style_translation import StyleDecision, TranslationLayer
 
 __all__ = [
@@ -176,6 +177,10 @@ class ReportFinding(_ReportModel):
     pipeline_stage: PipelineStage
     section_id: str | None = None
     entry_id: str | None = None
+    # Set by the vision reviewer (VF-101). A defect can be real at one
+    # breakpoint and absent at another, and the ledger weights mobile higher.
+    breakpoint: BreakpointName | None = None
+    source_file: str | None = None
     match: FindingMatchContext | None = None
     style_decision: FindingStyleContext | None = None
     source_ids: tuple[str, ...] = ()
