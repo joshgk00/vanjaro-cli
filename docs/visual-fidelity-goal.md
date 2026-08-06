@@ -2066,3 +2066,41 @@ coverage move is the real result: 0.6317 to 0.6767.
 0.750 (`element-gap` on all fifteen, plus the known corpus padding limitation),
 and the nav's typography, which is honestly unavailable — it has no heading and
 no body copy to sample.
+
+### 2026-08-06 — Inter-element rhythm measured; 54.99 → 57.21
+
+**Matcher unchanged.** Benchmark clean. Suite 2,000 → 2,004.
+
+| | before | after |
+|---|---:|---:|
+| overall | 54.99 | **57.21** |
+| **`evidence_coverage`** | 0.6767 | **0.6967 / 0.7167 / 0.6967** |
+
+Spacing reported `no spacing evidence for element-gap` on all fifteen pairs.
+**This one was not a sampling asymmetry** — the established rule was applied
+first, and both sides read `row-gap` and both got `normal`, because that
+property applies only to flex and grid containers. The dimension is documented
+as *inter-element rhythm*, and `row-gap` is one way to achieve it, not the thing
+itself.
+
+Rhythm is now measured as the median vertical distance between consecutive
+visible children. A declared `row-gap` still wins, because it states intent.
+
+**Two structural mismatches surfaced on the way, and both are the same shape as
+earlier ones.** The first attempt measured the section's own children and found
+gaps on the source but none on the build: the source lays elements out as direct
+children, the build wraps them in a container, so the build had exactly one child
+and no rhythm. Both scripts now descend through single-child wrappers to where
+the content actually sits.
+
+**Sections 3 and 4 still report no gap on the build, correctly.** Their content
+host is a card row whose children sit side by side, so there is no vertical
+rhythm at that level — consecutive gaps are negative and are discarded rather
+than counted. Two of five sections gained the signal; claiming the other three
+would mean measuring a horizontal arrangement as a vertical one.
+
+**A warning of my own making, cleaned up.** The effective-background check
+introduced two iterations ago used a JS regex inside a non-raw Python string,
+which emitted `SyntaxWarning: invalid escape sequence` on every import. It is
+now a plain string comparison, and `python -W error::SyntaxWarning` imports both
+modules cleanly.

@@ -321,3 +321,42 @@ def test_both_scripts_define_body_copy_the_same_way() -> None:
         block = script[script.index("const bodyElement") :]
         assert "root.querySelector('p')" in block
         assert "H[1-6]|A|BUTTON" in block
+
+
+def test_element_gap_is_measured_not_read_from_row_gap() -> None:
+    """`row-gap` applies only to flex and grid containers and computes to
+    `normal` everywhere else, so both sides reported nothing on every section
+    while the spacing between elements was plainly visible."""
+
+    block = MEASURE_SCRIPT[MEASURE_SCRIPT.index("const elementGap") :]
+
+    assert "parseFloat(style.rowGap)" in block
+    assert "current.top - previous.bottom" in block
+
+
+def test_a_declared_gap_still_wins() -> None:
+    """It states intent; the geometric median is the fallback."""
+
+    block = MEASURE_SCRIPT[MEASURE_SCRIPT.index("const elementGap") :]
+    declared = block.index("Number.isFinite(declared)")
+    measured = block.index("current.top - previous.bottom")
+
+    assert declared < measured
+
+
+def test_both_scripts_measure_the_gap_the_same_way() -> None:
+    from vanjaro_cli.design import html_adapter
+
+    for script in (MEASURE_SCRIPT, html_adapter._RENDERED_OBSERVATION_JS):
+        block = script[script.index("const elementGap") :]
+        assert "current.top - previous.bottom" in block
+        assert "gaps.sort" in block
+
+
+def test_a_single_child_reports_no_gap() -> None:
+    """One element has no rhythm; reporting zero would be a measurement of
+    something that was never spaced."""
+
+    block = MEASURE_SCRIPT[MEASURE_SCRIPT.index("const elementGap") :]
+
+    assert "kids.length < 2" in block

@@ -106,11 +106,50 @@ MEASURE_SCRIPT = """
     }
     return null;
   };
+  // Inter-element rhythm, measured rather than read from `row-gap`. That
+  // property only applies to flex and grid containers and computes to `normal`
+  // everywhere else, so both sides reported nothing on every section while the
+  // spacing between elements was plainly visible. The median vertical distance
+  // between consecutive visible children measures the rhythm the dimension
+  // actually names. A declared gap still wins, because it states intent.
+  const elementGap = (root, style) => {
+    const declared = parseFloat(style.rowGap);
+    if (Number.isFinite(declared)) return declared;
+    // Descend through single-child wrappers. The source lays its elements out
+    // as direct children; the build wraps them in a container, so measuring the
+    // section's own children found one box and no rhythm at all. The gap lives
+    // wherever the content actually sits.
+    let host = root;
+    for (let depth = 0; depth < 4; depth += 1) {
+      const visible = Array.from(host.children).filter((el) => {
+        const r = el.getBoundingClientRect();
+        return r.width > 0 && r.height > 0;
+      });
+      if (visible.length !== 1) break;
+      host = visible[0];
+    }
+    const kids = Array.from(host.children).filter((el) => {
+      const r = el.getBoundingClientRect();
+      return r.width > 0 && r.height > 0;
+    });
+    if (kids.length < 2) return null;
+    const gaps = [];
+    for (let i = 1; i < kids.length; i += 1) {
+      const previous = kids[i - 1].getBoundingClientRect();
+      const current = kids[i].getBoundingClientRect();
+      const gap = current.top - previous.bottom;
+      if (gap >= 0) gaps.push(gap);
+    }
+    if (!gaps.length) return null;
+    gaps.sort((a, b) => a - b);
+    const middle = Math.floor(gaps.length / 2);
+    return gaps.length % 2 ? gaps[middle] : (gaps[middle - 1] + gaps[middle]) / 2;
+  };
   const effectiveBackground = (el) => {
     let node = el;
     while (node) {
       const value = getComputedStyle(node).backgroundColor;
-      if (value && value !== 'transparent' && !/^rgba\(\s*0,\s*0,\s*0,\s*0\s*\)$/.test(value)) {
+      if (value && value !== 'transparent' && value !== 'rgba(0, 0, 0, 0)') {
         return value;
       }
       node = node.parentElement;
@@ -188,7 +227,7 @@ MEASURE_SCRIPT = """
         },
         padding_top: num(style.paddingTop),
         padding_bottom: num(style.paddingBottom),
-        element_gap: num(style.rowGap),
+        element_gap: elementGap(node, style),
         horizontal_overflow_px: Math.max(0, node.scrollWidth - node.clientWidth),
         media: Array.from(node.querySelectorAll('img')).map((image) => {
           const box = image.getBoundingClientRect();
