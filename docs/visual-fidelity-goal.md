@@ -1133,3 +1133,60 @@ no-fabrication rule, duplicates, and an unknown kind.
 **Not re-scored.** Confirming that `section.1` now scores above zero needs a
 build and a publish on the pilot portal, which is VF-008's work and the next
 iteration's.
+
+### 2026-08-06 — VF-008 attempted: rendered analysis makes the plan unbuildable
+
+**No code changed. The finding is the deliverable.** Suite unchanged at 1,879.
+Benchmark clean. Matcher top-1 0.9200, top-3 1.0000, precision 0.9091;
+responsive coverage 0.8864 (39/44) — all untouched.
+
+VF-211 works. The pilot rebuild reached `analyze` and `plan` with rendered
+evidence and did not fail at `global_blocks`. It stopped one step earlier
+instead, at the approval gate:
+
+```
+cannot approve plan with 4 unresolved validation issue(s)
+  section.2: scoped CSS rule count 26 exceeds budget 12
+  section.3: scoped CSS rule count 24 exceeds budget 12
+  section.4: scoped CSS rule count 25 exceeds budget 12
+  section.5: scoped CSS rule count 26 exceeds budget 12
+```
+
+Controlled comparison on one source, changing only the analysis mode:
+
+| | Static | Rendered |
+|---|---:|---:|
+| `issue_count` | 0 | 3 |
+| `scoped_css_rule_count` | 0 | 75 |
+| `scoped_css_bytes` | 8 | 1678 |
+| `valid` | true | false |
+
+**Measurement evidence and reproduction instructions are not the same thing,
+and one property set is currently doing both jobs.** `MEASURE_SCRIPT` records
+about thirty computed properties per section because the metrics need them to
+compare. `style_translation` maps nearly all of them to CSS because it treats
+every observed property as design intent to reproduce. `display`, `position`,
+`visibility`, `opacity`, `transform`, `order`, and `flex_wrap` are incidental
+computed state. Emitting them as scoped CSS pins a block to one browser's
+layout, and works directly against the native-component and editable-coverage
+ratios the same validation file tracks.
+
+Filed as **VF-212**, which is now the top unblocked task and gates VF-008.
+
+**The budget will not be raised.** `max_scoped_rules_per_section` is 12 because
+blocks are meant to stay native and editable. Raising it clears the gate and
+keeps the over-fit, which is the same move as widening a threshold to make a
+metric pass.
+
+**Halted before publishing, as instructed.** Two boundaries were reached and
+neither was crossed:
+
+- `project approval resolve` is a human decision by this goal's own definition —
+  "no human in the loop for any step except approval and publish". The loop
+  raised no approval it could then grant itself.
+- There is no `project publish` command; `PUBLISH` is a gated stage with no CLI
+  entry point. The loop could not have published even if it had tried.
+
+**Pilot workspace state.** `analyze` and `plan` re-ran under rendered evidence
+and are complete; the plan is invalid pending VF-212; `global_blocks` onward are
+unbuilt. The portal itself was not mutated — the run stopped before any POST.

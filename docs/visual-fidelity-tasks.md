@@ -457,3 +457,52 @@ failing.
 - Regime-1 baseline and final corpus scores committed as release evidence.
 - Full non-integration suite and offline benchmark pass.
 - No secrets in artefacts; `git diff --check` passes.
+
+### VF-212 — Separate measurement evidence from reproduction instructions
+
+**Dependencies:** VF-210
+
+**Problem**
+
+Rendered analysis makes the plan unbuildable. Measured against the same source,
+with only the analysis mode changed:
+
+| | Static | Rendered |
+|---|---:|---:|
+| `issue_count` | 0 | 3 |
+| `scoped_css_rule_count` | 0 | 75 |
+| `scoped_css_bytes` | 8 | 1678 |
+| `valid` | true | false |
+
+On the five-section pilot the same run produces four issues, one per body
+section, each `scoped CSS rule count NN exceeds budget 12` at 24–26 rules.
+`project approval request` then refuses the `portal_mutation` gate, so the
+build cannot proceed and VF-008 cannot run.
+
+The cause is a conflation. `MEASURE_SCRIPT` records roughly thirty computed
+properties per section because the fidelity metrics need them to *compare*.
+`style_translation` maps almost all of them to CSS declarations because it
+treats every observed property as design intent to *reproduce*. Those are
+different jobs. `display`, `position`, `visibility`, `opacity`, `transform`,
+`order`, and `flex_wrap` are incidental computed state; emitting them as scoped
+CSS pins a block to one browser's layout and works against the native-component
+and editable-coverage ratios the same validation tracks.
+
+**Acceptance criteria**
+
+- The set of properties translated into scoped CSS is declared explicitly and
+  separately from the set recorded for scoring. Adding a measured property does
+  not silently add a CSS declaration.
+- A rendered plan for a corpus fixture validates with zero issues and stays
+  within the existing per-section budget.
+- Scoring keeps every property it has today. Fidelity coverage must not fall as
+  a side effect of narrowing translation.
+- **The budget is not raised.** `max_scoped_rules_per_section` exists to keep
+  blocks native and editable. Raising it to clear the gate hides the over-fit
+  instead of removing it.
+- Static analysis output is unchanged.
+
+**Tests:** rendered plan validity for a corpus fixture, per-section rule count
+within budget, an assertion that the scoring property set is unchanged, and a
+standing test that a newly measured property does not reach the CSS map without
+being declared translatable.
