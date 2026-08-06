@@ -1004,3 +1004,53 @@ def test_an_id_still_wins_over_the_structural_path() -> None:
     soup = BeautifulSoup('<html><body><section id="hero"></section></body></html>', "html.parser")
 
     assert css_selector_for(soup.find("section")) == "#hero"
+
+
+def test_static_boundaries_are_found_at_any_depth() -> None:
+    """A Vanjaro-built page nests its sections in layout divs and has no <main>,
+    so requiring direct children returned nothing at all while the content
+    extractor found eleven — and with no DOM candidate to match, no section
+    recorded a selector and rendered measurement paired with nothing."""
+
+    from vanjaro_cli.design.html_boundaries import static_boundary_candidates
+
+    html = (
+        "<html><body><div class='outer'><div class='inner'>"
+        "<section id='one'>First</section><section id='two'>Second</section>"
+        "</div></div></body></html>"
+    )
+
+    candidates = static_boundary_candidates(html)
+
+    assert [tag.get("id") for tag in candidates] == ["one", "two"]
+
+
+def test_only_the_outermost_sectioning_element_is_a_boundary() -> None:
+    """A nested section is part of its parent, not a peer of it."""
+
+    from vanjaro_cli.design.html_boundaries import static_boundary_candidates
+
+    html = (
+        "<html><body><section id='outer'>Outer"
+        "<section id='inner'>Inner</section></section></body></html>"
+    )
+
+    candidates = static_boundary_candidates(html)
+
+    assert [tag.get("id") for tag in candidates] == ["outer"]
+
+
+def test_both_extractors_agree_on_where_sections_live() -> None:
+    """They disagreed completely on a real page: 11 sections against 0 DOM
+    candidates. Neither can pair with the other unless they look in the same
+    places."""
+
+    from vanjaro_cli.design.html_boundaries import static_boundary_candidates
+
+    rendered_query = html_adapter._RENDERED_OBSERVATION_JS
+    static_source = inspect_source = __import__(
+        "inspect"
+    ).getsource(static_boundary_candidates)
+
+    assert "querySelectorAll('section, article')" in rendered_query
+    assert 'select("section, article")' in static_source

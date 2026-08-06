@@ -95,7 +95,15 @@ def static_boundary_candidates(html: str) -> list[Tag]:
             add(owner)
             break
 
-    for element in soup.select("main > section, main > article, body > section, [role='main'] > section"):
+    # Sectioning elements at any depth, outermost only. Requiring them to be
+    # direct children of main or body missed every Vanjaro-built page: those
+    # nest their sections inside layout divs and have no <main>, so this
+    # returned nothing at all while the content extractor found eleven. The
+    # rendered observation script had the same blind spot.
+    sectioning = soup.select("section, article")
+    for element in sectioning:
+        if any(other is not element and other in element.parents for other in sectioning):
+            continue
         add(element)
     for element in soup.select("[data-elementor-type] > [data-id][data-element_type='container']"):
         add(element)

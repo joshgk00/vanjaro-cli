@@ -2322,3 +2322,44 @@ Vanjaro page nests content.
 three rendered sections; the fixture now yields four, because the nav is
 extracted as a section too and equal length is the precondition for position
 pairing. Updated to four rather than relaxed.
+
+### 2026-08-06 — VF-216: rendered analysis works on a real site, end to end
+
+**Matcher unchanged** (0.9200 / 1.0000). Boundary precision and recall both 1.0,
+visitor content retention 1.0. Benchmark clean. Suite 2,015 → 2,018.
+
+On the live `keys-to-success` site:
+
+| | before | after |
+|---|---:|---:|
+| sections with rendered provenance | 0 / 11 | **11 / 11** |
+| sections with measured bounds | 0 / 11 | **11 / 11** |
+| style properties per section | 0–2 | **32** |
+| warnings | 3 unmatched | **0** |
+
+Real backgrounds, and the site's real theme font throughout: Poppins, not the
+browser default this project has been measuring since typography first scored.
+
+**The cause was the same blind spot, in the other extractor.**
+`static_boundary_candidates` selected
+`main > section, main > article, body > section` — the identical direct-child
+query the rendered script had. On a Vanjaro-built page it returned **zero**
+candidates while the content extractor found eleven sections, so
+`prepare_static_sections` had nothing to match against, no section recorded a
+selector, and pairing had no key. Widened the same way: outermost `section,
+article` at any depth. Thirteen candidates, eleven sections matched, every one
+carrying its real id.
+
+**Two extractors that disagree about where sections live cannot pair**, however
+good either is alone. A test now asserts both query the same shape, so they
+cannot drift apart again silently.
+
+**The builder-specific selectors stay.** Elementor containers and DNN panes are
+still matched explicitly; the widened rule is additive, which is why boundary
+precision and recall hold at 1.0.
+
+**What this changes about everything measured so far.** Every rendered figure in
+this log came from the one hand-written fixture, because that was the only page
+shape either extractor could see. The pipeline can now measure a real site, and
+the colour, typography and media evidence that has been unavailable throughout
+is present on one for the first time.
