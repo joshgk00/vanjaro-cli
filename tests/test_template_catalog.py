@@ -43,8 +43,8 @@ EXPECTED_FIELDS_BY_TEMPLATE = {
     "Cards/class-photo-cards-4up.json": {
         "section_title", "subtitle", "item.title", "item.body", "item.media", "item.tag", "item.action"
     },
-    "Cards/feature-cards-3up.json": {"item.title", "item.body", "item.action"},
-    "Cards/feature-cards-4up.json": {"item.title", "item.body"},
+    "Cards/feature-cards-3up.json": {"item.title", "item.body", "item.action", "item.media"},
+    "Cards/feature-cards-4up.json": {"item.title", "item.body", "item.media"},
     "Cards/gallery-3up.json": {
         "section_title", "section_body", "item.title", "item.meta", "item.media"
     },
@@ -74,7 +74,7 @@ EXPECTED_FIELDS_BY_TEMPLATE = {
     "Heroes/centered-hero.json": {"title", "body", "action", "background_media"},
     "Heroes/photo-band.json": {"background_media"},
     "Heroes/split-hero.json": {"title", "body", "action", "media"},
-    "Lists/icon-feature-list.json": {"item.title", "item.body"},
+    "Lists/icon-feature-list.json": {"item.title", "item.body", "item.media"},
     "Navigation/footer-3col.json": {
         "brand.title", "brand.body", "column.title", "column.links", "contact_title", "contact_items"
     },

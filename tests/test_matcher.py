@@ -321,8 +321,10 @@ def test_maintainability_accounts_for_css_editability_and_reuse() -> None:
 
     assert reused.subscores.maintainability > baseline.subscores.maintainability
     assert css_heavy.subscores.maintainability < baseline.subscores.maintainability
-    # This item-only template deliberately has no section-title slot.
-    assert reused.maintainability.editable_content_coverage == 0.5
+    # This item-only template deliberately has no section-title slot. The
+    # coverage rose from 0.5 when the template gained an editable media slot
+    # (VF-214): more of the observed content now has somewhere real to go.
+    assert reused.maintainability.editable_content_coverage == 0.75
     assert any("section_title" in issue for issue in reused.missing_requirements)
     assert reused.maintainability.global_block_reuse
 
@@ -375,36 +377,54 @@ def _explanations(section: Section, filename: str) -> tuple[str, ...]:
     return match_section(section, [_entry(filename)]).candidates[0].missing_requirements
 
 
-def test_a_field_matching_only_a_static_slot_is_reported() -> None:
-    """The quietest content loss in the pipeline.
+def _static_only_capabilities():
+    """A real manifest with its media slot moved from editable to static.
 
-    `item.media` aliases to `item.icon`, which `feature-cards-3up` declares
-    static. That counted as represented, so it was never reported unsupported,
-    and binding then skipped it because only editable fields bind. Three
-    designed images left the pilot build this way with no warning at all.
+    Derived rather than constructed: the three templates that had this shape
+    were given a real media slot, so the catalog no longer contains an example,
+    but the reporting still has to work.
     """
+
+    capabilities = _entry("gallery-3up.json").capabilities
+    fields = {k: v for k, v in capabilities.fields.items() if k != "item.media"}
+    return capabilities.model_copy(
+        update={
+            "fields": fields,
+            "static_fields": tuple(capabilities.static_fields) + ("item.media",),
+        }
+    )
+
+
+def test_a_field_matching_only_a_static_slot_is_reported() -> None:
+    """The quietest content loss in the pipeline: a field aliasing to a slot the
+    template declares static counts as represented, so it is never reported
+    unsupported, and binding then skips it because only editable fields bind.
+    Three designed images left the pilot build that way with no warning."""
+
+    from vanjaro_cli.design.matcher import _field_score
 
     section = _section(item_fields=("title", "body", "media"))
 
-    explanations = _explanations(section, "feature-cards-3up.json")
+    _score, _coverage, missing = _field_score(section, _static_only_capabilities())
 
     assert any(
         "item.media" in message and "static template slot" in message
-        for message in explanations
+        for message in missing
     )
 
 
 def test_a_field_with_no_slot_at_all_is_still_reported_separately() -> None:
     """The two failures need different fixes, so they must read differently."""
 
+    from vanjaro_cli.design.matcher import _field_score
+
     section = _section(item_fields=("title", "body", "media"))
 
-    explanations = _explanations(section, "feature-cards-3up.json")
-    unsupported = [m for m in explanations if "is not editable by template" in m]
-    static_only = [m for m in explanations if "static template slot" in m]
+    _score, _coverage, missing = _field_score(section, _static_only_capabilities())
+    static_only = [m for m in missing if "static template slot" in m]
 
-    assert unsupported and static_only
-    assert not set(unsupported) & set(static_only)
+    assert static_only
+    assert not any(m in static_only for m in missing if "is not editable" in m)
 
 
 def test_a_field_bound_to_an_editable_slot_is_not_reported() -> None:

@@ -28,6 +28,7 @@ from vanjaro_cli.project import (
 )
 from vanjaro_cli.utils.semver import compare_semver, validate_semver
 from vanjaro_cli.agency_library.generation import (
+    _PACK_VERSION,
     check_repository_pack_artifacts,
     render_repository_pack_artifacts,
     write_repository_pack_artifacts,
@@ -231,7 +232,10 @@ def test_pack_generator_never_rewrites_digest_locked_history(tmp_path: Path) -> 
         for issue in check_repository_pack_artifacts(registry_root=registry)
     )
 
-    current = family / "packs" / "1.3.0.json"
+    # Derived, not hardcoded: this assertion is about the *current* release
+    # refusing to be rewritten, and pinning a version number meant the test
+    # silently stopped exercising that the moment the pack was bumped.
+    current = family / "packs" / f"{_PACK_VERSION}.json"
     tampered = current.read_bytes() + b" "
     current.write_bytes(tampered)
     with pytest.raises(ValueError, match="refusing to rewrite published"):

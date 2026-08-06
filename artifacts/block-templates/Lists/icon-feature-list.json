@@ -30,7 +30,8 @@
     },
     "fields": {
       "item.title": "required",
-      "item.body": "optional"
+      "item.body": "optional",
+      "item.media": "optional"
     },
     "static_fields": [
       "item.icon"
@@ -55,6 +56,16 @@
           "text_3"
         ],
         "slots_per_owner": 1
+      },
+      "item.media": {
+        "owner": "repeat_item",
+        "slot_type": "image",
+        "slots": [
+          "image_1_src",
+          "image_2_src",
+          "image_3_src"
+        ],
+        "slots_per_owner": 1
       }
     },
     "responsive": {
@@ -76,92 +87,217 @@
   "template": {
     "type": "section",
     "classes": [
-      {"name": "vj-section", "active": false},
-      {"name": "py-5", "active": false}
+      {
+        "name": "vj-section",
+        "active": false
+      },
+      {
+        "name": "py-5",
+        "active": false
+      }
     ],
-    "attributes": {"id": "tpl-ifl-s1"},
+    "attributes": {
+      "id": "tpl-ifl-s1"
+    },
     "components": [
       {
         "type": "grid",
         "classes": [
-          {"name": "container", "active": false}
+          {
+            "name": "container",
+            "active": false
+          }
         ],
-        "attributes": {"id": "tpl-ifl-g1"},
+        "attributes": {
+          "id": "tpl-ifl-g1"
+        },
         "components": [
           {
             "type": "row",
             "classes": [
-              {"name": "row", "active": false},
-              {"name": "justify-content-center", "active": false}
+              {
+                "name": "row",
+                "active": false
+              },
+              {
+                "name": "justify-content-center",
+                "active": false
+              }
             ],
-            "attributes": {"id": "tpl-ifl-r0"},
+            "attributes": {
+              "id": "tpl-ifl-r0"
+            },
             "components": [
               {
                 "type": "column",
                 "classes": [
-                  {"name": "col-xl-8", "active": false},
-                  {"name": "col-md-10", "active": false},
-                  {"name": "col-12", "active": false}
+                  {
+                    "name": "col-xl-8",
+                    "active": false
+                  },
+                  {
+                    "name": "col-md-10",
+                    "active": false
+                  },
+                  {
+                    "name": "col-12",
+                    "active": false
+                  }
                 ],
-                "attributes": {"id": "tpl-ifl-c0"},
+                "attributes": {
+                  "id": "tpl-ifl-c0"
+                },
                 "components": [
                   {
                     "type": "row",
                     "classes": [
-                      {"name": "row", "active": false},
-                      {"name": "g-4", "active": false},
-                      {"name": "align-items-center", "active": false}
+                      {
+                        "name": "row",
+                        "active": false
+                      },
+                      {
+                        "name": "g-4",
+                        "active": false
+                      },
+                      {
+                        "name": "align-items-center",
+                        "active": false
+                      }
                     ],
-                    "attributes": {"id": "tpl-ifl-r1"},
+                    "attributes": {
+                      "id": "tpl-ifl-r1"
+                    },
                     "components": [
                       {
                         "type": "column",
                         "classes": [
-                          {"name": "col-xl-2", "active": false},
-                          {"name": "col-md-2", "active": false},
-                          {"name": "col-12", "active": false},
-                          {"name": "text-center", "active": false}
+                          {
+                            "name": "col-xl-2",
+                            "active": false
+                          },
+                          {
+                            "name": "col-md-2",
+                            "active": false
+                          },
+                          {
+                            "name": "col-12",
+                            "active": false
+                          },
+                          {
+                            "name": "text-center",
+                            "active": false
+                          }
                         ],
-                        "attributes": {"id": "tpl-ifl-ic1"},
+                        "attributes": {
+                          "id": "tpl-ifl-ic1"
+                        },
                         "components": [
+                          {
+                            "type": "image",
+                            "classes": [
+                              {
+                                "name": "image-box",
+                                "active": false
+                              },
+                              {
+                                "name": "vj-image",
+                                "active": false
+                              },
+                              {
+                                "name": "img-fluid",
+                                "active": false
+                              },
+                              {
+                                "name": "rounded",
+                                "active": false
+                              },
+                              {
+                                "name": "mb-3",
+                                "active": false
+                              }
+                            ],
+                            "attributes": {
+                              "id": "tpl-ifl-img1",
+                              "src": "https://placehold.co/320x200?text=Item+1",
+                              "alt": ""
+                            }
+                          },
                           {
                             "type": "icon",
                             "classes": [
-                              {"name": "icon-box", "active": false},
-                              {"name": "vj-icon", "active": false},
-                              {"name": "text-primary", "active": false}
+                              {
+                                "name": "icon-box",
+                                "active": false
+                              },
+                              {
+                                "name": "vj-icon",
+                                "active": false
+                              },
+                              {
+                                "name": "text-primary",
+                                "active": false
+                              }
                             ],
-                            "attributes": {"id": "tpl-ifl-i1"}
+                            "attributes": {
+                              "id": "tpl-ifl-i1"
+                            }
                           }
                         ]
                       },
                       {
                         "type": "column",
                         "classes": [
-                          {"name": "col-xl-10", "active": false},
-                          {"name": "col-md-10", "active": false},
-                          {"name": "col-12", "active": false}
+                          {
+                            "name": "col-xl-10",
+                            "active": false
+                          },
+                          {
+                            "name": "col-md-10",
+                            "active": false
+                          },
+                          {
+                            "name": "col-12",
+                            "active": false
+                          }
                         ],
-                        "attributes": {"id": "tpl-ifl-tc1"},
+                        "attributes": {
+                          "id": "tpl-ifl-tc1"
+                        },
                         "components": [
                           {
                             "type": "heading",
                             "tagName": "h4",
                             "content": "Feature One",
                             "classes": [
-                              {"name": "vj-heading", "active": false},
-                              {"name": "head-style-4", "active": false}
+                              {
+                                "name": "vj-heading",
+                                "active": false
+                              },
+                              {
+                                "name": "head-style-4",
+                                "active": false
+                              }
                             ],
-                            "attributes": {"id": "tpl-ifl-h1"}
+                            "attributes": {
+                              "id": "tpl-ifl-h1"
+                            }
                           },
                           {
                             "type": "text",
                             "content": "A short explanation of what this feature does and why it matters.",
                             "classes": [
-                              {"name": "vj-text", "active": false},
-                              {"name": "paragraph-style-1", "active": false}
+                              {
+                                "name": "vj-text",
+                                "active": false
+                              },
+                              {
+                                "name": "paragraph-style-1",
+                                "active": false
+                              }
                             ],
-                            "attributes": {"id": "tpl-ifl-t1"}
+                            "attributes": {
+                              "id": "tpl-ifl-t1"
+                            }
                           }
                         ]
                       }
@@ -170,61 +306,157 @@
                   {
                     "type": "row",
                     "classes": [
-                      {"name": "row", "active": false},
-                      {"name": "g-4", "active": false},
-                      {"name": "align-items-center", "active": false},
-                      {"name": "mt-2", "active": false}
+                      {
+                        "name": "row",
+                        "active": false
+                      },
+                      {
+                        "name": "g-4",
+                        "active": false
+                      },
+                      {
+                        "name": "align-items-center",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-2",
+                        "active": false
+                      }
                     ],
-                    "attributes": {"id": "tpl-ifl-r2"},
+                    "attributes": {
+                      "id": "tpl-ifl-r2"
+                    },
                     "components": [
                       {
                         "type": "column",
                         "classes": [
-                          {"name": "col-xl-2", "active": false},
-                          {"name": "col-md-2", "active": false},
-                          {"name": "col-12", "active": false},
-                          {"name": "text-center", "active": false}
+                          {
+                            "name": "col-xl-2",
+                            "active": false
+                          },
+                          {
+                            "name": "col-md-2",
+                            "active": false
+                          },
+                          {
+                            "name": "col-12",
+                            "active": false
+                          },
+                          {
+                            "name": "text-center",
+                            "active": false
+                          }
                         ],
-                        "attributes": {"id": "tpl-ifl-ic2"},
+                        "attributes": {
+                          "id": "tpl-ifl-ic2"
+                        },
                         "components": [
+                          {
+                            "type": "image",
+                            "classes": [
+                              {
+                                "name": "image-box",
+                                "active": false
+                              },
+                              {
+                                "name": "vj-image",
+                                "active": false
+                              },
+                              {
+                                "name": "img-fluid",
+                                "active": false
+                              },
+                              {
+                                "name": "rounded",
+                                "active": false
+                              },
+                              {
+                                "name": "mb-3",
+                                "active": false
+                              }
+                            ],
+                            "attributes": {
+                              "id": "tpl-ifl-img2",
+                              "src": "https://placehold.co/320x200?text=Item+2",
+                              "alt": ""
+                            }
+                          },
                           {
                             "type": "icon",
                             "classes": [
-                              {"name": "icon-box", "active": false},
-                              {"name": "vj-icon", "active": false},
-                              {"name": "text-primary", "active": false}
+                              {
+                                "name": "icon-box",
+                                "active": false
+                              },
+                              {
+                                "name": "vj-icon",
+                                "active": false
+                              },
+                              {
+                                "name": "text-primary",
+                                "active": false
+                              }
                             ],
-                            "attributes": {"id": "tpl-ifl-i2"}
+                            "attributes": {
+                              "id": "tpl-ifl-i2"
+                            }
                           }
                         ]
                       },
                       {
                         "type": "column",
                         "classes": [
-                          {"name": "col-xl-10", "active": false},
-                          {"name": "col-md-10", "active": false},
-                          {"name": "col-12", "active": false}
+                          {
+                            "name": "col-xl-10",
+                            "active": false
+                          },
+                          {
+                            "name": "col-md-10",
+                            "active": false
+                          },
+                          {
+                            "name": "col-12",
+                            "active": false
+                          }
                         ],
-                        "attributes": {"id": "tpl-ifl-tc2"},
+                        "attributes": {
+                          "id": "tpl-ifl-tc2"
+                        },
                         "components": [
                           {
                             "type": "heading",
                             "tagName": "h4",
                             "content": "Feature Two",
                             "classes": [
-                              {"name": "vj-heading", "active": false},
-                              {"name": "head-style-4", "active": false}
+                              {
+                                "name": "vj-heading",
+                                "active": false
+                              },
+                              {
+                                "name": "head-style-4",
+                                "active": false
+                              }
                             ],
-                            "attributes": {"id": "tpl-ifl-h2"}
+                            "attributes": {
+                              "id": "tpl-ifl-h2"
+                            }
                           },
                           {
                             "type": "text",
                             "content": "A short explanation of what this feature does and why it matters.",
                             "classes": [
-                              {"name": "vj-text", "active": false},
-                              {"name": "paragraph-style-1", "active": false}
+                              {
+                                "name": "vj-text",
+                                "active": false
+                              },
+                              {
+                                "name": "paragraph-style-1",
+                                "active": false
+                              }
                             ],
-                            "attributes": {"id": "tpl-ifl-t2"}
+                            "attributes": {
+                              "id": "tpl-ifl-t2"
+                            }
                           }
                         ]
                       }
@@ -233,61 +465,157 @@
                   {
                     "type": "row",
                     "classes": [
-                      {"name": "row", "active": false},
-                      {"name": "g-4", "active": false},
-                      {"name": "align-items-center", "active": false},
-                      {"name": "mt-2", "active": false}
+                      {
+                        "name": "row",
+                        "active": false
+                      },
+                      {
+                        "name": "g-4",
+                        "active": false
+                      },
+                      {
+                        "name": "align-items-center",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-2",
+                        "active": false
+                      }
                     ],
-                    "attributes": {"id": "tpl-ifl-r3"},
+                    "attributes": {
+                      "id": "tpl-ifl-r3"
+                    },
                     "components": [
                       {
                         "type": "column",
                         "classes": [
-                          {"name": "col-xl-2", "active": false},
-                          {"name": "col-md-2", "active": false},
-                          {"name": "col-12", "active": false},
-                          {"name": "text-center", "active": false}
+                          {
+                            "name": "col-xl-2",
+                            "active": false
+                          },
+                          {
+                            "name": "col-md-2",
+                            "active": false
+                          },
+                          {
+                            "name": "col-12",
+                            "active": false
+                          },
+                          {
+                            "name": "text-center",
+                            "active": false
+                          }
                         ],
-                        "attributes": {"id": "tpl-ifl-ic3"},
+                        "attributes": {
+                          "id": "tpl-ifl-ic3"
+                        },
                         "components": [
+                          {
+                            "type": "image",
+                            "classes": [
+                              {
+                                "name": "image-box",
+                                "active": false
+                              },
+                              {
+                                "name": "vj-image",
+                                "active": false
+                              },
+                              {
+                                "name": "img-fluid",
+                                "active": false
+                              },
+                              {
+                                "name": "rounded",
+                                "active": false
+                              },
+                              {
+                                "name": "mb-3",
+                                "active": false
+                              }
+                            ],
+                            "attributes": {
+                              "id": "tpl-ifl-img3",
+                              "src": "https://placehold.co/320x200?text=Item+3",
+                              "alt": ""
+                            }
+                          },
                           {
                             "type": "icon",
                             "classes": [
-                              {"name": "icon-box", "active": false},
-                              {"name": "vj-icon", "active": false},
-                              {"name": "text-primary", "active": false}
+                              {
+                                "name": "icon-box",
+                                "active": false
+                              },
+                              {
+                                "name": "vj-icon",
+                                "active": false
+                              },
+                              {
+                                "name": "text-primary",
+                                "active": false
+                              }
                             ],
-                            "attributes": {"id": "tpl-ifl-i3"}
+                            "attributes": {
+                              "id": "tpl-ifl-i3"
+                            }
                           }
                         ]
                       },
                       {
                         "type": "column",
                         "classes": [
-                          {"name": "col-xl-10", "active": false},
-                          {"name": "col-md-10", "active": false},
-                          {"name": "col-12", "active": false}
+                          {
+                            "name": "col-xl-10",
+                            "active": false
+                          },
+                          {
+                            "name": "col-md-10",
+                            "active": false
+                          },
+                          {
+                            "name": "col-12",
+                            "active": false
+                          }
                         ],
-                        "attributes": {"id": "tpl-ifl-tc3"},
+                        "attributes": {
+                          "id": "tpl-ifl-tc3"
+                        },
                         "components": [
                           {
                             "type": "heading",
                             "tagName": "h4",
                             "content": "Feature Three",
                             "classes": [
-                              {"name": "vj-heading", "active": false},
-                              {"name": "head-style-4", "active": false}
+                              {
+                                "name": "vj-heading",
+                                "active": false
+                              },
+                              {
+                                "name": "head-style-4",
+                                "active": false
+                              }
                             ],
-                            "attributes": {"id": "tpl-ifl-h3"}
+                            "attributes": {
+                              "id": "tpl-ifl-h3"
+                            }
                           },
                           {
                             "type": "text",
                             "content": "A short explanation of what this feature does and why it matters.",
                             "classes": [
-                              {"name": "vj-text", "active": false},
-                              {"name": "paragraph-style-1", "active": false}
+                              {
+                                "name": "vj-text",
+                                "active": false
+                              },
+                              {
+                                "name": "paragraph-style-1",
+                                "active": false
+                              }
                             ],
-                            "attributes": {"id": "tpl-ifl-t3"}
+                            "attributes": {
+                              "id": "tpl-ifl-t3"
+                            }
                           }
                         ]
                       }

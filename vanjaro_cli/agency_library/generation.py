@@ -24,9 +24,9 @@ from vanjaro_cli.design.template_catalog import (
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_REGISTRY = _PROJECT_ROOT / "artifacts" / "agency-packs"
 _PACK_NAME = "clicks-and-mortars"
-_TEMPLATE_VERSION = "1.3.0"
+_TEMPLATE_VERSION = "1.4.0"
 _MODIFIER_VERSION = "1.0.0"
-_PACK_VERSION = "1.3.0"
+_PACK_VERSION = "1.4.0"
 _HISTORICAL_DIGESTS = {
     "templates/1.0.0.json": "c4e1316345e4c275ae9fb99312a3c2014de1ce39781a547b6a2d8685f42c8a73",
     "modifiers/1.0.0.json": "331b7c14af6ae87ac9d04a6559ff9ae3ed4c252a21be80c6fa5159c1f720f087",
@@ -36,6 +36,8 @@ _HISTORICAL_DIGESTS = {
     "packs/1.1.0.json": "4b7f293560e30839cecc1f680f46ef0e37b5c197dab1a0adec489a97698d7893",
     "templates/1.2.0.json": "3999dc0f9ec3848b150fc11738269b4062818a42dc5390626ce769105da8cd40",
     "packs/1.2.0.json": "88a092ce6413f0197b0f16aafd311539252fe699453ffb19df114e29c6b6c86a",
+    "packs/1.3.0.json": "e41111c7e6bd3d1bb84051489e8ede5536b789579529123872c6e80467938e2e",
+    "templates/1.3.0.json": "50c3251ba82f73d40b954ddda9802291075e3b00e996d2ce079d777c5dcd0fe1",
 }
 _AUDITED_EXECUTABLE_DIGESTS = {
     "CTAs/cta-banner": "f1af9e60b5086e510411ac5548097bdcfc5530ee1d474caa55cb04f3c2fe3028",
@@ -43,8 +45,8 @@ _AUDITED_EXECUTABLE_DIGESTS = {
     "Cards/blog-post-cards-3up": "cffaad2e72b57141fedf16dab66348b9e8c574950a6852b7bbef64b3df935c71",
     "Cards/blog-post-cards-4up": "21e493ed02959946206a38e1de9b01d51664dda61bc171d185da50f3e6047761",
     "Cards/class-photo-cards-4up": "5ee0813e8e8ddc04e7aeb431910ebbd56965f1128eca518c774dbe1a8bd926d3",
-    "Cards/feature-cards-3up": "93878542ca89a2e3f69d4985545d6d040a745a7e44315c66472cded03330fea9",
-    "Cards/feature-cards-4up": "03e48b7fd5e3e49391c9b0082c2b9bf56ddf8e2f1b096d8834e6727d5122a069",
+    "Cards/feature-cards-3up": "3b3f799f7fc069f41f983f88cd6fb87409d00605b4cc033c66f43d2b97409acd",
+    "Cards/feature-cards-4up": "5917950d191a1e3611393e3950492275e018f3c37ae62e6839f27c60a5bd3ae2",
     "Cards/gallery-3up": "949c1d7115e174518e75a74cde8665ec9dd071f61c6e463b6071714d9a53c109",
     "Cards/gallery-6up": "ed9d0cb2eba475cb071d917bea66e0685cf23e8e3acfd0db10b56ef941c26124",
     "Cards/pricing-cards-3up": "1a72cee2023bd6d5425faf789901d2b71e835ac96012a4622ea11d057b56a9ab",
@@ -64,7 +66,7 @@ _AUDITED_EXECUTABLE_DIGESTS = {
     "Heroes/centered-hero": "e523ecda49c5a3cb0fd43013ab0a2298d0fdaa44e50878154ea89ec55bbecaaa",
     "Heroes/photo-band": "e86fd5ed8de34657254283eef73177007c3e1d2c505c7a556692bd5a0f5bc910",
     "Heroes/split-hero": "2a8f8bc85e0fa2519641c270aac3940cee10345397bb421b3601c2b0514a46e6",
-    "Lists/icon-feature-list": "7cb204d6824f3b5bebabdd28a161d76b408a864e9a5841a7ceec3d00965c9a39",
+    "Lists/icon-feature-list": "e1749c56d50da2ecd0bc29f01e1ab92ac8e87985dab1d32e30642ef388aae3b7",
     "Navigation/footer-3col": "3a136c0341de8406a4c5a49c41c646a8b37fcdd2243e4ecf1e73908f2bc1e5ec",
     "Navigation/footer-4col": "d08141a70fd7756668d187e6a469a071f7ad587d7fa3177a5bedecf61305c9c1",
     "Navigation/navbar-brand-links": "8cbc596fa0fb8bf624c991d5b2c9650afca8c08d6429f46ae0ead9b22b414bfd",
@@ -76,8 +78,8 @@ _REVIEWED_EXECUTABLE_CHANGES = (
     "Lists/icon-feature-list",
 )
 _CURRENT_RELEASE_DIGESTS = {
-    "packs/1.3.0.json": "e41111c7e6bd3d1bb84051489e8ede5536b789579529123872c6e80467938e2e",
-    "templates/1.3.0.json": "50c3251ba82f73d40b954ddda9802291075e3b00e996d2ce079d777c5dcd0fe1",
+    "templates/1.4.0.json": "b9a32bb8c35eb87d3d45d45f034282bcb1f893738df6bdc80530bc029bbcfc91",
+    "packs/1.4.0.json": "8d48806b62a7b87583b5737f4f8f526a906a1b04aeb47a228b8f7e319e963d53",
 }
 
 
