@@ -1082,25 +1082,199 @@ def test_a_wrapper_div_is_not_turned_into_a_paragraph() -> None:
     """A div around other elements is structure, not a paragraph; rewriting it
     would swallow its children's roles."""
 
-    from vanjaro_cli.migration.sections import _normalize_text_blocks
+    from vanjaro_cli.migration.sections import normalize_text_blocks
     from bs4 import BeautifulSoup
 
     soup = BeautifulSoup(
         "<div class='wrap'><div class='vj-text'>Copy</div></div>", "html.parser"
     )
 
-    _normalize_text_blocks(soup)
+    normalize_text_blocks(soup)
 
     assert soup.find("div", class_="wrap") is not None
     assert soup.find("p") is not None
 
 
 def test_an_empty_div_is_left_alone() -> None:
-    from vanjaro_cli.migration.sections import _normalize_text_blocks
+    from vanjaro_cli.migration.sections import normalize_text_blocks
     from bs4 import BeautifulSoup
 
     soup = BeautifulSoup("<div class='spacer'></div>", "html.parser")
 
-    _normalize_text_blocks(soup)
+    normalize_text_blocks(soup)
 
     assert soup.find("p") is None
+
+
+_VANJARO_CARDS = """
+<section id="classes">
+  <div class="container">
+    <div class="row mb-4">
+      <div class="col-12 text-center">
+        <div class="vj-text">Our Classes</div>
+        <h2 class="vj-heading">MOST POPULAR CLASSES</h2>
+      </div>
+    </div>
+    <div class="row g-4 mb-4">
+      <div class="col-md-6 col-12">
+        <div class="kts-rounded-16">
+          <img class="vj-image" src="/one.png" alt="Prelude"/>
+          <div class="kts-card-band">
+            <h3 class="vj-heading">PRELUDE</h3>
+            <div class="vj-text">Ages nought to five</div>
+            <a class="btn" href="/prelude">LEARN MORE</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-12">
+        <div class="kts-rounded-16">
+          <img class="vj-image" src="/two.png" alt="Opening Notes"/>
+          <div class="kts-card-band">
+            <h3 class="vj-heading">OPENING NOTES</h3>
+            <div class="vj-text">Pre piano ages four to six</div>
+            <a class="btn" href="/opening">LEARN MORE</a>
+          </div>
+        </div>
+      </div>
+    </div>
+    <div class="row g-4">
+      <div class="col-md-6 col-12">
+        <div class="kts-rounded-16">
+          <img class="vj-image" src="/three.png" alt="Symphony"/>
+          <div class="kts-card-band">
+            <h3 class="vj-heading">SYMPHONY</h3>
+            <div class="vj-text">Lessons for all ages</div>
+            <a class="btn" href="/symphony">LEARN MORE</a>
+          </div>
+        </div>
+      </div>
+      <div class="col-md-6 col-12">
+        <div class="kts-rounded-16">
+          <img class="vj-image" src="/four.png" alt="Finale"/>
+          <div class="kts-card-band">
+            <h3 class="vj-heading">FINALE</h3>
+            <div class="vj-text">Lessons for adults</div>
+            <a class="btn" href="/finale">LEARN MORE</a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+"""
+
+
+def _enriched(static_html: str, role: str) -> dict:
+    from vanjaro_cli.design.html_ownership import enrich_section_from_static_dom
+
+    section: dict = {"id": "page.section.1", "semantic_role": role, "content": [], "groups": []}
+    enrich_section_from_static_dom(
+        section,
+        static_html,
+        source_url="http://example.test/page",
+        assets={},
+        provenance={"method": "static", "source_kind": "static_html"},
+    )
+    return section
+
+
+def test_cards_without_card_markup_still_become_a_repeat_group() -> None:
+    """A builder that emits Bootstrap columns has no <article> and no .card, so
+    vocabulary discovery found nothing and every item.* field went unbound."""
+
+    section = _enriched(_VANJARO_CARDS, "feature_cards")
+
+    groups = section["groups"]
+    assert len(groups) == 1
+    assert groups[0]["kind"] == "card"
+    assert len(groups[0]["items"]) == 4
+    assert all({"title", "media", "body"} <= set(item["fields"]) for item in groups[0]["items"])
+
+
+def test_card_discovery_spans_sibling_rows() -> None:
+    """The four cards live in two separate rows. Grouping by parent would have
+    reported two groups of two."""
+
+    section = _enriched(_VANJARO_CARDS, "feature_cards")
+
+    titles = [
+        next(element["value"] for element in section["content"] if element["id"] == item["fields"]["title"])
+        for item in section["groups"][0]["items"]
+    ]
+    assert titles == ["PRELUDE", "OPENING NOTES", "SYMPHONY", "FINALE"]
+
+
+def test_the_card_is_the_card_not_the_box_inside_it() -> None:
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.design.html_ownership import repeating_subtrees
+
+    root = BeautifulSoup(_VANJARO_CARDS, "html.parser").find("section")
+
+    items = repeating_subtrees(root)
+
+    assert [item.get("class") for item in items] == [["col-md-6", "col-12"]] * 4
+
+
+def test_the_section_heading_is_not_swallowed_by_a_card() -> None:
+    section = _enriched(_VANJARO_CARDS, "feature_cards")
+
+    titles = [element["value"] for element in section["content"] if element["role"] == "section_title"]
+    assert titles == ["MOST POPULAR CLASSES"]
+
+
+def test_a_section_with_no_repetition_reports_no_group() -> None:
+    """One card-shaped block is a section, not a repeat group."""
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.design.html_ownership import repeating_subtrees
+
+    root = BeautifulSoup(
+        "<section><div class='col'><h3>Only</h3><img src='/a.png'/></div></section>",
+        "html.parser",
+    ).find("section")
+
+    assert repeating_subtrees(root) == []
+
+
+def test_repeated_blocks_without_a_heading_or_image_are_not_cards() -> None:
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.design.html_ownership import repeating_subtrees
+
+    root = BeautifulSoup(
+        "<section><div class='col'>one</div><div class='col'>two</div></section>",
+        "html.parser",
+    ).find("section")
+
+    assert repeating_subtrees(root) == []
+
+
+def test_known_card_markup_still_wins_over_structural_discovery() -> None:
+    """Vocabulary discovery is unchanged; the structural pass is a fallback."""
+
+    section = _enriched(
+        "<section>"
+        "<div class='wrap'><article><h3>One</h3><img src='/a.png'/></article></div>"
+        "<div class='wrap'><article><h3>Two</h3><img src='/b.png'/></article></div>"
+        "</section>",
+        "feature_cards",
+    )
+
+    assert len(section["groups"][0]["items"]) == 2
+
+
+def test_card_body_copy_survives_a_builder_that_never_emits_a_paragraph() -> None:
+    """This pass parses the source subtree, not extraction output, so it needs
+    its own text normalization."""
+
+    section = _enriched(_VANJARO_CARDS, "feature_cards")
+
+    bodies = [element["value"] for element in section["content"] if element["role"] == "card_body"]
+    assert bodies == [
+        "Ages nought to five",
+        "Pre piano ages four to six",
+        "Lessons for all ages",
+        "Lessons for adults",
+    ]

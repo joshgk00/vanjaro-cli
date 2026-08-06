@@ -2397,3 +2397,49 @@ roles, or repeat-group relationships, not surviving this markup. Filed as
 
 The corpus is unmoved by the change, which is the check that matters: retention,
 boundary precision and recall all stay at 1.0.
+
+### Iteration 29 — VF-217, binding on a real site
+
+**Result:** `editable_content_coverage` on `keys-to-success` 0.074 → **0.3977**.
+Blocking sections 9 → 5. Corpus unchanged on every metric: boundary precision
+and recall 1.0, visitor content retention 1.0 (127/127), group-field
+association 1.0 (79/79), top-1 0.92, high-confidence precision 0.909. Suite
+2,021 → 2,029.
+
+Two causes, both the shape this loop keeps meeting — code that names a *tag or
+a class* where it means a *kind of thing*.
+
+**Repeat items were discovered by vocabulary.** `find_all("article")` then
+`.card, .e-loop-item, .service-list > *`. A Vanjaro page emits Bootstrap
+columns and has none of those, so a four-card section produced no groups, and
+every `item.*` field went unbound. Its images and links fell through to the
+generic `section_media` and `primary_action` loops, which is exactly the
+signature the evidence showed: four media, four actions, one title, no groups.
+
+`repeating_subtrees` now finds cards by the repetition itself — the outermost
+set of like-signatured elements that each hold a heading or an image. Grouping
+by signature rather than by parent is load-bearing: the four cards were split
+across two `.row` containers, and a single-parent scan would have found two
+groups of two. It runs only when vocabulary discovery finds nothing, so the
+corpus path is untouched.
+
+**Iteration 28's normalization never reached this pass.** It was applied inside
+`extract_sections`, but `enrich_section_from_static_dom` parses the source
+subtree captured by `static_boundary_candidates` — raw page HTML that has been
+through no normalization at all. That is why the previous fix moved nothing.
+The helper is now public and called on both soups. Eight sections that reported
+no body copy now report it.
+
+Sections 5, 6, 7 and 8 bind their cards; four-item groups carry title, media
+and body.
+
+**The five sections still blocking are not binding failures**, and the earlier
+task file was wrong to group them. Section 1 is the site header — one image and
+eight links — classified `call_to_action` instead of `navigation`. Section 2 is
+a hero whose heading is not a heading element. Both are role and heading
+recognition, upstream of binding. Filed as VF-218 and VF-219; VF-217 stays open
+for the coverage gap that remains against the corpus.
+
+**Known imprecision, not hidden:** card body picks the first paragraph, which
+on this page is a short pill tag rather than the description below it. Coverage
+counts it; a reader would not. Recorded in VF-217.

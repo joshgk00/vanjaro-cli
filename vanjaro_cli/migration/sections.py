@@ -11,6 +11,7 @@ from vanjaro_cli.migration.crawler import IGNORED_LINK_SCHEMES
 
 __all__ = [
     "extract_sections",
+    "normalize_text_blocks",
     "extract_page_title",
     "extract_global_element",
     "collect_image_urls",
@@ -1622,7 +1623,7 @@ def _split_media_sections(element: Tag, content: dict, base_url: str) -> list[di
     return sections
 
 
-def _normalize_text_blocks(soup: BeautifulSoup) -> None:
+def normalize_text_blocks(soup: BeautifulSoup) -> None:
     """Treat a text-bearing block leaf as the paragraph it is.
 
     Extraction asks for `<p>` in half a dozen places, and a Vanjaro-built page
@@ -1653,7 +1654,7 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
     """
     soup = BeautifulSoup(html, "html.parser")
     _strip_hidden_elements(soup)
-    _normalize_text_blocks(soup)
+    normalize_text_blocks(soup)
     if css_text:
         annotate_section_styles(soup, css_text)
     top_level = _top_level_sections(soup)

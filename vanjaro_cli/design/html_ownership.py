@@ -15,6 +15,7 @@ from vanjaro_cli.design.html_primitives import (
     register_asset as _register_asset,
 )
 from vanjaro_cli.design.models import BreakpointName, Viewport
+from vanjaro_cli.migration.sections import normalize_text_blocks
 
 
 CANONICAL_VIEWPORTS: dict[BreakpointName, Viewport] = {
@@ -22,6 +23,64 @@ CANONICAL_VIEWPORTS: dict[BreakpointName, Viewport] = {
     BreakpointName.TABLET: Viewport(width=768, height=1024),
     BreakpointName.MOBILE: Viewport(width=390, height=844),
 }
+
+
+_INLINE_TAGS = frozenset(
+    {
+        "a", "abbr", "b", "br", "button", "cite", "code", "em", "i", "img",
+        "input", "label", "p", "picture", "path", "small", "source", "span",
+        "strong", "svg", "time", "h1", "h2", "h3", "h4", "h5", "h6",
+    }
+)
+
+
+def _signature(element: Tag) -> tuple[str, tuple[str, ...]]:
+    classes = element.get("class") or []
+    return element.name, tuple(sorted(str(value) for value in classes))
+
+
+def _depth(element: Tag, root: Tag) -> int:
+    depth = 0
+    parent = element.parent
+    while isinstance(parent, Tag) and parent is not root:
+        depth += 1
+        parent = parent.parent
+    return depth
+
+
+def repeating_subtrees(root: Tag, *, minimum: int = 2) -> list[Tag]:
+    """Find repeated card-shaped subtrees when no card vocabulary applies.
+
+    Discovery by `<article>` or `.card` only finds cards in builders that
+    happen to use those names. A Vanjaro page emits Bootstrap columns and has
+    neither, so a four-card section produced no groups at all and every
+    `item.*` field went unbound. What survives every builder is the repetition
+    itself.
+
+    Grouping by tag and class signature rather than by parent is deliberate:
+    the cards on a real page were split across two `.row` containers, and a
+    single-parent scan would have found two groups of two. Outermost wins so
+    the card is the card, not the rounded box inside it.
+    """
+
+    by_signature: dict[tuple[str, tuple[str, ...]], list[Tag]] = {}
+    for element in root.find_all(True):
+        if element.name in _INLINE_TAGS:
+            continue
+        if element.find(["h1", "h2", "h3", "h4", "h5", "h6"]) is None and element.find("img") is None:
+            continue
+        by_signature.setdefault(_signature(element), []).append(element)
+
+    ranked: list[tuple[int, int, list[Tag]]] = []
+    for group in by_signature.values():
+        if len(group) < minimum:
+            continue
+        if any(item is not other and item in other.parents for item in group for other in group):
+            continue
+        ranked.append((_depth(group[0], root), -len(group), group))
+    if not ranked:
+        return []
+    return min(ranked, key=lambda entry: entry[:2])[2]
 
 
 def enrich_section_from_static_dom(
@@ -35,6 +94,9 @@ def enrich_section_from_static_dom(
     """Replace lossy flat arrays with source-DOM element relationships."""
 
     soup = BeautifulSoup(static_html, "html.parser")
+    # This pass parses the source subtree itself rather than extraction output,
+    # so it needs the same normalization extraction applies to the whole page.
+    normalize_text_blocks(soup)
     root = soup.find(True)
     if not isinstance(root, Tag):
         return
@@ -136,8 +198,10 @@ def enrich_section_from_static_dom(
             repeat_items = list(root.select(".elementor-column, [class*='step']"))
         elif role in {"feature_cards", "project_gallery"}:
             repeat_kind = "card"
-            repeat_items = list(root.find_all("article")) or list(
-                root.select(".card, .e-loop-item, .service-list > *")
+            repeat_items = (
+                list(root.find_all("article"))
+                or list(root.select(".card, .e-loop-item, .service-list > *"))
+                or repeating_subtrees(root)
             )
         elif role == "split_feature":
             repeat_kind = "other"

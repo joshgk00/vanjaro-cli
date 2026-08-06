@@ -702,3 +702,59 @@ relationships, do not survive on this markup.
 **Tests:** a Vanjaro-shaped card section binding `item.title` and `item.body`,
 and an assertion that a section whose content genuinely cannot bind reports
 which element and why.
+
+### VF-218 — A site header is classified as a call to action
+
+**Dependencies:** none
+
+**Problem**
+
+`keys-to-success.section.1` holds one image and eight links — a logo and a
+navigation bar. `static_role` returns `call_to_action`, so it is matched
+against `CTAs/cta-banner`, which requires a `title` the header does not have
+and owns one action slot for eight actions. It blocks planning and would build
+a CTA where the header belongs.
+
+The navigation branch of `prepare_static_sections` exists and works; this
+section never reaches it because `static_role` decides first.
+
+**Acceptance criteria**
+
+- A section whose content is a brand mark and a link list resolves to
+  `navigation`, whatever tag the builder wrapped it in.
+- A genuine call to action with several links is still a call to action.
+- No change to `semantic_role_accuracy`, 1.0 today.
+
+**Tests:** a Vanjaro header, an Elementor header, and a CTA with three links
+that must not be reclassified.
+
+### VF-219 — A hero heading that is not a heading element is lost
+
+**Dependencies:** none
+
+**Problem**
+
+`keys-to-success.section.2` is the hero. It reports a single `body` element and
+no title, so `Heroes/centered-hero` blocks on a required `title`. The heading
+exists on the page; it is not an `h1`–`h3`, so `root.find_all(["h1","h2","h3"])`
+does not see it.
+
+Related: only the first non-repeated heading is ever recorded as
+`section_title`, and any others in the same section are dropped silently.
+
+**Acceptance criteria**
+
+- A section's most prominent text resolves to its title when no heading element
+  is present, and the evidence for that choice is recorded.
+- A section with two headings does not silently lose the second.
+- No change to `visitor_content_retention` or `semantic_role_accuracy`.
+
+**Tests:** a hero with a styled div heading, a hero with a real `h1` that must
+be preferred, and a section with two headings.
+
+**VF-217 status (iteration 29):** repeat-group binding and body-copy
+normalization landed; `editable_content_coverage` 0.074 → 0.3977, blocking
+sections 9 → 5. Remaining gap against the corpus is tracked here. Known
+imprecision: card body binds the first paragraph in the card, which on a real
+page was a short pill tag rather than the description beneath it — coverage
+counts it, a reader would not.
