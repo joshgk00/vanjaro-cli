@@ -2363,3 +2363,37 @@ this log came from the one hand-written fixture, because that was the only page
 shape either extractor could see. The pipeline can now measure a real site, and
 the colour, typography and media evidence that has been unavailable throughout
 is present on one for the first time.
+
+### 2026-08-06 — A real page's body copy was never extracted
+
+**Matcher unchanged** (0.9200 / 1.0000). Boundary precision, recall and visitor
+content retention all 1.0. Benchmark clean. Suite 2,018 → 2,021.
+
+With rendered analysis working on a real site, the next step was to score one
+end to end. Planning blocked immediately: nine of eleven sections
+`unresolved blocking match or simplification`, each for a required `title` or
+`body`.
+
+**The page has 51 `div.vj-text` blocks and 2 `<p>` elements.** Extraction asks
+for `<p>` in half a dozen places, so it found almost nothing — sections came
+back with empty content and every match blocked on a field the section plainly
+had. This is the third time the same shape has appeared: the build renders body
+copy as a div, and code that looks for a tag rather than a shape misses it.
+
+A single normalization now rewrites a text-bearing `div` leaf to `<p>` before
+extraction, which is safer than teaching six call sites a second spelling. Only
+a `div` with text and no element children qualifies — a wrapper around other
+elements is structure, not a paragraph, and is left alone.
+
+Sections that extracted nothing now extract their content: one previously-empty
+section returns four headings and four paragraphs.
+
+**It does not unblock planning, and the honest reading is that it was never
+going to alone.** `editable_content_coverage` on the real site is **0.074**, and
+the same nine sections still block. The content is extracted and is not reaching
+the fields that require it, so the gap is between extraction and binding —
+roles, or repeat-group relationships, not surviving this markup. Filed as
+**VF-217** with the per-section evidence.
+
+The corpus is unmoved by the change, which is the check that matters: retention,
+boundary precision and recall all stay at 1.0.

@@ -664,3 +664,41 @@ nests its content, not general.
 
 **Tests:** a Vanjaro-shaped fixture, a DNN-shaped one, and an assertion that
 every recorded selector resolves to exactly one element in its own document.
+
+### VF-217 — Extracted content does not reach template fields on a real site
+
+**Dependencies:** VF-216
+
+**Problem**
+
+With boundaries and content extraction both working on a real page, planning
+still blocks. `keys-to-success` produces 11 sections and
+`editable_content_coverage` of **0.074** — nine of eleven sections report
+`unresolved blocking match or simplification`, every one for a required field
+the section evidently has:
+
+| section | template | missing |
+|---|---|---|
+| 1 | `CTAs/cta-banner` | `title` |
+| 2 | `Heroes/centered-hero` | `title` |
+| 3 | `Content/rich-text` | `body` |
+| 5 | `Cards/feature-cards-3up` | `item.title` |
+
+Section 5 extracts four headings and four paragraphs, so the content exists; it
+is not reaching `item.title`. The gap is between extraction and binding —
+either the roles assigned to extracted elements, or the repeat-group
+relationships, do not survive on this markup.
+
+**Acceptance criteria**
+
+- A real page's extracted headings and body copy bind to the template fields
+  that require them, or the reason each does not is reported per element.
+- `editable_content_coverage` on a real page is comparable to the corpus, not
+  an order of magnitude below it.
+- No change to `visitor_content_retention`, `section_boundary_precision`, or
+  `section_boundary_recall`, all 1.0 today.
+- No annotation, fixture, or threshold is edited to move any of them.
+
+**Tests:** a Vanjaro-shaped card section binding `item.title` and `item.body`,
+and an assertion that a section whose content genuinely cannot bind reports
+which element and why.

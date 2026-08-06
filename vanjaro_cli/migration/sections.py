@@ -1622,6 +1622,27 @@ def _split_media_sections(element: Tag, content: dict, base_url: str) -> list[di
     return sections
 
 
+def _normalize_text_blocks(soup: BeautifulSoup) -> None:
+    """Treat a text-bearing block leaf as the paragraph it is.
+
+    Extraction asks for `<p>` in half a dozen places, and a Vanjaro-built page
+    has almost none: its body copy is `div.vj-text`. A real site came back with
+    51 such blocks and 2 paragraphs, so sections extracted with empty content
+    and every template match blocked on a missing `body` or `item.body`.
+
+    Rewriting the tag once is safer than teaching six call sites a second
+    spelling. Only a `div` with text and no element children qualifies, which is
+    what a paragraph is; a wrapper around other elements is left alone.
+    """
+
+    for element in soup.find_all("div"):
+        if element.find(True) is not None:
+            continue
+        if not element.get_text(strip=True):
+            continue
+        element.name = "p"
+
+
 def extract_sections(html: str, base_url: str, css_text: str | None = None) -> list[dict]:
     """
     Extract sections from a page's HTML.
@@ -1632,6 +1653,7 @@ def extract_sections(html: str, base_url: str, css_text: str | None = None) -> l
     """
     soup = BeautifulSoup(html, "html.parser")
     _strip_hidden_elements(soup)
+    _normalize_text_blocks(soup)
     if css_text:
         annotate_section_styles(soup, css_text)
     top_level = _top_level_sections(soup)

@@ -1054,3 +1054,53 @@ def test_both_extractors_agree_on_where_sections_live() -> None:
 
     assert "querySelectorAll('section, article')" in rendered_query
     assert 'select("section, article")' in static_source
+
+
+def test_a_text_bearing_div_is_extracted_as_a_paragraph() -> None:
+    """Extraction asks for <p> in half a dozen places, and a Vanjaro-built page
+    has almost none: a real site came back with 51 div.vj-text blocks and 2
+    paragraphs, so sections extracted with empty content and every template
+    match blocked on a missing body."""
+
+    from vanjaro_cli.design.html_adapter import extract_sections
+
+    html = (
+        "<html><body><main><section id='s1'>"
+        "<div class='vj-heading'>A Heading</div>"
+        "<div class='vj-text'>Some body copy that is long enough to count.</div>"
+        "</section></main></body></html>"
+    )
+
+    sections = extract_sections(html, "https://vj.test/")
+
+    assert sections
+    paragraphs = sections[0]["content"].get("paragraphs") or []
+    assert any("body copy" in str(text) for text in paragraphs)
+
+
+def test_a_wrapper_div_is_not_turned_into_a_paragraph() -> None:
+    """A div around other elements is structure, not a paragraph; rewriting it
+    would swallow its children's roles."""
+
+    from vanjaro_cli.migration.sections import _normalize_text_blocks
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(
+        "<div class='wrap'><div class='vj-text'>Copy</div></div>", "html.parser"
+    )
+
+    _normalize_text_blocks(soup)
+
+    assert soup.find("div", class_="wrap") is not None
+    assert soup.find("p") is not None
+
+
+def test_an_empty_div_is_left_alone() -> None:
+    from vanjaro_cli.migration.sections import _normalize_text_blocks
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup("<div class='spacer'></div>", "html.parser")
+
+    _normalize_text_blocks(soup)
+
+    assert soup.find("p") is None
