@@ -1010,3 +1010,46 @@ corpus unchanged. `media_position` now comes from source order rather than
 always reading `left`.
 
 **VF-226 still accounts for all nine remaining losses** and still needs Josh.
+
+**VF-226 corrected (iteration 41) — its premise was wrong.** Six card templates
+declare `section_title`: `blog-post-cards-3up`, `blog-post-cards-4up`,
+`class-photo-cards-4up`, `gallery-3up`, `gallery-6up`, `team-member-grid-4up`.
+I had checked two. There is no missing template; there is an unreachable one.
+**Third time a "library gap" turned out to be reachability** — check the whole
+catalogue and the classification before ever filing one again.
+
+### VF-227 — Six card templates are unreachable from a `feature_cards` section
+
+**Dependencies:** none, but see the corpus conflict below
+
+**Problem**
+
+`Cards/class-photo-cards-4up` fits kts sections 5, 7 and 8 exactly —
+`section_title`, `subtitle`, `item.media`, `item.title`, `item.tag`,
+`item.body`, `item.action`. The `Age 0-5 yrs` pill under each card title is
+`item.tag`. It is unreachable: it declares `class_cards`, `program_cards`,
+`service_cards`; the section reads `feature_cards`; and `_ROLE_COMPATIBILITY`
+has no `feature_cards` entry, so only the two templates naming that role can
+ever match. Neither holds a section heading, which is why all nine remaining
+content losses exist.
+
+**The obvious fix moves the corpus and was reverted.** Adding
+`feature_cards → {service_cards 1.0, class_cards 0.92, program_cards 0.92}`
+drops `high_confidence_precision` 0.9091 → 0.8667, under its 0.90 gate:
+`figma-freeform-nonprofit`, annotated `feature-cards-3up`/`gallery-3up`, matches
+a class-card template instead. Lowering the alias to 0.80 does not help — the
+template wins on field coverage, not role similarity.
+
+**The real question is whether that annotation is right.** If a section has a
+heading and its annotated template cannot hold one, the match may be the better
+answer and the annotation the stale one. Deciding that is a judgement about the
+benchmark, and changing an annotation to make a metric move is prohibited
+without exactly that judgement being made explicitly.
+
+**Acceptance criteria**
+
+- A card section with a heading reaches a template that can hold it.
+- `high_confidence_precision` stays at or above 0.90 **without** editing an
+  annotation to achieve it, or the annotation is changed deliberately, with the
+  reasoning recorded and every affected baseline re-taken in the same commit.
+- No change to the other nine corpus metrics, and both real sites reported.

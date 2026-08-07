@@ -2936,3 +2936,54 @@ no card template declares a `section_title`, and `Content/rich-text` declares
 only `title` and `body`. Section 10 is a stacked media feature with two
 pictures — correctly not a split — and loses its image and action to that same
 gap.
+
+### Iteration 41 — VF-226 was wrong too, and the fix hit a halt condition
+
+**Both real sites, unchanged:**
+
+| site | coverage | blocking | valid | content losses |
+|---|---|---|---|---|
+| `edca-pilot` | 0.125 | 2 | false | 0 |
+| `kts-fidelity` | 0.8358 | 0 | true | 9 |
+
+Corpus unchanged on every metric. Suite 2,085. **No code change survived this
+iteration**, and the reason is worth more than a commit would have been.
+
+**VF-226 said no card template declares a `section_title`. Six of them do.**
+`blog-post-cards-3up`, `blog-post-cards-4up`, `class-photo-cards-4up`,
+`gallery-3up`, `gallery-6up`, and `team-member-grid-4up` all have one. I checked
+`feature-cards-3up` and `-4up`, found neither had it, and wrote a task asserting
+a library-wide gap. That is the **third** time I have called something a missing
+template when it was a reachability problem — VF-221 was a misclassified footer,
+iteration 40 was a split read as a stack.
+
+`Cards/class-photo-cards-4up` is an exact fit for the three losing sections:
+`section_title`, `subtitle`, `item.media`, `item.title`, `item.tag`,
+`item.body`, `item.action`. The pill under each card title — `Age 0-5 yrs` — is
+literally `item.tag`. These are music *class* cards and the template is named
+for them.
+
+It is unreachable because it declares the roles `class_cards`, `program_cards`
+and `service_cards`, the section reads `feature_cards`, and
+`_ROLE_COMPATIBILITY` has no entry for `feature_cards` at all. So the only
+templates a card section can reach are the two that spell that exact name, and
+neither holds a heading.
+
+**Adding the alias moved the corpus, so I reverted it.** With
+`class_cards`/`program_cards` reachable, `high_confidence_precision` fell from
+0.9091 to 0.8667, below its 0.90 gate: a corpus section annotated for
+`feature-cards-3up`/`gallery-3up` matched a class-card template instead.
+Weakening the alias to 0.80 changed nothing, because the template wins on field
+coverage rather than on role similarity.
+
+That is the halt condition this document already names — *closing a vocabulary
+gap needs an existing shared leaf widened and the corpus moves*. The alternatives
+were to weaken a threshold or edit an annotation, both prohibited, and both
+would have turned a real signal into a green light. Reverted, corpus back at
+0.9091, and the finding is written down instead.
+
+**What VF-226 actually is** has changed: not "add templates" but "make six
+existing templates reachable without displacing the corpus". Filed as VF-227.
+That needs a decision about whether the corpus annotation for
+`figma-freeform-nonprofit` is right, which is a judgement about the benchmark
+rather than a fix to the pipeline.
