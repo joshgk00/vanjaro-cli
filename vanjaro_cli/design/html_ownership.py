@@ -213,6 +213,41 @@ def _media_side(columns: tuple[Tag, Tag] | None) -> str:
     return "left" if media in worded.find_all_previous() else "right"
 
 
+def _most_prominent(headings: list[Tag]) -> Tag | None:
+    """Return the heading a reader would take as the section's title.
+
+    Document order was the whole rule, so a section led by a small eyebrow —
+    `OUR MEDIA` in an `h5` above `See what our students can do` in an `h2` —
+    titled itself with the eyebrow and **dropped the real heading entirely**.
+    Widening the query to `h6` in VF-219 is what exposed this: before that an
+    `h5` could not win, and the `h2` was picked by accident.
+
+    Prominence is the level, and document order only breaks a tie.
+    """
+
+    if not headings:
+        return None
+    return min(headings, key=lambda heading: (int(heading.name[1]), headings.index(heading)))
+
+
+def _eyebrow_for(title: Tag | None, headings: list[Tag]) -> Tag | None:
+    """Return the smaller heading sitting above the title, if there is one.
+
+    A kicker above a headline is a distinct editorial part, and several
+    templates have a field for it. Recording it as a second `section_title`
+    would make two titles; dropping it loses a line the visitor reads.
+    """
+
+    if title is None:
+        return None
+    for heading in headings:
+        if heading is title:
+            return None
+        if int(heading.name[1]) > int(title.name[1]):
+            return heading
+    return None
+
+
 def enrich_section_from_static_dom(
     section: dict[str, JsonValue],
     static_html: str,
@@ -347,14 +382,13 @@ def enrich_section_from_static_dom(
             repeat_items = list(root.find_all("li"))
 
         repeated_nodes = {id(node) for item in repeat_items for node in [item, *item.find_all(True)]}
-        title = next(
-            (
-                heading
-                for heading in root.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
-                if id(heading) not in repeated_nodes
-            ),
-            None,
-        )
+        headings = [
+            heading
+            for heading in root.find_all(["h1", "h2", "h3", "h4", "h5", "h6"])
+            if id(heading) not in repeated_nodes
+        ]
+        title = _most_prominent(headings)
+        eyebrow = _eyebrow_for(title, headings)
         inferred_title = implied_title(root) if title is None else None
         if isinstance(inferred_title, Tag) and id(inferred_title) not in repeated_nodes:
             title = inferred_title
@@ -366,6 +400,13 @@ def enrich_section_from_static_dom(
             }
             if inferred_title is not None:
                 attributes["implied"] = True
+            if isinstance(eyebrow, Tag):
+                add(
+                    "heading",
+                    "eyebrow",
+                    eyebrow.get_text(" ", strip=True),
+                    attributes={"level": int(eyebrow.name[1])},
+                )
             add("heading", "section_title", title.get_text(" ", strip=True), attributes=attributes)
 
         group_id = f"{section_id}.items"

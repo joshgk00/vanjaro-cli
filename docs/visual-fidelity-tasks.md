@@ -1053,3 +1053,37 @@ without exactly that judgement being made explicitly.
   annotation to achieve it, or the annotation is changed deliberately, with the
   reasoning recorded and every affected baseline re-taken in the same commit.
 - No change to the other nine corpus metrics, and both real sites reported.
+
+**Heading prominence fixed (iteration 42).** The title is the most prominent
+heading rather than the first, and a kicker above it is kept as an `eyebrow`.
+Recovered a headline that was being dropped outright. kts coverage 0.8358 →
+0.8235 and losses 9 → 10 — worse numbers, better evidence, as the goal's own
+guidance anticipates.
+
+### VF-228 — A linked thumbnail with a heading is a media feature
+
+**Dependencies:** none
+
+**Problem**
+
+`kts.section.10` carries a kicker, a headline, body copy, a decorative mascot
+and a thumbnail wrapped in a link. It reads `rich_text` and matches
+`Content/rich-text`, which holds a title and body and nothing else, so its
+eyebrow, its picture and its link are all dropped.
+
+`Content/video-feature` declares exactly `eyebrow`, `title`, `body`, `media`,
+`action` and the roles `video_feature`, `media_feature`. Nothing else in the
+catalogue claims those roles, so no alias is needed and the corpus conflict that
+blocked VF-227 does not apply here.
+
+The structural signal is an anchor whose content is an image and no text — a
+thumbnail that goes somewhere, which is not a call to action (iteration 35
+already established that an action with no label is not the call).
+
+**Acceptance criteria**
+
+- A section with a link-wrapped thumbnail, a heading and copy reaches
+  `Content/video-feature`.
+- A gallery of several linked thumbnails is not reclassified.
+- A card grid whose links carry labels is not reclassified.
+- No change to the ten corpus metrics, and both real sites reported.

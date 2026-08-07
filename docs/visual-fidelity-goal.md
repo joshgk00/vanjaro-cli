@@ -2987,3 +2987,43 @@ existing templates reachable without displacing the corpus". Filed as VF-227.
 That needs a decision about whether the corpus annotation for
 `figma-freeform-nonprofit` is right, which is a judgement about the benchmark
 rather than a fix to the pipeline.
+
+### Iteration 42 — the eyebrow was wearing the headline's job
+
+**Both real sites:**
+
+| site | coverage | blocking | valid | content losses |
+|---|---|---|---|---|
+| `edca-pilot` | 0.125 → 0.125 | 2 | false | 0 |
+| `kts-fidelity` | 0.8358 → **0.8235** | 0 | true | 9 → **10** |
+
+Corpus unchanged on every metric. Suite 2,085 → 2,089.
+
+**The numbers went the wrong way and the change is still right.** Section 10 led
+with `OUR MEDIA` in an `h5` above `See what our students can do` in an `h2`. The
+title picker took the first heading in document order, so the section titled
+itself with the kicker and **dropped the real headline entirely** — the built
+page would have read `OUR MEDIA` as its heading with the actual sentence
+nowhere. That is silently wrong, which is worse than visibly lossy.
+
+Prominence is the level; document order only breaks a tie. The headline is the
+title now, and the kicker is kept as an `eyebrow` rather than discarded.
+
+**VF-219 caused this and the fix exposed it.** Widening the heading query to
+`h6` in iteration 31 is what let an `h5` win. Before that the query stopped at
+`h3`, so the `h2` was picked — correctly, but by accident. A fix that made
+extraction see more also made it choose worse, and nothing failed.
+
+Coverage fell and losses rose because extraction now finds a field —
+`eyebrow` — that `Content/rich-text` cannot hold. The goal already says what to
+do with that: *a lower, better-evidenced number is progress; report it, do not
+tune toward a nicer one.* One more named loss and one recovered headline is the
+trade, and it is a good one.
+
+**Noted for the next iteration, not rushed into this one:**
+`Content/video-feature` declares `eyebrow`, `title`, `body`, `media` and
+`action` — an exact fit for this section, whose thumbnail is a link-wrapped
+image. Classifying it would take the losses from ten to eight. Doing that in the
+same iteration would have confounded the measurement of this fix, and a
+classification rule written in the last minutes of a window is how the corpus
+gets moved by accident.

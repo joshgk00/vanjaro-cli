@@ -1841,3 +1841,47 @@ def test_a_split_with_the_picture_second_says_right() -> None:
     )
 
     assert section["layout"]["media_position"] == "right"
+
+
+def test_the_title_is_the_most_prominent_heading_not_the_first() -> None:
+    """A section led by a small eyebrow titled itself with the eyebrow and
+    dropped its real heading entirely."""
+
+    section = _enriched(
+        "<section><h5>OUR MEDIA</h5><h2>See what our students can do</h2>"
+        "<p>Pellentesque mattis mauris ac tortor volutpat.</p></section>",
+        "rich_text",
+    )
+
+    titles = [e["value"] for e in section["content"] if e["role"] == "section_title"]
+    assert titles == ["See what our students can do"]
+
+
+def test_a_kicker_above_the_headline_is_kept_as_an_eyebrow() -> None:
+    section = _enriched(
+        "<section><h5>OUR MEDIA</h5><h2>See what our students can do</h2>"
+        "<p>Pellentesque mattis mauris ac tortor volutpat.</p></section>",
+        "rich_text",
+    )
+
+    assert [e["value"] for e in section["content"] if e["role"] == "eyebrow"] == ["OUR MEDIA"]
+
+
+def test_a_smaller_heading_below_the_title_is_not_an_eyebrow() -> None:
+    """An eyebrow sits above the headline. A subheading below it does not."""
+
+    section = _enriched(
+        "<section><h2>Studio hours</h2><h4>Weekdays</h4><p>Copy.</p></section>",
+        "rich_text",
+    )
+
+    assert not [e for e in section["content"] if e["role"] == "eyebrow"]
+    assert [e["value"] for e in section["content"] if e["role"] == "section_title"] == ["Studio hours"]
+
+
+def test_document_order_still_breaks_a_tie_between_equal_headings() -> None:
+    section = _enriched(
+        "<section><h2>First</h2><h2>Second</h2><p>Copy.</p></section>", "rich_text"
+    )
+
+    assert [e["value"] for e in section["content"] if e["role"] == "section_title"] == ["First"]
