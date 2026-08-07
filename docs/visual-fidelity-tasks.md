@@ -835,3 +835,30 @@ repeated blocks at any depth; a stat value is a short token with no letters, not
 a numeral; `_stat_parts` splits value from label by shape. Corpus unchanged.
 Section 6 of the real page reports three stats instead of a mislabelled title
 and three orphan paragraphs — a fidelity gain the coverage metric cannot see.
+
+### VF-222 — Responsive coverage cannot reach 1.0 from the current fixtures
+
+**Dependencies:** none, but see the warning below
+
+**Problem**
+
+`responsive_observation_coverage` sits at 0.8864 (39/44) and the top of the goal
+document lists it as an open gap. It is not one. All five outstanding
+observations — mobile `min_height` on two heroes, one `background_position`, and
+`carousel: true` on two testimonial sections — are annotated but **absent from
+the sources**. `html-bootstrap-agency/source.html` has no CSS whatsoever.
+
+**Any fix is a fixture change, not an extraction change.** Adding the declaring
+CSS to the sources would make the metric reachable, but it also changes what the
+corpus measures, so every historical responsive score becomes incomparable —
+exactly the comparability failure VF-1 exists to prevent.
+
+**Acceptance criteria**
+
+- Either the sources declare what the annotations expect and every prior
+  responsive score is re-taken in the same commit, or the annotations are
+  narrowed to what a source can support and the same re-take happens.
+- The decision is recorded with its effect on comparability.
+- No annotation is edited merely to make the number rise.
+
+This needs a deliberate call about the corpus, not an iteration of the loop.

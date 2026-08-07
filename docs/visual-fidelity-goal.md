@@ -2606,3 +2606,44 @@ like a number (retention 0.76, then 0.96). A block that has already been judged
 a stat keeps its first leaf as the value. The structural fallback is separately
 gated on a block genuinely carrying a value, so a group of service cards is not
 claimed as stats.
+
+### Iteration 34 — no code change; responsive coverage has a fixture ceiling
+
+**Result:** no commit to source. Corpus unchanged. Suite 2,049, unchanged.
+
+I went looking for unblocked work with corpus-visible value and took
+`responsive_observation_coverage`, which the problem statement at the top of
+this document still lists as one of the four headline gaps at 0.8864 (39/44).
+
+**The five outstanding failures cannot be extracted, because the evidence is
+not in the sources.**
+
+| case | expected at mobile | present in source |
+|---|---|---|
+| bootstrap-agency | `min_height: 520px` | nothing |
+| bootstrap-agency | `background_position: 65% 50%` | nothing |
+| bootstrap-agency | `carousel: true` | nothing |
+| elementor-studio | `min_height: 600px` | nothing |
+| elementor-studio | `carousel: true` | nothing |
+
+`html-bootstrap-agency/source.html` is 24 lines and contains **no CSS at all** —
+no `<style>` element, no linked sheet, no `@media` rule, and no `min-height`,
+`background-position`, or carousel markup anywhere. The elementor source has
+none of those tokens either. The annotations describe a rendering the source
+does not declare.
+
+Passing these would require inventing the values or editing the annotations.
+Both are prohibited, and the prohibition is the right one: a metric that can
+only be moved by fabrication is not measuring extraction.
+
+**So 0.8864 is a ceiling, not a deficit.** 39 of 44 is every responsive
+observation these fixtures can support. This is recorded so the next iteration
+does not spend itself rediscovering it, and so the gap table at the top of this
+document is not read as an open work item. Closing the remaining 5 needs
+fixtures that declare what they expect — a fixture change, not an extraction
+change, and one that changes the denominator for every historical score.
+
+**Stopping the loop here.** VF-221 is gated on Josh. VF-008 needs the six
+benchmark portals, which are not authorized. VF-206 needs a portal parity run.
+What remains is either gated, or work invented to keep the loop moving, and the
+loop is worth less than an honest stop.
