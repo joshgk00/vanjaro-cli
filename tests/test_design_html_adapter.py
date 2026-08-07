@@ -1712,3 +1712,62 @@ def test_the_loopback_server_does_not_narrate_requests(capsys) -> None:
                 pass
 
     assert capsys.readouterr().err == ""
+
+
+_NESTED_PANES = """
+<body><div id="Body">
+  <div id="dnn_content" class="Pane">
+    <div id="dnn_TopPane" class="Pane"><h2>Who we are</h2><p>A service organization.</p></div>
+    <div id="dnn_BannerPane" class="Pane"><img src="/banner.jpg" alt=""/></div>
+  </div>
+</div></body>
+"""
+
+
+def _selectors(html: str) -> list[str]:
+    from vanjaro_cli.design.html_boundaries import css_selector_for, static_boundary_candidates
+
+    return [css_selector_for(tag) for tag in static_boundary_candidates(html)]
+
+
+def test_a_pane_wrapping_other_panes_is_not_a_boundary() -> None:
+    """A real DNN page put #dnn_content around three panes that were themselves
+    candidates, so every word inside it was counted twice."""
+
+    assert _selectors(_NESTED_PANES) == ["#dnn_TopPane", "#dnn_BannerPane"]
+
+
+def test_a_wrapper_that_carries_its_own_copy_is_kept() -> None:
+    """Outermost is the wrong tie-break here — the test is contribution. A
+    wrapper with words of its own is a section that happens to contain one."""
+
+    html = (
+        "<body><div id='Body'><div id='dnn_content' class='Pane'>"
+        "<h2>Introduction that belongs to the outer pane</h2>"
+        "<div id='dnn_TopPane' class='Pane'><p>Inner copy.</p></div>"
+        "</div></div></body>"
+    )
+
+    assert "#dnn_content" in _selectors(html)
+
+
+def test_a_wrapper_holding_an_extra_image_is_kept() -> None:
+    html = (
+        "<body><div id='Body'><div id='dnn_content' class='Pane'>"
+        "<img src='/outer.jpg' alt=''/>"
+        "<div id='dnn_TopPane' class='Pane'><p>Inner copy.</p></div>"
+        "</div></div></body>"
+    )
+
+    assert "#dnn_content" in _selectors(html)
+
+
+def test_unnested_panes_are_all_boundaries() -> None:
+    html = (
+        "<body><div id='Body'>"
+        "<div id='dnn_TopPane' class='Pane'><p>One.</p></div>"
+        "<div id='dnn_BottomPane' class='Pane'><p>Two.</p></div>"
+        "</div></body>"
+    )
+
+    assert _selectors(html) == ["#dnn_TopPane", "#dnn_BottomPane"]

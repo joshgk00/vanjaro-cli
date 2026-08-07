@@ -934,3 +934,39 @@ evidence on edca is close to worthless until that is addressed.
   with the reason it cannot be closed.
 - No annotation, fixture, or threshold is edited to move any metric.
 - No change to the ten corpus metrics.
+
+**VF-224 partly done (iteration 38).** Wrapper panes are no longer boundaries;
+edca 0.10 → 0.125, kts unchanged, corpus unchanged. The rest is **not an
+extraction problem**: `sources/` holds only the HTML, so every image and
+stylesheet the page references is absent, and both remaining blockers are assets
+that were never saved.
+
+**Needs Josh:** record the origin URL on the edca source
+(`metadata.source_url`). Relative URLs then resolve against it and
+`acquire_html_assets` fetches them, exactly as for `keys-to-success`. No code
+change is required. I will not guess the origin — a wrong one binds the wrong
+images into a build.
+
+### VF-225 — No template holds an about section with a picture and several paragraphs
+
+**Dependencies:** VF-224 (worth nothing until edca has its images)
+
+**Problem**
+
+`edca.section.2` is "Who is EDCA Consulting?" — one image and three paragraphs.
+`Content/bio-about` (roles about, bio, profile) owns one body slot.
+`Content/rich-text` owns four but declares no media field at all. Checked across
+the whole catalogue: rich-text is the **only** template with body capacity above
+one.
+
+Unlike VF-221 this survives reading the catalogue, so it is a real gap. It is
+also the shape every consulting or practice site uses on its about page.
+
+**Acceptance criteria**
+
+- An about section with a picture and three paragraphs binds without overflow.
+- No existing template's contract changes shape.
+- Pack version bumped, digests re-audited, history immutable.
+- No change to the ten corpus metrics, and both real sites reported.
+
+**This is a governed library change and needs Josh's authorization.**

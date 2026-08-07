@@ -111,7 +111,42 @@ def static_boundary_candidates(html: str) -> list[Tag]:
         add(element)
 
     positions = {id(tag): index for index, tag in enumerate(soup.find_all(True))}
-    return sorted(candidates, key=lambda tag: positions.get(id(tag), 0))
+    return sorted(_without_wrappers(candidates), key=lambda tag: positions.get(id(tag), 0))
+
+
+def _without_wrappers(candidates: list[Tag]) -> list[Tag]:
+    """Drop a candidate whose whole content is other candidates.
+
+    The sectioning rule keeps only the outermost element, but the builder rules
+    below it have no such filter, and a real DNN page put `#dnn_content` around
+    three panes that were themselves candidates. Every word inside it was
+    counted twice, and one boundary held the same content as three others.
+
+    Outermost is the wrong tie-break here: the wrapper is layout and the panes
+    are the sections. So the test is contribution rather than depth — a
+    candidate stays if it carries any text or media of its own, and is dropped
+    only when the nested candidates account for all of it.
+    """
+
+    kept: list[Tag] = []
+    for element in candidates:
+        nested = [
+            other for other in candidates if other is not element and element in other.parents
+        ]
+        if not nested:
+            kept.append(element)
+            continue
+        own_words = _normalized_words(element.get_text(" ", strip=True))
+        nested_words: set[str] = set()
+        nested_media: set[int] = set()
+        for other in nested:
+            nested_words |= _normalized_words(other.get_text(" ", strip=True))
+            nested_media |= {id(node) for node in other.find_all(["img", "video"])}
+        own_media = {id(node) for node in element.find_all(["img", "video"])}
+        if own_words <= nested_words and own_media <= nested_media:
+            continue
+        kept.append(element)
+    return kept
 
 
 def _normalized_words(value: str) -> set[str]:

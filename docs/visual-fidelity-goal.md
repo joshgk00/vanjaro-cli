@@ -2789,3 +2789,57 @@ The saved copy's images are relative and were never saved beside it, so
 **Next on edca:** a saved page's relative images have to exist in the workspace
 or be fetched from the origin, and a `biography` section with three bodies and
 three media has no template that fits. Filed as VF-224.
+
+### Iteration 38 — VF-224, and edca's source turns out to be incomplete
+
+**Both real sites, before → after:**
+
+| site | coverage | blocking | valid |
+|---|---|---|---|
+| `edca-pilot` | 0.10 → **0.125** | 2 → 2 | false |
+| `kts-fidelity` | 0.8060 → 0.8060 | 0 → 0 | true |
+
+Corpus unchanged on every metric: boundary precision and recall 1.0, semantic
+role accuracy 1.0, visitor content retention 1.0 (127/127), group-field
+association 1.0 (79/79), top-1 0.92, high-confidence precision 0.909. Suite
+2,073 → 2,077.
+
+**A layout pane was counted as a section.** `#dnn_content` wraps `#dnn_TopPane`,
+`#dnn_Full_Screen_PaneB` and `#dnn_BottomPane`, and all four were boundaries.
+The sectioning rule keeps only the outermost `<section>`; the builder rules
+below it had no such filter, so every word inside the wrapper was counted twice
+and one boundary held the same content as three others. That is why section 2
+reported three media where the page has one.
+
+Outermost is the wrong tie-break for a pane — the wrapper is layout and the
+panes are the sections — so the test is **contribution**: a candidate stays if
+it carries any text or media of its own, and is dropped only when the nested
+candidates account for all of it. The corpus never showed this because it has no
+nested candidates at all.
+
+**Then the remaining gap stopped being an extraction problem.**
+`artifacts/projects/edca-pilot/sources/` contains **one file: the HTML.** No
+images, no stylesheets. The saved copy's URLs are root-relative, so they joined
+against the file URI and became `file:///Portals/0/...` — the drive root, where
+nothing exists. Both remaining blockers are assets that were never saved:
+
+- `section.3` needs `background_media`; the plan says the asset was never
+  acquired, which is exactly right.
+- `section.2` needs media and three body slots; `Content/bio-about` owns one of
+  each.
+
+The ten unresolved stylesheets and the three sections with no rendered match
+have the same single cause.
+
+**No extraction change can recover an image that was never saved**, and I am not
+going to guess the origin it came from — a wrong guess binds someone else's
+pictures into a build. The mechanism to fix it already exists and needs no code:
+a source that records `metadata.source_url` resolves its relative URLs against
+that origin, and `acquire_html_assets` then fetches them exactly as it does for
+`keys-to-success`. That is a workspace configuration and a question for Josh.
+
+**Reading the catalogue first, as VF-221 taught:** `Content/rich-text` is the
+only template owning more than one body slot (four), and it has no media field.
+So a three-paragraph about-section with a picture genuinely has nothing that
+fits. That is a real capacity gap — the first one this loop has found that
+survives actually checking — but it is worth nothing until edca has its images.
