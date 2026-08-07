@@ -799,3 +799,33 @@ section untitled.
 
 **Tests:** a CTA with six links, a contact section with a link list, and a card
 section with both a section heading and per-card headings.
+
+**VF-220 partly done (iteration 32), and partly misconceived.** The
+capacity-aware field score landed and the shortfall is reported before binding.
+The premise that matching could prefer a wider template was wrong — no such
+template exists.
+
+### VF-221 — The library has no template that holds a link list
+
+**Dependencies:** needs Josh's authorization (agency pack version bump)
+
+**Problem**
+
+Every template owns exactly one `action` slot and one `body` slot;
+`contact-section` owns three `contact_items` and is the widest available. A real
+page's footer carries ten links and two body blocks, so it matches nothing that
+can hold it, and three of eleven sections still block for this reason alone.
+
+Measured requirement from `keys-to-success`: one template owning **eight or more
+actions** (a footer link list), and body capacity of **two** on the CTA family.
+
+**This is a governed change.** It adds to the shared agency library and requires
+a pack version bump. Josh authorized that for VF-214 and VF-215 specifically;
+this is a new template family and needs its own go-ahead.
+
+**Acceptance criteria**
+
+- A footer of link columns binds without overflow.
+- No existing template's contract changes shape, only the new family is added.
+- Pack version bumped, digests re-audited, history immutable.
+- No change to the ten corpus metrics.

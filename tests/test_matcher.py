@@ -444,3 +444,48 @@ def test_reporting_a_static_only_field_does_not_change_any_score() -> None:
 
     assert candidate.subscores.fields < 1.0
     assert 0.0 <= candidate.score <= 1.0
+
+
+def _flat_section(*roles: str) -> Section:
+    return _section(
+        role="call_to_action",
+        section_roles=roles,
+        item_fields=(),
+        item_count=0,
+        layout_kind=LayoutKind.STACK,
+        columns=1,
+        media_position=None,
+    )
+
+
+def test_a_template_that_cannot_hold_the_content_scores_lower() -> None:
+    """Field presence was the whole of the field score, so a template owning one
+    action slot scored as well as one owning four against ten actions — and the
+    plan then failed at binding, after the choice was already made."""
+
+    entry = _entry("cta-split.json")
+    fits = score_template(_flat_section("section_title", "primary_action"), entry)
+    overflows = score_template(
+        _flat_section("section_title", *["primary_action"] * 10), entry
+    )
+
+    assert overflows.score < fits.score
+
+
+def test_the_overflow_is_reported_with_the_count_it_needs() -> None:
+    entry = _entry("cta-split.json")
+
+    candidate = score_template(_flat_section("section_title", *["primary_action"] * 10), entry)
+
+    assert any(
+        "needs 10 slots, template owns 1" in requirement
+        for requirement in candidate.missing_requirements
+    )
+
+
+def test_content_that_fits_is_not_penalised() -> None:
+    entry = _entry("cta-split.json")
+
+    candidate = score_template(_flat_section("section_title", "primary_action"), entry)
+
+    assert not any("slots" in requirement for requirement in candidate.missing_requirements)

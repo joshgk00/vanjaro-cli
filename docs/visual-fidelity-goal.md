@@ -2522,3 +2522,46 @@ now separate, with the reason written next to them.
 The page reads correctly end to end: navigation, hero with its title, four card
 sections, footer. Three sections still block, all `call_to_action` and
 `contact` variants at the foot of the page.
+
+### Iteration 32 — VF-220, and a finding that stops the run
+
+**Result:** blocking sections **3, unchanged**. Coverage 0.4444, unchanged.
+Corpus unchanged on every metric: boundary precision and recall 1.0, semantic
+role accuracy 1.0, visitor content retention 1.0 (127/127), group-field
+association 1.0 (79/79), top-1 0.92, high-confidence precision 0.909. Suite
+2,042 → 2,045.
+
+**VF-220 is not a matcher bug, and the task as I wrote it was wrong.** Its
+acceptance criteria said matching should "prefer a template that can hold
+them". It cannot: **every template in the library owns exactly one `action`
+slot and one `body` slot.** `contact-section` owns three `contact_items` and is
+the widest thing available. A footer with ten links has nothing to match.
+
+| section | wants | widest template |
+|---|---|---|
+| 9 | 2 body | 1 |
+| 10 | 2 background media | 1 |
+| 11 | 10 actions, 2 body | 1 action, 3 contact items |
+
+The scoring change is still right and landed. Field *presence* was the whole of
+the field score, so a template owning one action slot scored exactly as well as
+one owning four against a section with ten actions — and the plan then failed
+at binding, after the choice had been made. `_capacity_fit` now folds the ratio
+of slots to values into the field score and reports the shortfall as
+`action needs 10 slots, template owns 1`.
+
+Section 11's score fell from 0.889 to 0.819 and its overflow is now legible
+before binding rather than after. Nothing unblocked, because there is nothing
+to unblock it with.
+
+A manifest with no `physical_fields` is schema 1.0 and takes no penalty —
+absent is not zero. That distinction has now caused three bugs in this project
+and is worth stating every time it comes up.
+
+**Halting here rather than continuing.** Closing this gap means adding
+templates to the shared library — a link-list or footer template that owns many
+actions, and wider body slots — which is a pack version bump and a change to
+the governed agency library. Josh authorized that class of change once, for
+VF-214 and VF-215 specifically. I am not extending that authorization to a new
+template family on my own reading. Filed as VF-221 with the measured
+requirement.

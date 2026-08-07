@@ -287,6 +287,53 @@ def _observed_fields(section: Section) -> tuple[tuple[str, tuple[str, ...]], ...
     return tuple(sorted(((label, aliases) for aliases, label in observations.items()), key=lambda item: item[0]))
 
 
+def _observed_counts(section: Section) -> dict[tuple[str, ...], int]:
+    """Count how many values each observed field carries, per alias set."""
+
+    grouped_ids = {element.id for element in section.content if element.group_id is not None}
+    counts: dict[tuple[str, ...], int] = {}
+    for element in section.content:
+        if element.id in grouped_ids:
+            continue
+        alternatives = section_capability_aliases(element.role)
+        counts[alternatives] = counts.get(alternatives, 0) + 1
+    return counts
+
+
+def _capacity_fit(section: Section, capabilities: CapabilityManifest) -> tuple[float, tuple[str, ...]]:
+    """Score how well a template's physical slots hold the section's values.
+
+    Field presence was the whole of the field score, so a template owning one
+    action slot scored exactly as well as one owning four against a section
+    with ten actions — and the plan then failed at binding, after the choice
+    was already made. A template that cannot hold the content is a worse match
+    than one that can, and the score should say so before binding does.
+
+    A manifest without physical fields is schema 1.0: no capacity evidence, so
+    no penalty. Absent is not zero.
+    """
+
+    if not capabilities.physical_fields:
+        return 1.0, ()
+    overflows: list[str] = []
+    ratios: list[float] = []
+    for alternatives, count in _observed_counts(section).items():
+        slots = [
+            capabilities.physical_fields[name].slots_per_owner
+            for name in alternatives
+            if name in capabilities.physical_fields
+        ]
+        if not slots:
+            continue
+        capacity = max(slots)
+        ratios.append(min(1.0, capacity / count) if count else 1.0)
+        if count > capacity:
+            overflows.append(f"{alternatives[0]} needs {count} slots, template owns {capacity}")
+    if not ratios:
+        return 1.0, ()
+    return sum(ratios) / len(ratios), tuple(sorted(overflows))
+
+
 def _field_score(
     section: Section,
     capabilities: CapabilityManifest,
@@ -332,7 +379,10 @@ def _field_score(
         - len(missing_template_fields)
         / len([name for name, value in capabilities.fields.items() if value == "required"])
     )
-    score = _bounded(represented_coverage * 0.7 + max(0.0, required_fill) * 0.3)
+    capacity, capacity_overflows = _capacity_fit(section, capabilities)
+    score = _bounded(
+        (represented_coverage * 0.7 + max(0.0, required_fill) * 0.3) * capacity
+    )
     missing = tuple(
         [f"required template field '{name}' has no source content" for name in missing_template_fields]
         + [f"source field '{name}' is not editable by template" for name in unsupported_source]
@@ -341,6 +391,7 @@ def _field_score(
             "so its content cannot reach the build"
             for name in static_only_source
         ]
+        + list(capacity_overflows)
     )
     return score, _bounded(editable_coverage), missing
 
