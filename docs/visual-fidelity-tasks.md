@@ -829,3 +829,9 @@ this is a new template family and needs its own go-ahead.
 - No existing template's contract changes shape, only the new family is added.
 - Pack version bumped, digests re-audited, history immutable.
 - No change to the ten corpus metrics.
+
+**Stats-band recognition done (iteration 33).** `_looks_like_stats` finds
+repeated blocks at any depth; a stat value is a short token with no letters, not
+a numeral; `_stat_parts` splits value from label by shape. Corpus unchanged.
+Section 6 of the real page reports three stats instead of a mislabelled title
+and three orphan paragraphs — a fidelity gain the coverage metric cannot see.

@@ -12,6 +12,7 @@ from vanjaro_cli.migration.crawler import IGNORED_LINK_SCHEMES
 __all__ = [
     "extract_sections",
     "normalize_text_blocks",
+    "is_stat_value",
     "extract_page_title",
     "extract_global_element",
     "collect_image_urls",
@@ -1251,22 +1252,50 @@ def _looks_like_pricing(element: Tag, classes: str) -> bool:
 _DIGITS_PATTERN = re.compile(r"^\s*[\d,\.]+[+%]?\s*$")
 
 
+_STAT_VALUE_MAXIMUM_CHARACTERS = 8
+
+
+def is_stat_value(text: str) -> bool:
+    """Report whether a short token reads as the big number in a stats band.
+
+    A real page used the infinity sign for "happy students", so a digits-only
+    test called the band a card grid and bound its numbers as card titles.
+    What makes a stat a stat is that it is a short token carrying no letters,
+    not that it is a numeral.
+    """
+
+    if not text or len(text) > _STAT_VALUE_MAXIMUM_CHARACTERS:
+        return False
+    if _DIGITS_PATTERN.match(text):
+        return True
+    return not any(character.isalpha() for character in text)
+
+
+def _counts_stat_blocks(blocks: list[Tag]) -> int:
+    stat_count = 0
+    for child in blocks:
+        for tag in child.find_all(["h1", "h2", "h3", "h4", "span", "strong", "b"]):
+            if is_stat_value(tag.get_text(separator=" ", strip=True)):
+                stat_count += 1
+                break
+    return stat_count
+
+
 def _looks_like_stats(element: Tag) -> bool:
     """Detect a stats / counter section.
 
-    Matches when 3+ direct child blocks each contain a short text node that
-    is mostly digits (e.g. ``1,200+``, ``99%``, ``50``). These are the big
-    numbers in a typical stats section, paired with descriptive labels.
+    Matches when 3+ repeated blocks each contain a short value token (e.g.
+    ``1,200+``, ``99%``, ``50``), paired with descriptive labels.
+
+    Direct children are checked first, then repeated siblings anywhere in the
+    subtree: a builder nests the band under a container and a row, so a
+    direct-child test found nothing and the section fell through to the card
+    branch below.
     """
-    child_blocks = _direct_child_blocks(element)
-    stat_count = 0
-    for child in child_blocks:
-        for tag in child.find_all(["h1", "h2", "h3", "h4", "span", "strong", "b"]):
-            text = tag.get_text(separator=" ", strip=True)
-            if text and _DIGITS_PATTERN.match(text):
-                stat_count += 1
-                break
-    return stat_count >= 3
+
+    if _counts_stat_blocks(_direct_child_blocks(element)) >= 3:
+        return True
+    return _counts_stat_blocks(_find_sibling_card_group(element)) >= 3
 
 
 _CARD_LIKE_TYPES = frozenset({"gallery", "blog_cards", "cards"})

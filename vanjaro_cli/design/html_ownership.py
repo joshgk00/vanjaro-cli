@@ -15,7 +15,7 @@ from vanjaro_cli.design.html_primitives import (
     register_asset as _register_asset,
 )
 from vanjaro_cli.design.models import BreakpointName, Viewport
-from vanjaro_cli.migration.sections import normalize_text_blocks
+from vanjaro_cli.migration.sections import is_stat_value, normalize_text_blocks
 
 
 CANONICAL_VIEWPORTS: dict[BreakpointName, Viewport] = {
@@ -133,6 +133,49 @@ def implied_title(root: Tag) -> Tag | None:
     return first
 
 
+def _text_leaves(item: Tag) -> list[Tag]:
+    return [
+        element
+        for element in item.find_all(True)
+        if element.get_text(strip=True)
+        and not any(child.get_text(strip=True) for child in element.find_all(True))
+    ]
+
+
+def _carries_stat_value(item: Tag) -> bool:
+    """Report whether a block holds something that reads as a stat's value.
+
+    A structural group on its own is not evidence of a stats band, and
+    claiming a richer block here would drop every part of it that is neither
+    value nor label.
+    """
+
+    return any(is_stat_value(leaf.get_text(" ", strip=True)) for leaf in _text_leaves(item))
+
+
+def _stat_parts(item: Tag) -> tuple[Tag | None, Tag | None]:
+    """Split a stat block into its value and its label.
+
+    Looking for `<strong>` and `<span>` found neither on a real page, whose
+    band carries the number in a heading and the label in a styled div. The
+    value is the block that reads as a value; the label is the next text block
+    that is not it.
+    """
+
+    leaves = _text_leaves(item)
+    value = next(
+        (leaf for leaf in leaves if is_stat_value(leaf.get_text(" ", strip=True))),
+        None,
+    )
+    if value is None:
+        # The block reached here because something already judged it a stat, so
+        # its first text is the value even when it does not read like one on
+        # its own. Returning nothing would drop it.
+        value = leaves[0] if leaves else None
+    label = next((leaf for leaf in leaves if leaf is not value), None)
+    return value, label
+
+
 def enrich_section_from_static_dom(
     section: dict[str, JsonValue],
     static_html: str,
@@ -242,7 +285,16 @@ def enrich_section_from_static_dom(
             repeat_items = list(root.find_all("figure", recursive=True)) or list(root.find_all("blockquote", recursive=True))
         elif role == "stats":
             repeat_kind = "stat"
-            repeat_items = [tag for tag in root.find_all("li") if tag.find("strong") is not None]
+            repeat_items = [
+                tag for tag in root.find_all("li") if tag.find("strong") is not None
+            ] or [
+                # Only blocks that actually carry a value. A structural group
+                # alone is not evidence of a stat, and claiming a richer block
+                # here drops every part of it that is neither value nor label.
+                block
+                for block in repeating_subtrees(root)
+                if _carries_stat_value(block)
+            ]
         elif role == "process_steps":
             repeat_kind = "other"
             repeat_items = list(root.select(".elementor-column, [class*='step']"))
@@ -295,8 +347,7 @@ def enrich_section_from_static_dom(
                 if isinstance(author, Tag):
                     fields["author"] = add("text", "author", author.get_text(" ", strip=True), group_id=group_id)
             elif role == "stats":
-                value_tag = item.find("strong")
-                label_tag = item.find("span")
+                value_tag, label_tag = _stat_parts(item)
                 if isinstance(value_tag, Tag):
                     fields["value"] = add("stat", "stat_value", value_tag.get_text(" ", strip=True), group_id=group_id)
                 if isinstance(label_tag, Tag):

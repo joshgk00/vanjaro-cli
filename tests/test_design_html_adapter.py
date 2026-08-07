@@ -1476,3 +1476,64 @@ def test_a_section_of_one_block_has_no_title_to_promote() -> None:
     root = BeautifulSoup("<section><div>MUSIC IS MAGIC</div></section>", "html.parser").find("section")
 
     assert implied_title(root) is None
+
+
+_STATS_BAND = """
+<section id="band">
+  <div class="container">
+    <div class="row text-center">
+      <div class="col-md-4"><h2>10</h2><p>Professional Instructors</p></div>
+      <div class="col-md-4"><h2>&#8734;</h2><p>Happy Students</p></div>
+      <div class="col-md-4"><h2>80+</h2><p>Combined Years of Experience</p></div>
+    </div>
+  </div>
+</section>
+"""
+
+
+def test_a_stats_band_is_not_a_card_grid() -> None:
+    """A real band nested under a container and a row, so a direct-child test
+    found nothing and its numbers were bound as card titles."""
+
+    from vanjaro_cli.migration.sections import extract_sections
+
+    sections = extract_sections(f"<body>{_STATS_BAND}</body>", "http://example.test/")
+
+    assert [section["type"] for section in sections] == ["stats"]
+
+
+def test_a_symbol_counts_as_a_stat_value() -> None:
+    """A page used the infinity sign for happy students. What makes a stat a
+    stat is a short token with no letters, not that it is a numeral."""
+
+    from vanjaro_cli.migration.sections import is_stat_value
+
+    assert is_stat_value("∞")
+    assert is_stat_value("80+")
+    assert not is_stat_value("Professional Instructors")
+
+
+def test_stats_values_and_labels_survive_a_builder_with_no_strong_tags() -> None:
+    section = _enriched(_STATS_BAND, "stats")
+
+    groups = section["groups"]
+    assert [group["kind"] for group in groups] == ["stat"]
+    assert len(groups[0]["items"]) == 3
+    values = [element["value"] for element in section["content"] if element["role"] == "stat_value"]
+    labels = [element["value"] for element in section["content"] if element["role"] == "stat_label"]
+    assert values == ["10", "∞", "80+"]
+    assert labels == ["Professional Instructors", "Happy Students", "Combined Years of Experience"]
+
+
+def test_repeated_blocks_with_no_value_are_not_stats() -> None:
+    """A structural group alone is not evidence of a stat, and claiming a
+    richer block would drop everything that is neither value nor label."""
+
+    section = _enriched(
+        "<section><div class='col'><h3>Piano</h3><p>Weekly lessons.</p></div>"
+        "<div class='col'><h3>Guitar</h3><p>Weekly lessons.</p></div>"
+        "<div class='col'><h3>Voice</h3><p>Weekly lessons.</p></div></section>",
+        "stats",
+    )
+
+    assert section["groups"] == []

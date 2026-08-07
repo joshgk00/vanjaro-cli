@@ -2565,3 +2565,44 @@ the governed agency library. Josh authorized that class of change once, for
 VF-214 and VF-215 specifically. I am not extending that authorization to a new
 template family on my own reading. Filed as VF-221 with the measured
 requirement.
+
+### Iteration 33 — a stats band read as a card grid
+
+**Result:** blocking sections **3, unchanged**. Coverage **0.4444, unchanged**.
+Corpus unchanged on every metric: boundary precision and recall 1.0, semantic
+role accuracy 1.0, visitor content retention 1.0 (127/127), group-field
+association 1.0 (79/79), top-1 0.92, high-confidence precision 0.909. Suite
+2,045 → 2,049.
+
+**Neither headline number moved, and the section is nonetheless right now.**
+Section 6 of the real page is a stats band — `10 Professional Instructors`,
+`∞ Happy Students`, `80+ Combined Years of Experience`. It was classified
+`feature_cards`, which bound `10` as the section title and left the three
+labels as loose body copy. It now reports a three-item `stat` group with
+values and labels in the right places. Coverage counts fields, not whether they
+are the right fields, so it cannot see the difference. The section can.
+
+Two vocabulary tests were behind it, the seventh and eighth instances in this
+log. `_looks_like_stats` scanned direct children only, and the band nests under
+a container and a row. And a stat value had to match a digits pattern, so the
+infinity sign did not count — what makes a stat a stat is a short token
+carrying no letters, not that it is a numeral.
+
+**Classifying it correctly made things briefly worse, which is the useful part
+of this iteration.** With the band reading `stats`, ownership ran the stats
+path — `find_all("li")` filtered by `find("strong")` — and a Vanjaro band has
+neither. Coverage fell 0.4444 → 0.4304 and the numbers were lost. A fix to
+classification that its downstream path cannot honour is not a fix.
+
+`_stat_parts` now splits a block by shape: the value is the leaf that reads as
+a value, the label is the next leaf that is not it. That covers both the
+`<li><strong>` shape the corpus uses and the heading-plus-div shape the real
+page uses.
+
+**Two corpus regressions caught and fixed before commit**, both from the same
+mistake — assuming the new shape was the only shape. Requiring a stat-shaped
+value dropped `<li><strong>Since 1998</strong>` items whose value does not read
+like a number (retention 0.76, then 0.96). A block that has already been judged
+a stat keeps its first leaf as the value. The structural fallback is separately
+gated on a block genuinely carrying a value, so a group of service cards is not
+claimed as stats.
