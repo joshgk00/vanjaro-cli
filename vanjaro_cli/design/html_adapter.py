@@ -477,6 +477,13 @@ class StylesheetCache:
         return "\n".join(chunks)
 
 
+class _QuietRequestHandler(SimpleHTTPRequestHandler):
+    """A static handler that does not narrate its requests."""
+
+    def log_message(self, format: str, *args: object) -> None:  # noqa: A002 - stdlib signature
+        return
+
+
 @contextmanager
 def serve_local_directory(path: Path):
     """Serve one saved page's directory on loopback and yield its URL.
@@ -489,10 +496,14 @@ def serve_local_directory(path: Path):
 
     Loopback only, an ephemeral port, the source directory alone, and shut down
     on exit: this resolves the page's own references and reaches no network.
+
+    The handler is silenced because `SimpleHTTPRequestHandler` logs every
+    request to stderr, and a saved page missing ten stylesheets emits thirty
+    lines that land in the middle of `--json` output and make it unparseable.
     """
 
     directory = path.parent if path.is_file() else path
-    handler = partial(SimpleHTTPRequestHandler, directory=str(directory))
+    handler = partial(_QuietRequestHandler, directory=str(directory))
     server = ThreadingHTTPServer(("127.0.0.1", 0), handler)
     thread = Thread(target=server.serve_forever, daemon=True)
     thread.start()

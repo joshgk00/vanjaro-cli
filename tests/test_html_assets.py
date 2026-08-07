@@ -84,7 +84,7 @@ def test_a_remote_image_is_acquired_into_the_workspace(tmp_path: Path) -> None:
         downloader=_downloader({}),
     )
 
-    assert updated.assets[0].local_path == "sources/live-html-1/assets/image-1.png"
+    assert updated.assets[0].local_path == "sources/live-html-1/assets/a39b1f3b92e974d8.png"
     assert (tmp_path / updated.assets[0].local_path).is_file()
     assert "sources/live-html-1/asset-manifest.json" in artifacts
 
@@ -170,4 +170,55 @@ def test_the_same_url_is_requested_once(tmp_path: Path) -> None:
     )
 
     assert seen == [["http://example.test/hero.png"]]
-    assert {asset.local_path for asset in updated.assets} == {"sources/live-html-1/assets/image-1.png"}
+    assert {asset.local_path for asset in updated.assets} == {"sources/live-html-1/assets/a39b1f3b92e974d8.png"}
+
+
+def test_re_acquiring_replaces_the_previous_files(tmp_path: Path) -> None:
+    """The downloader gives a colliding name a numeric suffix, so re-analysing
+    doubled every image on disk instead of replacing it. A workspace name is
+    derived from the source URL, so a re-run overwrites in place."""
+
+    document = _document(_asset("asset-1", "http://example.test/hero.png"))
+    counter = {"run": 0}
+
+    def download(urls, output_dir: Path, on_warning) -> list[dict]:
+        counter["run"] += 1
+        directory = output_dir / "assets"
+        directory.mkdir(parents=True, exist_ok=True)
+        filename = f"hero-{counter['run']}.png"
+        (directory / filename).write_bytes(b"\x89PNG")
+        return [
+            {
+                "source_url": urls[0],
+                "local_file": filename,
+                "content_type": "image/png",
+                "size_bytes": 4,
+            }
+        ]
+
+    acquire_html_assets(
+        root=tmp_path, source_id="live-html-1", document=document, downloader=download
+    )
+    acquire_html_assets(
+        root=tmp_path, source_id="live-html-1", document=document, downloader=download
+    )
+
+    assert sorted(path.name for path in (tmp_path / "sources/live-html-1/assets").iterdir()) == [
+        "a39b1f3b92e974d8.png"
+    ]
+
+
+def test_a_file_outside_the_manifest_is_never_removed(tmp_path: Path) -> None:
+    assets = tmp_path / "sources/live-html-1/assets"
+    assets.mkdir(parents=True)
+    keep = assets / "hand-placed.png"
+    keep.write_bytes(b"\x89PNG")
+
+    acquire_html_assets(
+        root=tmp_path,
+        source_id="live-html-1",
+        document=_document(_asset("asset-1", "http://example.test/hero.png")),
+        downloader=_downloader({}),
+    )
+
+    assert keep.is_file()

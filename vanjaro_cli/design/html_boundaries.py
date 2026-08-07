@@ -236,6 +236,11 @@ def static_role(element: Tag, section_index: int) -> str:
         return "contact"
     if element.find("img") is not None and element.find("ul") is not None:
         return "split_feature"
+    if element.find("img") is not None and not text:
+        # A band with a picture and no words at all is a photo band. Falling
+        # through to rich text gave it a template whose body is required, which
+        # a section carrying no text can never satisfy.
+        return "photo_band"
     actions = [
         action
         for action in element.find_all("a", href=True)

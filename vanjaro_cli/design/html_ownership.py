@@ -83,6 +83,11 @@ def repeating_subtrees(root: Tag, *, minimum: int = 2) -> list[Tag]:
     return min(ranked, key=lambda entry: entry[:2])[2]
 
 
+# A photo band has no words, so its picture is the band, not an
+# illustration beside one — and only `background_media` reaches the slot
+# that fills a full-bleed band.
+_IMAGE_ROLE_BY_SECTION = {"hero": "hero_media", "photo_band": "background_media"}
+
 _TITLE_MAXIMUM_CHARACTERS = 80
 
 # Narrower than _INLINE_TAGS, which exists to keep card discovery off leaf
@@ -406,7 +411,7 @@ def enrich_section_from_static_dom(
 
         for img in root.find_all("img"):
             if id(img) not in repeated_nodes:
-                image_role = "hero_media" if role == "hero" else "section_media"
+                image_role = _IMAGE_ROLE_BY_SECTION.get(role, "section_media")
                 image(img, image_role)
         background_match = re.search(
             r"background(?:-image)?\s*:\s*(?:[^;]*?)url\((['\"]?)([^)'\"]+)\1\)",

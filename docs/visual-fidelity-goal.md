@@ -2734,3 +2734,58 @@ document warning — and never as a silent drop.
 **Where the real page stands:** 11 sections, header and footer as global chrome,
 9 body sections all matched and bound, `editable_content_coverage` 0.8060, zero
 blocking issues, zero warnings, and a valid plan.
+
+### Iteration 37 — the over-fit check VF-4 asks for, run at last
+
+**Result:** corpus unchanged on every metric: boundary precision and recall 1.0,
+semantic role accuracy 1.0, visitor content retention 1.0 (127/127),
+group-field association 1.0 (79/79), top-1 0.92, high-confidence precision
+0.909. Suite 2,067 → 2,073. `kts-fidelity` holds at coverage 0.8060, 0 blocking,
+valid.
+
+`kts-fidelity` cannot advance: its next stage needs the `portal_mutation`
+approval, which is a human gate, and its source portal is not the pilot. So the
+useful move was the one VF-4 has demanded since this document was written and
+that nine iterations of fixes never got — **a second real site**.
+
+**`edca-pilot`: coverage 0.10, 2 of 4 sections blocking, plan invalid.**
+Against `keys-to-success` at 0.8060 and valid. That gap is the honest state of
+this pipeline: strong on the page it was tuned against, weak on the next one.
+
+**Nothing regressed there, which is the part that matters.** Section 1 went from
+`hero` carrying a lone image to `navigation` with eleven items — the VF-218
+link-bar rule generalises to a second builder untouched. Every other section
+held or improved. The changes are not over-fitted; they are simply incomplete.
+
+Two general defects came out of running it.
+
+**A text-free image band was rich text.** `#dnn_BannerPane` holds one image and
+no words at all, and the role fallback gave it `Content/rich-text`, whose body
+is required — a section with no text can never satisfy that. It reads
+`photo_band` now and matches `Heroes/photo-band`, which requires only
+`background_media`. A photo band's picture is the band rather than an
+illustration beside one, so it owns `background_media` rather than
+`section_media`; only that role reaches the full-bleed slot.
+
+**`--json` was not machine-readable.** `SimpleHTTPRequestHandler` logs every
+request to stderr, so a saved page missing ten stylesheets emitted thirty lines
+into the middle of the JSON. I hit this while parsing my own output. The
+loopback handler is silent now.
+
+**And a defect in iteration 36's own work.** The crawl downloader avoids
+collisions by appending a number — right for a crawl, wrong for a workspace:
+re-analysing wrote `hero-1.png` beside `hero.png` and kept two copies of every
+image, seventeen becoming thirty-four. Workspace assets are named by a digest
+of their source URL now, so a re-run overwrites in place, and a previous
+acquisition's recorded files are removed first. Only paths the manifest
+recorded are ever deleted, which a test pins.
+
+**Section 3 now blocks for the right reason**, and says so: `required field
+'background_media' has 1 value(s) whose asset was never acquired`. That is
+iteration 36's `_unmet_reason` doing its job on a site it was not written for.
+The saved copy's images are relative and were never saved beside it, so
+`acquire_html_assets` correctly leaves them alone.
+
+**Next on edca:** a saved page's relative images have to exist in the workspace
+or be fetched from the origin, and a `biography` section with three bodies and
+three media has no template that fits. Filed as VF-224.

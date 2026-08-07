@@ -900,3 +900,37 @@ remote images into the workspace, built on the existing crawl downloader.
 Blocking 1 → 0, coverage 0.5672 → 0.8060, `valid: true` for the first time.
 `_unmet_reason` now distinguishes an absent field from one whose asset was never
 acquired. Corpus unchanged.
+
+### VF-224 — The second real site scores 0.10 against the first at 0.81
+
+**Dependencies:** none
+
+**Problem**
+
+`edca-pilot` plans to `editable_content_coverage` 0.10 with 2 of 4 sections
+blocking; `kts-fidelity` reaches 0.8060 with none. Nothing regressed on edca
+when the recent fixes landed — its header improved from a lone image to eleven
+navigation items — so this is incompleteness, not over-fit. But it is the
+measure VF-4 exists to force, and it says the pipeline is tuned to one page.
+
+Two specific blockers:
+
+1. `section.3` matches `Heroes/photo-band` and blocks because its image is a
+   relative path in a saved local copy whose images were never saved beside it.
+   `acquire_html_assets` only fetches absolute http(s) sources, correctly. A
+   saved page needs its relative references resolved against the origin it came
+   from, which the source metadata records.
+2. `section.2` reads `biography` with three body values and three media against
+   templates owning one of each. Unlike VF-221 this may be a real capacity gap —
+   check the catalogue first.
+
+Also: the page yields only 4 sections and 3 of them have no rendered match,
+because the saved copy declares ten stylesheets that are not present. Rendered
+evidence on edca is close to worthless until that is addressed.
+
+**Acceptance criteria**
+
+- edca coverage is comparable to kts, or every remaining shortfall is reported
+  with the reason it cannot be closed.
+- No annotation, fixture, or threshold is edited to move any metric.
+- No change to the ten corpus metrics.

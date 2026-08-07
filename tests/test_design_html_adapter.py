@@ -1662,3 +1662,53 @@ def test_a_long_first_paragraph_is_not_a_deck() -> None:
     )
 
     assert [element["role"] for element in section["content"] if element["kind"] == "text"] == ["body", "body"]
+
+
+def test_a_text_free_image_band_is_a_photo_band() -> None:
+    """Falling through to rich text gave a DNN banner pane a template whose body
+    is required, which a section carrying no text can never satisfy."""
+
+    html = "<body><section id='banner'><div><img src='/banner.jpg' alt=''/></div></section></body>"
+
+    assert _role_of(html, "banner") == "photo_band"
+
+
+def test_a_band_with_words_is_not_a_photo_band() -> None:
+    html = (
+        "<body><section id='band'><img src='/a.jpg' alt=''/>"
+        "<p>Consulting that fits how you already work.</p></section></body>"
+    )
+
+    assert _role_of(html, "band") != "photo_band"
+
+
+def test_a_photo_band_owns_its_picture_as_background_media() -> None:
+    """Only background_media reaches the slot that fills a full-bleed band."""
+
+    section = _enriched("<section><img src='/banner.jpg' alt=''/></section>", "photo_band")
+
+    assert [element["role"] for element in section["content"]] == ["background_media"]
+
+
+def test_the_loopback_server_does_not_narrate_requests(capsys) -> None:
+    """SimpleHTTPRequestHandler logs every request to stderr, and a saved page
+    missing ten stylesheets made --json output unparseable."""
+
+    import urllib.request
+
+    from vanjaro_cli.design.html_adapter import serve_local_directory
+
+    from pathlib import Path
+    import tempfile
+
+    with tempfile.TemporaryDirectory() as directory:
+        page = Path(directory) / "page.html"
+        page.write_text("<html><body>hi</body></html>", encoding="utf-8")
+        with serve_local_directory(page) as url:
+            urllib.request.urlopen(url).read()
+            try:
+                urllib.request.urlopen(url.replace("page.html", "missing.css"))
+            except Exception:  # noqa: BLE001 - a 404 is the point
+                pass
+
+    assert capsys.readouterr().err == ""
