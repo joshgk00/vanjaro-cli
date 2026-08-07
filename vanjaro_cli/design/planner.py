@@ -154,6 +154,34 @@ def _asset_value(element: ContentElement, assets: Mapping[str, AssetRecord]) -> 
     return location, alt
 
 
+def _unmet_reason(
+    semantic_field: str,
+    candidates: Sequence[ContentElement],
+    assets: Mapping[str, AssetRecord],
+) -> str:
+    """Explain why a required field bound nothing.
+
+    "Missing or has no slot" was reported for a section that had the element
+    and only lacked its bytes: a live page's images are remote until they are
+    acquired, and a remote URL is deliberately refused rather than hotlinked.
+    Reporting the wrong cause sent a reader looking for absent content.
+    """
+
+    if not candidates:
+        return f"required field {semantic_field!r} is missing or has no slot"
+    unacquired = [
+        assets[element.asset_id].source_url
+        for element in candidates
+        if element.asset_id and element.asset_id in assets and not assets[element.asset_id].local_path
+    ]
+    if unacquired:
+        return (
+            f"required field {semantic_field!r} has {len(unacquired)} value(s) whose asset "
+            "was never acquired, so nothing loadable can be bound"
+        )
+    return f"required field {semantic_field!r} is present but no value could be bound"
+
+
 def _slot_queues(entry: TemplateCatalogEntry) -> tuple[dict[str, deque[str]], dict[str, str]]:
     data = load_template_data(entry)
     slots = enumerate_slots(data["template"])
@@ -630,9 +658,7 @@ def _bind_section_physical(
                 )
             )
         if not created and requirement == "required":
-            issues.append(
-                f"{section.id}: required field '{semantic_field}' is missing or has no slot"
-            )
+            issues.append(f"{section.id}: {_unmet_reason(semantic_field, candidates, asset_map)}")
         bindings.extend(created)
         used_section_ids.update(
             source_id for binding in created for source_id in binding.source_element_ids

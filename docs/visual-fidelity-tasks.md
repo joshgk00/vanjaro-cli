@@ -894,3 +894,9 @@ and its asset is simply not acquired.
   missing.
 - No remote URL is ever bound into a build.
 - No change to the ten corpus metrics.
+
+**VF-223 done (iteration 36).** `acquire_html_assets` downloads a live page's
+remote images into the workspace, built on the existing crawl downloader.
+Blocking 1 → 0, coverage 0.5672 → 0.8060, `valid: true` for the first time.
+`_unmet_reason` now distinguishes an absent field from one whose asset was never
+acquired. Corpus unchanged.

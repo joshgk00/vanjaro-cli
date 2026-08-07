@@ -28,6 +28,7 @@ from vanjaro_cli.design.sources import (
 from vanjaro_cli.figma import FigmaClient, FigmaError, parse_file_key, parse_node_id
 from vanjaro_cli.migration.crawler import fetch_url_text
 from vanjaro_cli.orchestration.figma_assets import acquire_figma_image_fills
+from vanjaro_cli.orchestration.html_assets import acquire_html_assets
 from vanjaro_cli.orchestration.image_acquisition import (
     ImageAcquisitionError,
     acquire_reference_image,
@@ -288,16 +289,14 @@ def _analyze_source(
             # site root, so a file render paints browser defaults and describes
             # nothing the author chose. Loopback only, and it reaches no network.
             with serve_local_directory(local) as served_url:
-                return (
-                    analyze_source(
-                        HtmlSourceRequest(**request_fields, render_url=served_url)
-                    ),
-                    (),
+                document = analyze_source(
+                    HtmlSourceRequest(**request_fields, render_url=served_url)
                 )
-        return (
-            analyze_source(HtmlSourceRequest(**request_fields, render_url=render_url)),
-            (),
-        )
+        else:
+            document = analyze_source(
+                HtmlSourceRequest(**request_fields, render_url=render_url)
+            )
+        return acquire_html_assets(root=root, source_id=source.id, document=document)
     if source.kind == SourceKind.FIGMA:
         node_id = _string_metadata(source, "node_id")
         if node_id:

@@ -564,3 +564,41 @@ def test_a_local_path_still_wins_over_an_unusable_source() -> None:
 
     assert [b for b in bindings if b.semantic_field == "item.media"]
     assert dropped == []
+
+
+def test_an_unbound_required_field_says_its_asset_was_never_acquired() -> None:
+    """"Missing or has no slot" was reported for a section that had the element
+    and only lacked its bytes."""
+
+    from vanjaro_cli.design.models import AssetRole
+    from vanjaro_cli.design.planner import _unmet_reason
+
+    element = ContentElement(
+        id="element-1",
+        kind=ContentKind.IMAGE,
+        role="section_media",
+        value="http://example.test/hero.png",
+        asset_id="asset-1",
+        order=1,
+        provenance=[],
+        confidence=1.0,
+    )
+    assets = {
+        "asset-1": AssetRecord(
+            id="asset-1",
+            kind=AssetKind.IMAGE,
+            role=AssetRole.EDITORIAL,
+            source_url="http://example.test/hero.png",
+        )
+    }
+
+    reason = _unmet_reason("media", [element], assets)
+
+    assert "never acquired" in reason
+    assert "missing or has no slot" not in reason
+
+
+def test_a_field_with_no_candidates_still_reads_as_missing() -> None:
+    from vanjaro_cli.design.planner import _unmet_reason
+
+    assert "missing or has no slot" in _unmet_reason("media", [], {})

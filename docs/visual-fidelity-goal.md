@@ -2693,3 +2693,44 @@ was found by looking for one section's fix, which is worth saying plainly.
 field and every asset in the workspace has `local_path: null`, so the remote URL
 correctly refuses to bind rather than leaking into a build. That is asset
 acquisition, not the library. Filed as VF-223.
+
+### Iteration 36 — VF-223, and the first valid plan on a real site
+
+**Result:** blocking sections **1 → 0**. Coverage **0.5672 → 0.8060**.
+`valid: true` — **the first valid plan this project has produced from a live
+page.** All 17 assets acquired, 0 warnings. Corpus unchanged on every metric:
+boundary precision and recall 1.0, semantic role accuracy 1.0, visitor content
+retention 1.0 (127/127), group-field association 1.0 (79/79), top-1 0.92,
+high-confidence precision 0.909. Suite 2,059 → 2,067.
+
+A live page analysed with `local_path` unset on **every** asset. Nothing
+downloaded them: the legacy crawl path builds an asset manifest, and the Figma
+path has `acquire_figma_image_fills`, but a `live_html` source had no
+equivalent. So every image stayed an absolute remote URL, and the planner
+blanked each one rather than hotlink another origin — correct, and invisible.
+
+`acquire_html_assets` fills that gap, built on the existing
+`migration.assets.download_assets` rather than a second downloader. It writes
+`sources/<id>/assets/` and an `asset-manifest.json` with digests, mirroring the
+Figma module. Only absolute http(s) sources are fetched — a relative path
+already loads in a portal page, and downloading it would mean fetching the site
+being built.
+
+**Coverage rose far more than the one blocking section explains.** Media fields
+across the page were dropping silently: optional ones simply bound nothing and
+said nothing. One section blocked because its template *required* media, which
+is the only reason this was visible at all.
+
+**The plan also reported the wrong cause**, which is the part worth keeping in
+mind. `required field 'media' is missing or has no slot` was printed for a
+section that had the element and lacked only its bytes. `_unmet_reason` now
+separates the three cases: no candidate at all, a candidate whose asset was
+never acquired, and a candidate that could not bind for another reason. A wrong
+diagnosis sends a reader looking for absent content.
+
+A failed download is recorded twice — as `missing_reason` on the asset and as a
+document warning — and never as a silent drop.
+
+**Where the real page stands:** 11 sections, header and footer as global chrome,
+9 body sections all matched and bound, `editable_content_coverage` 0.8060, zero
+blocking issues, zero warnings, and a valid plan.
