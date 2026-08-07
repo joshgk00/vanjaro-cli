@@ -241,6 +241,21 @@ def _hint_tokens(hints: str) -> set[str]:
     return set(re.split(r"[^a-z0-9]+", hints))
 
 
+def _linked_thumbnails(element: Tag) -> list[Tag]:
+    """Return anchors whose whole content is a picture.
+
+    A thumbnail that goes somewhere is not a call to action — iteration 35
+    already established that an action carrying no label is not the call. What
+    it is, next to a heading and a paragraph, is a media feature.
+    """
+
+    return [
+        anchor
+        for anchor in element.find_all("a", href=True)
+        if anchor.find("img") is not None and not anchor.get_text(" ", strip=True)
+    ]
+
+
 def media_text_split(element: Tag) -> tuple[Tag, Tag] | None:
     """Return a section's (media column, text column) when it is a two-up split.
 
@@ -309,6 +324,11 @@ def static_role(element: Tag, section_index: int) -> str:
         return "split_feature"
     if media_text_split(element) is not None:
         return "split_media"
+    # One linked thumbnail beside a heading and copy. Several of them is a
+    # gallery, and a card grid's links carry their own labels, so neither
+    # reaches here.
+    if len(_linked_thumbnails(element)) == 1 and element.find(["h1", "h2", "h3", "h4"]) is not None:
+        return "video_feature"
     if element.find("img") is not None and not text:
         # A band with a picture and no words at all is a photo band. Falling
         # through to rich text gave it a template whose body is required, which

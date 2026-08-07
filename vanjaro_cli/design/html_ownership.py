@@ -213,6 +213,16 @@ def _media_side(columns: tuple[Tag, Tag] | None) -> str:
     return "left" if media in worded.find_all_previous() else "right"
 
 
+def _feature_media(root: Tag) -> Tag | None:
+    """Return the picture a media feature is actually featuring."""
+
+    for anchor in root.find_all("a", href=True):
+        picture = anchor.find("img")
+        if picture is not None and not anchor.get_text(" ", strip=True):
+            return picture
+    return None
+
+
 def _most_prominent(headings: list[Tag]) -> Tag | None:
     """Return the heading a reader would take as the section's title.
 
@@ -458,10 +468,17 @@ def enrich_section_from_static_dom(
         if repeat_kind and group_items:
             groups.append({"id": group_id, "kind": repeat_kind, "items": group_items, "provenance": [provenance]})
 
+        feature_media = _feature_media(root) if role == "video_feature" else None
         for img in root.find_all("img"):
-            if id(img) not in repeated_nodes:
-                image_role = _IMAGE_ROLE_BY_SECTION.get(role, "section_media")
-                image(img, image_role)
+            if id(img) in repeated_nodes:
+                continue
+            if feature_media is not None and img is not feature_media:
+                # The feature's picture is the one the link points at. A mascot
+                # floated beside it is decoration, and counting it as editorial
+                # media made a section overflow a template that holds one.
+                image(img, "decorative_media")
+                continue
+            image(img, _IMAGE_ROLE_BY_SECTION.get(role, "section_media"))
         background_match = re.search(
             r"background(?:-image)?\s*:\s*(?:[^;]*?)url\((['\"]?)([^)'\"]+)\1\)",
             str(root.get("style") or ""),

@@ -1087,3 +1087,12 @@ already established that an action with no label is not the call).
 - A gallery of several linked thumbnails is not reclassified.
 - A card grid whose links carry labels is not reclassified.
 - No change to the ten corpus metrics, and both real sites reported.
+
+**VF-228 done (iteration 43).** A section with one link-wrapped thumbnail beside
+a heading reads `video_feature` and reaches `Content/video-feature`. The picture
+the link points at is the feature's media; any other image is `decorative_media`
+and is reported as a loss rather than overflowing the template. kts coverage
+0.8235 → 0.8529, losses 10 → 8, blocking stays 0, corpus unchanged.
+
+**All eight remaining kts losses are VF-227** — the three card sections that
+cannot reach a template holding a section heading without moving the corpus.

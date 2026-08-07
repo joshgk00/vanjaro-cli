@@ -3027,3 +3027,47 @@ image. Classifying it would take the losses from ten to eight. Doing that in the
 same iteration would have confounded the measurement of this fix, and a
 classification rule written in the last minutes of a window is how the corpus
 gets moved by accident.
+
+### Iteration 43 — VF-228, and a mascot that was pretending to be content
+
+**Both real sites:**
+
+| site | coverage | blocking | valid | content losses |
+|---|---|---|---|---|
+| `edca-pilot` | 0.125 → 0.125 | 2 | false | 0 |
+| `kts-fidelity` | 0.8235 → **0.8529** | 0 | true | 10 → **8** |
+
+Corpus unchanged on every metric. Suite 2,089 → 2,094. Best coverage this
+project has recorded on a real page.
+
+Section 10 carries a kicker, a headline, copy, a floated mascot and a thumbnail
+wrapped in a link. It read `rich_text` and matched a template holding a title
+and body and nothing else, so its eyebrow, its picture and its link were all
+dropped. `Content/video-feature` declares exactly `eyebrow`, `title`, `body`,
+`media`, `action`, and nothing else in the catalogue claims its roles — so
+unlike VF-227 this needed no alias and could not disturb the corpus.
+
+A section is a media feature when it has **one** anchor whose whole content is a
+picture, next to a heading. A gallery has several; a card grid's links carry
+their own labels. Both are excluded by that one sentence.
+
+**Classifying it correctly broke the plan, which is the interesting part.**
+`video_feature` owns one media slot and the section has two pictures, so it went
+from zero blocking issues to one and the plan stopped being valid. The mascot is
+not editorial media — it is decoration floated beside the feature — and calling
+it `section_media` is what made the section overflow.
+
+The picture a media feature features is the one its link points at. Everything
+else is `decorative_media`, which no template claims, so it is reported as a
+content loss rather than blocking a build. That is the honest answer: a floating
+mascot genuinely has no slot, and saying so beats both pretending it fits and
+refusing to build.
+
+**I nearly reverted instead.** Losses fell from ten to seven while blocking rose
+from zero to one, and a plan that cannot build is worse than one that reports
+what it drops. Fixing the cause was better than either, but the fallback was to
+revert and report — an unmeasured change to `decorative_layers` at the end of a
+window is how the corpus moves by accident.
+
+**The remaining eight losses are all VF-227**, the three card sections, still
+waiting on a judgement about a corpus annotation rather than on any code.

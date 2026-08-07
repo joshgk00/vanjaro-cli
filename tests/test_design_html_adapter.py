@@ -1885,3 +1885,71 @@ def test_document_order_still_breaks_a_tie_between_equal_headings() -> None:
     )
 
     assert [e["value"] for e in section["content"] if e["role"] == "section_title"] == ["First"]
+
+
+_MEDIA_FEATURE = """
+<body><section id="feature">
+  <div class="mascot"><img src="/mascot.png" alt="Saxophone player mascot"/></div>
+  <div class="container">
+    <h5>OUR MEDIA</h5><h2>See what our students can do</h2>
+    <p>Pellentesque mattis mauris ac tortor volutpat.</p>
+    <a class="vj-link" href="/watch"><img src="/thumb.png" alt="Two students playing"/></a>
+  </div>
+</section></body>
+"""
+
+
+def test_a_linked_thumbnail_beside_a_heading_is_a_media_feature() -> None:
+    """It matched a rich-text template that holds a title and body and nothing
+    else, so its eyebrow, its picture and its link were all dropped."""
+
+    assert _role_of(_MEDIA_FEATURE, "feature") == "video_feature"
+
+
+def test_a_gallery_of_linked_thumbnails_is_not_a_media_feature() -> None:
+    html = (
+        "<body><section id='gallery'><h2>Our work</h2>"
+        "<a href='/a'><img src='/a.png' alt=''/></a>"
+        "<a href='/b'><img src='/b.png' alt=''/></a>"
+        "<a href='/c'><img src='/c.png' alt=''/></a>"
+        "</section></body>"
+    )
+
+    assert _role_of(html, "gallery") != "video_feature"
+
+
+def test_a_labelled_link_is_not_a_thumbnail() -> None:
+    """A card grid's links carry their own labels."""
+
+    html = (
+        "<body><section id='cards'><h2>Classes</h2>"
+        "<a href='/a'><img src='/a.png' alt=''/> LEARN MORE</a>"
+        "</section></body>"
+    )
+
+    assert _role_of(html, "cards") != "video_feature"
+
+
+def test_the_featured_picture_is_the_one_the_link_points_at() -> None:
+    from bs4 import BeautifulSoup
+
+    section = _enriched(
+        str(BeautifulSoup(_MEDIA_FEATURE, "html.parser").find("section")), "video_feature"
+    )
+
+    media = [e for e in section["content"] if e["role"] == "section_media"]
+    assert [e["attributes"]["alt"] for e in media] == ["Two students playing"]
+
+
+def test_a_mascot_beside_the_feature_is_decoration_not_media() -> None:
+    """Counting it as editorial media made the section overflow a template that
+    holds one picture."""
+
+    from bs4 import BeautifulSoup
+
+    section = _enriched(
+        str(BeautifulSoup(_MEDIA_FEATURE, "html.parser").find("section")), "video_feature"
+    )
+
+    decorative = [e for e in section["content"] if e["role"] == "decorative_media"]
+    assert [e["attributes"]["alt"] for e in decorative] == ["Saxophone player mascot"]
