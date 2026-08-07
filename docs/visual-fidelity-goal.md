@@ -2843,3 +2843,50 @@ only template owning more than one body slot (four), and it has no media field.
 So a three-paragraph about-section with a picture genuinely has nothing that
 fits. That is a real capacity gap — the first one this loop has found that
 survives actually checking — but it is worth nothing until edca has its images.
+
+### Iteration 39 — a valid plan that silently drops eleven pieces of content
+
+**Both real sites:**
+
+| site | coverage | blocking | valid | content losses |
+|---|---|---|---|---|
+| `edca-pilot` | 0.125 | 2 | false | 0 |
+| `kts-fidelity` | 0.8060 | 0 | true | **11** |
+
+Corpus unchanged on every metric: boundary precision and recall 1.0, semantic
+role accuracy 1.0, visitor content retention 1.0 (127/127), group-field
+association 1.0 (79/79), top-1 0.92, high-confidence precision 0.909. Suite
+2,077 → 2,080.
+
+`kts-fidelity` reports `valid: true` and `issue_count: 0`. It will also drop:
+
+| section | template | lost |
+|---|---|---|
+| 3, 10 | Rich Text Block | its image and its button |
+| 5, 7 | Feature Cards (4-up) | its heading and its body copy |
+| 8 | Feature Cards (4-up) | its heading, body, and button |
+
+`MOST POPULAR CLASSES` would not reach the built page. The evidence existed —
+one warning per field, inside the composition plan's per-entry list — but
+nothing a reader looks at said so. `editable_content_coverage` of 0.8060
+encoded it as a number with no names attached.
+
+`content_losses` and `content_loss_count` now sit in `validation.json` beside
+`valid`, naming the section and the fields. Not blocking: a template that fits
+imperfectly is still buildable, and forcing a block would stop plans that are
+fine. Visible, though, which is the whole of VF-214's lesson applied to a
+different quiet loss.
+
+**Measuring the change required a second fix.** `project plan` had no
+`--refresh`, and its fingerprint covers the analysis and the policy — not the
+planner. So a change to planning reproduced the cached result exactly, and my
+first reading of the new field was of a file written before it existed. That is
+the same resume trap as iteration 30, on a stage that had no way out of it at
+all. `--refresh` exists on `plan` now, matching `analyze`.
+
+**The cause is a template gap, and it is not mine to close.** No card template
+declares a `section_title` field — neither `feature-cards-3up` nor `-4up` has
+one, so *every card section on every site* loses its heading. `Content/rich-text`
+declares `title` and `body` and nothing else, so an image or a button in a
+rich-text section has nowhere to go. Both are governed library changes. Filed as
+VF-226 with the measurement attached.

@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 from pathlib import Path
+from types import SimpleNamespace
 
 import pytest
 
@@ -394,3 +395,77 @@ def test_render_is_part_of_the_analyze_fingerprint(runner, tmp_path: Path) -> No
     assert rendered_execution["status"] == "dry_run"
     assert rendered_execution["action"] == "execute"
     assert rendered_execution["input_fingerprint"] != static_fingerprint
+
+
+def test_content_losses_name_the_fields_a_build_will_drop() -> None:
+    """A plan reported valid with zero issues while three card sections lost
+    their heading and two rich-text sections their image and button."""
+
+    from vanjaro_cli.orchestration.project_planning import _content_losses
+
+    plan = SimpleNamespace(
+        entries=[
+            SimpleNamespace(
+                source_section_id="page.section.5",
+                warnings=(
+                    "source field 'section_title' is not editable by template",
+                    "source field 'body' is not editable by template",
+                ),
+            ),
+            SimpleNamespace(
+                source_section_id="page.section.6",
+                warnings=("selected template does not declare a native representation",),
+            ),
+        ]
+    )
+
+    assert _content_losses(plan) == {"page.section.5": ["body", "section_title"]}
+
+
+def test_a_plan_that_loses_nothing_reports_no_losses() -> None:
+    from vanjaro_cli.orchestration.project_planning import _content_losses
+
+    plan = SimpleNamespace(
+        entries=[SimpleNamespace(source_section_id="page.section.1", warnings=())]
+    )
+
+    assert _content_losses(plan) == {}
+
+
+def test_plan_refresh_re_runs_a_resumable_plan(tmp_path: Path) -> None:
+    """The plan fingerprint covers the analysis and the policy, not the planner,
+    so a change to planning itself reproduced the cached result."""
+
+    from click.testing import CliRunner
+
+    from vanjaro_cli.cli import cli
+
+    runner = CliRunner()
+    workspace = tmp_path / "project"
+    created = runner.invoke(
+        cli,
+        [
+            "project", "init", str(workspace),
+            "--name", "Refresh",
+            "--target-profile", "pilot",
+            "--source", "live_html=sources/page.html",
+            "--json",
+        ],
+    )
+    assert created.exit_code == 0, created.output
+    source = workspace / "sources" / "page.html"
+    source.parent.mkdir(parents=True, exist_ok=True)
+    source.write_text(
+        "<body><section id='a'><h2>Heading</h2><p>Copy here.</p></section></body>",
+        encoding="utf-8",
+    )
+    analyzed = runner.invoke(cli, ["project", "analyze", str(workspace), "--json"])
+    assert analyzed.exit_code == 0, analyzed.output
+
+    first = runner.invoke(cli, ["project", "plan", str(workspace), "--json"])
+    assert first.exit_code == 0, first.output
+    resumed = runner.invoke(cli, ["project", "plan", str(workspace), "--json"])
+    refreshed = runner.invoke(cli, ["project", "plan", str(workspace), "--refresh", "--json"])
+
+    assert json.loads(resumed.output)["execution"]["action"] == "resume"
+    assert json.loads(refreshed.output)["execution"]["action"] == "execute"

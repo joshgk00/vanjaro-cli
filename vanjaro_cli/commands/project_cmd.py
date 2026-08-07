@@ -307,6 +307,15 @@ def analyze_project(
 )
 @click.option("--override-author", default="cli-user", show_default=True)
 @click.option("--override-reason", default="explicit template override", show_default=True)
+@click.option(
+    "--refresh",
+    is_flag=True,
+    help=(
+        "Re-plan even when the previous plan is resumable. The fingerprint "
+        "covers the analysis and the policy, not the planner, so a change to "
+        "planning itself reproduces the cached result without this."
+    ),
+)
 @click.option("--dry-run", is_flag=True, help="Preview state transitions without planning or writing files.")
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
 def plan_project(
@@ -317,6 +326,7 @@ def plan_project(
     template_overrides: tuple[str, ...],
     override_author: str,
     override_reason: str,
+    refresh: bool,
     dry_run: bool,
     as_json: bool,
 ) -> None:
@@ -343,6 +353,8 @@ def plan_project(
             "target_pack": current.agency_pack.model_dump(mode="json"),
             "template_catalog_fingerprint": catalog_fingerprint,
         }
+        if refresh:
+            planning_request["refresh_token"] = datetime.now(timezone.utc).isoformat()
         inputs = StageInputs(
             data=planning_request,
             files=tuple(plan_files),

@@ -970,3 +970,34 @@ also the shape every consulting or practice site uses on its about page.
 - No change to the ten corpus metrics, and both real sites reported.
 
 **This is a governed library change and needs Josh's authorization.**
+
+### VF-226 — Card and rich-text templates cannot hold a section heading, an image, or a button
+
+**Dependencies:** none, but this is a governed library change and needs Josh
+
+**Problem**
+
+`kts-fidelity` plans to `valid: true` with zero issues and will drop **eleven**
+pieces of visitor content, now reported as `content_losses`:
+
+| section | template | lost |
+|---|---|---|
+| 3, 10 | `Content/rich-text` | `section_media`, `primary_action` |
+| 5, 7 | `Cards/feature-cards-4up` | `section_title`, `body` |
+| 8 | `Cards/feature-cards-4up` | `section_title`, `body`, `primary_action` |
+
+**No card template declares a `section_title` field at all** — checked both
+`feature-cards-3up` and `-4up`. So every card section on every site loses its
+heading; `MOST POPULAR CLASSES` never reaches the build. `Content/rich-text`
+declares only `title` and `body`, so a rich-text section with a picture and a
+button loses both.
+
+**Acceptance criteria**
+
+- A card section keeps its heading and its introductory copy.
+- A rich-text section with an image and a button keeps them, or matches a
+  template that holds them.
+- No existing template's contract changes shape in a way that alters already
+  built pages.
+- Pack version bumped, digests re-audited, history immutable.
+- No change to the ten corpus metrics, and both real sites reported.

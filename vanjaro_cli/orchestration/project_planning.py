@@ -131,6 +131,7 @@ def run_project_planning(
         if total_sections
         else 0.0
     )
+    content_losses = _content_losses(plan)
     _atomic_write_json(
         validation_path,
         {
@@ -138,6 +139,8 @@ def run_project_planning(
             "valid": not issues,
             "issue_count": len(issues),
             "issues": list(issues),
+            "content_loss_count": sum(len(fields) for fields in content_losses.values()),
+            "content_losses": content_losses,
             "section_count": total_sections,
             "composition_section_count": plan.summary.section_count,
             "global_section_count": global_plan["section_count"],
@@ -159,6 +162,36 @@ def run_project_planning(
             f"{len(issues)} approval-blocking validation issue(s)."
         ),
     )
+
+
+_UNEDITABLE_PREFIX = "source field '"
+_UNEDITABLE_SUFFIX = "' is not editable by template"
+
+
+def _content_losses(plan: CompositionPlan) -> dict[str, list[str]]:
+    """List, per section, the source fields the chosen template cannot hold.
+
+    A plan reported `valid: true` with `issue_count: 0` while three card
+    sections were losing their heading and two rich-text sections their image
+    and their button. The evidence existed only inside the composition plan's
+    per-entry requirements; nothing a reader looks at said the build would drop
+    visitor content.
+
+    Not blocking — a template that fits imperfectly is still buildable, and
+    forcing a block here would stop plans that are fine. Visible, though.
+    """
+
+    losses: dict[str, list[str]] = {}
+    for entry in plan.entries:
+        fields = sorted(
+            requirement[len(_UNEDITABLE_PREFIX) : -len(_UNEDITABLE_SUFFIX)]
+            for requirement in entry.warnings
+            if requirement.startswith(_UNEDITABLE_PREFIX)
+            and requirement.endswith(_UNEDITABLE_SUFFIX)
+        )
+        if fields:
+            losses[entry.source_section_id] = fields
+    return losses
 
 
 def _atomic_write_json(path: Path, value: object) -> None:
