@@ -1771,3 +1771,73 @@ def test_unnested_panes_are_all_boundaries() -> None:
     )
 
     assert _selectors(html) == ["#dnn_TopPane", "#dnn_BottomPane"]
+
+
+_SPLIT_SECTION = """
+<body><section id="split"><div class="container"><div class="row">
+  <div class="col-md-6"><img src="/boy.png" alt="Boy playing a ukulele"/></div>
+  <div class="col-md-6"><h2>MUSIC IS MAGIC</h2>
+    <p>The values that come from studying music are truly miraculous.</p>
+    <a class="btn" href="/learn">LEARN MORE</a></div>
+</div></div></section></body>
+"""
+
+
+def test_a_picture_beside_its_copy_is_a_split() -> None:
+    """The layout was recorded as a one-column stack, so the section read
+    rich_text and matched a template with no media field and no action."""
+
+    assert _role_of(_SPLIT_SECTION, "split") == "split_media"
+
+
+def test_a_card_grid_is_not_a_split() -> None:
+    """The inner row of a four-card grid has two columns and a picture in one."""
+
+    assert _role_of(_VANJARO_CARDS, "classes") != "split_media"
+
+
+def test_a_section_with_two_pictures_is_not_a_split() -> None:
+    """A split is one picture beside one block of copy. A stacked media feature
+    carrying a mascot and a thumbnail is not one."""
+
+    html = (
+        "<body><section id='feature'><div class='row'>"
+        "<div><img src='/mascot.png' alt=''/></div>"
+        "<div><h2>See what our students can do</h2>"
+        "<p>Pellentesque mattis mauris ac tortor volutpat.</p>"
+        "<img src='/thumb.png' alt=''/></div>"
+        "</div></section></body>"
+    )
+
+    assert _role_of(html, "feature") != "split_media"
+
+
+def test_a_split_records_which_side_the_picture_is_on() -> None:
+    """A mirrored build reads as a different design."""
+
+    from bs4 import BeautifulSoup
+
+    section = _enriched(
+        str(BeautifulSoup(_SPLIT_SECTION, "html.parser").find("section")), "split_media"
+    )
+
+    assert section["layout"]["kind"] == "split"
+    assert section["layout"]["media_position"] == "left"
+
+
+def test_a_split_with_the_picture_second_says_right() -> None:
+    from bs4 import BeautifulSoup
+
+    reversed_html = (
+        "<section id='split'><div class='row'>"
+        "<div><h2>MUSIC IS MAGIC</h2>"
+        "<p>The values that come from studying music are truly miraculous.</p></div>"
+        "<div><img src='/boy.png' alt=''/></div>"
+        "</div></section>"
+    )
+
+    section = _enriched(
+        str(BeautifulSoup(reversed_html, "html.parser").find("section")), "split_media"
+    )
+
+    assert section["layout"]["media_position"] == "right"

@@ -1001,3 +1001,12 @@ button loses both.
   built pages.
 - Pack version bumped, digests re-audited, history immutable.
 - No change to the ten corpus metrics, and both real sites reported.
+
+**Split detection added (iteration 40).** `media_text_split` reads a picture
+beside its copy from shape rather than column classes; `split_media` sections
+match `Content/split-media`, which holds media, title, subtitle, body and
+action. kts coverage 0.8060 → 0.8358 and content losses 11 → 9, edca unchanged,
+corpus unchanged. `media_position` now comes from source order rather than
+always reading `left`.
+
+**VF-226 still accounts for all nine remaining losses** and still needs Josh.

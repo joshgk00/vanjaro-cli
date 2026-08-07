@@ -2890,3 +2890,49 @@ one, so *every card section on every site* loses its heading. `Content/rich-text
 declares `title` and `body` and nothing else, so an image or a button in a
 rich-text section has nowhere to go. Both are governed library changes. Filed as
 VF-226 with the measurement attached.
+
+### Iteration 40 — a picture beside its copy was a one-column stack
+
+**Both real sites:**
+
+| site | coverage | blocking | valid | content losses |
+|---|---|---|---|---|
+| `edca-pilot` | 0.125 → 0.125 | 2 | false | 0 |
+| `kts-fidelity` | 0.8060 → **0.8358** | 0 | true | 11 → **9** |
+
+Corpus unchanged on every metric: boundary precision and recall 1.0, semantic
+role accuracy 1.0, visitor content retention 1.0 (127/127), group-field
+association 1.0 (79/79), top-1 0.92, high-confidence precision 0.909. Suite
+2,080 → 2,085.
+
+Iteration 39 named eleven pieces of content a valid plan would drop and put the
+cause in the library, where I could not go. Two of them were not a library
+problem at all.
+
+`#tpl-split-s1` lays a picture beside its copy — a row with an image column and
+a text column. The layout was recorded as `kind: stack, columns: 1`, so the
+section read `rich_text` and matched a template that has no media field and no
+action. Its image and its button were going to be dropped by a plan that
+reported no issues.
+
+`media_text_split` reads the shape: a container whose element children are
+exactly two blocks, one carrying the pictures and one carrying the words. The
+role is `split_media` and `Content/split-media` holds all four fields, so
+nothing is lost.
+
+**My first version claimed a four-card grid and a stacked media feature**, and
+the tests I wrote for those two cases are the reason I noticed. A card grid's
+inner row is two columns with a picture in one of them; a media feature carries
+a mascot and a thumbnail. Both are excluded now by the same sentence that
+describes what a split actually is — **one picture beside one block of copy** —
+plus a check that the two columns account for the section's content rather than
+one band inside it.
+
+Which side the picture sits on is recorded from source order. A mirrored build
+reads as a different design, and `media_position` was hard-coded to `left`.
+
+**The remaining nine losses are the library gap**, and VF-226 still needs Josh:
+no card template declares a `section_title`, and `Content/rich-text` declares
+only `title` and `body`. Section 10 is a stacked media feature with two
+pictures — correctly not a split — and loses its image and action to that same
+gap.

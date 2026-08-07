@@ -14,6 +14,7 @@ from vanjaro_cli.design.html_primitives import (
     layout_for_section as _layout_for_section,
     register_asset as _register_asset,
 )
+from vanjaro_cli.design.html_boundaries import media_text_split
 from vanjaro_cli.design.models import BreakpointName, Viewport
 from vanjaro_cli.migration.sections import is_stat_value, normalize_text_blocks
 
@@ -203,6 +204,13 @@ def _deck_paragraph(title: Tag | None, paragraphs: list[Tag]) -> Tag | None:
     if len(first.get_text(" ", strip=True)) > _DECK_MAXIMUM_CHARACTERS:
         return None
     return first if title in first.find_all_previous() else None
+
+
+def _media_side(columns: tuple[Tag, Tag] | None) -> str:
+    if columns is None:
+        return "left"
+    media, worded = columns
+    return "left" if media in worded.find_all_previous() else "right"
 
 
 def enrich_section_from_static_dom(
@@ -472,10 +480,14 @@ def enrich_section_from_static_dom(
             "kind": "stack", "contained": True, "columns": max(1, item_count),
             "media_position": "none", "alignment": "center", "full_bleed": False,
         }
-    elif role == "split_feature" or (role == "hero" and root.find("img") is not None):
+    elif role in {"split_feature", "split_media"} or (role == "hero" and root.find("img") is not None):
+        columns = media_text_split(root)
         section["layout"] = {
             "kind": "split", "contained": True, "columns": 2,
-            "media_position": "left", "alignment": "left", "full_bleed": False,
+            # Which side the picture is on is in the source order, and a
+            # mirrored build reads as a different design.
+            "media_position": _media_side(columns),
+            "alignment": "left", "full_bleed": False,
         }
     add_inferred_static_responsive(section, root, provenance)
 

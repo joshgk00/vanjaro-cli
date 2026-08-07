@@ -241,6 +241,42 @@ def _hint_tokens(hints: str) -> set[str]:
     return set(re.split(r"[^a-z0-9]+", hints))
 
 
+def media_text_split(element: Tag) -> tuple[Tag, Tag] | None:
+    """Return a section's (media column, text column) when it is a two-up split.
+
+    A real page laid a picture beside its copy in two Bootstrap columns and the
+    layout was recorded as a one-column stack, so the section read `rich_text`
+    and matched a template with no media field and no action — it would have
+    built without its image or its button.
+
+    Keyed on shape rather than on column classes: a container whose element
+    children are exactly two blocks, one carrying the pictures and the other
+    carrying the words. A block holding both is one column of mixed content,
+    not half of a split.
+    """
+
+    # One picture beside one block of copy. Without this the inner row of a
+    # four-card grid matched, and so did a stacked media feature carrying a
+    # mascot and a thumbnail.
+    if len(element.find_all("img")) != 1:
+        return None
+    section_text = len(element.get_text(" ", strip=True))
+    for container in element.find_all(True):
+        columns = [child for child in container.find_all(True, recursive=False)]
+        if len(columns) != 2:
+            continue
+        media = [column for column in columns if column.find("img") is not None]
+        worded = [column for column in columns if len(column.get_text(" ", strip=True)) > 40]
+        if len(media) != 1 or len(worded) != 1 or media[0] is worded[0]:
+            continue
+        # The row has to be the section's content, not one band inside it.
+        paired = len(columns[0].get_text(" ", strip=True)) + len(columns[1].get_text(" ", strip=True))
+        if section_text and paired < section_text * 0.9:
+            continue
+        return media[0], worded[0]
+    return None
+
+
 def static_role(element: Tag, section_index: int) -> str:
     """Classify a boundary from semantic structure and stable source hints."""
 
@@ -271,6 +307,8 @@ def static_role(element: Tag, section_index: int) -> str:
         return "contact"
     if element.find("img") is not None and element.find("ul") is not None:
         return "split_feature"
+    if media_text_split(element) is not None:
+        return "split_media"
     if element.find("img") is not None and not text:
         # A band with a picture and no words at all is a photo band. Falling
         # through to rich text gave it a template whose body is required, which
