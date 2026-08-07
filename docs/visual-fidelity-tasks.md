@@ -862,3 +862,35 @@ exactly the comparability failure VF-1 exists to prevent.
 - No annotation is edited merely to make the number rise.
 
 This needs a deliberate call about the corpus, not an iteration of the loop.
+
+**VF-221 closed without doing it (iteration 35).** Josh authorized the library
+change; it was not needed. `Navigation/footer-4col` already holds a footer's
+link columns — the footer simply was not classified as one. Recognising it as
+chrome, matching hints as whole words, requiring an action to have a label, and
+reading a deck as a subtitle took blocking 3 → 1 with **no library change at
+all**. The task's premise was my own error: I generalised from three templates
+instead of reading the catalogue.
+
+### VF-223 — A required media field cannot bind because assets are not localised
+
+**Dependencies:** none
+
+**Problem**
+
+`keys-to-success.section.9` is the last blocking section. It matches
+`Content/split-media`, which requires `media`, and the section has an image —
+but every asset in the workspace carries `local_path: null`. The value is an
+absolute remote URL, which correctly refuses to bind rather than leaking a
+foreign URL into a build.
+
+So the plan blocks for the right reason and reports the wrong one: the message
+says the required field "is missing or has no slot" when the field is present
+and its asset is simply not acquired.
+
+**Acceptance criteria**
+
+- A live-HTML source's images are acquired into the workspace during analysis,
+  or the plan says the asset was not acquired rather than that the field is
+  missing.
+- No remote URL is ever bound into a build.
+- No change to the ten corpus metrics.

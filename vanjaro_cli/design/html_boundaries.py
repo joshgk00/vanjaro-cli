@@ -194,6 +194,18 @@ def _is_link_bar(element: Tag) -> bool:
     return link_text / total >= _NAVIGATION_LINK_TEXT_SHARE
 
 
+def _hint_tokens(hints: str) -> set[str]:
+    """Split selector and class hints into whole words.
+
+    A substring test read `#tpl-ctas-s1` as a call to action because "ctas"
+    contains "cta", and the section — a heading, an image and two paragraphs
+    with no link at all — then matched a CTA template that wanted an action it
+    does not have.
+    """
+
+    return set(re.split(r"[^a-z0-9]+", hints))
+
+
 def static_role(element: Tag, section_index: int) -> str:
     """Classify a boundary from semantic structure and stable source hints."""
 
@@ -216,20 +228,72 @@ def static_role(element: Tag, section_index: int) -> str:
         if any(token in hints for token in ("project", "gallery", "portfolio", "loop")):
             return "project_gallery"
         return "feature_cards"
-    if "hero" in hints or (element.find("h1") is not None and section_index <= 1):
+    if "hero" in _hint_tokens(hints) or (element.find("h1") is not None and section_index <= 1):
         return "hero"
-    if "cta" in hints:
+    if "cta" in _hint_tokens(hints):
         return "call_to_action"
     if element.find("a", href=re.compile(r"^mailto:")) is not None or element.find("form") is not None:
         return "contact"
     if element.find("img") is not None and element.find("ul") is not None:
         return "split_feature"
-    actions = element.find_all("a", href=True)
+    actions = [
+        action
+        for action in element.find_all("a", href=True)
+        # An action with no label is not the call. A media block whose thumbnail
+        # is wrapped in a link otherwise reads as a call to action, and then
+        # matches a template that requires an action it cannot fill.
+        if action.get_text(" ", strip=True)
+    ]
     if len(actions) == 1 and len(element.find_all(["h1", "h2", "h3"])) == 1 and len(text) < 180:
         return "call_to_action"
     if "contact" in hints:
         return "contact"
     return "rich_text"
+
+
+_FOOTER_MINIMUM_LINKS = 3
+# The footer is last, or second to last behind a copyright bar.
+_FOOTER_SEARCH_DEPTH = 2
+_FOOTER_MINIMUM_HEADINGS = 2
+
+
+def _is_footer(element: Tag) -> bool:
+    """Report whether a trailing boundary is the page footer.
+
+    `<footer>` is excluded from boundary discovery already, so this only ever
+    sees a builder that used a plain `<section>` — as a real Vanjaro page does
+    for both its chrome. The header was fixed in VF-218 and the footer was left
+    matching CTA templates that want a title it does not have.
+
+    Shape, not position alone: a footer is column headings over link lists,
+    which is why it fails the link-bar test that catches the header. Position
+    is still required — the caller only offers trailing candidates — because a
+    services grid has the same shape in the middle of a page.
+    """
+
+    if element.name in {"header", "nav"}:
+        return False
+    if element.find(["h1", "h2", "h3"]) is not None:
+        # A section heading means the block is part of the page's argument. A
+        # footer labels its columns, and labels are small.
+        return False
+    headings = element.find_all(["h4", "h5", "h6"])
+    links = element.find_all("a", href=True)
+    return len(headings) >= _FOOTER_MINIMUM_HEADINGS and len(links) >= _FOOTER_MINIMUM_LINKS
+
+
+def _trailing_footer(candidates: Sequence[Tag]) -> Tag | None:
+    """Return the last candidate that reads as the page footer, if any.
+
+    Only one: two footer sections make `split_global_sections` report
+    conflicting variants and block, which is worse than leaving a copyright
+    bar in the body where it does no harm.
+    """
+
+    for element in reversed(candidates[-_FOOTER_SEARCH_DEPTH:]):
+        if _is_footer(element):
+            return element
+    return None
 
 
 def prepare_static_sections(
@@ -242,9 +306,12 @@ def prepare_static_sections(
     # candidate pool: `section_index` means "how far down the page", and a
     # pool-relative index makes it drift as earlier candidates are claimed.
     roles = {id(tag): static_role(tag, index) for index, tag in enumerate(candidates)}
+    footer = _trailing_footer(candidates)
+    if footer is not None:
+        roles[id(footer)] = "footer"
     remaining = list(candidates)
     prepared: list[dict[str, JsonValue]] = []
-    claimed_navigation: set[int] = set()
+    claimed_chrome: set[int] = set()
     for raw in sections:
         raw_words = _raw_section_words(raw)
         scored = [
@@ -256,34 +323,43 @@ def prepare_static_sections(
         if isinstance(match, Tag):
             remaining.remove(match)
             role = roles[id(match)]
-            if role == "navigation":
+            if role in _CHROME_ROLES:
                 # The extractor emitted this chrome as an ordinary section.
                 # Withholding the candidate instead would leave that section
                 # to match some other subtree, which is how a header came to
                 # wear the footer's DOM.
-                claimed_navigation.add(id(match))
-                copy = _navigation_section(match)
+                claimed_chrome.add(id(match))
+                copy = _chrome_section(match, role)
             else:
                 copy["_static_selector"] = css_selector_for(match)
                 copy["_static_html"] = str(match)
                 copy["_static_role"] = role
         prepared.append(copy)
 
-    for nav in reversed(candidates):
-        if roles[id(nav)] != "navigation" or id(nav) in claimed_navigation:
+    for element in reversed(candidates):
+        role = roles[id(element)]
+        if role not in _CHROME_ROLES or id(element) in claimed_chrome:
             continue
-        prepared.insert(0, _navigation_section(nav))
+        if role == "navigation":
+            prepared.insert(0, _chrome_section(element, role))
+        else:
+            prepared.append(_chrome_section(element, role))
     return prepared
 
 
-def _navigation_section(nav: Tag) -> dict[str, JsonValue]:
+_CHROME_ROLES = frozenset({"navigation", "footer"})
+
+_CHROME_TEMPLATES = {"navigation": "Site Header", "footer": "Site Footer"}
+
+
+def _chrome_section(element: Tag, role: str) -> dict[str, JsonValue]:
     return {
-        "type": "navigation",
-        "template": "Site Header",
+        "type": role,
+        "template": _CHROME_TEMPLATES[role],
         "content": {},
-        "_static_selector": css_selector_for(nav),
-        "_static_html": str(nav),
-        "_static_role": "navigation",
+        "_static_selector": css_selector_for(element),
+        "_static_html": str(element),
+        "_static_role": role,
     }
 
 

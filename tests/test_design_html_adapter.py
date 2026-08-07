@@ -1537,3 +1537,128 @@ def test_repeated_blocks_with_no_value_are_not_stats() -> None:
     )
 
     assert section["groups"] == []
+
+
+_CHROME_PAGE = """
+<body>
+  <section id="chrome" class="vj-section">
+    <img src="/logo.png" alt="Studio"/>
+    <a href="/">Home</a><a href="/about">About</a><a href="/contact">Contact</a>
+  </section>
+  <section id="story" class="vj-section"><h2>MUSIC IS MAGIC</h2><p>Copy here.</p></section>
+  <section id="foot" class="vj-section">
+    <h5>QUICK LINKS</h5><a href="/a">Home</a><a href="/b">Programs</a>
+    <h5>OTHER LINKS</h5><a href="/c">Privacy</a>
+    <p>Doctors Drive, Angeles California.</p>
+  </section>
+</body>
+"""
+
+
+def test_a_footer_without_a_footer_element_is_chrome() -> None:
+    """A builder that wraps its chrome in plain sections had its header fixed
+    and its footer left matching CTA templates that want a title it lacks."""
+
+    prepared = _prepared(_CHROME_PAGE, [])
+
+    assert [entry["_static_role"] for entry in prepared] == ["navigation", "footer"]
+
+
+def test_the_footer_stays_at_the_end() -> None:
+    prepared = _prepared(
+        _CHROME_PAGE,
+        [{"type": "content", "template": "Rich Text Block", "content": _empty_content(
+            headings=["MUSIC IS MAGIC"], paragraphs=["Copy here."],
+        )}],
+    )
+
+    assert [entry["_static_role"] for entry in prepared] == ["navigation", "rich_text", "footer"]
+
+
+def test_only_one_footer_is_recorded() -> None:
+    """Two footer sections make the global plan report conflicting variants and
+    block, which is worse than leaving a copyright bar in the body."""
+
+    prepared = _prepared(_CHROME_PAGE + "<section id='copy'><h6>A</h6><h6>B</h6>"
+                         "<a href='/x'>x</a><a href='/y'>y</a><a href='/z'>z</a></section>", [])
+
+    assert [entry["_static_role"] for entry in prepared].count("footer") == 1
+
+
+def test_a_mid_page_card_grid_is_not_a_footer() -> None:
+    html = (
+        "<body><section id='services'><h2>What we do</h2>"
+        "<h3>Strategy</h3><a href='/s'>More</a>"
+        "<h3>Design</h3><a href='/d'>More</a><a href='/b'>More</a></section>"
+        "<section id='last'><h2>Closing</h2><p>Copy.</p></section></body>"
+    )
+
+    prepared = _prepared(html, [])
+
+    assert not any(entry["_static_role"] == "footer" for entry in prepared)
+
+
+def test_a_class_that_merely_contains_cta_is_not_a_call_to_action() -> None:
+    """`#tpl-ctas-s1` read as a call to action because "ctas" contains "cta",
+    and the section has no link at all."""
+
+    html = (
+        "<body><section id='tpl-ctas-s1'><h2>Join us at the studio</h2>"
+        "<img src='/a.png' alt=''/><p>Short line.</p>"
+        "<p>Our mobile studio brings these programs to you.</p></section></body>"
+    )
+
+    assert _role_of(html, "tpl-ctas-s1") != "call_to_action"
+
+
+def test_a_real_cta_class_still_classifies() -> None:
+    html = (
+        "<body><section id='cta-band'><h2>Ready to start?</h2>"
+        "<a href='/go'>Book a lesson</a></section></body>"
+    )
+
+    assert _role_of(html, "cta-band") == "call_to_action"
+
+
+def test_a_link_with_no_label_is_not_the_call() -> None:
+    """A media block whose thumbnail is wrapped in a link otherwise reads as a
+    call to action, then matches a template requiring an action it cannot fill."""
+
+    html = (
+        "<body><section id='media'><h2>See what our students can do</h2>"
+        "<p>Pellentesque mattis mauris ac tortor volutpat.</p>"
+        "<a href='/watch'><img src='/thumb.png' alt=''/></a></section></body>"
+    )
+
+    assert _role_of(html, "media") != "call_to_action"
+
+
+def test_a_short_line_under_a_headline_is_a_deck() -> None:
+    """Calling both lines body copy needs two body slots where the templates
+    own one, and loses a distinction a reader can see."""
+
+    section = _enriched(
+        "<section><h2>JOIN US AT KEYS TO SUCCESS</h2>"
+        "<p>and give your child the gift of music.</p>"
+        "<p>Our mobile studio brings these exceptional programs right to you.</p></section>",
+        "rich_text",
+    )
+
+    roles = [element["role"] for element in section["content"] if element["kind"] == "text"]
+    assert roles == ["subtitle", "body"]
+
+
+def test_a_lone_short_paragraph_is_body_copy() -> None:
+    section = _enriched("<section><h2>Studio hours</h2><p>Weekdays.</p></section>", "rich_text")
+
+    assert [element["role"] for element in section["content"] if element["kind"] == "text"] == ["body"]
+
+
+def test_a_long_first_paragraph_is_not_a_deck() -> None:
+    section = _enriched(
+        "<section><h2>Studio hours</h2>"
+        "<p>" + "word " * 30 + "</p><p>Second paragraph.</p></section>",
+        "rich_text",
+    )
+
+    assert [element["role"] for element in section["content"] if element["kind"] == "text"] == ["body", "body"]

@@ -2647,3 +2647,49 @@ change, and one that changes the denominator for every historical score.
 benchmark portals, which are not authorized. VF-206 needs a portal parity run.
 What remains is either gated, or work invented to keep the loop moving, and the
 loop is worth less than an honest stop.
+
+### Iteration 35 — VF-221 authorized, and it turned out not to be needed
+
+**Result:** blocking sections **3 → 1**. Coverage **0.4444 → 0.5672**. Warnings 0.
+Corpus unchanged on every metric: boundary precision and recall 1.0, semantic
+role accuracy 1.0, visitor content retention 1.0 (127/127), group-field
+association 1.0 (79/79), top-1 0.92, high-confidence precision 0.909. Suite
+2,049 → 2,059. **No template was added, and no template's contract changed.**
+
+VF-221 said the library had nothing that could hold a footer's ten links. It
+was wrong, and the error was mine: I checked three CTA and contact templates
+and generalised from them. **`Navigation/footer-4col` already exists** — brand
+column, two `navigation_column` items owning six links each, and a contact
+block. It is an exact structural match for the real footer.
+
+The footer never reached it because it was never a footer. `<footer>` is
+excluded from boundary discovery, so the only footers that path ever sees are
+the ones a builder wrapped in a plain `<section>` — and nothing recognised
+those. The header got this treatment in VF-218; the footer did not.
+
+Recognition is now symmetric, and the footer routes to global chrome exactly as
+the header does: `global_section_count` is 2 and the body is 9 sections rather
+than 11. A footer labels its columns and labels are small, so a section heading
+of `h1`–`h3` disqualifies; position is required too, within the last two
+candidates behind a possible copyright bar. **A test I wrote caught the first
+version claiming a mid-page services grid** — it scanned backwards from the end
+without requiring the match to be near it.
+
+**Two more misreadings fell out, both one line.** `#tpl-ctas-s1` was a call to
+action because `"cta" in hints` is a substring test and `"ctas"` contains
+`"cta"` — the section has a heading, an image and two paragraphs and no link at
+all. Hints are matched as whole words now. And a media block whose thumbnail is
+wrapped in a link satisfied "one action, one heading, short text"; an action
+with no label is not the call.
+
+**A deck is not body copy.** `JOIN US AT KEYS TO SUCCESS MUSIC STUDIO` over
+`and give your child the gift of music.` was two body values against templates
+that own one. The first line finishes the headline. It binds to `subtitle` now,
+which `Content/split-media` has had all along. The rule is narrow — the deck
+must directly follow the title, be short, and have real copy after it — and it
+was found by looking for one section's fix, which is worth saying plainly.
+
+**The last blocker is not capacity either.** Section 9 needs a required `media`
+field and every asset in the workspace has `local_path: null`, so the remote URL
+correctly refuses to bind rather than leaking into a build. That is asset
+acquisition, not the library. Filed as VF-223.

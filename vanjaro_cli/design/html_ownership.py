@@ -176,6 +176,30 @@ def _stat_parts(item: Tag) -> tuple[Tag | None, Tag | None]:
     return value, label
 
 
+_DECK_MAXIMUM_CHARACTERS = 80
+
+
+def _deck_paragraph(title: Tag | None, paragraphs: list[Tag]) -> Tag | None:
+    """Return the short line under a headline that is a deck, not body copy.
+
+    A section read `JOIN US AT KEYS TO SUCCESS MUSIC STUDIO` over
+    `and give your child the gift of music.` and then a real paragraph. Calling
+    both of them body copy makes a section that needs two body slots where its
+    templates own one, and loses a distinction a reader can see: the first line
+    finishes the headline, the second is the copy.
+
+    Deliberately narrow. The deck must directly follow the title, be short, and
+    have real body copy after it — a lone short paragraph is body copy.
+    """
+
+    if title is None or len(paragraphs) < 2:
+        return None
+    first = paragraphs[0]
+    if len(first.get_text(" ", strip=True)) > _DECK_MAXIMUM_CHARACTERS:
+        return None
+    return first if title in first.find_all_previous() else None
+
+
 def enrich_section_from_static_dom(
     section: dict[str, JsonValue],
     static_html: str,
@@ -405,9 +429,15 @@ def enrich_section_from_static_dom(
                 attributes={"alt": "", "decorative": True},
                 asset_id=asset_id,
             )
-        for paragraph in root.find_all("p"):
-            if id(paragraph) not in repeated_nodes and paragraph is not inferred_title:
-                add("text", "body", paragraph.get_text(" ", strip=True))
+        body_paragraphs = [
+            paragraph
+            for paragraph in root.find_all("p")
+            if id(paragraph) not in repeated_nodes and paragraph is not inferred_title
+        ]
+        deck = _deck_paragraph(title, body_paragraphs)
+        for paragraph in body_paragraphs:
+            element_role = "subtitle" if paragraph is deck else "body"
+            add("text", element_role, paragraph.get_text(" ", strip=True))
         for link in root.find_all("a", href=True):
             if id(link) in repeated_nodes:
                 continue
