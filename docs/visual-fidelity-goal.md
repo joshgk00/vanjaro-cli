@@ -3071,3 +3071,53 @@ window is how the corpus moves by accident.
 
 **The remaining eight losses are all VF-227**, the three card sections, still
 waiting on a judgement about a corpus annotation rather than on any code.
+
+### Iteration 44 — nothing ungated left that is worth doing; loop stopped
+
+**Verified state, reproduced from a clean tree:**
+
+| site | coverage | blocking | valid | content losses |
+|---|---|---|---|---|
+| `edca-pilot` | 0.125 | 2 | false | 0 |
+| `kts-fidelity` | **0.8529** | 0 | **true** | 8 |
+
+Corpus: boundary precision 1.0, recall 1.0, semantic role accuracy 1.0, visitor
+content retention 1.0 (127/127), group-field association 1.0 (79/79), asset
+association 1.0 (15/15), responsive coverage 0.8864, top-1 0.92, top-3 1.0,
+high-confidence precision 0.9091. No threshold failures, no failed regressions.
+Suite 2,094 green.
+
+**Every remaining task that would move a number is gated.**
+
+| task | gate |
+|---|---|
+| VF-227 — six card templates unreachable | a judgement about a corpus annotation |
+| VF-224 — edca's images | the origin URL, which must not be guessed |
+| VF-225 — about-section capacity | governed library |
+| kts build and fidelity score | `portal_mutation` approval, and kts is not on the pilot portal |
+| pilot-measure publish | publish approval |
+| VF-222 — responsive coverage | a decision about the fixtures, which breaks comparability |
+| VF-008 — regime-1 corpus baseline | the six benchmark portals, not authorized |
+| VF-301 — loop runner | rebuild and re-score, so the portal gate again |
+
+**Two things I considered and rejected as not worth an iteration.** A command
+that prints the guard state — corpus metrics, both sites, losses — would save me
+reassembling it by hand each run and has twice prevented a misreading, but it
+moves no fidelity number and is tooling for the loop's own convenience. And
+recognising a short *text* line above a heading as an eyebrow, the way iteration
+42 did for headings, would describe `Our Classes` more accurately in three card
+sections — but no template those sections can reach has an eyebrow field, so it
+would change nothing measurable on either site. Building either would have been
+motion rather than progress.
+
+**Where this run got to.** Over sixteen iterations the leading real site went
+from nine blocking sections and `editable_content_coverage` 0.074 to zero
+blocking, a valid plan, and 0.8529, with eight named content losses remaining
+and every one of them attributable. The corpus did not move once in either
+direction. Three claimed "library gaps" turned out to be reachability or
+misclassification, and one corpus regression was reverted rather than tuned
+around.
+
+**VF-227 is the one to clear first** — it accounts for all eight remaining
+losses, affects every site rather than one page, and needs a decision rather
+than a template.
