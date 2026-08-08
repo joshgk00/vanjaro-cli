@@ -3508,3 +3508,44 @@ reason written next to it.
 That silent degradation is the same shape as the stylesheet failure of iteration
 27 and worth the same suspicion: **when rendered evidence disappears, suspect the
 script before the page.**
+
+### Iteration 54 — the media dimension was dark on every site
+
+**All three real sites:**
+
+| site | coverage | blocking | valid | losses | rendered | media evidence |
+|---|---|---|---|---|---|---|
+| `edca-pilot` | 0.0 | 3 | false | 2 | 4/4 | 0/4 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 | **0/11 → 7/11** |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 | 0/5 |
+
+Corpus unchanged, all gates green. Suite 2,114 → 2,122.
+
+**I checked a claim I made in iteration 48 and it was partly wrong.** I said the
+four dark dimensions were finally getting design-side evidence. Measuring it:
+bounds, colour and spacing are complete on all three sites and typography nearly
+so — but **media was 0 of N on every site**, including one with seventeen
+acquired images all bound to slots.
+
+The media dimension scores an aspect ratio, an aspect ratio needs the picture's
+own width and height, and `acquire_html_assets` — my own work in iteration 36 —
+downloaded the bytes without ever reading them. Every asset carried
+`width: None`, so media could never score anything.
+
+Intrinsic size is now read from the image header when it is acquired. From the
+header rather than by decoding, and with no new dependency: PNG, GIF and WebP
+each keep it at a fixed offset, and a JPEG needs a short walk to its frame
+marker because its position depends on how much metadata precedes it. That is
+four struct unpacks against the standard's advice not to add a dependency for
+something the stdlib handles. An SVG has no intrinsic pixel size, so it returns
+nothing rather than a guess.
+
+kts now has media evidence on 7 of 11 sections; the other four have no images.
+edca and Northstar stay at zero because their images are `file:///` references
+that were never saved beside the page — the same source-completeness problem as
+VF-224, not a new one.
+
+**The lesson is about verification, not media.** Iteration 48's claim was
+plausible and I wrote it without checking. Measuring what a change actually
+delivered, dimension by dimension, took ten minutes and found a gap that had
+been open since the fidelity work began.

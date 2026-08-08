@@ -1294,3 +1294,10 @@ records the same selector the static side does — id, builder data-id, then an
 `nth-of-type` path — and pairing accepts anything but a positional label. edca
 3/4 → 4/4 rendered with no unmatched sections; corpus unchanged. A contract test
 fails if either side loses its structural selector.
+
+**Media evidence unblocked (iteration 54).** `acquire_html_assets` downloaded
+images without recording their intrinsic size, so the media dimension scored
+nothing anywhere. Size is now read from the image header at acquisition — PNG,
+GIF, WebP and JPEG, no new dependency, SVG honestly returns nothing. kts media
+evidence 0/11 → 7/11; corpus unchanged. edca and Northstar remain at zero
+because their images were never saved beside the page (VF-224).

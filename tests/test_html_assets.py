@@ -222,3 +222,66 @@ def test_a_file_outside_the_manifest_is_never_removed(tmp_path: Path) -> None:
     )
 
     assert keep.is_file()
+
+
+def test_an_acquired_image_records_its_intrinsic_size(tmp_path: Path) -> None:
+    """The media dimension scores an aspect ratio, and an aspect ratio needs the
+    picture's own size — without it media was dark on every site."""
+
+    import struct
+    import zlib
+
+    header = struct.pack(">II", 320, 240) + b"\x08\x06\x00\x00\x00"
+    chunk = b"IHDR" + header
+    png = (
+        b"\x89PNG\r\n\x1a\n"
+        + struct.pack(">I", len(header))
+        + chunk
+        + struct.pack(">I", zlib.crc32(chunk))
+    )
+
+    def download(urls, output_dir: Path, on_warning) -> list[dict]:
+        directory = output_dir / "assets"
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "hero.png").write_bytes(png)
+        return [
+            {
+                "source_url": urls[0],
+                "local_file": "hero.png",
+                "content_type": "image/png",
+                "size_bytes": len(png),
+            }
+        ]
+
+    updated, _ = acquire_html_assets(
+        root=tmp_path,
+        source_id="live-html-1",
+        document=_document(_asset("asset-1", "http://example.test/hero.png")),
+        downloader=download,
+    )
+
+    assert (updated.assets[0].width, updated.assets[0].height) == (320, 240)
+
+
+def test_an_image_with_no_readable_size_keeps_what_it_had(tmp_path: Path) -> None:
+    def download(urls, output_dir: Path, on_warning) -> list[dict]:
+        directory = output_dir / "assets"
+        directory.mkdir(parents=True, exist_ok=True)
+        (directory / "logo.svg").write_bytes(b"<svg viewBox='0 0 10 10'></svg>")
+        return [
+            {
+                "source_url": urls[0],
+                "local_file": "logo.svg",
+                "content_type": "image/svg+xml",
+                "size_bytes": 30,
+            }
+        ]
+
+    updated, _ = acquire_html_assets(
+        root=tmp_path,
+        source_id="live-html-1",
+        document=_document(_asset("asset-1", "http://example.test/logo.svg")),
+        downloader=download,
+    )
+
+    assert updated.assets[0].width is None

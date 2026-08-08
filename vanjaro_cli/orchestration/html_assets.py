@@ -10,6 +10,7 @@ import re
 
 from vanjaro_cli.design.models import AssetRecord, DesignDocument, DesignWarning
 from vanjaro_cli.migration.assets import download_assets
+from vanjaro_cli.utils.image_size import image_dimensions
 
 __all__ = ["acquire_html_assets"]
 
@@ -137,12 +138,18 @@ def acquire_html_assets(
             }
         )
         artifacts.append(relative)
+        # The media dimension scores an aspect ratio, and an aspect ratio needs
+        # the picture's own size. Downloading the bytes without reading it left
+        # media dark on every site even when every image had been acquired.
+        size = image_dimensions(path.read_bytes()) if path.is_file() else None
         assets.append(
             asset.model_copy(
                 update={
                     "local_path": relative,
                     "mime_type": entry.get("content_type") or asset.mime_type,
                     "missing_reason": None,
+                    "width": size[0] if size else asset.width,
+                    "height": size[1] if size else asset.height,
                 }
             )
         )
