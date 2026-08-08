@@ -1162,3 +1162,36 @@ into a blocker.
 - A section with no link or button does not read `call_to_action`.
 - A genuine CTA with a labelled action still does.
 - No change to the ten corpus metrics, and all three real sites reported.
+
+**VF-229 was misfiled; the real bug was worse (iteration 49).** The section is a
+contact form, not a link-less CTA. Detecting a form required a `<form>` element,
+which an XHR-posting DNN ActionForm never emits — so it read `call_to_action`
+and would have been **rebuilt as a lookalike CTA banner**, which the forms policy
+exists to prevent. A form is now two or more visitor-facing fields plus a submit
+control, on both the legacy and boundary sides. edca coverage 0.0 → 0.125,
+blocking 3 → 2, losses 1 → 0, rendered evidence retained; corpus unchanged.
+
+### VF-230 — A detected form still emits no placeholder, and a spinner is treated as content
+
+**Dependencies:** none
+
+**Problem**
+
+`edca.section.4` now reads `contact`, but its fields never reach the design
+document: the section carries a `section_title` and a loading-spinner GIF, and
+plans as `CTAs/cta-split` — a heading with no form. The standing policy is a
+dashed placeholder listing the detected fields, so Josh can rebuild the form
+with his plugin. The legacy extractor already collects `form_fields` and
+`form_action`; nothing carries them across.
+
+Separately, `/DesktopModules/DnnSharp/ActionForm/static/loader/fountain.GIF`
+(alt `LoadingBar`) is extracted as `section_media`. A loading spinner is chrome,
+not editorial content.
+
+**Acceptance criteria**
+
+- A section detected as a form carries its field names into the design document
+  and plans as a placeholder, never as a template that mimics a form.
+- No form markup is ever emitted into a build.
+- A spinner, tracking pixel or other UI asset is not bound as section media.
+- No change to the ten corpus metrics, and all three real sites reported.

@@ -13,6 +13,8 @@ __all__ = [
     "extract_sections",
     "normalize_text_blocks",
     "is_stat_value",
+    "has_form_fields",
+    "visible_form_fields",
     "extract_page_title",
     "extract_global_element",
     "collect_image_urls",
@@ -1082,6 +1084,46 @@ def _extract_form_fields(form: Tag) -> list[dict]:
     return fields
 
 
+_HIDDEN_FIELD_NAMES = ("recaptcha", "csrf", "token", "viewstate", "eventvalidation")
+_FORM_MINIMUM_FIELDS = 2
+
+
+def visible_form_fields(element: Tag) -> list[Tag]:
+    """Return the fields a visitor actually fills in."""
+
+    fields = []
+    for field in element.find_all(["input", "textarea", "select"]):
+        if field.name == "input" and str(field.get("type") or "text").casefold() == "hidden":
+            continue
+        identity = f"{field.get('name') or ''} {field.get('id') or ''}".casefold()
+        if any(token in identity for token in _HIDDEN_FIELD_NAMES):
+            continue
+        fields.append(field)
+    return fields
+
+
+def has_form_fields(element: Tag) -> bool:
+    """Report whether a section is a form, whatever markup wraps it.
+
+    Requiring a `<form>` element missed a real contact form completely: a DNN
+    ActionForm posts over XHR and emits none, so a section holding Name, Email,
+    Phone, Message and a Send button read as a call to action and would have
+    been **built as a lookalike CTA banner**. Forms are never rebuilt as HTML —
+    they get a placeholder listing their fields — so failing to see one is worse
+    than mismatching any other section.
+
+    Two fields and something to submit them. One field and a button is a search
+    box or a newsletter signup, which is not a contact form.
+    """
+
+    fields = visible_form_fields(element)
+    if len(fields) < _FORM_MINIMUM_FIELDS:
+        return False
+    if element.find("button") is not None:
+        return True
+    return element.find("input", attrs={"type": ["submit", "button", "image"]}) is not None
+
+
 def _looks_like_contact_form(element: Tag, classes: str) -> bool:
     """Detect a contact section by the presence of a real form.
 
@@ -1098,9 +1140,9 @@ def _looks_like_contact_form(element: Tag, classes: str) -> bool:
             return True
 
     form = element.find("form")
-    if form is None:
-        return False
-    return form.find(["input", "textarea", "select"]) is not None
+    if form is not None and form.find(["input", "textarea", "select"]) is not None:
+        return True
+    return has_form_fields(element)
 
 
 def _looks_like_gallery(element: Tag) -> bool:

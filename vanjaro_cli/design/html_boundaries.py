@@ -9,6 +9,8 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup, Tag
 from pydantic import JsonValue
 
+from vanjaro_cli.migration.sections import has_form_fields
+
 
 STABLE_NAV_MIN_LINKS = 2
 
@@ -318,7 +320,14 @@ def static_role(element: Tag, section_index: int) -> str:
         return "hero"
     if "cta" in _hint_tokens(hints):
         return "call_to_action"
-    if element.find("a", href=re.compile(r"^mailto:")) is not None or element.find("form") is not None:
+    if (
+        element.find("a", href=re.compile(r"^mailto:")) is not None
+        or element.find("form") is not None
+        # A form needs no `<form>` element: one that posts over XHR emits none,
+        # and its section read as a call to action and would have been rebuilt
+        # as a lookalike banner. Forms are never rebuilt as HTML.
+        or has_form_fields(element)
+    ):
         return "contact"
     if element.find("img") is not None and element.find("ul") is not None:
         return "split_feature"

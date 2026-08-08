@@ -3291,3 +3291,48 @@ blockers; it is invalid at three now, with far more evidence behind it.
 be unit tested, but the failure was that one side gained a rule and the other did
 not — so the test asserts both discoveries carry the same builder selectors, and
 fails the moment they drift apart again.
+
+### Iteration 49 — a contact form was about to be rebuilt as a CTA banner
+
+**All three real sites:**
+
+| site | coverage | blocking | valid | losses | rendered |
+|---|---|---|---|---|---|
+| `edca-pilot` | 0.0 → **0.125** | 3 → **2** | false | 1 → **0** | 3/4 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 |
+
+Corpus unchanged, all gates green. Suite 2,098 → 2,103.
+
+**VF-229's premise was wrong, and what was actually there matters more.** I filed
+it as "a heading and a picture with no link is not a call to action". The
+section holds *Contact Us, Name, Email, Phone, Message, Security, Send Now* — it
+is a contact form. Its only image is a loading spinner. That is the fourth task
+I have written from an unchecked assumption, and checking first is what turned
+a cosmetic classification note into this.
+
+**Detecting a form required a `<form>` element.** A DNN ActionForm posts over
+XHR and emits none: three inputs, two textareas, a submit button, and no form
+tag anywhere. So the section read `call_to_action` and matched a CTA banner.
+
+That is not an ordinary mismatch. **The standing policy is that forms are never
+rebuilt as HTML** — they get a placeholder listing their fields, and Josh
+rebuilds them with his own plugin. Building a CTA banner here would have shipped
+a lookalike of somebody's contact form with no working submit, which is exactly
+what that policy exists to prevent. A missed form is worse than any other
+misclassification.
+
+A form is now two or more visitor-facing fields with something to submit them,
+whatever markup wraps it. Hidden inputs, view state and captcha responses are
+not fields a visitor fills in. One field and a button is a search box or a
+newsletter signup, not somewhere to reach anyone. Both the legacy extractor and
+`static_role` use the same test, so a form cannot be a form on one side only.
+
+edca's section 4 reads `contact` now, and the site recovers the ground iteration
+48 cost it while keeping the rendered evidence that iteration bought.
+
+**Two things this did not fix, and I am not rushing them into the last minutes
+of a window.** The form's *fields* still do not reach the design document, so no
+placeholder is emitted yet — the section plans as a CTA Split with a heading and
+no form. And a loading spinner GIF is still extracted as `section_media`, which
+is a UI asset, not content. Both are filed as VF-230.

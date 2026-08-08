@@ -2070,3 +2070,71 @@ def test_the_rendered_script_drops_wrapper_panes_too() -> None:
     from vanjaro_cli.design import html_adapter
 
     assert "el.contains(other)" in html_adapter._RENDERED_OBSERVATION_JS
+
+
+_XHR_FORM = """
+<body><section id="enquiry"><h3>Contact Us</h3>
+  <input id="Name" name="Name" type="text"/>
+  <input id="Email" name="Email" type="text"/>
+  <textarea id="Message" name="Message"></textarea>
+  <input type="hidden" name="__VIEWSTATE" value="x"/>
+  <textarea name="g-recaptcha-response"></textarea>
+  <button type="button" class="btn submit">Send Now</button>
+</section></body>
+"""
+
+
+def test_a_form_that_posts_over_xhr_is_still_a_form() -> None:
+    """A DNN ActionForm emits no <form> element, so a section holding Name,
+    Email, Message and a Send button read as a call to action — and forms are
+    never rebuilt as HTML."""
+
+    assert _role_of(_XHR_FORM, "enquiry") == "contact"
+
+
+def test_hidden_and_captcha_fields_are_not_counted() -> None:
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.migration.sections import visible_form_fields
+
+    section = BeautifulSoup(_XHR_FORM, "html.parser").find("section")
+
+    names = [field.get("name") for field in visible_form_fields(section)]
+    assert names == ["Name", "Email", "Message"]
+
+
+def test_a_search_box_is_not_a_contact_form() -> None:
+    """One field and a button is a search box, not somewhere to reach anyone."""
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.migration.sections import has_form_fields
+
+    section = BeautifulSoup(
+        "<section><input name='q' type='text'/><button>Search</button></section>",
+        "html.parser",
+    ).find("section")
+
+    assert not has_form_fields(section)
+
+
+def test_fields_with_nothing_to_submit_them_are_not_a_form() -> None:
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.migration.sections import has_form_fields
+
+    section = BeautifulSoup(
+        "<section><input name='a'/><input name='b'/></section>", "html.parser"
+    ).find("section")
+
+    assert not has_form_fields(section)
+
+
+def test_the_legacy_extractor_agrees_it_is_contact() -> None:
+    """Both discoveries must agree, or a form is a form on one side only."""
+
+    from vanjaro_cli.migration.sections import extract_sections
+
+    sections = extract_sections(_XHR_FORM, "http://example.test/")
+
+    assert [section["type"] for section in sections] == ["contact"]
