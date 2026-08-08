@@ -1112,3 +1112,16 @@ The disputed annotation is also right: `riverkind.programs` already accepts
 coverage outweigh exact role naming when the gap is ~0.03? Answering yes closes
 all eight kts losses and changes matching on every site; answering no makes the
 eight losses the accepted cost of preferring exact role names.
+
+**VF-227 evidence widened (iteration 46).** The `section_title` loss reproduces
+on Northstar — a clean, well-formed page — in **two** section families, cards
+*and* testimonials (`testimonial-cards-3up` declares only `item.quote` and
+`item.author`). Three real sites now show it. The decision is unchanged and
+still Josh's; the case for it is no longer resting on one page.
+
+**Third control established.** Northstar is byte-identical before and after
+iterations 29–45: coverage 0.7273, 0 blocking, valid, same roles and content.
+`kts-fidelity` 0.074 → 0.8529 and `edca-pilot` 0.10 → 0.125 over the same span.
+The work reached the pages that needed it and left the one that did not alone.
+Measured on a copied workspace so `pilot-measure`'s `portal_mutation` approval
+was not spent taking a reading.

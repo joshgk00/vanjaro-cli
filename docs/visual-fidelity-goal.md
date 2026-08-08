@@ -3170,3 +3170,44 @@ I stopped, chose 0.10 on principle instead, measured once — the corpus held
 exactly — and then found the term made no difference to either real site. A
 change that moves nothing measurable is complexity, so it was reverted with the
 rest.
+
+### Iteration 46 — a third real site, and the control that was missing
+
+**All three real sites:**
+
+| site | coverage | blocking | valid | content losses |
+|---|---|---|---|---|
+| `edca-pilot` | 0.125 | 2 | false | 0 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 |
+| **Northstar** (new) | **0.7273** | **0** | **true** | **2** |
+
+Corpus unchanged, suite 2,094 green, benchmark gates green. No code change.
+
+**I did not re-analyse `pilot-measure` itself.** Re-running its analysis
+invalidates every downstream stage and, with them, the `portal_mutation`
+approval Josh granted — spending a human decision to take a reading. The
+measurement ran on a fresh workspace built from the same source file, so the
+approved project is untouched.
+
+**Northstar is byte-identical before and after seventeen iterations.** Same
+coverage to four decimal places, same five sections, same roles, same content:
+navigation with its brand, hero, feature cards, testimonials, call to action.
+Its page is 1,838 bytes of well-formed semantic HTML — `header`, `section`,
+`article`, `figure` — which is exactly the shape the pipeline already handled
+before any of this work began.
+
+That makes it the third control, and the one that closes the anti-overfit
+argument VF-4 asks for. `kts-fidelity` went 0.074 → 0.8529 and `edca-pilot`
+0.10 → 0.125 while Northstar did not move a digit in either direction. The
+changes reached the pages that needed them and left alone the page that did not.
+
+**Its two losses are VF-227, on a page with nothing wrong with it.** Sections 3
+and 4 both drop their `section_title` — and section 4 is `testimonials`, not
+cards, so `testimonial-cards-3up` has no section heading either. The gap is
+wider than the card families: on a clean, well-formed page, in two different
+section types, the heading a visitor reads does not reach the build.
+
+That is now three sites and two section families showing the same loss, which
+is worth more than the argument I could make from `keys-to-success` alone. The
+policy question is unchanged and still Josh's, but the evidence behind it is no
+longer one page's.
