@@ -3586,3 +3586,52 @@ iteration 48, id-less selectors in iteration 53, headings now. Each was invisibl
 because the pipeline degrades quietly: a missing sample is indistinguishable
 from an element that genuinely has no font. The contract tests are the answer,
 and there are now three of them.
+
+### Iteration 56 — a systematic drift pass, and three more found
+
+**All three real sites, unchanged:**
+
+| site | coverage | blocking | valid | losses | rendered | typography | media |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 0.0 | 3 | false | 2 | 4/4 | 2/4 | 0/4 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 | 10/11 | 7/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 | 4/5 | 0/5 |
+
+Corpus unchanged, all gates green. Suite 2,124 → 2,128.
+
+Rather than wait for a fourth drift to surface, I walked every shape rule the
+static side has and asked whether the rendered side needs it. Most do not:
+`_is_link_bar`, `_is_footer`, `has_form_fields`, `repeating_subtrees`,
+`normalize_text_blocks` and stats detection all decide a section's *role* or its
+*content*, and the rendered side neither classifies nor extracts. Only the rules
+that decide **which element gets measured** can drift, and there were three left.
+
+**The heading sample was the first heading, not the most prominent.** Iteration
+42 fixed exactly this on the static side; the rendered side kept taking
+`querySelector('h1, ..., h6')`, which is document order. On a section led by a
+small kicker the browser measured the kicker and called it the section's
+heading.
+
+**The stamping had the same flaw, one layer down.** Even with the browser
+sampling the right element, `_attach_type_samples` gave the font to the first
+element of heading kind — the eyebrow again. Both now choose by prominence, and
+the value is attached to the element the browser actually measured, because
+claiming it for any other asserts a measurement that never happened.
+
+**The action sample took any anchor.** Iteration 35 established that an action
+with no label is not the call; the rendered side still sampled the first `a` or
+`button`, so a thumbnail wrapped in a link reported the page's default colours
+as the section's accent. Section 10 of `keys-to-success` was doing exactly that.
+It now requires a label, and that section correctly reports no accent rather
+than a wrong one.
+
+**One test had to change, and it was right that it did.** It asserted the exact
+string `el.querySelector('a, button')` — an implementation detail rather than a
+behaviour. It now asserts that the rendered side still requires a label, which
+is the thing worth protecting.
+
+No site metric moved, because these were wrong values rather than missing ones —
+a kicker's font recorded as the headline's, a hyperlink's default colours
+recorded as the brand accent. Both would have scored, and both would have been
+wrong. That is the failure mode this loop has repeatedly found worse than an
+honest gap.

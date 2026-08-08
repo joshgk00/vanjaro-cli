@@ -797,11 +797,17 @@ def test_both_scripts_measure_the_effective_background() -> None:
     assert "return null;" in html_adapter._RENDERED_OBSERVATION_JS
 
 
-def test_the_analysis_script_samples_the_first_action_colours() -> None:
-    script = html_adapter._RENDERED_OBSERVATION_JS
+def test_the_analysis_script_samples_the_first_labelled_action() -> None:
+    """An action with no label is not the call: a thumbnail wrapped in a link
+    was reporting the page's default colours as the section's accent."""
 
-    assert "el.querySelector('a, button')" in script
-    assert "text_color:" in script
+    script = html_adapter._RENDERED_OBSERVATION_JS
+    start = script.index("action: (() =>")
+    block = script[start : start + 600]
+
+    assert "querySelectorAll('a, button')" in block
+    assert "textContent" in block, "the rendered side stopped requiring a label"
+    assert "text_color:" in block
 
 
 ACTION_HTML = """
@@ -2280,3 +2286,56 @@ def test_the_rendered_heading_prefers_a_real_heading_element() -> None:
     body = script[script.index("const headingElement") : script.index("const bodyElement")]
 
     assert body.index("h1, h2, h3, h4, h5, h6") < body.index("blocks.length < 2")
+
+
+def test_the_rendered_heading_is_the_most_prominent_not_the_first() -> None:
+    """A section led by a small kicker stamped the kicker's font as the
+    section's heading; the static side stopped doing that in iteration 42."""
+
+    from vanjaro_cli.design import html_adapter
+
+    script = html_adapter._RENDERED_OBSERVATION_JS
+    start = script.index("const headingElement")
+    block = script[start : start + 700]
+
+    assert "reduce" in block, "rendered side went back to taking the first heading"
+    assert "tagName[1]" in block
+
+
+def test_the_heading_font_is_stamped_on_the_most_prominent_heading() -> None:
+    """Claiming the value for any other element asserts a measurement that was
+    never taken."""
+
+    from vanjaro_cli.design.html_adapter import _sampled_element
+
+    elements = [
+        {"kind": "heading", "role": "eyebrow", "attributes": {"level": 5}},
+        {"kind": "heading", "role": "section_title", "attributes": {"level": 2}},
+    ]
+
+    assert _sampled_element(elements, "heading")["role"] == "section_title"
+
+
+def test_equal_headings_fall_back_to_document_order() -> None:
+    from vanjaro_cli.design.html_adapter import _sampled_element
+
+    elements = [
+        {"kind": "heading", "role": "first", "attributes": {"level": 2}},
+        {"kind": "heading", "role": "second", "attributes": {"level": 2}},
+    ]
+
+    assert _sampled_element(elements, "heading")["role"] == "first"
+
+
+def test_a_body_sample_still_takes_the_first_of_its_kind() -> None:
+    """Only headings are chosen by prominence; the browser's own query returns
+    the first for everything else."""
+
+    from vanjaro_cli.design.html_adapter import _sampled_element
+
+    elements = [
+        {"kind": "text", "role": "body", "attributes": {}},
+        {"kind": "text", "role": "body_two", "attributes": {}},
+    ]
+
+    assert _sampled_element(elements, "text")["role"] == "body"

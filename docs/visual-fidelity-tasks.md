@@ -1309,3 +1309,12 @@ Both now use the same order: real heading, then the first short text block with
 more text after it. kts heading samples 8 → 9 of 11; corpus unchanged. Remaining
 typography gaps are navigation bars, a photo band and a form, all of which
 genuinely have neither a heading nor prose.
+
+**Systematic drift pass done (iteration 56).** Walked every static shape rule
+against the rendered script. Rules that decide role or content cannot drift —
+the rendered side neither classifies nor extracts. Of the rules that decide
+which element is measured, three were still wrong: the heading sample took the
+first heading rather than the most prominent, the stamping did the same one
+layer down, and the action sample took any anchor rather than a labelled one. All
+three now match the static side, each pinned by a test. No metric moved because
+these produced wrong values rather than missing ones.

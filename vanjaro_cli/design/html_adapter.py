@@ -241,8 +241,15 @@ _RENDERED_OBSERVATION_JS = r"""() => {
     // real heading first, then the first short text block with more text after
     // it.
     const headingElement = (root) => {
-      const real = root.querySelector('h1, h2, h3, h4, h5, h6');
-      if (real) return real;
+      // The most prominent heading, not the first. A section led by a small
+      // kicker above its headline stamped the kicker's font as the section's
+      // heading — the static side stopped doing that in VF-219's follow-up and
+      // this side kept doing it.
+      const headings = Array.from(root.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+      if (headings.length) {
+        return headings.reduce((best, el) =>
+          Number(el.tagName[1]) < Number(best.tagName[1]) ? el : best);
+      }
       const blocks = [];
       root.querySelectorAll('*').forEach((el) => {
         if (/^(A|BUTTON|SCRIPT|STYLE|IMG|SVG|SOURCE|PICTURE|SPAN|STRONG|EM)$/.test(el.tagName)) return;
@@ -333,7 +340,13 @@ _RENDERED_OBSERVATION_JS = r"""() => {
                 body: typeOf(bodyElement(el)),
             },
             action: (() => {
-                const a = el.querySelector('a, button');
+                // An action with no label is not the call: a thumbnail wrapped
+                // in a link was reporting the page's default colours as the
+                // section's accent. The static side has excluded these since
+                // iteration 35.
+                const a = Array.from(el.querySelectorAll('a, button')).find(
+                    (node) => (node.textContent || '').trim(),
+                );
                 if (!a) return null;
                 const s = getComputedStyle(a);
                 return {
@@ -826,6 +839,30 @@ def _tokens_from_legacy(raw: JsonValue) -> dict[str, JsonValue]:
 _TYPE_SAMPLE_KINDS = {"heading": "heading", "body": "text"}
 
 
+def _sampled_element(
+    elements: list[dict[str, JsonValue]], kind: str
+) -> dict[str, JsonValue] | None:
+    """Return the element the browser sampled for this kind.
+
+    Headings are chosen by prominence on both sides, so a kicker above a
+    headline is not the one measured. Everything else is the first of its kind,
+    which is what the browser's own query returns.
+    """
+
+    matching = [element for element in elements if element.get("kind") == kind]
+    if not matching:
+        return None
+    if kind != "heading":
+        return matching[0]
+
+    def level(element: dict[str, JsonValue]) -> int:
+        attributes = element.get("attributes")
+        value = attributes.get("level") if isinstance(attributes, dict) else None
+        return int(value) if isinstance(value, int) else 2
+
+    return min(matching, key=lambda element: (level(element), matching.index(element)))
+
+
 def _attach_type_samples(
     elements: list[dict[str, JsonValue]],
     samples: Mapping[str, Mapping[str, JsonValue]],
@@ -838,9 +875,10 @@ def _attach_type_samples(
     side has no type evidence at all and the dimension scores nothing, on every
     section of every breakpoint.
 
-    Only the first element of each kind is stamped, matching what the browser
-    sampled: `querySelector` returns the first match, so claiming the value for
-    later elements would assert a measurement that was never taken.
+    One element of each kind is stamped, and it has to be the one the browser
+    measured: claiming the value for any other asserts a measurement that was
+    never taken. For a heading that means the most prominent, not the first —
+    a section led by a small kicker stamped the kicker with the headline's font.
     """
 
     rendered_provenance = {**provenance, "method": "rendered"}
@@ -848,9 +886,7 @@ def _attach_type_samples(
         sample = samples.get(key)
         if not isinstance(sample, Mapping):
             continue
-        target = next(
-            (element for element in elements if element.get("kind") == kind), None
-        )
+        target = _sampled_element(elements, kind)
         if target is None:
             continue
         observations = [
