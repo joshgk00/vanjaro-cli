@@ -1096,3 +1096,19 @@ and is reported as a loss rather than overflowing the template. kts coverage
 
 **All eight remaining kts losses are VF-227** — the three card sections that
 cannot reach a template holding a section heading without moving the corpus.
+
+**VF-227 reframed (iteration 45) — it is not a bug.** Iteration 41's diagnosis
+was wrong twice: `_ROLE_COMPATIBILITY` *does* have a `feature_cards` entry, and
+the alias I added there was a **duplicate key** that silently replaced it,
+dropping `feature_list`, `service_list` and `gallery` — which is what moved the
+corpus, not the new roles. `class-photo-cards-4up` has been reachable at 0.80
+via `service_cards` the whole time, and already scores 0.856 against
+`feature-cards-4up`'s 0.890.
+
+The disputed annotation is also right: `riverkind.programs` already accepts
+`gallery-3up`, which holds a section heading.
+
+**The remaining question is policy, not code, and it is Josh's:** should field
+coverage outweigh exact role naming when the gap is ~0.03? Answering yes closes
+all eight kts losses and changes matching on every site; answering no makes the
+eight losses the accepted cost of preferring exact role names.

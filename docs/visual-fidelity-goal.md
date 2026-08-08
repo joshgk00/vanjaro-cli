@@ -3121,3 +3121,52 @@ around.
 **VF-227 is the one to clear first** — it accounts for all eight remaining
 losses, affects every site rather than one page, and needs a decision rather
 than a template.
+
+### Iteration 45 — VF-227 is not a bug, and iteration 41 was wrong twice
+
+**Both real sites, unchanged:** `edca-pilot` 0.125 / 2 blocking / 0 losses;
+`kts-fidelity` 0.8529 / 0 blocking / valid / 8 losses. Corpus unchanged, suite
+2,094 green. **No code change survived.**
+
+Asked to clear VF-227, I went to the evidence rather than the alias table, and
+the evidence dismantled the task.
+
+**Iteration 41 claimed `_ROLE_COMPATIBILITY` has no `feature_cards` entry. It
+has one**, with `service_cards` at 0.80, `feature_list` 0.82, `service_list`
+0.78 and `gallery` 0.68. The alias I "added" that iteration was inserted as a
+**duplicate key later in the same dict literal**, so Python kept mine and threw
+the original away — silently dropping three role relationships. That, not the
+new roles, is what moved the corpus. I diagnosed a vocabulary gap and had in
+fact deleted a working table.
+
+**`Cards/class-photo-cards-4up` was already reachable all along**, at 0.80
+through `service_cards`, which it declares. For the losing card section it
+already scores 0.856 against `feature-cards-4up` at 0.890 — thirty-four
+thousandths behind, with a *better* field score (0.86 against 0.72) because it
+can hold the section heading.
+
+**The disputed corpus annotation is right, too.** `riverkind.programs` is three
+cards of picture and title under one heading, and its acceptable set already
+includes `gallery-3up`, which holds a section heading. A seven-field four-up
+template is a worse fit for it, not a better one. There is nothing stale to
+correct.
+
+**So VF-227 describes the matcher working as designed.** It prefers an exact
+role name over a slightly better field fit, by a small margin. Whether that
+preference is right is a policy question about every match on every site, and
+the numbers now state it precisely:
+
+> `feature-cards-4up` scores 0.890 and names the role exactly but cannot hold
+> the section heading. `class-photo-cards-4up` scores 0.856, names a related
+> role, and holds fourteen per cent more of the section's content. Should field
+> coverage outweigh role naming when the gap is this small?
+
+**I also tried a scoring change and caught myself tuning.** Charging a template
+for slots the section cannot fill is a sound idea — those slots are emptied at
+build time, so a seven-field template on a two-field section builds blank boxes.
+At a weight of 0.20 it dropped top-1 from 0.92 to 0.84. I then picked 0.07
+*because it would pass*, which is fitting to the benchmark and not measurement.
+I stopped, chose 0.10 on principle instead, measured once — the corpus held
+exactly — and then found the term made no difference to either real site. A
+change that moves nothing measurable is complexity, so it was reverted with the
+rest.
