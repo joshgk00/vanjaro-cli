@@ -3211,3 +3211,41 @@ That is now three sites and two section families showing the same loss, which
 is worth more than the argument I could make from `keys-to-success` alone. The
 policy question is unchanged and still Josh's, but the evidence behind it is no
 longer one page's.
+
+### Iteration 47 — the render's address was outliving the render
+
+**All three real sites, unchanged:**
+
+| site | coverage | blocking | valid | content losses |
+|---|---|---|---|---|
+| `edca-pilot` | 0.125 | 2 | false | 0 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 |
+| Northstar | 0.7273 | 0 | true | 2 |
+
+Corpus unchanged, all benchmark gates green. Suite 2,094 → 2,096.
+Northstar's assets: **5 → 4**, warnings **1 → 0**.
+
+Iteration 46 left a warning I did not chase: Northstar's hero image failed to
+download from `http://127.0.0.1:57968/synthetic/northstar-hero.jpg`. That is the
+loopback server iteration 27 introduced to make a saved page's root-relative
+URLs resolve — and the port closes the moment the render ends.
+
+The browser reports every asset against the address it was served from, so a
+saved page recorded **the same picture twice**: once under a dead loopback
+address from the rendered pass and once under the file URI from the static pass.
+Two asset records for one image, neither loadable, and `acquire_html_assets`
+dutifully chasing a closed socket.
+
+The served address is a detail of *how* the page was rendered. It must not
+outlive the render, so it is translated back to the source's address at the
+boundary where capture ends. The duplicate is gone, the phantom download is
+gone, and both passes now agree on what the page references.
+
+**This only ever affected saved local sources**, which is why `keys-to-success`
+never showed it and why it survived twenty iterations unnoticed. It took a third
+site to surface, which is the argument for having one.
+
+**A test I wrote would have passed vacuously**, and its sibling caught it. The
+first assertion was `not any(... "127.0.0.1" ...)`, which is trivially true when
+the fixture registers no assets at all — and the minimal fixture registered
+none. Both tests now assert an asset exists before asserting anything about it.

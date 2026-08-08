@@ -1125,3 +1125,12 @@ iterations 29–45: coverage 0.7273, 0 blocking, valid, same roles and content.
 The work reached the pages that needed it and left the one that did not alone.
 Measured on a copied workspace so `pilot-measure`'s `portal_mutation` approval
 was not spent taking a reading.
+
+**Render-address leak fixed (iteration 47).** A saved page served on loopback
+recorded its assets against the ephemeral `http://127.0.0.1:<port>/` origin, so
+one picture became two asset records — one of them pointing at a socket that
+closes when the render ends — and the acquirer attempted a download against it.
+The served origin is translated back to the source's at the end of capture.
+Northstar assets 5 → 4, warnings 1 → 0; all three sites otherwise unchanged;
+corpus unchanged. Affected saved local sources only, which is why a live source
+never showed it.

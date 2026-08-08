@@ -1953,3 +1953,90 @@ def test_a_mascot_beside_the_feature_is_decoration_not_media() -> None:
 
     decorative = [e for e in section["content"] if e["role"] == "decorative_media"]
     assert [e["attributes"]["alt"] for e in decorative] == ["Saxophone player mascot"]
+
+
+def test_the_render_address_does_not_outlive_the_render() -> None:
+    """A saved page served on loopback had every asset recorded against
+    http://127.0.0.1:<port>/, a socket that closes when the render ends — so one
+    picture was stored twice and the acquirer chased a dead port."""
+
+    from vanjaro_cli.design.html_adapter import RenderedCaptureResult, RenderedPageObservation
+    from vanjaro_cli.design.models import BreakpointName, Viewport
+    from vanjaro_cli.design.sources.html import HtmlSourceAdapter, HtmlSourceRequest
+
+    served = "http://127.0.0.1:51234/page.html"
+    captured = RenderedCaptureResult(
+        observations=(
+            RenderedPageObservation(
+                breakpoint=BreakpointName.DESKTOP,
+                viewport=Viewport(width=1440, height=900),
+                html=(
+                    "<body><section id='hero'><h1>Make ideas clear</h1>"
+                    "<p>Strategy and design.</p>"
+                    "<img src='http://127.0.0.1:51234/synthetic/hero.jpg' alt='Hero'/>"
+                    "</section></body>"
+                ),
+                sections=(),
+            ),
+        ),
+        warnings=(),
+    )
+
+    document = HtmlSourceAdapter(capture=lambda url: captured).analyze(
+        HtmlSourceRequest(
+            html=(
+                "<body><section id='hero'><h1>Make ideas clear</h1>"
+                "<p>Strategy and design.</p>"
+                "<img src='/synthetic/hero.jpg' alt='Hero'/></section></body>"
+            ),
+            source_url="file:///c:/work/page.html",
+            render_url=served,
+            render=True,
+        )
+    )
+
+    sources = [asset.source_url or "" for asset in document.assets]
+    assert sources, "the fixture must register an asset for this test to mean anything"
+    assert not any("127.0.0.1" in source for source in sources)
+    assert any(source.endswith("/synthetic/hero.jpg") for source in sources)
+
+
+def test_a_live_source_keeps_its_own_address() -> None:
+    """Nothing is rebased when the page was rendered at the address it lives at."""
+
+    from vanjaro_cli.design.html_adapter import RenderedCaptureResult, RenderedPageObservation
+    from vanjaro_cli.design.models import BreakpointName, Viewport
+    from vanjaro_cli.design.sources.html import HtmlSourceAdapter, HtmlSourceRequest
+
+    captured = RenderedCaptureResult(
+        observations=(
+            RenderedPageObservation(
+                breakpoint=BreakpointName.DESKTOP,
+                viewport=Viewport(width=1440, height=900),
+                html=(
+                    "<body><section id='hero'><h1>Make ideas clear</h1>"
+                    "<p>Strategy and design.</p>"
+                    "<img src='http://example.test/hero.jpg' alt='Hero'/>"
+                    "</section></body>"
+                ),
+                sections=(),
+            ),
+        ),
+        warnings=(),
+    )
+
+    document = HtmlSourceAdapter(capture=lambda url: captured).analyze(
+        HtmlSourceRequest(
+            html=(
+                "<body><section id='hero'><h1>Make ideas clear</h1>"
+                "<p>Strategy and design.</p>"
+                "<img src='/hero.jpg' alt='Hero'/></section></body>"
+            ),
+            source_url="http://example.test/page",
+            render=True,
+        )
+    )
+
+    sources = [asset.source_url or "" for asset in document.assets]
+    assert sources, "the fixture must register an asset for this test to mean anything"
+    assert all("example.test" in source for source in sources)

@@ -3,8 +3,9 @@
 from __future__ import annotations
 
 from collections.abc import Callable
-from dataclasses import dataclass, field
+from dataclasses import dataclass, field, replace
 from datetime import datetime
+from urllib.parse import urlsplit
 
 from vanjaro_cli.design.html_adapter import (
     RenderedCaptureResult,
@@ -18,6 +19,38 @@ from vanjaro_cli.design.models import DesignDocument, DesignWarning, SourceKind
 RenderedCapture = Callable[[str], RenderedCaptureResult]
 
 __all__ = ["HtmlSourceAdapter", "HtmlSourceRequest", "RenderedCapture"]
+
+
+def _origin(url: str) -> str:
+    parts = urlsplit(url)
+    return f"{parts.scheme}://{parts.netloc}" if parts.scheme else ""
+
+
+def _rebased_observations(
+    observations: tuple[RenderedPageObservation, ...],
+    render_url: str,
+    source_url: str,
+) -> tuple[RenderedPageObservation, ...]:
+    """Translate the render's own address back to the source's.
+
+    A saved page is served on loopback so its root-relative URLs resolve, and
+    the browser then reports every asset against `http://127.0.0.1:<port>/`.
+    That port closes when the render ends, so recording it left one picture
+    stored twice — once under a dead loopback address and once under the source
+    — and sent the asset acquirer chasing a closed socket.
+
+    The served address is a detail of how the page was rendered. It must not
+    outlive the render.
+    """
+
+    render_origin = _origin(render_url)
+    source_origin = _origin(source_url)
+    if not render_origin or render_origin == source_origin:
+        return observations
+    return tuple(
+        replace(observation, html=observation.html.replace(render_origin, source_origin))
+        for observation in observations
+    )
 
 
 @dataclass(frozen=True, slots=True)
@@ -66,7 +99,9 @@ class HtmlSourceAdapter:
         warnings: tuple[DesignWarning, ...] = ()
         if request.render:
             captured = self._capture(request.effective_render_url)
-            observations = captured.observations
+            observations = _rebased_observations(
+                captured.observations, request.effective_render_url, request.source_url
+            )
             warnings = captured.warnings
         return design_document_from_html(
             request.html,
