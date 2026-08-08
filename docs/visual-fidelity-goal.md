@@ -3249,3 +3249,45 @@ site to surface, which is the argument for having one.
 first assertion was `not any(... "127.0.0.1" ...)`, which is trivially true when
 the fixture registers no assets at all — and the minimal fixture registered
 none. Both tests now assert an asset exists before asserting anything about it.
+
+### Iteration 48 — a whole site was scoring on static evidence alone
+
+**All three real sites:**
+
+| site | coverage | blocking | valid | losses | rendered sections |
+|---|---|---|---|---|---|
+| `edca-pilot` | 0.125 → **0.0** | 2 → **3** | false | 0 → 1 | **0/4 → 3/4** |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 |
+
+Corpus unchanged, all gates green. Suite 2,096 → 2,098.
+
+Iteration 38 blamed edca's unmatched rendered sections on its missing
+stylesheets and moved on. That was a guess, and it was wrong.
+
+**The rendered script and the static extractor were looking for different
+things.** Iteration 26 taught both to find `section` and `article` at any depth,
+but the *builder-specific* rules — Elementor containers and DNN panes — were
+only ever added to the static side. edca's boundaries are `#dnn_TopPane` and its
+siblings, which are plain divs, so the browser found no body candidates at all
+and every section paired to nothing. The site scored entirely on static
+evidence: **zero** measured geometry, **zero** computed styles.
+
+Both sides now run the same rules, including iteration 38's wrapper test, since
+pairing is by selector and the two must agree on what a boundary is. Sections 2,
+3 and 4 carry rendered provenance and 31 style properties each, where they
+carried none. That is the four dark dimensions — colour, typography, spacing,
+media — getting design-side evidence on this site for the first time.
+
+**The numbers got worse and I am keeping the change.** Real layout and style
+data changed section 4's match from `CTA Split` to `CTA Banner`, which requires
+an action the section does not have, so it went from a warning to a block:
+coverage 0.125 → 0.0 and blocking 2 → 3. The section has a heading and a picture
+and no link — it is not a call to action, and better evidence has exposed a
+misclassification that was always there. edca was already invalid at two
+blockers; it is invalid at three now, with far more evidence behind it.
+
+**The test that matters here is a contract, not a case.** A browser query cannot
+be unit tested, but the failure was that one side gained a rule and the other did
+not — so the test asserts both discoveries carry the same builder selectors, and
+fails the moment they drift apart again.

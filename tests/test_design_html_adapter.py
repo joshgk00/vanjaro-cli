@@ -2040,3 +2040,33 @@ def test_a_live_source_keeps_its_own_address() -> None:
     sources = [asset.source_url or "" for asset in document.assets]
     assert sources, "the fixture must register an asset for this test to mean anything"
     assert all("example.test" in source for source in sources)
+
+
+def test_both_discoveries_use_the_same_builder_rules() -> None:
+    """The rendered script queried only section/article, so a DNN page whose
+    boundaries are panes produced no rendered candidates at all: every section
+    paired to nothing and the site scored on static evidence alone."""
+
+    import inspect
+
+    from vanjaro_cli.design import html_adapter, html_boundaries
+
+    script = html_adapter._RENDERED_OBSERVATION_JS
+    static_source = inspect.getsource(html_boundaries.static_boundary_candidates)
+
+    builder_selectors = [
+        "[data-elementor-type] > [data-id][data-element_type='container']",
+        "#Body > [id^='dnn_'], [id^='dnn_'][class*='Pane']",
+    ]
+    for selector in builder_selectors:
+        assert selector in static_source, f"static side lost {selector!r}"
+        assert selector in script, f"rendered side lost {selector!r}"
+
+
+def test_the_rendered_script_drops_wrapper_panes_too() -> None:
+    """Pairing is by selector, so both sides must agree on which elements are
+    boundaries — the static side drops a pane that wraps other panes."""
+
+    from vanjaro_cli.design import html_adapter
+
+    assert "el.contains(other)" in html_adapter._RENDERED_OBSERVATION_JS

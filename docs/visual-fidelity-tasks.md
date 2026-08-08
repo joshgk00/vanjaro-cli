@@ -1134,3 +1134,31 @@ The served origin is translated back to the source's at the end of capture.
 Northstar assets 5 → 4, warnings 1 → 0; all three sites otherwise unchanged;
 corpus unchanged. Affected saved local sources only, which is why a live source
 never showed it.
+
+**Rendered discovery brought level with static (iteration 48).** The rendered
+script queried only `section, article`; the Elementor and DNN builder rules
+existed only on the static side, so a DNN page produced no rendered candidates
+and scored on static evidence alone. edca rendered sections **0/4 → 3/4**, 31
+style properties each where there were none. A contract test now fails if either
+discovery gains a rule the other lacks.
+
+### VF-229 — A heading and a picture with no link is not a call to action
+
+**Dependencies:** none
+
+**Problem**
+
+`edca.section.4` (`#dnn_BottomPane`) holds a `section_title` and one
+`section_media`. It reads `call_to_action`, and with rendered evidence available
+it now matches `CTAs/cta-banner`, which requires an `action` the section does
+not have — so it blocks. Iteration 35 established that an action with no label
+is not the call; a section with no action at all is not a call to action either.
+
+This was always a misclassification; better evidence turned it from a warning
+into a blocker.
+
+**Acceptance criteria**
+
+- A section with no link or button does not read `call_to_action`.
+- A genuine CTA with a labelled action still does.
+- No change to the ten corpus metrics, and all three real sites reported.

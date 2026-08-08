@@ -137,10 +137,40 @@ _RENDERED_OBSERVATION_JS = r"""() => {
     sectioning
         .filter((el) => !sectioning.some((other) => other !== el && other.contains(el)))
         .forEach(add);
+    // The same builder rules the static extractor uses. Without them a DNN page,
+    // whose boundaries are panes rather than <section> elements, produced no
+    // rendered candidates at all: every section paired to nothing and the whole
+    // site scored on static evidence alone.
+    document
+        .querySelectorAll("[data-elementor-type] > [data-id][data-element_type='container']")
+        .forEach(add);
+    document.querySelectorAll("#Body > [id^='dnn_'], [id^='dnn_'][class*='Pane']").forEach(add);
     if (!candidates.length) {
         const main = document.querySelector('main, [role="main"]');
         if (main) Array.from(main.children).forEach(add);
     }
+    // A pane wrapping other panes is layout, not a section. The static side
+    // drops it on the same test — contribution, not depth — and pairing is by
+    // selector, so the two must agree on which elements are boundaries.
+    const wrapped = candidates.filter((el) => {
+        const nested = candidates.filter((other) => other !== el && el.contains(other));
+        if (!nested.length) return false;
+        const ownText = (el.textContent || '').replace(/\s+/g, ' ').trim();
+        const nestedText = nested
+            .map((other) => (other.textContent || '').replace(/\s+/g, ' ').trim())
+            .join(' ');
+        const ownMedia = el.querySelectorAll('img, video').length;
+        const nestedMedia = nested.reduce(
+            (total, other) => total + other.querySelectorAll('img, video').length,
+            0,
+        );
+        return nestedText.includes(ownText) && ownMedia <= nestedMedia;
+    });
+    wrapped.forEach((el) => {
+        const index = candidates.indexOf(el);
+        if (index >= 0) candidates.splice(index, 1);
+        seen.delete(el);
+    });
     // Page chrome, added explicitly. The body query above cannot reach a nav
     // inside a header, so the design side carried no styles and no geometry for
     // it at all: the nav section scored on two of six dimensions while every
