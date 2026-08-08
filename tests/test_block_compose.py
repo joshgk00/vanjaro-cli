@@ -1457,3 +1457,60 @@ def test_flat_color_band_gets_no_text_shadow():
     section = {}
     apply_section_background(section, {"background_color": "rgb(188, 48, 47)"})
     assert "text-shadow" not in section["attributes"]["style"]
+
+
+def test_project_composition_marks_where_a_form_was():
+    """The legacy migration path has marked forms since it was built; the
+    project path did not, so a page carried a heading where a contact form used
+    to be and nothing said so."""
+
+    import json
+    from pathlib import Path
+
+    from vanjaro_cli.portal.block_library import compose_project_library
+
+    template_name = "Rich Text Block"
+    entries = [
+        {
+            "key": "page.section.1",
+            "template": template_name,
+            "name": "Test / Contact",
+            "category": "Test",
+            "type": "custom",
+            "overrides": {"heading_1": "Contact Us"},
+            "form_fields": [
+                {"label": "Name", "required": True},
+                {"label": "Email", "required": False},
+            ],
+        }
+    ]
+
+    composed = compose_project_library(entries)
+
+    rendered = json.dumps(composed[0]["content_json"])
+    assert "form-placeholder" in rendered
+    assert "Name*" in rendered
+    assert "Email" in rendered
+
+
+def test_project_composition_adds_nothing_when_there_is_no_form():
+    import json
+    from pathlib import Path
+
+    from vanjaro_cli.portal.block_library import compose_project_library
+
+    entries = [
+        {
+            "key": "page.section.1",
+            "template": "Rich Text Block",
+            "name": "Test / Copy",
+            "category": "Test",
+            "type": "custom",
+            "overrides": {"heading_1": "Studio hours"},
+            "form_fields": [],
+        }
+    ]
+
+    composed = compose_project_library(entries)
+
+    assert "form-placeholder" not in json.dumps(composed[0]["content_json"])

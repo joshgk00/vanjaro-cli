@@ -3423,3 +3423,48 @@ original wording.
 
 That is a small change and it is the difference between a reader hunting for a
 better match and a reader reaching for the forms plugin.
+
+### Iteration 52 — VF-232, the placeholder chain wired end to end
+
+**All three real sites, unchanged:**
+
+| site | coverage | blocking | valid | losses | rendered |
+|---|---|---|---|---|---|
+| `edca-pilot` | 0.0 | 3 | false | 2 | 3/4 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 |
+
+Corpus unchanged, all gates green. Suite 2,109 → 2,111.
+
+**The disposition concept already existed**, which is the seventh premise worth
+checking before building: `SimplificationKind.MANUAL_MODULE` has been in the plan
+model all along, and `reports.py` already counts manual modules against a
+threshold. What was missing was not a concept but a *path* — nothing carried a
+form's fields from the section to the thing that composes a block.
+
+That path now exists: `CompositionPlanEntry` carries `form_fields`, the planner
+populates them from the section's `form_placeholder` elements, `emit_library_plan`
+passes them through, and `compose_project_library` attaches the placeholder to
+the composed block. The renderer is the one the legacy path has used since it
+was written — no second implementation.
+
+The committed plan schema changed, which the schema-drift test caught and
+required regenerating in the same commit. That test exists precisely so a model
+change cannot slip through unnoticed, and it did its job.
+
+**The chain is wired and edca's form still does not reach it**, because the
+section blocks and `emit_library_plan` skips blocking entries. `form_fields` in
+the library plan: zero.
+
+**What remains is a decision, not a fix, and it is not mine to make.** A form's
+`manual_module` simplification is HIGH severity, so it blocks. That is either
+right or wrong depending on what the pipeline should do unattended:
+
+- **Blocking** means a page with a form never builds until a human looks at it.
+- **Not blocking** means the page builds with an honest, marked placeholder
+  where the form was, and the human rebuilds the form afterwards.
+
+Both are defensible. The second is what the legacy migration path does. The
+first is what this pipeline does today. Changing it changes what the tool will
+do without supervision, so it is recorded as VF-233 for Josh rather than decided
+in an iteration.

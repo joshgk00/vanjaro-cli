@@ -10,6 +10,7 @@ from typing import Any
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
     apply_overrides,
+    attach_form_placeholder,
     check_overflow,
     find_template,
 )
@@ -90,6 +91,12 @@ def compose_project_library(plan: list[object]) -> list[dict[str, Any]]:
             errors.append(f"entry {index} requires a non-empty category")
             continue
         rendered = apply_overrides(template, overrides)
+        form_fields = raw.get("form_fields")
+        if isinstance(form_fields, list) and form_fields:
+            # The legacy migration path has marked forms this way since it was
+            # built; the project path did not, so a migrated page carried a
+            # heading where a contact form used to be and nothing said so.
+            attach_form_placeholder(rendered["template"], form_fields)
         desired = {
             "type": "custom",
             "name": name,

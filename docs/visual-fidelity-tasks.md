@@ -1256,3 +1256,35 @@ than a corner of one.
 - The build emits the dashed field list; no form markup and no lookalike.
 - A section blocking for any other reason still blocks.
 - No change to the ten corpus metrics, and all three real sites reported.
+
+**VF-232 done (iteration 52).** `CompositionPlanEntry.form_fields` → planner →
+`emit_library_plan` → `compose_project_library` → `attach_form_placeholder`, the
+same renderer the legacy path uses. Plan schema regenerated in the same commit,
+as its drift test requires. Unit tests prove a composed block carries the dashed
+field list with required fields starred, and that a section without a form gains
+nothing.
+
+### VF-233 — Should a form section block the plan, or build with its placeholder?
+
+**Dependencies:** needs Josh — it changes what the pipeline does unattended
+
+**Problem**
+
+The placeholder chain is complete, but a form section never reaches it: its
+`manual_module` simplification is HIGH severity, so the section blocks and
+`emit_library_plan` skips it.
+
+- **Block** (today): a page with a form never builds until a human looks.
+- **Build with the placeholder** (what the legacy `migrate assemble` path does):
+  the page builds, carrying an honest marker listing the fields to configure.
+
+Both honour the rule that no form is ever rebuilt as HTML. The difference is
+whether the pipeline stops or proceeds without supervision.
+
+**Acceptance criteria (if the answer is "build")**
+
+- A form section plans and builds with its placeholder and does not block for
+  that reason alone.
+- A section blocking for any other reason still blocks.
+- No form markup and no lookalike is ever emitted.
+- No change to the ten corpus metrics, and all three real sites reported.

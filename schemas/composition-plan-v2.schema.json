@@ -53,6 +53,17 @@
           "default": null,
           "title": "Css Scope"
         },
+        "form_fields": {
+          "default": [],
+          "items": {
+            "additionalProperties": {
+              "$ref": "#/$defs/JsonValue"
+            },
+            "type": "object"
+          },
+          "title": "Form Fields",
+          "type": "array"
+        },
         "id": {
           "minLength": 1,
           "title": "Id",
@@ -156,6 +167,7 @@
       "title": "IssueSeverity",
       "type": "string"
     },
+    "JsonValue": {},
     "MatchAlternative": {
       "additionalProperties": false,
       "properties": {

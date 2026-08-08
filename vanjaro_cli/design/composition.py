@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, model_validator
+from pydantic import BaseModel, ConfigDict, Field, JsonValue, model_validator
 
 from vanjaro_cli.design.style_translation import StyleDecision
 
@@ -105,6 +105,10 @@ class CompositionPlanEntry(_PlanModel):
     scoped_css: dict[str, str] = Field(default_factory=dict)
     simplifications: tuple[SimplificationDecision, ...] = ()
     warnings: tuple[str, ...] = ()
+    # Fields of a form the source page had. A form is never rebuilt from a
+    # template, so these do not bind to slots — they travel to the build so it
+    # can mark where the form was and list what to configure.
+    form_fields: tuple[dict[str, JsonValue], ...] = ()
 
     @model_validator(mode="after")
     def validate_entry(self) -> "CompositionPlanEntry":

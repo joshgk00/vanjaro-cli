@@ -182,6 +182,16 @@ def _unmet_reason(
     return f"required field {semantic_field!r} is present but no value could be bound"
 
 
+def _form_fields(section: Section) -> tuple[dict[str, Any], ...]:
+    """Collect the form a section had, for the build to mark rather than rebuild."""
+
+    return tuple(
+        dict(element.attributes)
+        for element in section.content
+        if element.kind is ContentKind.FORM_PLACEHOLDER
+    )
+
+
 def _interaction_reason(kind: InteractionKind) -> str:
     """Explain an unrepresentable interaction in the terms that decided it.
 
@@ -1017,6 +1027,7 @@ def plan_design_document(
                     style_decisions=style_decisions,
                     css_scope=_css_scope(resolved_style_config, section) if scoped_css else None,
                     scoped_css=scoped_css,
+                    form_fields=_form_fields(section),
                     simplifications=simplifications,
                     # Dropped content reports on the entry rather than as a
                     # validation issue: it is worth seeing, but whether it
@@ -1097,6 +1108,7 @@ def emit_library_plan(plan: CompositionPlan) -> list[dict[str, Any]]:
                 "type": entry.block.type.value,
                 "template_digest": template_digest,
                 "overrides": overrides,
+                "form_fields": [dict(field) for field in entry.form_fields],
             }
         )
     return output
