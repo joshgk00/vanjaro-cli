@@ -3677,3 +3677,56 @@ script being wrong on its own, it is the two of them ceasing to agree.
 **The wider lesson is about fixing one half of a pair.** Iteration 56 was
 correct and incomplete, and incomplete was worse than untouched. When a value is
 compared rather than reported, both sides have to move together or not at all.
+
+### Iteration 58 — the regime safeguard holds; loop stopped
+
+**All three real sites, unchanged:**
+
+| site | coverage | blocking | valid | losses | rendered | typography | media |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 0.0 | 3 | false | 2 | 4/4 | 2/4 | 0/4 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 | 10/11 | 7/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 | 4/5 | 0/5 |
+
+Corpus unchanged, all gates green, suite 2,132. **No code change, and none was
+warranted.**
+
+I went after VF-1's headline safeguard — *scores from different regime versions
+are never compared* — because it is the guarantee this whole document was
+written around, and nobody had checked it held.
+
+**It holds, at every point where it must.** Section-to-page and
+page-to-report aggregation both run `_require_single_regime`. The corpus ledger
+raises `RegimeMismatchError` before it can average across regimes; I suspected
+it silently popped one from a set, and it does not — the length check comes
+first. And there is no stored-versus-new fidelity comparison anywhere to guard,
+because each run builds its report fresh.
+
+That is a negative result and worth recording. Three of the last five iterations
+found real bugs by doubting a claim; this one doubted a claim and the claim was
+true. Writing that down stops the next iteration spending itself on the same
+check.
+
+**Stopping the loop here.** The two seams that have produced every recent
+finding are closed: warnings on all three sites are explained, and the three
+measurement surfaces are in parity with contract tests holding them there. What
+remains is four decisions, none of which an iteration may make:
+
+| task | decision |
+|---|---|
+| VF-233 | should a form block the plan, or build with its placeholder? |
+| VF-227 | should field coverage outweigh exact role naming at a ~0.03 gap? |
+| VF-224 | what origin did the edca page come from? |
+| VF-225 | a governed template for an about section with a picture and several paragraphs |
+
+Plus the portal gates: `portal_mutation` for a build, and publish.
+
+**Where this run of the loop got to.** `keys-to-success` went from nine blocking
+sections and coverage 0.074 to zero blocking, a valid plan, and 0.8529, with
+eight named losses all attributable to one gated decision. A second real site
+was brought in as an anti-overfit check and a third as a control that has not
+moved a digit. The corpus never moved across thirty iterations, in either
+direction. Along the way: a contact form that would have been rebuilt as a
+lookalike banner, a whole site scoring on static evidence alone, every id-less
+boundary unmeasurable, the media dimension dark everywhere, and three pairs of
+scripts quietly measuring different elements.
