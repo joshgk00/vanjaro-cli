@@ -3635,3 +3635,45 @@ a kicker's font recorded as the headline's, a hyperlink's default colours
 recorded as the brand accent. Both would have scored, and both would have been
 wrong. That is the failure mode this loop has repeatedly found worse than an
 honest gap.
+
+### Iteration 57 — the third measurement surface, and a mismatch I created
+
+**All three real sites, unchanged:**
+
+| site | coverage | blocking | valid | losses | rendered | typography | media |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 0.0 | 3 | false | 2 | 4/4 | 2/4 | 0/4 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 | 10/11 | 7/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 | 4/5 | 0/5 |
+
+Corpus unchanged, all gates green. Suite 2,128 → 2,132.
+
+There is a third script nobody had compared: `fidelity_measure.MEASURE_SCRIPT`
+reads the **built** page, while the analysis script reads the design. The score
+is the difference between them, so if they sample different elements the
+difference is not a defect in the build — it is a defect in the measurement, and
+it looks exactly like a real one.
+
+**It had both of the flaws iteration 56 had just fixed on the other side**: the
+first heading rather than the most prominent, and any anchor rather than a
+labelled one.
+
+**Which means iteration 56 made the two sides disagree.** Before it they were
+consistently wrong together, and a consistent error largely cancels in a
+comparison. Fixing one side alone turned a cancelling error into a scoring one:
+a section led by a kicker would have compared the kicker's font against the
+headline's and reported the mismatch as a fidelity defect. That is my own change
+creating exactly the wrong-value failure this loop keeps finding worse than a
+gap, and it existed for one iteration.
+
+Both scripts now choose the heading by prominence and require an action to carry
+a label. `effectiveBackground` and `elementGap` were already identical, so
+colour and spacing were never affected.
+
+A parity test now holds the two scripts against each other on all four shared
+rules. That is the right shape of test here: the failure mode is not either
+script being wrong on its own, it is the two of them ceasing to agree.
+
+**The wider lesson is about fixing one half of a pair.** Iteration 56 was
+correct and incomplete, and incomplete was worse than untouched. When a value is
+compared rather than reported, both sides have to move together or not at all.

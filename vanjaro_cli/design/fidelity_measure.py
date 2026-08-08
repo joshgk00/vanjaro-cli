@@ -93,6 +93,15 @@ MEASURE_SCRIPT = """
   // <p>; Vanjaro renders <div class="vj-text">, so a `p` selector found nothing
   // on the build and typography compared one sample of two on every section.
   // A <p> still wins when present, because it states the author's intent.
+  // The most prominent heading, matching the design side. Taking the first
+  // means a section led by a small kicker compares the kicker's font against
+  // the headline's, and reports the mismatch as a fidelity defect.
+  const headingElement = (root) => {
+    const headings = Array.from(root.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+    if (!headings.length) return null;
+    return headings.reduce((best, el) =>
+      Number(el.tagName[1]) < Number(best.tagName[1]) ? el : best);
+  };
   const bodyElement = (root) => {
     const direct = root.querySelector('p');
     if (direct) return direct;
@@ -206,7 +215,13 @@ MEASURE_SCRIPT = """
     sections: roots.map((node, index) => {
       const style = getComputedStyle(node);
       const rect = node.getBoundingClientRect();
-      const action = node.querySelector('a, button');
+      // An action with no label is not the call, so a thumbnail wrapped in a
+      // link must not supply the accent colour. The design side has excluded
+      // these since iteration 35; measuring a different element here would
+      // compare two different things and call the difference a defect.
+      const action = Array.from(node.querySelectorAll('a, button')).find(
+        (candidate) => (candidate.textContent || '').trim(),
+      ) || null;
       const columns = columnCount(node, style);
       return {
         section_id: node.getAttribute('data-agency-section'),
@@ -222,7 +237,7 @@ MEASURE_SCRIPT = """
         text_color: style.color || null,
         accent_color: action ? getComputedStyle(action).color : null,
         typography: {
-          heading: typeOf(node.querySelector('h1, h2, h3, h4, h5, h6')),
+          heading: typeOf(headingElement(node)),
           body: typeOf(bodyElement(node)),
         },
         padding_top: num(style.paddingTop),

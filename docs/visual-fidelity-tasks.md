@@ -1318,3 +1318,11 @@ first heading rather than the most prominent, the stamping did the same one
 layer down, and the action sample took any anchor rather than a labelled one. All
 three now match the static side, each pinned by a test. No metric moved because
 these produced wrong values rather than missing ones.
+
+**Measurement-script parity established (iteration 57).**
+`fidelity_measure.MEASURE_SCRIPT` reads the built page and had both flaws
+iteration 56 fixed in the analysis script — so that iteration briefly made the
+two sides disagree, turning a cancelling error into a scoring one. Both now take
+the most prominent heading and require a labelled action;
+`effectiveBackground` and `elementGap` were already identical. A parity test
+holds them against each other on all four shared rules.
