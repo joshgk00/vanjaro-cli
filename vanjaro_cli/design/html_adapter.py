@@ -120,6 +120,40 @@ _RENDERED_OBSERVATION_JS = r"""() => {
             font_weight: s.fontWeight || null,
         };
     };
+    // The same selector the static extractor records, in the same order it
+    // tries: id, then a builder's data-id, then an nth-of-type path. Falling
+    // back to a positional label meant an element without an id could never
+    // pair with its static counterpart, so a real page's header measured
+    // nothing at all. Pairing is by selector, so the two must agree exactly.
+    const structuralSelector = (el) => {
+        const steps = [];
+        let node = el;
+        while (node && node.tagName && node.tagName.toLowerCase() !== 'html') {
+            const parent = node.parentElement;
+            if (!parent) break;
+            const siblings = Array.from(parent.children).filter(
+                (child) => child.tagName === node.tagName,
+            );
+            const position = siblings.indexOf(node);
+            if (position < 0) return null;
+            steps.push(`${node.tagName.toLowerCase()}:nth-of-type(${position + 1})`);
+            node = parent;
+        }
+        return steps.length ? steps.reverse().join(' > ') : null;
+    };
+    // Built from character codes so the escape sequences survive being
+    // embedded in a Python string; a regex literal here silently broke the
+    // whole script, and a broken script degrades to no rendered evidence at
+    // all rather than to an error.
+    const BACKSLASH = String.fromCharCode(92);
+    const escapeAttribute = (value) =>
+        value.split(BACKSLASH).join(BACKSLASH + BACKSLASH).split("'").join(BACKSLASH + "'");
+    const sectionSelector = (el, index) => {
+        if (el.id && el.id.trim()) return `#${el.id.trim()}`;
+        const dataId = el.getAttribute('data-id');
+        if (dataId && dataId.trim()) return "[data-id='" + escapeAttribute(dataId.trim()) + "']";
+        return structuralSelector(el) || `rendered-section-${index + 1}`;
+    };
     const candidates = [];
     const seen = new Set();
     const add = (el) => {
@@ -272,7 +306,7 @@ _RENDERED_OBSERVATION_JS = r"""() => {
             ? cs.gridTemplateColumns.split(/\s+/).filter(Boolean).length
             : null;
         return {
-            selector: el.id ? `#${CSS.escape(el.id)}` : `rendered-section-${index + 1}`,
+            selector: sectionSelector(el, index),
             bounds: {x: rect.x, y: rect.y + window.scrollY, width: rect.width, height: rect.height},
             hidden: cs.display === 'none' || cs.visibility === 'hidden',
             typography: {
@@ -1437,7 +1471,12 @@ def _pair_rendered_sections(
     rendered_by_selector: dict[str, RenderedSectionObservation] = {}
     duplicated: set[str] = set()
     for rendered in observation.sections:
-        if not rendered.selector.startswith("#"):
+        # Only a positional label is unusable: it names no element and would
+        # match by coincidence. A structural path names exactly one element and
+        # is what the static side records for anything without an id, so
+        # rejecting it left every id-less boundary — a real page's header —
+        # measuring nothing.
+        if rendered.selector.startswith("rendered-section-"):
             continue
         if rendered.selector in rendered_by_selector:
             duplicated.add(rendered.selector)

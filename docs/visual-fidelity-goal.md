@@ -3468,3 +3468,43 @@ Both are defensible. The second is what the legacy migration path does. The
 first is what this pipeline does today. Changing it changes what the tool will
 do without supervision, so it is recorded as VF-233 for Josh rather than decided
 in an iteration.
+
+### Iteration 53 — every boundary without an id was unmeasurable
+
+**All three real sites:**
+
+| site | coverage | blocking | valid | losses | rendered |
+|---|---|---|---|---|---|
+| `edca-pilot` | 0.0 | 3 | false | 2 | **3/4 → 4/4** |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 |
+
+Corpus unchanged, all gates green. Suite 2,111 → 2,115. edca has **no unmatched
+rendered sections left**.
+
+The last warning on edca was its header: no rendered match. Two causes, both on
+the same seam.
+
+**The rendered script named an element `rendered-section-N` when it had no id.**
+The static side records an `nth-of-type` path in that case, and a positional
+label can never equal a CSS path — so **any boundary without an id was
+unmeasurable by construction**. It never showed on the other two sites because
+every section there carries an id.
+
+**And pairing only accepted `#id` selectors.** That was right while the fallback
+was a meaningless label, and became exactly the thing blocking a real selector
+once the script emitted one. Only a positional label is unusable now; a
+structural path names one element and is accepted.
+
+**I broke the render script in the middle of fixing it**, which is the part
+worth recording. A regex literal in the JS — `replace(/\/g, ...)` — was invalid,
+because the backslash escaped the closing slash. The script failed to parse, and
+**the failure was silent**: every section fell back to static evidence, edca went
+from 3/4 rendered to 0/4, and nothing errored. A broken observation script
+degrades to no evidence rather than to a message. The escaping is built from
+character codes now so it survives being embedded in a Python string, with the
+reason written next to it.
+
+That silent degradation is the same shape as the stylesheet failure of iteration
+27 and worth the same suspicion: **when rendered evidence disappears, suspect the
+script before the page.**

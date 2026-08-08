@@ -2182,3 +2182,77 @@ def test_a_section_with_no_form_gains_no_form_fields() -> None:
     )
 
     assert not [e for e in section["content"] if e["role"] == "form_field"]
+
+
+def test_the_rendered_script_names_an_id_less_element_the_same_way() -> None:
+    """The rendered side fell back to a positional label, so an element without
+    an id could never pair and a real page's header measured nothing."""
+
+    from vanjaro_cli.design import html_adapter
+
+    script = html_adapter._RENDERED_OBSERVATION_JS
+
+    assert "nth-of-type" in script, "rendered side lost its structural selector"
+    assert "structuralSelector" in script
+
+
+def test_a_structural_selector_can_pair() -> None:
+    """Only a positional label is unusable; a structural path names exactly one
+    element and is what the static side records for anything without an id."""
+
+    from vanjaro_cli.design.html_adapter import (
+        BoundingBox,
+        RenderedPageObservation,
+        RenderedSectionObservation,
+        _pair_rendered_sections,
+    )
+    from vanjaro_cli.design.models import BreakpointName, Viewport
+
+    path = "body:nth-of-type(1) > header:nth-of-type(1)"
+    observation = RenderedPageObservation(
+        breakpoint=BreakpointName.DESKTOP,
+        viewport=Viewport(width=1440, height=900),
+        html="<body></body>",
+        sections=(
+            RenderedSectionObservation(
+                selector=path,
+                bounds=BoundingBox(x=0, y=0, width=1440, height=90),
+                hidden=False,
+            ),
+        ),
+    )
+
+    paired = _pair_rendered_sections([{"_static_selector": path}], observation)
+
+    assert list(paired) == [0]
+
+
+def test_a_positional_label_still_cannot_pair() -> None:
+    """It names no element and would match by coincidence."""
+
+    from vanjaro_cli.design.html_adapter import (
+        BoundingBox,
+        RenderedPageObservation,
+        RenderedSectionObservation,
+        _pair_rendered_sections,
+    )
+    from vanjaro_cli.design.models import BreakpointName, Viewport
+
+    observation = RenderedPageObservation(
+        breakpoint=BreakpointName.DESKTOP,
+        viewport=Viewport(width=1440, height=900),
+        html="<body></body>",
+        sections=(
+            RenderedSectionObservation(
+                selector="rendered-section-1",
+                bounds=BoundingBox(x=0, y=0, width=1440, height=90),
+                hidden=False,
+            ),
+        ),
+    )
+
+    paired = _pair_rendered_sections(
+        [{"_static_selector": "#a"}, {"_static_selector": "#b"}], observation
+    )
+
+    assert paired == {}

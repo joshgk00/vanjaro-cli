@@ -1288,3 +1288,9 @@ whether the pipeline stops or proceeds without supervision.
 - A section blocking for any other reason still blocks.
 - No form markup and no lookalike is ever emitted.
 - No change to the ten corpus metrics, and all three real sites reported.
+
+**Id-less boundaries made measurable (iteration 53).** The rendered script now
+records the same selector the static side does — id, builder data-id, then an
+`nth-of-type` path — and pairing accepts anything but a positional label. edca
+3/4 → 4/4 rendered with no unmatched sections; corpus unchanged. A contract test
+fails if either side loses its structural selector.
