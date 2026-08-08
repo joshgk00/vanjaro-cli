@@ -1301,3 +1301,11 @@ nothing anywhere. Size is now read from the image header at acquisition — PNG,
 GIF, WebP and JPEG, no new dependency, SVG honestly returns nothing. kts media
 evidence 0/11 → 7/11; corpus unchanged. edca and Northstar remain at zero
 because their images were never saved beside the page (VF-224).
+
+**Heading typography brought level (iteration 55).** The rendered side sampled
+only `h1`–`h6`, so a hero whose title is a styled block — which the static side
+has promoted since VF-219 — had a title on one side and no font on the other.
+Both now use the same order: real heading, then the first short text block with
+more text after it. kts heading samples 8 → 9 of 11; corpus unchanged. Remaining
+typography gaps are navigation bars, a photo band and a form, all of which
+genuinely have neither a heading nor prose.

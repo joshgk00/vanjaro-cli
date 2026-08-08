@@ -235,6 +235,25 @@ _RENDERED_OBSERVATION_JS = r"""() => {
     // <p>; Vanjaro renders <div class="vj-text">, so a `p` selector found nothing
     // on the build and typography compared one sample of two on every section.
     // A <p> still wins when present, because it states the author's intent.
+    // The static side promotes a styled block to the section title when there
+    // is no heading element, so a hero titled with a div had a title on one
+    // side and no typography on the other. Same order the static side uses: a
+    // real heading first, then the first short text block with more text after
+    // it.
+    const headingElement = (root) => {
+      const real = root.querySelector('h1, h2, h3, h4, h5, h6');
+      if (real) return real;
+      const blocks = [];
+      root.querySelectorAll('*').forEach((el) => {
+        if (/^(A|BUTTON|SCRIPT|STYLE|IMG|SVG|SOURCE|PICTURE|SPAN|STRONG|EM)$/.test(el.tagName)) return;
+        if (!(el.textContent || '').trim()) return;
+        if (Array.from(el.children).some((child) => (child.textContent || '').trim() && !/^(SPAN|STRONG|EM|A|B|I)$/.test(child.tagName))) return;
+        blocks.push(el);
+      });
+      if (blocks.length < 2) return null;
+      const first = blocks[0];
+      return (first.textContent || '').trim().length <= 80 ? first : null;
+    };
     const bodyElement = (root) => {
       const direct = root.querySelector('p');
       if (direct) return direct;
@@ -310,7 +329,7 @@ _RENDERED_OBSERVATION_JS = r"""() => {
             bounds: {x: rect.x, y: rect.y + window.scrollY, width: rect.width, height: rect.height},
             hidden: cs.display === 'none' || cs.visibility === 'hidden',
             typography: {
-                heading: typeOf(el.querySelector('h1, h2, h3, h4, h5, h6')),
+                heading: typeOf(headingElement(el)),
                 body: typeOf(bodyElement(el)),
             },
             action: (() => {

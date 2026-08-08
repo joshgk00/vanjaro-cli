@@ -3549,3 +3549,40 @@ VF-224, not a new one.
 plausible and I wrote it without checking. Measuring what a change actually
 delivered, dimension by dimension, took ten minutes and found a gap that had
 been open since the fidelity work began.
+
+### Iteration 55 — a hero had a title on one side and no font on the other
+
+**All three real sites, with per-dimension evidence:**
+
+| site | coverage | blocking | valid | losses | rendered | typography | media |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 0.0 | 3 | false | 2 | 4/4 | 2/4 | 0/4 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 | 10/11 | 7/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 | 4/5 | 0/5 |
+
+Corpus unchanged, all gates green. Suite 2,122 → 2,124.
+
+Most of the typography gap turned out to be legitimate and worth stating rather
+than fixing. A navigation bar has neither a heading nor prose, so the two sample
+keys cannot describe it. A photo band has no text at all. A contact section's
+fields are not prose. Those are honest absences.
+
+**One was not.** `kts.section.2` is a hero with a title and no heading
+typography at all. Iteration 31 taught the static side to promote a styled block
+to the section title when a page has no heading element — and the rendered side
+still sampled `h1`–`h6` only. So the hero had a title on one side and no font on
+the other, and the typography dimension could never compare them.
+
+The two now find a heading the same way: a real heading element first, then the
+first short text block with more text after it. That mirrors `implied_title`
+exactly, and a contract test fails if either side loses its half.
+
+kts heading samples 8 → 9 of 11; the two without are the navigation bar and the
+stats band, both correct. edca and Northstar are unchanged, their remaining gaps
+being nav and a text-free band.
+
+**This is the third time the two sides have drifted** — builder rules in
+iteration 48, id-less selectors in iteration 53, headings now. Each was invisible
+because the pipeline degrades quietly: a missing sample is indistinguishable
+from an element that genuinely has no font. The contract tests are the answer,
+and there are now three of them.

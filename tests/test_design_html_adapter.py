@@ -2256,3 +2256,27 @@ def test_a_positional_label_still_cannot_pair() -> None:
     )
 
     assert paired == {}
+
+
+def test_both_sides_find_a_heading_the_same_way() -> None:
+    """The static side promotes a styled block to the section title when there
+    is no heading element. The rendered side sampled only h1-h6, so a hero
+    titled with a div had a title on one side and no typography on the other."""
+
+    from vanjaro_cli.design import html_adapter
+
+    script = html_adapter._RENDERED_OBSERVATION_JS
+
+    assert "headingElement" in script, "rendered side lost its shape-based heading"
+    assert "typeOf(headingElement(el))" in script
+
+
+def test_the_rendered_heading_prefers_a_real_heading_element() -> None:
+    """Same order the static side uses: a real heading first."""
+
+    from vanjaro_cli.design import html_adapter
+
+    script = html_adapter._RENDERED_OBSERVATION_JS
+    body = script[script.index("const headingElement") : script.index("const bodyElement")]
+
+    assert body.index("h1, h2, h3, h4, h5, h6") < body.index("blocks.length < 2")
