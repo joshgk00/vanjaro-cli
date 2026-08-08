@@ -182,6 +182,25 @@ def _unmet_reason(
     return f"required field {semantic_field!r} is present but no value could be bound"
 
 
+def _interaction_reason(kind: InteractionKind) -> str:
+    """Explain an unrepresentable interaction in the terms that decided it.
+
+    A contact form blocked with "selected template does not declare a native
+    representation", which reads like a template shortfall to be fixed by
+    picking a better template. It is not: a form is never rebuilt as HTML at
+    all, so no template can or should represent one. Saying that plainly is the
+    difference between a reader looking for a better match and a reader
+    reaching for the forms plugin.
+    """
+
+    if kind is InteractionKind.FORM:
+        return (
+            "a form is never rebuilt from a template; it needs a placeholder "
+            "and a hand-built form"
+        )
+    return "selected template does not declare a native representation"
+
+
 def _slot_queues(entry: TemplateCatalogEntry) -> tuple[dict[str, deque[str]], dict[str, str]]:
     data = load_template_data(entry)
     slots = enumerate_slots(data["template"])
@@ -809,7 +828,7 @@ def _simplifications(section: Section, entry: TemplateCatalogEntry) -> tuple[Sim
                     trait=f"interaction:{interaction.kind.value}",
                     classification=SimplificationKind.MANUAL_MODULE,
                     severity=severity,
-                    reason="selected template does not declare a native representation",
+                    reason=_interaction_reason(interaction.kind),
                     source_ids=(interaction.id,),
                 )
             )

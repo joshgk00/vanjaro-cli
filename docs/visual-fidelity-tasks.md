@@ -1222,3 +1222,37 @@ rebuild the form with his plugin. The section simply blocks.
 - No form markup, and no lookalike, is ever emitted into a build.
 - A section that blocks for any other reason is unaffected.
 - No change to the ten corpus metrics, and all three real sites reported.
+
+**VF-231 corrected (iteration 51) — sixth wrong premise.**
+`utils/block_compose.attach_form_placeholder` already renders the dashed field
+list and has since the legacy migration path was built. It is called from
+`migrate assemble` and not from the project pipeline. Landed this iteration: a
+form's block now explains itself in policy terms rather than reading as a
+template shortfall.
+
+### VF-232 — A form section needs a plan disposition, not a template match
+
+**Dependencies:** none, but it is a change to the plan contract
+
+**Problem**
+
+`attach_form_placeholder` exists and is used by the legacy path. The project
+pipeline cannot reach it: `emit_library_plan` skips blocking entries, and a form
+section blocks because no template can represent a form — correctly, since forms
+are never rebuilt from templates.
+
+So the placeholder is unreachable by construction. What is missing is a
+*disposition*: a section the plan deliberately does not build from a template,
+carrying its inventoried fields so the build emits the placeholder instead.
+
+This touches the composition plan model, its validation, `emit_library_plan` and
+the build stage. It is a design change and deserves its own iteration rather
+than a corner of one.
+
+**Acceptance criteria**
+
+- A section detected as a form plans to a placeholder disposition, not a
+  template match, and does not block the plan for that reason alone.
+- The build emits the dashed field list; no form markup and no lookalike.
+- A section blocking for any other reason still blocks.
+- No change to the ten corpus metrics, and all three real sites reported.

@@ -602,3 +602,25 @@ def test_a_field_with_no_candidates_still_reads_as_missing() -> None:
     from vanjaro_cli.design.planner import _unmet_reason
 
     assert "missing or has no slot" in _unmet_reason("media", [], {})
+
+
+def test_a_form_block_says_a_form_is_never_rebuilt() -> None:
+    """"Selected template does not declare a native representation" reads like a
+    template shortfall to fix by picking a better template. A form is not."""
+
+    from vanjaro_cli.design.models import InteractionKind
+    from vanjaro_cli.design.planner import _interaction_reason
+
+    reason = _interaction_reason(InteractionKind.FORM)
+
+    assert "never rebuilt from a template" in reason
+    assert "placeholder" in reason
+
+
+def test_other_interactions_keep_the_template_wording() -> None:
+    from vanjaro_cli.design.models import InteractionKind
+    from vanjaro_cli.design.planner import _interaction_reason
+
+    assert _interaction_reason(InteractionKind.CAROUSEL) == (
+        "selected template does not declare a native representation"
+    )

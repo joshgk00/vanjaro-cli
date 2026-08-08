@@ -3381,3 +3381,45 @@ be silently rebuilt as a lookalike — the safety half of the policy holds. The
 `form_placeholder` element into the dashed field list Josh rebuilds from. That
 needs either a template or build-stage support, and adding a template is
 governed. Filed as VF-231.
+
+### Iteration 51 — the placeholder exists; the project pipeline cannot reach it
+
+**All three real sites, unchanged:**
+
+| site | coverage | blocking | valid | losses | rendered |
+|---|---|---|---|---|---|
+| `edca-pilot` | 0.0 | 3 | false | 2 | 3/4 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 |
+
+Corpus unchanged, all gates green. Suite 2,107 → 2,109.
+
+**VF-231 assumed nothing renders a form placeholder. `attach_form_placeholder`
+has existed all along** — it appends a bordered marker listing the detected
+fields with required ones starred, and its docstring already states the policy:
+a rendered form that silently drops submissions is worse than an honest marker.
+That is the sixth consecutive task built on an unchecked premise.
+
+**It is wired into the legacy `migrate assemble` path and not into the project
+pipeline**, so the newer pipeline has lost a capability the older one has. And
+the project pipeline cannot simply call it: `emit_library_plan` skips every
+blocking entry, and a form section blocks precisely *because* no template can
+represent a form. The placeholder can never be reached through a path that only
+builds what matched.
+
+What that needs is a **disposition** in the plan — a section deliberately not
+built from a template, carrying its placeholder instead of a match. That touches
+the plan model, its validation, the library plan and the build stage. It is a
+design change, not a fix, and half-implementing it at the end of a window is how
+this project has previously moved the corpus by accident. Recorded as VF-232
+with the shape it needs rather than a partial attempt.
+
+**One thing did land.** A form section blocked with *"selected template does not
+declare a native representation"*, which reads like a template shortfall — as if
+a better template would resolve it. It would not, and cannot: no template should
+represent a form. The reason now says a form is never rebuilt from a template
+and needs a placeholder and a hand-built form. Every other interaction keeps the
+original wording.
+
+That is a small change and it is the difference between a reader hunting for a
+better match and a reader reaching for the forms plugin.
