@@ -1195,3 +1195,30 @@ not editorial content.
 - No form markup is ever emitted into a build.
 - A spinner, tracking pixel or other UI asset is not bound as section media.
 - No change to the ten corpus metrics, and all three real sites reported.
+
+**VF-230 done, and its premise was wrong (iteration 50).** The design side
+already carried `form_placeholder`/`form_field`/`form_action` and a `form`
+interaction. The gap was that `_extract_form_fields` was only *called* when a
+`<form>` existed, and that enrichment discarded the result. Both fixed; edca's
+contact section inventories four fields and the plan now blocks rather than
+covering a form with a CTA banner. Coverage 0.125 → 0.0 and losses 0 → 2 because
+the form is visible content at last.
+
+### VF-231 — A form placeholder is inventoried but never rendered
+
+**Dependencies:** the placeholder template may be a governed library change
+
+**Problem**
+
+`edca.section.4` now carries four `form_placeholder` elements with labels, and
+its `form` interaction blocks every template that cannot represent one — so
+nothing wrong gets built. But nothing turns those elements into the dashed
+placeholder listing the fields, which is what the policy asks for so Josh can
+rebuild the form with his plugin. The section simply blocks.
+
+**Acceptance criteria**
+
+- A section detected as a form plans to a placeholder that lists its fields.
+- No form markup, and no lookalike, is ever emitted into a build.
+- A section that blocks for any other reason is unaffected.
+- No change to the ten corpus metrics, and all three real sites reported.

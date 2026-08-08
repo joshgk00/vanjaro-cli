@@ -2138,3 +2138,47 @@ def test_the_legacy_extractor_agrees_it_is_contact() -> None:
     sections = extract_sections(_XHR_FORM, "http://example.test/")
 
     assert [section["type"] for section in sections] == ["contact"]
+
+
+def test_a_form_without_a_form_element_is_still_inventoried() -> None:
+    """The placeholder that replaces a form is built from its fields, and a
+    form nobody listed is a form rebuilt as a lookalike."""
+
+    from vanjaro_cli.migration.sections import extract_sections
+
+    content = extract_sections(_XHR_FORM, "http://example.test/")[0]["content"]
+
+    assert [field["label"] for field in content["form_fields"]] == ["Name", "Email", "Message"]
+
+
+def test_a_captcha_response_is_not_a_field_to_rebuild() -> None:
+    """Listing it on a placeholder would ask a human to rebuild plumbing."""
+
+    from vanjaro_cli.migration.sections import extract_sections
+
+    content = extract_sections(_XHR_FORM, "http://example.test/")[0]["content"]
+
+    assert not any("recaptcha" in field["name"] for field in content["form_fields"])
+
+
+def test_enrichment_does_not_drop_the_form_it_was_given() -> None:
+    """Enrichment replaces the content list wholesale, so a form inventoried by
+    extraction is lost unless it is re-emitted."""
+
+    from bs4 import BeautifulSoup
+
+    section = _enriched(
+        str(BeautifulSoup(_XHR_FORM, "html.parser").find("section")), "contact"
+    )
+
+    fields = [element for element in section["content"] if element["role"] == "form_field"]
+    assert [element["value"] for element in fields] == ["Name", "Email", "Message"]
+    assert all(element["kind"] == "form_placeholder" for element in fields)
+
+
+def test_a_section_with_no_form_gains_no_form_fields() -> None:
+    section = _enriched(
+        "<section><h2>Studio hours</h2><p>Weekdays.</p></section>", "rich_text"
+    )
+
+    assert not [e for e in section["content"] if e["role"] == "form_field"]

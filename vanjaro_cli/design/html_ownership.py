@@ -16,7 +16,12 @@ from vanjaro_cli.design.html_primitives import (
 )
 from vanjaro_cli.design.html_boundaries import media_text_split
 from vanjaro_cli.design.models import BreakpointName, Viewport
-from vanjaro_cli.migration.sections import is_stat_value, normalize_text_blocks
+from vanjaro_cli.migration.sections import (
+    extract_form_fields,
+    has_form_fields,
+    is_stat_value,
+    normalize_text_blocks,
+)
 
 
 CANONICAL_VIEWPORTS: dict[BreakpointName, Viewport] = {
@@ -509,6 +514,12 @@ def enrich_section_from_static_dom(
         for paragraph in body_paragraphs:
             element_role = "subtitle" if paragraph is deck else "body"
             add("text", element_role, paragraph.get_text(" ", strip=True))
+        # Enrichment replaces the content list wholesale, so a form inventoried
+        # by extraction is lost here unless it is re-emitted. The placeholder
+        # that stands in for a form is built from these, and a form nobody
+        # listed is a form rebuilt as a lookalike.
+        for field in extract_form_fields(root) if has_form_fields(root) else []:
+            add("form_placeholder", "form_field", field.get("label") or field.get("name") or "", attributes=field)
         for link in root.find_all("a", href=True):
             if id(link) in repeated_nodes:
                 continue

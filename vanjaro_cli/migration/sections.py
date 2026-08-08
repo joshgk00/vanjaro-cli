@@ -14,6 +14,7 @@ __all__ = [
     "normalize_text_blocks",
     "is_stat_value",
     "has_form_fields",
+    "extract_form_fields",
     "visible_form_fields",
     "extract_page_title",
     "extract_global_element",
@@ -790,9 +791,13 @@ def _extract_content(element: Tag, base_url: str) -> dict:
 
     form_fields: list[dict] = []
     form_action = ""
-    form = element.find("form")
+    # A form that posts over XHR emits no `<form>`, so the section itself is
+    # the form. Its fields still have to be listed: the placeholder that
+    # replaces a form is built from them, and a form nobody inventoried is a
+    # form rebuilt as a lookalike.
+    form = element.find("form") or (element if has_form_fields(element) else None)
     if form is not None:
-        form_fields = _extract_form_fields(form)
+        form_fields = extract_form_fields(form)
         raw_action = (form.get("action") or "").strip()
         if form_fields and raw_action and not raw_action.startswith(("#", "javascript:")):
             form_action = urljoin(base_url, raw_action)
@@ -1048,7 +1053,7 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
 _NON_DATA_INPUT_TYPES = frozenset({"hidden", "submit", "button", "image", "reset"})
 
 
-def _extract_form_fields(form: Tag) -> list[dict]:
+def extract_form_fields(form: Tag) -> list[dict]:
     """Field inventory of a real HTML form: name, type, label, required.
 
     Labels resolve from ``<label for>``, then aria-label, then placeholder,
@@ -1064,6 +1069,11 @@ def _extract_form_fields(form: Tag) -> list[dict]:
         else:
             field_type = control.name
         name = control.get("name") or control.get("id") or ""
+        identity = f"{name} {control.get('id') or ''}".casefold()
+        if any(token in identity for token in _HIDDEN_FIELD_NAMES):
+            # A captcha response or a view-state blob is plumbing. Listing it
+            # on a placeholder would ask a human to rebuild it.
+            continue
         label = ""
         control_id = control.get("id")
         if control_id:

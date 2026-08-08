@@ -3336,3 +3336,48 @@ of a window.** The form's *fields* still do not reach the design document, so no
 placeholder is emitted yet — the section plans as a CTA Split with a heading and
 no form. And a loading spinner GIF is still extracted as `section_media`, which
 is a UI asset, not content. Both are filed as VF-230.
+
+### Iteration 50 — the form is inventoried, and the build now refuses it
+
+**All three real sites:**
+
+| site | coverage | blocking | valid | losses | rendered |
+|---|---|---|---|---|---|
+| `edca-pilot` | 0.125 → **0.0** | 2 → **3** | false | 0 → **2** | 3/4 |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 11/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 5/5 |
+
+Corpus unchanged, all gates green. Suite 2,103 → 2,107.
+
+**VF-230 said nothing carries form fields into the design document. Everything
+does.** `form_placeholder` as a kind, `form_field` as a role, `form_action` as
+an attribute, and a `form` interaction — all present and all wired. That is the
+fifth task written from a premise I had not checked, and the fifth time checking
+first changed the work.
+
+The real gap was one line: `_extract_form_fields` accepts any element, but it
+was only ever *called* when a `<form>` existed. Iteration 49 taught detection
+that a form needs no form element; extraction never got the same lesson. The
+section is now its own form when there is no `<form>`, and its four fields —
+Name, Email, Phone, Message — are inventoried with their labels. A captcha
+response is skipped on both paths: listing it on a placeholder would ask a human
+to rebuild plumbing.
+
+**Enrichment was throwing them away again.** It replaces the content list
+wholesale, which iteration 28 already learned the hard way, so the fields
+extraction had found never reached the document. They are re-emitted there now.
+
+**The plan blocks this section, and that is the point.** `CTAs/cta-split` cannot
+declare a native representation for a `form` interaction, so the build refuses
+rather than covering a contact form with a banner. edca's coverage falls to 0.0
+and its losses rise to 2 because four real fields are now visible content that
+no matched template can hold — all of which was equally true before and simply
+invisible. **A number that was flattering because the pipeline could not see the
+form is not a number worth keeping.**
+
+**What is done and what is not.** The form is detected, inventoried, and cannot
+be silently rebuilt as a lookalike — the safety half of the policy holds. The
+*placeholder itself* is not rendered yet: nothing at build time turns a
+`form_placeholder` element into the dashed field list Josh rebuilds from. That
+needs either a template or build-stage support, and adding a template is
+governed. Filed as VF-231.
