@@ -4,6 +4,8 @@
 **Started:** 2026-07-26
 **Product owner:** Clicks and Mortars
 **Related foundations:** `agency-tool-goal.md`, `design-translation-v2-spec.md`
+**Spun off:** `template-capability-goal.md` owns template capability gaps
+(VF-235 and VF-236 moved there as TC-102 and TC-103)
 
 ## Goal
 

@@ -1391,6 +1391,9 @@ Northstar 0.7273 → 0.7727 and losses 2 → 1; corpus unchanged.
 
 ### VF-235 — A two-column split with several paragraphs still owns one body slot
 
+**Moved.** Owned by `template-capability-goal.md` as TC-102, which also requires
+the classification be verified before the template is widened.
+
 **Dependencies:** none, but it is another governed release
 
 **Problem**
@@ -1412,6 +1415,9 @@ been.
 - No change to the ten corpus metrics, and all three real sites reported.
 
 ### VF-236 — Card templates have no field for a section-level body
+
+**Moved.** Owned by `template-capability-goal.md` as TC-103, and wider there
+than filed here: twelve repeat templates lack `section_body`, not two.
 
 **Dependencies:** none
 
