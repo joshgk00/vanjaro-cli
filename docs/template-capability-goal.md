@@ -216,6 +216,15 @@ commands.
 - Deterministic: same inputs, byte-identical output.
 - No change to the ten corpus metrics; all three real sites reported.
 
+**TC-101 done (iteration 61).** `vanjaro project capability-gaps` and
+`design/capability_gaps.py`. It reproduced both known gaps without being told,
+found two the backlog had not recorded, and held back eleven losses that are not
+capability gaps. Benchmark-corpus coverage is *not* included: the offline
+benchmark scores extraction and matching from a fixture manifest and never
+builds a composition plan, so covering it means running the planner inside the
+benchmark — a change to what the benchmark computes, filed as TC-106 rather than
+smuggled in here.
+
 ### TC-102 — A two-column split with several paragraphs owns one body slot
 
 **Dependencies:** TC-101 should rank it first; do not wait if it does not
@@ -270,6 +279,21 @@ one that was never the target.
 carrying a heading. A template nothing routes to does not need a wider field; it
 needs deleting or a routing fix, and that is a different task.
 
+### TC-106 — The benchmark corpus is outside the gap report
+
+**Dependencies:** none, but it changes what the benchmark computes
+
+TC-101 reports gaps from composition plans, and only project workspaces have
+plans. The offline benchmark scores extraction and matching against a fixture
+manifest of predicted template ids; it never runs the planner, so no benchmark
+case can report a capability gap. Corpus-wide ranking therefore covers four
+projects, not five benchmark cases as well.
+
+Closing this means running the planner over benchmark design documents, which
+adds to what the benchmark measures. Treat it as a scoring-regime question — a
+prior regime change moved a site from 79.4 to 59.4 with no quality change — not
+as an extension of the report.
+
 ### TC-105 — Family symmetry becomes a test
 
 **Dependencies:** TC-103, TC-104
@@ -286,3 +310,76 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### Iteration 61 — the join exists, and it found two gaps nobody had filed
+
+TC-101. `design/capability_gaps.py` reads every composition plan under a
+workspace root, attributes each loss to the template that produced it,
+aggregates across projects and ranks by sections lost. Surfaced as
+`vanjaro project capability-gaps [ROOT] [--json] [--held-back]`.
+
+The acceptance criterion was that it reproduce the two known gaps without being
+told. It did, and the ranking is not what the backlog assumed:
+
+| rank | template | field | kind | sections |
+|---|---|---|---|---|
+| 1 | `Cards/feature-cards-4up` | `body` | no field | 3 (kts) |
+| 2 | `Cards/testimonial-cards-3up` | `section_title` | no field | 2 (northstar, pilot-measure) |
+| 3 | `Cards/feature-cards-4up` | `primary_action` | no field | 1 (kts) |
+| 4 | `Content/split-media-reverse` | `body` | owns 1, needs 3 | 1 (edca) |
+| 5 | `Content/video-feature` | `decorative_media` | no field | 1 (kts) |
+
+Ranks 3 and 5 were not in the backlog at all. Rank 2 is TC-104's evidence
+arriving early and from the control site: `testimonial-cards-3up` has no
+section title, and that costs a heading on Northstar today — TC-104 was filed
+from a library survey and assumed it might route to nothing.
+
+**A loss is not the same thing as a capability gap, and ranking one that is not
+sends the next iteration to widen a template that is behaving correctly.** Three
+kinds are held back with the reason recorded rather than dropped: a form field
+(a form is never rebuilt from a template, so the fix would be to give a template
+a field it must not have), an asset that resolved to nothing (the template owned
+the slot; the picture never arrived), and an unsupported interaction (a missing
+behaviour is not a missing field). Eleven losses across the four projects are
+held back this way — and the form-field rule keys on whether the plan carries
+the form's inventory, not on the field's name, so a form the pipeline silently
+dropped still reads as a gap.
+
+**Two shapes of loss, and the existing counter only sees one.**
+`_content_losses` matches `source field 'X' is not editable by template`, so
+edca's overflow — `body needs 3 slots, template owns 1` — has never been counted
+as a loss anywhere. That is why edca reports one content loss while dropping two
+paragraphs. The report reads both, plus the static-only shape, and folds the
+matcher's and the planner's report of the same overflow into one gap: counting
+warnings would rank a capacity gap above a missing field purely for being
+mentioned twice.
+
+**The report is only as fresh as the plans it reads, and some plans cannot be
+refreshed.** The first run ranked `feature-cards-3up`/`section_title` — a gap
+pack 1.6.0 closed. `pilot-measure`'s plan predates the release and must not be
+re-analysed, because that invalidates the `portal_mutation` approval already
+granted. So each gap is now checked against the library as it stands rather than
+against the day the plan ran, and one that the catalogue has since closed is
+reported as stale instead of ranked. The check proves itself on this data:
+`feature-cards-3up` moves to stale, `testimonial-cards-3up` stays live.
+
+**Not included, deliberately.** The offline benchmark never builds a composition
+plan, so no benchmark case can report a gap. Filed as TC-106 rather than
+extending the report into the benchmark, because that changes what the benchmark
+computes.
+
+**Evidence.** Suite 2,134 → 2,156 passing, 16 deselected. Corpus unchanged: all
+ten metrics at their established values (`responsive_observation_coverage`
+0.8864, `template_top1_accuracy` 0.92, `high_confidence_precision` 0.9333, five
+extraction metrics 1.0), no threshold failures, no regression failures. All
+three real sites re-analysed with `--refresh --render` (`execution.action ==
+"execute"`) and re-planned with `--refresh`:
+
+| site | sections | provenance | style observations | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.25 | 1 | false | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.8971 | 0 | true | 5 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.7727 | 0 | true | 1 |
+
+All three are byte-identical to iteration 60, which is the expected result for a
+change that adds a reader and touches no part of the pipeline.

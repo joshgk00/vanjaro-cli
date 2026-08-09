@@ -498,11 +498,13 @@ def _read_optional_json(path: Path) -> dict | None:
 
 from vanjaro_cli.commands.project_build_cmd import build_project
 from vanjaro_cli.commands.project_evidence_cmd import evidence
+from vanjaro_cli.commands.project_gaps_cmd import capability_gaps
 from vanjaro_cli.commands.project_pack_cmd import pack
 from vanjaro_cli.commands.project_overlay_cmd import overlay
 from vanjaro_cli.commands.project_target_cmd import target
 
 project.add_command(build_project)
+project.add_command(capability_gaps)
 project.add_command(evidence)
 project.add_command(pack)
 project.add_command(overlay)
