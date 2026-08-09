@@ -1381,3 +1381,46 @@ piece of work of its own.
 - `kts-fidelity` content losses fall from 8 toward 0; `edca-pilot`'s biography
   section stops blocking.
 - No change to the ten corpus metrics, and all three real sites reported.
+
+**VF-234 done — agency pack 1.6.0 released (iteration 60).** Both audited
+template changes in one governed release: `feature-cards-3up` and `-4up` declare
+`section_title`; `Content/bio-about` owns three body slots. Versions bumped,
+executables re-audited, catalogue ledger and generated artefacts updated, 1.5.0
+made immutable history. kts coverage 0.8529 → 0.8971 and losses 8 → 5;
+Northstar 0.7273 → 0.7727 and losses 2 → 1; corpus unchanged.
+
+### VF-235 — A two-column split with several paragraphs still owns one body slot
+
+**Dependencies:** none, but it is another governed release
+
+**Problem**
+
+`edca.section.2` is a picture beside three paragraphs. Since iteration 40 it
+reads `split_media`, so it matches `Content/split-media-reverse`, and both split
+templates own a single body slot — the same shortfall `Content/bio-about` had
+before 1.6.0 widened it. Widening `bio-about` therefore did not help this
+section, because the section is not classified as a biography.
+
+This was deliberately left out of 1.6.0: that release's first capability change
+had just been measured, and a second one in the same release would not have
+been.
+
+**Acceptance criteria**
+
+- A two-column split with several paragraphs binds without overflow.
+- One governed release, digests re-audited, prior versions immutable.
+- No change to the ten corpus metrics, and all three real sites reported.
+
+### VF-236 — Card templates have no field for a section-level body
+
+**Dependencies:** none
+
+**Problem**
+
+Three of `kts-fidelity`'s five remaining losses are a section-level `body` on a
+card grid — the short line that introduces the cards. No card template declares
+`section_body`, though `gallery-3up`, `gallery-6up`, `blog-post-cards-4up` and
+`team-member-grid-4up` all do. `feature-cards-*` and `class-photo-cards-4up` do
+not.
+
+Same shape as VF-227: the gap is in specific templates rather than in matching.
