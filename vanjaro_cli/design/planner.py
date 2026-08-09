@@ -976,7 +976,15 @@ def plan_design_document(
                         )
                     )
             simplifications = tuple(simplification_list)
-            blocks_for_gaps = any(item.blocks_approval for item in simplifications)
+            section_form_fields = _form_fields(section)
+            blocks_for_gaps = any(
+                item.blocks_approval
+                # A form is never rebuilt from a template, so no template can
+                # represent one: it is the expected outcome rather than a
+                # shortfall, and it is handled once its placeholder has fields.
+                and not (item.trait == "interaction:form" and section_form_fields)
+                for item in simplifications
+            )
             blocking = (
                 selected.score < plan_policy.minimum_confidence
                 or result.blocking
@@ -1027,7 +1035,7 @@ def plan_design_document(
                     style_decisions=style_decisions,
                     css_scope=_css_scope(resolved_style_config, section) if scoped_css else None,
                     scoped_css=scoped_css,
-                    form_fields=_form_fields(section),
+                    form_fields=section_form_fields,
                     simplifications=simplifications,
                     # Dropped content reports on the entry rather than as a
                     # validation issue: it is worth seeing, but whether it

@@ -489,3 +489,46 @@ def test_content_that_fits_is_not_penalised() -> None:
     candidate = score_template(_flat_section("section_title", "primary_action"), entry)
 
     assert not any("slots" in requirement for requirement in candidate.missing_requirements)
+
+
+def test_a_template_whose_required_field_cannot_be_filled_is_not_chosen() -> None:
+    """A contact form matched a CTA banner requiring an action it does not have,
+    while the contact template beside it needed none. Choosing an unbuildable
+    template only to block afterwards discards one that would have worked."""
+
+    section = _section(
+        role="contact",
+        section_roles=("section_title", "section_media"),
+        item_fields=(),
+        item_count=0,
+        layout_kind=LayoutKind.STACK,
+        columns=1,
+        media_position=None,
+    )
+
+    result = match_section(section, CATALOG)
+    selected = result.selected_candidate
+
+    assert not [
+        requirement
+        for requirement in selected.missing_requirements
+        if requirement.startswith("required template field ")
+    ], f"selected {selected.template_id} cannot be filled: {selected.missing_requirements}"
+
+
+def test_an_unfillable_template_still_wins_when_nothing_can_be_filled() -> None:
+    """The rule prefers a buildable template; it does not invent one."""
+
+    section = _section(
+        role="contact",
+        section_roles=(),
+        item_fields=(),
+        item_count=0,
+        layout_kind=LayoutKind.STACK,
+        columns=1,
+        media_position=None,
+    )
+
+    result = match_section(section, CATALOG)
+
+    assert result.selected_candidate.template_id

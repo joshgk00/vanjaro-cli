@@ -122,10 +122,25 @@ class CompositionPlanEntry(_PlanModel):
             raise ValueError("a slot cannot be both bound and cleared")
         if self.scoped_css and not self.css_scope:
             raise ValueError("scoped_css requires an explicit client-safe css_scope")
-        should_block = any(item.blocks_approval for item in self.simplifications)
+        should_block = any(
+            item.blocks_approval and not self._handled_by_placeholder(item)
+            for item in self.simplifications
+        )
         if should_block and not self.match.blocking:
             raise ValueError("high-severity unresolved simplifications must block the match")
         return self
+
+    def _handled_by_placeholder(self, decision: "SimplificationDecision") -> bool:
+        """Report whether a simplification already has its intended handling.
+
+        A form is never rebuilt from a template, so no template can represent
+        one and the simplification is not a shortfall to resolve — it is the
+        expected outcome. It stops blocking once the fields that make up its
+        placeholder have actually been inventoried; a form nobody listed still
+        blocks, because then there is nothing to put in the page's place.
+        """
+
+        return decision.trait == "interaction:form" and bool(self.form_fields)
 
 
 class PlanPolicy(_PlanModel):

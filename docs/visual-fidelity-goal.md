@@ -3730,3 +3730,41 @@ direction. Along the way: a contact form that would have been rebuilt as a
 lookalike banner, a whole site scoring on static evidence alone, every id-less
 boundary unmeasurable, the media dimension dark everywhere, and three pairs of
 scripts quietly measuring different elements.
+
+### Iteration 59 — three of Josh's four decisions landed
+
+**All three real sites:**
+
+| site | coverage | blocking | valid | losses | media |
+|---|---|---|---|---|---|
+| `edca-pilot` | 0.0 → **0.25** | 3 → **1** | false | 2 → **1** | 0/4 → **3/4** |
+| `kts-fidelity` | 0.8529 | 0 | true | 8 | 7/11 |
+| Northstar | 0.7273 | 0 | true | 2 | 0/5 |
+
+Corpus unchanged, all gates green, suite 2,134.
+
+**VF-224 — the origin is `edcaconsulting.com`.** Recorded on the source, so its
+root-relative URLs resolve against the site they came from. All four images
+acquired; media evidence 0/4 → 3/4 on a site that had none. The page id also
+stopped being a filesystem path, which is a side effect worth having.
+
+**VF-233 — a form builds its placeholder rather than blocking.** A form is never
+rebuilt from a template, so no template can represent one: the simplification is
+the expected outcome, not an unresolved shortfall. It stops blocking **once its
+fields have actually been inventoried** — a form nobody listed still blocks,
+because then there is nothing to put in the page's place. The planner and the
+plan model apply the same condition, so neither can drift from the other.
+
+**A third fix fell out of testing that one.** With the form no longer blocking,
+edca's contact section still blocked — because it had matched `CTAs/cta-banner`,
+which *requires* an action a contact form does not have, while
+`Content/contact-section` sat beside it needing none. A template whose own
+required field the section cannot supply is not a near miss to be scored: it
+cannot be built at all, and choosing it only to block afterwards discards a
+template that would have worked. Buildable candidates now rank above unfillable
+ones, which is a constraint rather than a weighting, and the corpus does not
+move. edca coverage 0.0833 → 0.25 and its last two blockers became one.
+
+**VF-227 and VF-225 are mine to decide and are answered in the next entry**,
+with the reasoning, because both are governed library changes and deserve to be
+argued before they are made.

@@ -675,7 +675,25 @@ def match_section(
     ]
     if not scored:
         raise ValueError("template catalog must not be empty")
-    scored.sort(key=lambda candidate: (-candidate.score, candidate.template_id.casefold(), candidate.template_id))
+    # A template whose own required field the section cannot supply is not a
+    # near miss to be scored — it cannot be built at all, and choosing it only
+    # to block afterwards discards a template that would have worked. A contact
+    # form matched a CTA banner that requires an action it does not have, while
+    # the contact template beside it needed none.
+    def _unfillable(candidate: TemplateMatchCandidate) -> bool:
+        return any(
+            requirement.startswith("required template field ")
+            for requirement in candidate.missing_requirements
+        )
+
+    scored.sort(
+        key=lambda candidate: (
+            _unfillable(candidate),
+            -candidate.score,
+            candidate.template_id.casefold(),
+            candidate.template_id,
+        )
+    )
 
     native_medium_exists = any(
         not candidate.maintainability.uses_custom_code

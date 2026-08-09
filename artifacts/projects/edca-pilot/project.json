@@ -1,0 +1,2120 @@
+{
+  "schema_version": "1.0",
+  "project": {
+    "id": "edca-pilot",
+    "name": "EDCA Consulting",
+    "created_at": "2026-08-05T03:00:52.714667Z",
+    "updated_at": "2026-08-09T14:26:21.789027Z"
+  },
+  "target": {
+    "profile": "edca",
+    "expected_portal_id": 3,
+    "expected_base_url": "http://vanjarocli.local/edca"
+  },
+  "agency_pack": {
+    "name": "clicks-and-mortars",
+    "version": "1.0.0",
+    "digest": null
+  },
+  "sources": [
+    {
+      "id": "live-html-1",
+      "kind": "live_html",
+      "reference": "sources/edca-home.html",
+      "evidence_reference": null,
+      "page_reference": null,
+      "breakpoint": null,
+      "viewport": null,
+      "metadata": {
+        "source_url": "https://www.edcaconsulting.com/"
+      }
+    }
+  ],
+  "stages": {
+    "intake": {
+      "stage": "intake",
+      "status": "completed",
+      "attempt": 1,
+      "input_fingerprint": "2c53b14a16a51c4fa2ecbf996d3600d020f58dfdbc078a597e91f324018399c4",
+      "output_fingerprint": "2c53b14a16a51c4fa2ecbf996d3600d020f58dfdbc078a597e91f324018399c4",
+      "started_at": "2026-08-05T03:00:52.714667Z",
+      "completed_at": "2026-08-05T03:00:52.714667Z",
+      "artifacts": [
+        "project.json"
+      ],
+      "message": "Project workspace initialized."
+    },
+    "analyze": {
+      "stage": "analyze",
+      "status": "completed",
+      "attempt": 35,
+      "input_fingerprint": "22029632cb6471ff0bdb59bd34ce6b983da58e3f2d24e941bfdaae8a12fb69d4",
+      "output_fingerprint": "68df8a3c9e4403c0e24350bbf478dcd0a6b4e6f29626cdb6214f8a37f0154c78",
+      "started_at": "2026-08-09T14:22:27.093698Z",
+      "completed_at": "2026-08-09T14:22:40.919514Z",
+      "artifacts": [
+        "sources/live-html-1/assets/e6b55211e22e3ded.png",
+        "sources/live-html-1/assets/dfc0c7e392cb82b4.png",
+        "sources/live-html-1/assets/639b2ea4eec0855c.jpg",
+        "sources/live-html-1/assets/5a904dc8c9eb35fc.GIF",
+        "sources/live-html-1/asset-manifest.json",
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ],
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s)."
+    },
+    "plan": {
+      "stage": "plan",
+      "status": "completed",
+      "attempt": 3,
+      "input_fingerprint": "a483f12d6dd6962e930b4ccb485ffb26f5ff2262939610f12a42aa4d74370191",
+      "output_fingerprint": "137a6f1f9b91457f46dd5ec98524e6d795b78ec9be8835f69e0d4762d176c622",
+      "started_at": "2026-08-09T14:26:21.686732Z",
+      "completed_at": "2026-08-09T14:26:21.789027Z",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ],
+      "message": "Planned 4 section(s), including 1 global section(s); 1 approval-blocking validation issue(s)."
+    },
+    "theme": {
+      "stage": "theme",
+      "status": "pending",
+      "attempt": 0,
+      "input_fingerprint": null,
+      "output_fingerprint": null,
+      "started_at": null,
+      "completed_at": null,
+      "artifacts": [],
+      "message": null
+    },
+    "assets": {
+      "stage": "assets",
+      "status": "pending",
+      "attempt": 0,
+      "input_fingerprint": null,
+      "output_fingerprint": null,
+      "started_at": null,
+      "completed_at": null,
+      "artifacts": [],
+      "message": null
+    },
+    "library": {
+      "stage": "library",
+      "status": "pending",
+      "attempt": 0,
+      "input_fingerprint": null,
+      "output_fingerprint": null,
+      "started_at": null,
+      "completed_at": null,
+      "artifacts": [],
+      "message": null
+    },
+    "pages": {
+      "stage": "pages",
+      "status": "pending",
+      "attempt": 0,
+      "input_fingerprint": null,
+      "output_fingerprint": null,
+      "started_at": null,
+      "completed_at": null,
+      "artifacts": [],
+      "message": null
+    },
+    "global_blocks": {
+      "stage": "global_blocks",
+      "status": "pending",
+      "attempt": 0,
+      "input_fingerprint": null,
+      "output_fingerprint": null,
+      "started_at": null,
+      "completed_at": null,
+      "artifacts": [],
+      "message": null
+    },
+    "verify": {
+      "stage": "verify",
+      "status": "pending",
+      "attempt": 0,
+      "input_fingerprint": null,
+      "output_fingerprint": null,
+      "started_at": null,
+      "completed_at": null,
+      "artifacts": [],
+      "message": null
+    },
+    "publish": {
+      "stage": "publish",
+      "status": "pending",
+      "attempt": 0,
+      "input_fingerprint": null,
+      "output_fingerprint": null,
+      "started_at": null,
+      "completed_at": null,
+      "artifacts": [],
+      "message": null
+    }
+  },
+  "decisions": [],
+  "approvals": [],
+  "audit": [
+    {
+      "id": "project-initialized",
+      "occurred_at": "2026-08-05T03:00:52.714667Z",
+      "kind": "project_initialized",
+      "message": "Created project workspace and completed intake.",
+      "stage": "intake",
+      "fingerprint": "2c53b14a16a51c4fa2ecbf996d3600d020f58dfdbc078a597e91f324018399c4",
+      "artifacts": [
+        "project.json"
+      ]
+    },
+    {
+      "id": "event-00002-stage-started",
+      "occurred_at": "2026-08-05T03:01:27.949455Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 1.",
+      "stage": "analyze",
+      "fingerprint": "e0179e02444cdd41f90b16b85a29647ba16187580d64f9ff601c111a3ab119ae",
+      "artifacts": []
+    },
+    {
+      "id": "event-00003-stage-failed",
+      "occurred_at": "2026-08-05T03:01:28.046936Z",
+      "kind": "stage_failed",
+      "message": "analyze failed: source 'live-html-1' failed: 1 validation error for DesignDocument\n  Value error, pages[0].sections[3].interactions[0].target_element_ids[0] points to missing element 'c-code-vanjaro-cli-artifacts-projects-edca-pilot-sources-edca-home-html.section.4.video.1' [type=value_error, input_value={'schema_version': '1.0',...nsupported_traits': []}}, input_type=dict]\n    For further information visit https://errors.pydantic.dev/2.12/v/value_error",
+      "stage": "analyze",
+      "fingerprint": "e0179e02444cdd41f90b16b85a29647ba16187580d64f9ff601c111a3ab119ae",
+      "artifacts": []
+    },
+    {
+      "id": "event-00004-stages-invalidated",
+      "occurred_at": "2026-08-05T03:04:04.127376Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00005-stage-started",
+      "occurred_at": "2026-08-05T03:04:04.127376Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 2.",
+      "stage": "analyze",
+      "fingerprint": "e0179e02444cdd41f90b16b85a29647ba16187580d64f9ff601c111a3ab119ae",
+      "artifacts": []
+    },
+    {
+      "id": "event-00006-stage-completed",
+      "occurred_at": "2026-08-05T03:04:04.255146Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "ac4d255bf4672a873b3d2c078f4bd1801bf012099ccca3528dcc82c67862b868",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00007-stage-started",
+      "occurred_at": "2026-08-05T03:04:20.332255Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "0f257b68eb6d81987eabc9914100e6e2650067d486b5dcceecb59c8a1c4d1424",
+      "artifacts": []
+    },
+    {
+      "id": "event-00008-stage-completed",
+      "occurred_at": "2026-08-05T03:04:20.398499Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 0 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "7bf17832e48f96db319bc9a439c29bb1f85458f4cd04c0102b25aa71bcace570",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00009-stages-invalidated",
+      "occurred_at": "2026-08-05T03:51:08.173208Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00010-stage-started",
+      "occurred_at": "2026-08-05T03:51:08.173208Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 3.",
+      "stage": "analyze",
+      "fingerprint": "97f935e80edb7a8dce2d23b2d96bff3483f50cd9b170cde020d84296f6132057",
+      "artifacts": []
+    },
+    {
+      "id": "event-00011-stage-completed",
+      "occurred_at": "2026-08-05T03:51:08.307781Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "1e1ddddad03d5e87a467bba62b90708e3ab5f0351141aed9d91d5ef3ae83c566",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00012-stage-started",
+      "occurred_at": "2026-08-05T03:51:09.006694Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "d339db73b344d5eb50653040c498491ea5162a00f3b9418572bb38ddbd6f4025",
+      "artifacts": []
+    },
+    {
+      "id": "event-00013-stage-completed",
+      "occurred_at": "2026-08-05T03:51:09.082573Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 0 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "586fbf20beb5e47a6f72ee331ad6a8d224a630fb846c83f7a219ab67523a0e39",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00014-stages-invalidated",
+      "occurred_at": "2026-08-06T20:35:10.473858Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00015-stage-started",
+      "occurred_at": "2026-08-06T20:35:10.473858Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 4.",
+      "stage": "analyze",
+      "fingerprint": "63e83526946a32163b40a733f5ce7eab3ab542a62e484dbbb960b22b530e8433",
+      "artifacts": []
+    },
+    {
+      "id": "event-00016-stage-completed",
+      "occurred_at": "2026-08-06T20:35:19.845983Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "eee5adf2ea089ae34a56ce3e13a61b7021d517cbda5a8420e454a679723dde92",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00017-stages-invalidated",
+      "occurred_at": "2026-08-06T21:12:48.672682Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00018-stage-started",
+      "occurred_at": "2026-08-06T21:12:48.672682Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 5.",
+      "stage": "analyze",
+      "fingerprint": "83ab8031cd9fbb9fd82cc12a9ceb65a3bd590da0aaba3880218f00cb2a524c32",
+      "artifacts": []
+    },
+    {
+      "id": "event-00019-stage-completed",
+      "occurred_at": "2026-08-06T21:12:59.183654Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "5b1e40e83c3cb954a4470bbbcd2c23cff6f9321a6a8f0e4d2bc18c5db4bf47e2",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00020-stages-invalidated",
+      "occurred_at": "2026-08-07T13:08:18.167492Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00021-stage-started",
+      "occurred_at": "2026-08-07T13:08:18.167492Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 6.",
+      "stage": "analyze",
+      "fingerprint": "cc2d91f21611ec252b10f7a402f91842fd5734bfe65db404bfa9e2911d921213",
+      "artifacts": []
+    },
+    {
+      "id": "event-00022-stage-completed",
+      "occurred_at": "2026-08-07T13:08:30.756772Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "0c6c1a631d291f6fe71f317b85593efa4b2f0483c7975d608e5f7aea1f2466e6",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00023-stages-invalidated",
+      "occurred_at": "2026-08-07T13:08:42.363127Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00024-stage-started",
+      "occurred_at": "2026-08-07T13:08:42.363127Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 7.",
+      "stage": "analyze",
+      "fingerprint": "2167ffa5d402a446ecb9e2123ef10c5a18a2460a90cf301129f8cb5139fc3351",
+      "artifacts": []
+    },
+    {
+      "id": "event-00025-stage-completed",
+      "occurred_at": "2026-08-07T13:08:49.284477Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "af16f53159d2aa58942365a9734666fef514d4cdd0009bded4336b654fd88474",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00026-stage-started",
+      "occurred_at": "2026-08-07T13:09:23.470043Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "1f677323c64a1914252fc491644ba1806f7e2f799ae98101bc1c8d4667b7453d",
+      "artifacts": []
+    },
+    {
+      "id": "event-00027-stage-completed",
+      "occurred_at": "2026-08-07T13:09:23.556200Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "aaa36f27e450db54456261a4e456f03339dbd7e1e3a2df396e06bf695cf22035",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00028-stages-invalidated",
+      "occurred_at": "2026-08-07T13:12:18.923965Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00029-stage-started",
+      "occurred_at": "2026-08-07T13:12:18.923965Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 8.",
+      "stage": "analyze",
+      "fingerprint": "5e852d1314e7856d38b3009c241fe841451502436b48e22be5205aea28dfc3fe",
+      "artifacts": []
+    },
+    {
+      "id": "event-00030-stage-completed",
+      "occurred_at": "2026-08-07T13:12:26.035169Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "cac15c1c56b021204deaec92d9ed8487667a535efdb96051635ac7ea09a1e804",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00031-stage-started",
+      "occurred_at": "2026-08-07T13:12:26.063315Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "8e29bd6f9a2d20ad388587d6a7b1edfe5d9291cee94f9dd6ae1314b2e8635d66",
+      "artifacts": []
+    },
+    {
+      "id": "event-00032-stage-completed",
+      "occurred_at": "2026-08-07T13:12:26.144475Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "6015e4115fa5ebfba0ee3e80184df778d586033a3490b15492a197d4af1cef3d",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00033-stages-invalidated",
+      "occurred_at": "2026-08-07T13:14:51.259092Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00034-stage-started",
+      "occurred_at": "2026-08-07T13:14:51.259092Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 9.",
+      "stage": "analyze",
+      "fingerprint": "d66d651940f20b73b66f4439df72ca8b546f74014668c21c3b76d8231ed17bea",
+      "artifacts": []
+    },
+    {
+      "id": "event-00035-stage-completed",
+      "occurred_at": "2026-08-07T13:14:58.083651Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "e033b36d7b4711d9c51adf9a8f5730b4205c6b279bc23c6dd3fc46ea47ffc6a4",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00036-stage-started",
+      "occurred_at": "2026-08-07T13:14:58.112068Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "35475955d3dd0594c741efe5f6831f25c68e3f478f6bbebae7f599319c776b5d",
+      "artifacts": []
+    },
+    {
+      "id": "event-00037-stage-completed",
+      "occurred_at": "2026-08-07T13:14:58.191028Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "6f508b9135c13fb4515abc6ed62f30eaedda78d1c071de48096475ec2094e72d",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00038-stages-invalidated",
+      "occurred_at": "2026-08-07T13:35:39.786190Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00039-stage-started",
+      "occurred_at": "2026-08-07T13:35:39.786190Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 10.",
+      "stage": "analyze",
+      "fingerprint": "53289a3bc2b5f971ca5f3920439134dd789f427a2796d4209f9fa10b733e342b",
+      "artifacts": []
+    },
+    {
+      "id": "event-00040-stage-completed",
+      "occurred_at": "2026-08-07T13:35:49.575946Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "4f6f79aaa10366d3610d1953371f42b64ece43f9584d79c2f5a47c028881e497",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00041-stage-started",
+      "occurred_at": "2026-08-07T13:35:49.606406Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "32c35c1d4edab131ebf527603126ea4a3b8ac2f3b21566b5d391c0011837eec0",
+      "artifacts": []
+    },
+    {
+      "id": "event-00042-stage-completed",
+      "occurred_at": "2026-08-07T13:35:49.692679Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "a80dd2f0f36464a515229bb138f39e7cc11383fc764e3c8239360629e3a91b89",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00043-stages-invalidated",
+      "occurred_at": "2026-08-07T14:13:46.394132Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from plan: plan.",
+      "stage": "plan",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00044-stage-started",
+      "occurred_at": "2026-08-07T14:13:46.394132Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 2.",
+      "stage": "plan",
+      "fingerprint": "ab136df59864b52b2ed846c6bbd85781f2101fb2e7397cd198a84c584cdee141",
+      "artifacts": []
+    },
+    {
+      "id": "event-00045-stage-completed",
+      "occurred_at": "2026-08-07T14:13:46.488033Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "7ea52c6863c1e00efe929973f2222fba7288bd9f24d1c2c8a85acfcdcb597a75",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00046-stages-invalidated",
+      "occurred_at": "2026-08-07T14:50:51.886993Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00047-stage-started",
+      "occurred_at": "2026-08-07T14:50:51.886993Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 11.",
+      "stage": "analyze",
+      "fingerprint": "5a6cfb0b27a1a57b2261ff625d19a5eee870a18af7b05615cbe39486286a7159",
+      "artifacts": []
+    },
+    {
+      "id": "event-00048-stage-completed",
+      "occurred_at": "2026-08-07T14:51:03.573899Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "8000c508b93f4989ac3304f05cc281e1a80ac0a4422f9087b6cfc1ddaa1193e4",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00049-stage-started",
+      "occurred_at": "2026-08-07T14:51:03.604511Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "524495e5b94204f84b449cde59546ea8bdd60db8221006894878d17c78dea030",
+      "artifacts": []
+    },
+    {
+      "id": "event-00050-stage-completed",
+      "occurred_at": "2026-08-07T14:51:03.693109Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "e8dbc1ad059a7de7b38294238ac7e640cad282444f3da87ea4fadaf33a9ed746",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00051-stages-invalidated",
+      "occurred_at": "2026-08-07T15:26:35.419905Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from plan: plan.",
+      "stage": "plan",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00052-stage-started",
+      "occurred_at": "2026-08-07T15:26:35.419905Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 2.",
+      "stage": "plan",
+      "fingerprint": "80d64df4d5ae0d152d65d1d8780240a7831a447e8aec11f521ae0a38d904303a",
+      "artifacts": []
+    },
+    {
+      "id": "event-00053-stage-completed",
+      "occurred_at": "2026-08-07T15:26:35.517612Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "372adf5aebe0067fdc04fe94e0b5a9a5918ba1d1e0e2c4b8d1b2318a159f2cdc",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00054-stages-invalidated",
+      "occurred_at": "2026-08-07T15:59:33.184231Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00055-stage-started",
+      "occurred_at": "2026-08-07T15:59:33.184231Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 12.",
+      "stage": "analyze",
+      "fingerprint": "114acf3dfa3a15d515af53a10d2026aa80d584ee0c9cbde7159161adb51fbea0",
+      "artifacts": []
+    },
+    {
+      "id": "event-00056-stage-completed",
+      "occurred_at": "2026-08-07T15:59:42.951957Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "995b1a04c3e0e99bc1ef77fb0cb5d7f7e65fa32c1c128e492b5a8e8948b15697",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00057-stage-started",
+      "occurred_at": "2026-08-07T15:59:42.983887Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "ff64ca2a0009bdc1c27de6dd21ed0475c551162e939e9fe2b4185d035556bbe4",
+      "artifacts": []
+    },
+    {
+      "id": "event-00058-stage-completed",
+      "occurred_at": "2026-08-07T15:59:43.069821Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "bc81cf3397ef0734f71480c92e37dce468defb1142994b494e37fc4369ccbcab",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00059-stages-invalidated",
+      "occurred_at": "2026-08-07T16:28:11.143176Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00060-stage-started",
+      "occurred_at": "2026-08-07T16:28:11.143176Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 13.",
+      "stage": "analyze",
+      "fingerprint": "b2e5ea513287b909fc958d7789526cb8ec662de850b2b741d1d1ee87c622a85d",
+      "artifacts": []
+    },
+    {
+      "id": "event-00061-stage-completed",
+      "occurred_at": "2026-08-07T16:28:20.938558Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "a151b8c3c294aca2ddc21f9c22e18868b80f1267d0ad059c8c6b1b87fd5e4ca8",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00062-stage-started",
+      "occurred_at": "2026-08-07T16:28:20.965687Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "4824980edaac02f76d6826a077618a20c9140ae87ebe2cc77ea6642b06353e28",
+      "artifacts": []
+    },
+    {
+      "id": "event-00063-stage-completed",
+      "occurred_at": "2026-08-07T16:28:21.080235Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "7725c89a23ced105c5c4ec769664d88a9bf8dddbc3ca69df6286a55ad1748c59",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00064-stages-invalidated",
+      "occurred_at": "2026-08-07T16:30:00.426021Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00065-stage-started",
+      "occurred_at": "2026-08-07T16:30:00.426021Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 14.",
+      "stage": "analyze",
+      "fingerprint": "9e2d9bc23a9dbc9a40d9c9e62bec96c13e6c9f4effb2b35c66b0779cc326fde4",
+      "artifacts": []
+    },
+    {
+      "id": "event-00066-stage-completed",
+      "occurred_at": "2026-08-07T16:30:08.260176Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "3eb9006ec434b3a147652c2aa285a14aa6a7c221e7ebd93eb0f312a290df2004",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00067-stage-started",
+      "occurred_at": "2026-08-07T16:30:08.289847Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "7aab56cde07d9c5af3951a6cd5bbea142341179152adc5e401f9e6faa7c055c1",
+      "artifacts": []
+    },
+    {
+      "id": "event-00068-stage-completed",
+      "occurred_at": "2026-08-07T16:30:08.378239Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "3ad20a81cf714d027f98c0af3031bac643f8f031829ff490d390ac0c437e5b83",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00069-stages-invalidated",
+      "occurred_at": "2026-08-07T17:03:32.025712Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00070-stage-started",
+      "occurred_at": "2026-08-07T17:03:32.025712Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 15.",
+      "stage": "analyze",
+      "fingerprint": "2e05de124aa37a75387dabc92d17fa216845883e99da6323c284a6486c317827",
+      "artifacts": []
+    },
+    {
+      "id": "event-00071-stage-completed",
+      "occurred_at": "2026-08-07T17:03:41.755550Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "4ab1994eb0eb8e52dc3e2d673ac28eb468c2d00477350cc0cf48c5fa36d1d047",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00072-stage-started",
+      "occurred_at": "2026-08-07T17:03:41.785626Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "2db9301d0ccdcf6144bd6402bc2868be51b6538e7ffdb1aa8d2d844f6034872c",
+      "artifacts": []
+    },
+    {
+      "id": "event-00073-stage-completed",
+      "occurred_at": "2026-08-07T17:03:41.909717Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "c0e3d4ebc0ca3f93390672b65df94ad1d2e6d2d38493dbc1847f1f4d2c336d19",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00074-stages-invalidated",
+      "occurred_at": "2026-08-08T04:04:16.462618Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from plan: plan.",
+      "stage": "plan",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00075-stage-started",
+      "occurred_at": "2026-08-08T04:04:16.462618Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 2.",
+      "stage": "plan",
+      "fingerprint": "b5dbeab8e95d4cf81eb9a89b6463efb3eab6fd95276d4c2b8fa6567dcfe92d94",
+      "artifacts": []
+    },
+    {
+      "id": "event-00076-stage-completed",
+      "occurred_at": "2026-08-08T04:04:16.580480Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "a8c0b96f266f4a8c208baafdc9b14fff3a73dc3f3d6f79d637679a2c25ffec51",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00077-stages-invalidated",
+      "occurred_at": "2026-08-08T05:12:27.364038Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00078-stage-started",
+      "occurred_at": "2026-08-08T05:12:27.364038Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 16.",
+      "stage": "analyze",
+      "fingerprint": "0e8ea08c47ff033d5fdbb42d46137aada9e72e9ba8faf7aea82a18ea1f122ba3",
+      "artifacts": []
+    },
+    {
+      "id": "event-00079-stage-completed",
+      "occurred_at": "2026-08-08T05:12:37.039511Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "b8e800e315fa068afb03d42e6eb20e85ecf4c73f0d92e11c3c38af1c15c126e7",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00080-stage-started",
+      "occurred_at": "2026-08-08T05:12:37.068730Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "cb808c26c0a7484f2b415cc30d83e7ec1734f7f8d9bfc9c4b8809572b8533eef",
+      "artifacts": []
+    },
+    {
+      "id": "event-00081-stage-completed",
+      "occurred_at": "2026-08-08T05:12:37.134509Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "3c8a0355203fdae388c8da6355367a24e1538fa701848537bc946d95b2d707f5",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00082-stages-invalidated",
+      "occurred_at": "2026-08-08T05:46:24.031372Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00083-stage-started",
+      "occurred_at": "2026-08-08T05:46:24.031372Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 17.",
+      "stage": "analyze",
+      "fingerprint": "e5c8ad9d6eb4aef09d55e00b0b015466067c13d5432ff7b49d98ebee06d659a6",
+      "artifacts": []
+    },
+    {
+      "id": "event-00084-stage-completed",
+      "occurred_at": "2026-08-08T05:46:33.599180Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "9de2fbe159754f930887fb270a1a58278af06b67f44cf817a313f6c33ed5195e",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00085-stages-invalidated",
+      "occurred_at": "2026-08-08T05:47:42.631148Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00086-stage-started",
+      "occurred_at": "2026-08-08T05:47:42.631148Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 18.",
+      "stage": "analyze",
+      "fingerprint": "9496a14ac14726388447699b9b3c7faece9b72f6a614465662f17fbcc7ac1dde",
+      "artifacts": []
+    },
+    {
+      "id": "event-00087-stage-completed",
+      "occurred_at": "2026-08-08T05:47:49.662789Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "ad6bd27f717c436ac35be0d02555812e26e10f3fa2f8b23a93ff74d624a387f5",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00088-stages-invalidated",
+      "occurred_at": "2026-08-08T05:48:06.323233Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00089-stage-started",
+      "occurred_at": "2026-08-08T05:48:06.323233Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 19.",
+      "stage": "analyze",
+      "fingerprint": "49f9e3a561710e127ceb773e8de5bc86b436f6c60d2697b59555b8857640e8fa",
+      "artifacts": []
+    },
+    {
+      "id": "event-00090-stage-completed",
+      "occurred_at": "2026-08-08T05:48:13.286070Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "f63e4e973a18fa8a2ca75a10c03966233b6b08bf783bfab96d5584e85cca5b3c",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00091-stage-started",
+      "occurred_at": "2026-08-08T05:48:13.316188Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "d7b8f6bd50a30ef697dee7375ce0d106a4400bf560f6fa44b656035ec519d670",
+      "artifacts": []
+    },
+    {
+      "id": "event-00092-stage-completed",
+      "occurred_at": "2026-08-08T05:48:13.407031Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "7cd747ae19dd358548e7e5cf12dfb8ebd01fd0e15652ea6aefc3681fba642a59",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00093-stages-invalidated",
+      "occurred_at": "2026-08-08T06:18:55.006050Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00094-stage-started",
+      "occurred_at": "2026-08-08T06:18:55.006050Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 20.",
+      "stage": "analyze",
+      "fingerprint": "eba88ef30d6a30c09dd5b90c563187e2ea72a2467e6123c994521799610d427c",
+      "artifacts": []
+    },
+    {
+      "id": "event-00095-stage-completed",
+      "occurred_at": "2026-08-08T06:19:04.876094Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "aff6e26ef0c85676ee498fdf7dd37c5f0572aa0a5efcf52dbda599801f9d20c4",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00096-stage-started",
+      "occurred_at": "2026-08-08T06:19:04.905969Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "aa32b6cc9c25be4caccb9227687e9d07dd40a20c9c60d0a7335f1899708aa394",
+      "artifacts": []
+    },
+    {
+      "id": "event-00097-stage-completed",
+      "occurred_at": "2026-08-08T06:19:05.005796Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "7102951b1375ccf5bbad02b23e4b7f99d8d5c64737c6fb8d3dc31d4a94e86e72",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00098-stages-invalidated",
+      "occurred_at": "2026-08-08T06:48:41.574371Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00099-stage-started",
+      "occurred_at": "2026-08-08T06:48:41.574371Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 21.",
+      "stage": "analyze",
+      "fingerprint": "d58753c1ac94655b6e337141bf13137082889275d6a09b6c80e80710681dd6b0",
+      "artifacts": []
+    },
+    {
+      "id": "event-00100-stage-completed",
+      "occurred_at": "2026-08-08T06:48:51.266495Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "7dfdb25ee499e2881472d39b73245fd05e82bebb27cd13ad46063369f76f0de0",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00101-stage-started",
+      "occurred_at": "2026-08-08T06:48:51.294579Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "d05c72bc8a5c8a00115114b31ce5f60a37ec39ba2213e5c9b53b417672ca0faf",
+      "artifacts": []
+    },
+    {
+      "id": "event-00102-stage-completed",
+      "occurred_at": "2026-08-08T06:48:51.390106Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "c71e64b57881f091310795d3d9a85ab532ef55adc62184307072d366df44c695",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00103-stages-invalidated",
+      "occurred_at": "2026-08-08T06:50:05.642395Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00104-stage-started",
+      "occurred_at": "2026-08-08T06:50:05.642395Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 22.",
+      "stage": "analyze",
+      "fingerprint": "364e3e81f88c6e9a090496155547448db3f768a70fa363c435d3df46c85ed6c6",
+      "artifacts": []
+    },
+    {
+      "id": "event-00105-stage-completed",
+      "occurred_at": "2026-08-08T06:50:12.594184Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "904ae375e04dc66aba4b4dc7cbeb46868741fd7516e5daa5a9d2fec72be52798",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00106-stages-invalidated",
+      "occurred_at": "2026-08-08T06:50:25.820602Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00107-stage-started",
+      "occurred_at": "2026-08-08T06:50:25.820602Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 23.",
+      "stage": "analyze",
+      "fingerprint": "963ab0ce129ddc2784ed5766430b5a4e5ddedbdbca2ae4daeb02bbe4463ccbc7",
+      "artifacts": []
+    },
+    {
+      "id": "event-00108-stage-completed",
+      "occurred_at": "2026-08-08T06:50:33.051093Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "47586e56525d5e022b7a73c3a97ce46544f917a019987c6c0afae532e02e797f",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00109-stage-started",
+      "occurred_at": "2026-08-08T06:50:33.093084Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "75e6f06af59250fd4c7f014d5cad4a2c9a7dbaa4e21fae96f668e4821d868b8c",
+      "artifacts": []
+    },
+    {
+      "id": "event-00110-stage-completed",
+      "occurred_at": "2026-08-08T06:50:33.192700Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "63d2a637b7a217f1a528a8e5d0d60b9de561baf3b54370a6f8464530c4feed0e",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00111-stages-invalidated",
+      "occurred_at": "2026-08-08T07:21:07.099444Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00112-stage-started",
+      "occurred_at": "2026-08-08T07:21:07.099444Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 24.",
+      "stage": "analyze",
+      "fingerprint": "658e63513ff9b5a0c80f19f865e5f04ce14ef182e55ac7d7fd730a19daec8206",
+      "artifacts": []
+    },
+    {
+      "id": "event-00113-stage-completed",
+      "occurred_at": "2026-08-08T07:21:18.861644Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "64f9d714296623fe1376e7c834c768add067e9ce0f0d3f74967d787f32a73e5c",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00114-stage-started",
+      "occurred_at": "2026-08-08T07:21:18.890407Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "16d3d5a617e8a2d95ab5747a132e46eba6eb2c3d574bc4bfb95a76b371ed639c",
+      "artifacts": []
+    },
+    {
+      "id": "event-00115-stage-completed",
+      "occurred_at": "2026-08-08T07:21:18.993431Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "6ce151c08cd9251cbeb48d70d26cf1b18753aef3ada48afab3c56b3095eee09e",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00116-stages-invalidated",
+      "occurred_at": "2026-08-08T07:22:35.700369Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from plan: plan.",
+      "stage": "plan",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00117-stage-started",
+      "occurred_at": "2026-08-08T07:22:35.700369Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 2.",
+      "stage": "plan",
+      "fingerprint": "98f8448da214b7c889d42d6ffce1b543ec122307bb060608126be7622bc594c8",
+      "artifacts": []
+    },
+    {
+      "id": "event-00118-stage-completed",
+      "occurred_at": "2026-08-08T07:22:35.784867Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "28064fbce719b5c810438d1384c59d6b55df9ed8cd5ecb33253d0e1ed143030f",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00119-stages-invalidated",
+      "occurred_at": "2026-08-08T07:58:07.165112Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00120-stage-started",
+      "occurred_at": "2026-08-08T07:58:07.165112Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 25.",
+      "stage": "analyze",
+      "fingerprint": "c663c0757b1891c7a854a25b398f461f212dc97b10263cc67a587ff19583ab21",
+      "artifacts": []
+    },
+    {
+      "id": "event-00121-stage-completed",
+      "occurred_at": "2026-08-08T07:58:16.925629Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "e3d5eae8407c98d8fd348897aa3c363bdb7540f09da193952ac25a3380e21089",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00122-stage-started",
+      "occurred_at": "2026-08-08T07:58:16.953752Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "9e20ec02f21142b1750cfa875c3fff77c6cdaffe7561c3ef8b52fa068f1a1aa3",
+      "artifacts": []
+    },
+    {
+      "id": "event-00123-stage-completed",
+      "occurred_at": "2026-08-08T07:58:17.053147Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "6cddc9471c7bcf0debaa610ff118f50a211c01b5223a8020802bff6850858fa4",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00124-stages-invalidated",
+      "occurred_at": "2026-08-08T08:31:02.469785Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00125-stage-started",
+      "occurred_at": "2026-08-08T08:31:02.469785Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 26.",
+      "stage": "analyze",
+      "fingerprint": "d67674ac355a3bcfedde25d65d5a523dff79c85eea229e72a7232d301c74ca5d",
+      "artifacts": []
+    },
+    {
+      "id": "event-00126-stage-completed",
+      "occurred_at": "2026-08-08T08:31:12.168477Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "0da96d43a5566b6a9a93f189456b7e5b4c7a0d08399e8934992323a83b8a178f",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00127-stages-invalidated",
+      "occurred_at": "2026-08-08T08:31:51.135573Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00128-stage-started",
+      "occurred_at": "2026-08-08T08:31:51.135573Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 27.",
+      "stage": "analyze",
+      "fingerprint": "6c478e365d2f62d32eb93ec9d3416eeacdf3164e60cee40812ad3c2497b1d4b0",
+      "artifacts": []
+    },
+    {
+      "id": "event-00129-stage-completed",
+      "occurred_at": "2026-08-08T08:31:58.141610Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "b1aa45471cde2b8cbc910468288abeb10dc0a7dfff2f948dc2817d285544b2b3",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00130-stages-invalidated",
+      "occurred_at": "2026-08-08T08:33:16.212685Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00131-stage-started",
+      "occurred_at": "2026-08-08T08:33:16.212685Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 28.",
+      "stage": "analyze",
+      "fingerprint": "4b20f6370bf687d84559d5c78f2f3c13e2de1637b8faea7e215271e1a39de2e0",
+      "artifacts": []
+    },
+    {
+      "id": "event-00132-stage-completed",
+      "occurred_at": "2026-08-08T08:33:23.197996Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "7859ac06d341a1ba11c794f91d7a0474bd4dd0d01560b6e81f6169c04d62f438",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00133-stages-invalidated",
+      "occurred_at": "2026-08-08T08:33:35.437129Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00134-stage-started",
+      "occurred_at": "2026-08-08T08:33:35.437129Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 29.",
+      "stage": "analyze",
+      "fingerprint": "cf742d26cdeeb5c4efc327475b350213477ba9e7d4be3d83a52f62d1b93eb603",
+      "artifacts": []
+    },
+    {
+      "id": "event-00135-stage-completed",
+      "occurred_at": "2026-08-08T08:33:42.464722Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "3550f5514cc40de986b3ed02dcb5440bd63cbdc6c334bb16ce1f9e5b15eeefea",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00136-stage-started",
+      "occurred_at": "2026-08-08T08:33:42.510981Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "977a5043bb458005dccfc6a4da46f55cb496379d4b6583b71206c70127ecddc7",
+      "artifacts": []
+    },
+    {
+      "id": "event-00137-stage-completed",
+      "occurred_at": "2026-08-08T08:33:42.609696Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "d2c8128018cc01a395d6a10a9a6024cc64fda1e6e44dfa2e92f48baf2c38f188",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00138-stages-invalidated",
+      "occurred_at": "2026-08-08T09:10:33.917321Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00139-stage-started",
+      "occurred_at": "2026-08-08T09:10:33.917321Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 30.",
+      "stage": "analyze",
+      "fingerprint": "bd70767dd1f30c536bd5feac0d6ce55ec412fd9f82c1c3e2e08ef293fc31f880",
+      "artifacts": []
+    },
+    {
+      "id": "event-00140-stage-completed",
+      "occurred_at": "2026-08-08T09:10:40.896809Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "50e77fadc076696f289c67b24dd6416e6aed942bd1041c024dbb093fe6e4163f",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00141-stage-started",
+      "occurred_at": "2026-08-08T09:10:40.925903Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "d3087da2a97dc8e393b9e677d3d53a704136a836ae5fc1ab4c5b350619300cde",
+      "artifacts": []
+    },
+    {
+      "id": "event-00142-stage-completed",
+      "occurred_at": "2026-08-08T09:10:40.997503Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "1f82cf4abf93535948df23cb8fdb82a93cc198c0115359b118722255579b8bcb",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00143-stages-invalidated",
+      "occurred_at": "2026-08-08T09:44:26.226897Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00144-stage-started",
+      "occurred_at": "2026-08-08T09:44:26.226897Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 31.",
+      "stage": "analyze",
+      "fingerprint": "b1f64eff07c430a2bd8451d5974400bce67f82aff9c795590c84d4f6646a674b",
+      "artifacts": []
+    },
+    {
+      "id": "event-00145-stage-completed",
+      "occurred_at": "2026-08-08T09:44:33.250062Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "d14b90770102f4f21600d166da6b986de1699c4e1adbebf55e02e3504cdd5a06",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00146-stage-started",
+      "occurred_at": "2026-08-08T09:44:33.285084Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "b31a122358aa05a8674d03a5f6a8b2d919f8e5f753de768ea17f1f51c52a1d4e",
+      "artifacts": []
+    },
+    {
+      "id": "event-00147-stage-completed",
+      "occurred_at": "2026-08-08T09:44:33.387017Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "1ba9a251fa65096a3c2b46d44c08b6cd9cc8108f13ac9902cbc2c5214ceff987",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00148-stages-invalidated",
+      "occurred_at": "2026-08-08T10:21:08.810342Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00149-stage-started",
+      "occurred_at": "2026-08-08T10:21:08.810342Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 32.",
+      "stage": "analyze",
+      "fingerprint": "ad95d2162a89228bd70969446001650319108f184692abbb543c6bacfaf00ab8",
+      "artifacts": []
+    },
+    {
+      "id": "event-00150-stage-completed",
+      "occurred_at": "2026-08-08T10:21:15.904722Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "2a96561d016740aac96c654da19813a77ed222d99bfa66699e26ce337d2683ee",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00151-stage-started",
+      "occurred_at": "2026-08-08T10:21:15.934759Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "8a76e51279351636487d23d1fba153edd27b2c0a9233074fa1fa5080caf3a6e6",
+      "artifacts": []
+    },
+    {
+      "id": "event-00152-stage-completed",
+      "occurred_at": "2026-08-08T10:21:16.034896Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "e0e4a04173ffa19ac84df81dde906065ad08657be42eaef5e78680a1007ccaf5",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00153-stages-invalidated",
+      "occurred_at": "2026-08-08T10:57:09.622539Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00154-stage-started",
+      "occurred_at": "2026-08-08T10:57:09.622539Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 33.",
+      "stage": "analyze",
+      "fingerprint": "bcf24f110b0f1c5eab191339f8506044f371b77891d788459eb4c2e53532a947",
+      "artifacts": []
+    },
+    {
+      "id": "event-00155-stage-completed",
+      "occurred_at": "2026-08-08T10:57:19.330105Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "72e52384822cf53948138af5ea4c8fe62dadc23c402f27607272343aee7100c0",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00156-stage-started",
+      "occurred_at": "2026-08-08T10:57:19.359321Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "72fd68f9ebf491272063258d7726869f6a7e019a30f38fafbb7724822d3d8daf",
+      "artifacts": []
+    },
+    {
+      "id": "event-00157-stage-completed",
+      "occurred_at": "2026-08-08T10:57:19.487778Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "b761348b9d34c3b0fe4c31ab7f508c83d7a7c48e27536ecd8074d94a8254f26f",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00158-stages-invalidated",
+      "occurred_at": "2026-08-08T11:31:12.845446Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00159-stage-started",
+      "occurred_at": "2026-08-08T11:31:12.845446Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 34.",
+      "stage": "analyze",
+      "fingerprint": "cb7955723a507ab85a447d90fe401cce4a92fc4f2c382bf4bb7f5cd5a407f2f8",
+      "artifacts": []
+    },
+    {
+      "id": "event-00160-stage-completed",
+      "occurred_at": "2026-08-08T11:31:22.632959Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "f180cc15a03c4415512bfbd50427555421eacd5510943610d4d5e402147fc466",
+      "artifacts": [
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00161-stage-started",
+      "occurred_at": "2026-08-08T11:31:22.665505Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "05d4327578feed7779e5a188648850a3df2cb5289d561d221da0c749a0cb57d2",
+      "artifacts": []
+    },
+    {
+      "id": "event-00162-stage-completed",
+      "occurred_at": "2026-08-08T11:31:22.747530Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 3 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "01dd914dbeb301ca49e705192c7adaaa9966c59f2332169ffbbdba891ca25739",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00163-stages-invalidated",
+      "occurred_at": "2026-08-09T14:22:27.093698Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from analyze: analyze, plan.",
+      "stage": "analyze",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00164-stage-started",
+      "occurred_at": "2026-08-09T14:22:27.093698Z",
+      "kind": "stage_started",
+      "message": "Started analyze attempt 35.",
+      "stage": "analyze",
+      "fingerprint": "22029632cb6471ff0bdb59bd34ce6b983da58e3f2d24e941bfdaae8a12fb69d4",
+      "artifacts": []
+    },
+    {
+      "id": "event-00165-stage-completed",
+      "occurred_at": "2026-08-09T14:22:40.919514Z",
+      "kind": "stage_completed",
+      "message": "Analyzed 1 source(s) into 1 page(s) and 4 section(s).",
+      "stage": "analyze",
+      "fingerprint": "68df8a3c9e4403c0e24350bbf478dcd0a6b4e6f29626cdb6214f8a37f0154c78",
+      "artifacts": [
+        "sources/live-html-1/assets/e6b55211e22e3ded.png",
+        "sources/live-html-1/assets/dfc0c7e392cb82b4.png",
+        "sources/live-html-1/assets/639b2ea4eec0855c.jpg",
+        "sources/live-html-1/assets/5a904dc8c9eb35fc.GIF",
+        "sources/live-html-1/asset-manifest.json",
+        "analysis/sources/live-html-1.design-document.json",
+        "analysis/design-document.json",
+        "analysis/source-index.json",
+        "analysis/analysis-report.json"
+      ]
+    },
+    {
+      "id": "event-00166-stage-started",
+      "occurred_at": "2026-08-09T14:22:53.475232Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 1.",
+      "stage": "plan",
+      "fingerprint": "3ab6cdadc6628b9f933b6d3925012c72c84787a475fbe4a066e3c4836e038a67",
+      "artifacts": []
+    },
+    {
+      "id": "event-00167-stage-completed",
+      "occurred_at": "2026-08-09T14:22:53.585077Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "6ce3c7f52db1a9ad9cb6ac2150ebbb267641db694263d3eeb94448f5ac132b76",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00168-stages-invalidated",
+      "occurred_at": "2026-08-09T14:24:46.320573Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from plan: plan.",
+      "stage": "plan",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00169-stage-started",
+      "occurred_at": "2026-08-09T14:24:46.320573Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 2.",
+      "stage": "plan",
+      "fingerprint": "77535880d356742d638bd615247dcf6a054ce3c24656d3b6eacf28c98d64ddd2",
+      "artifacts": []
+    },
+    {
+      "id": "event-00170-stage-completed",
+      "occurred_at": "2026-08-09T14:24:46.400084Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 2 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "12367118a6c35e3fd07c4024cd56ca9144026e7acc4a0237e701d1a9776d2db4",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    },
+    {
+      "id": "event-00171-stages-invalidated",
+      "occurred_at": "2026-08-09T14:26:21.686732Z",
+      "kind": "stages_invalidated",
+      "message": "Invalidated stage state from plan: plan.",
+      "stage": "plan",
+      "fingerprint": null,
+      "artifacts": []
+    },
+    {
+      "id": "event-00172-stage-started",
+      "occurred_at": "2026-08-09T14:26:21.686732Z",
+      "kind": "stage_started",
+      "message": "Started plan attempt 3.",
+      "stage": "plan",
+      "fingerprint": "a483f12d6dd6962e930b4ccb485ffb26f5ff2262939610f12a42aa4d74370191",
+      "artifacts": []
+    },
+    {
+      "id": "event-00173-stage-completed",
+      "occurred_at": "2026-08-09T14:26:21.789027Z",
+      "kind": "stage_completed",
+      "message": "Planned 4 section(s), including 1 global section(s); 1 approval-blocking validation issue(s).",
+      "stage": "plan",
+      "fingerprint": "137a6f1f9b91457f46dd5ec98524e6d795b78ec9be8835f69e0d4762d176c622",
+      "artifacts": [
+        "plans/composition-plan.json",
+        "plans/library-plan.json",
+        "plans/global-block-plan.json",
+        "plans/resolved-design-document.json",
+        "plans/validation.json",
+        "plans/planning-request.json"
+      ]
+    }
+  ],
+  "metadata": {}
+}
