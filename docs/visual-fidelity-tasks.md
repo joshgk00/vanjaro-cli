@@ -1326,3 +1326,58 @@ two sides disagree, turning a cancelling error into a scoring one. Both now take
 the most prominent heading and require a labelled action;
 `effectiveBackground` and `elementGap` were already identical. A parity test
 holds them against each other on all four shared rules.
+
+### VF-227 — decided: keep exact role naming; fix the two templates instead
+
+**Decision (delegated by Josh, iteration 59):** do **not** re-weight coverage
+against role naming.
+
+The corpus is twenty-five annotated sections and says the current balance
+predicts well (top-1 0.92). One page's eight losses is weaker evidence than
+that, and re-weighting would change every match on every site to close a gap
+that exists in two templates. `blog-post-cards-3up`, `blog-post-cards-4up`,
+`class-photo-cards-4up`, `gallery-3up`, `gallery-6up` and
+`team-member-grid-4up` all declare `section_title`; `feature-cards-3up` and
+`-4up` are the only card templates that do not. **The gap is in those two
+templates, not in the policy.**
+
+**Remaining work:** add `section_title` to both, which closes all eight
+`kts-fidelity` losses without touching matching behaviour anywhere.
+
+### VF-225 — decided: widen `Content/bio-about` to three body slots
+
+**Decision (delegated by Josh, iteration 59):** widen rather than add a new
+template. An about section with several paragraphs is the normal shape, that
+template is the one for it, and `Content/rich-text` already establishes
+multi-body as an accepted pattern at four slots. Adding slots is additive:
+already-built blocks are copies and are unaffected, and unbound slots are
+cleared at build time.
+
+**Remaining work:** the change itself is two extra text components and a
+`slots_per_owner` of 3. It closes `edca-pilot`'s last blocking section.
+
+### VF-234 — Both template changes need one governed pack release
+
+**Dependencies:** VF-227 and VF-225 decisions, both now made
+
+Both are edits to the audited agency library, and the governance tests reject a
+capability change at an unchanged pack version — correctly. Making them means
+one deliberate release: bump `_TEMPLATE_VERSION` and `_PACK_VERSION` to 1.6.0,
+re-audit the changed executable digests, generate `templates/1.6.0.json` and
+`packs/1.6.0.json`, record their digests as the current release, and move the
+1.5.0 digests into immutable history.
+
+I attempted the `bio-about` edit inside iteration 59 and reverted it: the
+governance tests caught it immediately, and a hand-maintained digest ledger that
+every consumer depends on is not something to update at the end of a long
+working session. The decisions are made and recorded; the release is a clean
+piece of work of its own.
+
+**Acceptance criteria**
+
+- `feature-cards-3up` and `-4up` declare `section_title`; `bio-about` owns three
+  body slots.
+- Pack version bumped once for both, digests re-audited, 1.5.0 history immutable.
+- `kts-fidelity` content losses fall from 8 toward 0; `edca-pilot`'s biography
+  section stops blocking.
+- No change to the ten corpus metrics, and all three real sites reported.
