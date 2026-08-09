@@ -541,7 +541,9 @@ def test_optional_slots_are_cleared_and_no_template_placeholder_leaks_to_library
     assert "feature three" not in serialized
     assert "lorem ipsum" not in serialized
     assert "placehold.co" not in serialized
-    assert emit_library_plan(plan)[0]["overrides"]["heading_3"] == ""
+    # Two cards in a three-up. Pack 1.6.0 put the section title in heading_1,
+    # so the unused card's title is the fourth heading slot.
+    assert emit_library_plan(plan)[0]["overrides"]["heading_4"] == ""
 
 
 def test_manual_template_override_has_author_reason_and_prior_candidate_audit():

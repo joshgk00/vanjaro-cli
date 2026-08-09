@@ -30,6 +30,7 @@
       "expandable": true
     },
     "fields": {
+      "section_title": "optional",
       "item.title": "required",
       "item.body": "optional",
       "item.media": "optional"
@@ -38,14 +39,22 @@
       "item.icon"
     ],
     "physical_fields": {
+      "section_title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
       "item.title": {
         "owner": "repeat_item",
         "slot_type": "heading",
         "slots": [
-          "heading_1",
           "heading_2",
           "heading_3",
-          "heading_4"
+          "heading_4",
+          "heading_5"
         ],
         "slots_per_owner": 1
       },
@@ -106,6 +115,28 @@
       "id": "tpl-fc4-s1"
     },
     "components": [
+      {
+        "type": "heading",
+        "tagName": "h2",
+        "content": "Section heading",
+        "classes": [
+          {
+            "name": "vj-heading",
+            "active": false
+          },
+          {
+            "name": "text-center",
+            "active": false
+          },
+          {
+            "name": "mb-4",
+            "active": false
+          }
+        ],
+        "attributes": {
+          "id": "tpl-fc4-h0"
+        }
+      },
       {
         "type": "grid",
         "classes": [

@@ -39,8 +39,11 @@ def test_blocks_plan_writes_v2_and_backward_compatible_library_plan(runner, tmp_
     assert json.loads(plan_path.read_text(encoding="utf-8"))["schema_version"] == "2.0"
     library = json.loads(library_path.read_text(encoding="utf-8"))
     assert library[0]["template"] == "Feature Cards (3-up)"
-    assert library[0]["overrides"]["heading_1"] == "Service 1"
-    assert library[0]["overrides"]["heading_3"] == ""
+    # Pack 1.6.0 gave the card templates a section title, so heading_1 is the
+    # section's own heading and the card titles follow it.
+    assert library[0]["overrides"]["heading_1"] == "Our Services"
+    assert library[0]["overrides"]["heading_2"] == "Service 1"
+    assert library[0]["overrides"]["heading_4"] == ""
 
     compatibility = runner.invoke(
         cli,

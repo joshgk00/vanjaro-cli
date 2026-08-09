@@ -49,9 +49,11 @@
         "owner": "section",
         "slot_type": "text",
         "slots": [
-          "text_1"
+          "text_1",
+          "text_2",
+          "text_3"
         ],
-        "slots_per_owner": 1
+        "slots_per_owner": 3
       },
       "media": {
         "owner": "section",
@@ -82,44 +84,94 @@
   "template": {
     "type": "section",
     "classes": [
-      {"name": "vj-section", "active": false},
-      {"name": "py-5", "active": false}
+      {
+        "name": "vj-section",
+        "active": false
+      },
+      {
+        "name": "py-5",
+        "active": false
+      }
     ],
-    "attributes": {"id": "tpl-bio-s1"},
+    "attributes": {
+      "id": "tpl-bio-s1"
+    },
     "components": [
       {
         "type": "grid",
         "classes": [
-          {"name": "container", "active": false}
+          {
+            "name": "container",
+            "active": false
+          }
         ],
-        "attributes": {"id": "tpl-bio-g1"},
+        "attributes": {
+          "id": "tpl-bio-g1"
+        },
         "components": [
           {
             "type": "row",
             "classes": [
-              {"name": "row", "active": false},
-              {"name": "align-items-center", "active": false},
-              {"name": "g-4", "active": false}
+              {
+                "name": "row",
+                "active": false
+              },
+              {
+                "name": "align-items-center",
+                "active": false
+              },
+              {
+                "name": "g-4",
+                "active": false
+              }
             ],
-            "attributes": {"id": "tpl-bio-r1"},
+            "attributes": {
+              "id": "tpl-bio-r1"
+            },
             "components": [
               {
                 "type": "column",
                 "classes": [
-                  {"name": "col-xl-4", "active": false},
-                  {"name": "col-md-5", "active": false},
-                  {"name": "col-12", "active": false},
-                  {"name": "text-center", "active": false}
+                  {
+                    "name": "col-xl-4",
+                    "active": false
+                  },
+                  {
+                    "name": "col-md-5",
+                    "active": false
+                  },
+                  {
+                    "name": "col-12",
+                    "active": false
+                  },
+                  {
+                    "name": "text-center",
+                    "active": false
+                  }
                 ],
-                "attributes": {"id": "tpl-bio-c1"},
+                "attributes": {
+                  "id": "tpl-bio-c1"
+                },
                 "components": [
                   {
                     "type": "image",
                     "classes": [
-                      {"name": "image-box", "active": false},
-                      {"name": "vj-image", "active": false},
-                      {"name": "img-fluid", "active": false},
-                      {"name": "rounded-circle", "active": false}
+                      {
+                        "name": "image-box",
+                        "active": false
+                      },
+                      {
+                        "name": "vj-image",
+                        "active": false
+                      },
+                      {
+                        "name": "img-fluid",
+                        "active": false
+                      },
+                      {
+                        "name": "rounded-circle",
+                        "active": false
+                      }
                     ],
                     "attributes": {
                       "id": "tpl-bio-i1",
@@ -132,42 +184,125 @@
               {
                 "type": "column",
                 "classes": [
-                  {"name": "col-xl-8", "active": false},
-                  {"name": "col-md-7", "active": false},
-                  {"name": "col-12", "active": false}
+                  {
+                    "name": "col-xl-8",
+                    "active": false
+                  },
+                  {
+                    "name": "col-md-7",
+                    "active": false
+                  },
+                  {
+                    "name": "col-12",
+                    "active": false
+                  }
                 ],
-                "attributes": {"id": "tpl-bio-c2"},
+                "attributes": {
+                  "id": "tpl-bio-c2"
+                },
                 "components": [
                   {
                     "type": "heading",
                     "tagName": "h2",
                     "content": "About Us",
                     "classes": [
-                      {"name": "vj-heading", "active": false},
-                      {"name": "head-style-2", "active": false}
+                      {
+                        "name": "vj-heading",
+                        "active": false
+                      },
+                      {
+                        "name": "head-style-2",
+                        "active": false
+                      }
                     ],
-                    "attributes": {"id": "tpl-bio-h1"}
+                    "attributes": {
+                      "id": "tpl-bio-h1"
+                    }
                   },
                   {
                     "type": "heading",
                     "tagName": "h5",
                     "content": "Jane Smith, Founder & CEO",
                     "classes": [
-                      {"name": "vj-heading", "active": false},
-                      {"name": "head-style-5", "active": false},
-                      {"name": "mt-2", "active": false}
+                      {
+                        "name": "vj-heading",
+                        "active": false
+                      },
+                      {
+                        "name": "head-style-5",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-2",
+                        "active": false
+                      }
                     ],
-                    "attributes": {"id": "tpl-bio-h2"}
+                    "attributes": {
+                      "id": "tpl-bio-h2"
+                    }
                   },
                   {
                     "type": "text",
                     "content": "A brief paragraph about the person or organization. Share your story, mission, and what drives you. This helps visitors connect with the people behind the brand.",
                     "classes": [
-                      {"name": "vj-text", "active": false},
-                      {"name": "paragraph-style-1", "active": false},
-                      {"name": "mt-3", "active": false}
+                      {
+                        "name": "vj-text",
+                        "active": false
+                      },
+                      {
+                        "name": "paragraph-style-1",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-3",
+                        "active": false
+                      }
                     ],
-                    "attributes": {"id": "tpl-bio-t1"}
+                    "attributes": {
+                      "id": "tpl-bio-t1"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "content": "A further paragraph.",
+                    "classes": [
+                      {
+                        "name": "vj-text",
+                        "active": false
+                      },
+                      {
+                        "name": "paragraph-style-1",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-3",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-bio-t2"
+                    }
+                  },
+                  {
+                    "type": "text",
+                    "content": "A further paragraph.",
+                    "classes": [
+                      {
+                        "name": "vj-text",
+                        "active": false
+                      },
+                      {
+                        "name": "paragraph-style-1",
+                        "active": false
+                      },
+                      {
+                        "name": "mt-3",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-bio-t3"
+                    }
                   }
                 ]
               }

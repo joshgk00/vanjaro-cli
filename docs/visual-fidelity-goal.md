@@ -3768,3 +3768,48 @@ move. edca coverage 0.0833 → 0.25 and its last two blockers became one.
 **VF-227 and VF-225 are mine to decide and are answered in the next entry**,
 with the reasoning, because both are governed library changes and deserve to be
 argued before they are made.
+
+### Iteration 60 — agency pack 1.6.0
+
+**All three real sites:**
+
+| site | coverage | blocking | valid | content losses |
+|---|---|---|---|---|
+| `edca-pilot` | 0.25 | 1 | false | 2 → **1** |
+| `kts-fidelity` | 0.8529 → **0.8971** | 0 | true | 8 → **5** |
+| Northstar | 0.7273 → **0.7727** | 0 | true | 2 → **1** |
+
+Corpus unchanged, all gates green including pack governance. Suite 2,134.
+
+The two decisions delegated in iteration 59, made as one governed release.
+
+**`feature-cards-3up` and `-4up` now declare `section_title`.** They were the
+only two card templates without one while six siblings had it, which is why
+`MOST POPULAR CLASSES` and its equivalents were dropped on every site with a
+card grid. All three `section_title` losses on `keys-to-success` are gone, and
+Northstar's card section keeps its heading too — a site that was never the
+target of the work.
+
+**`Content/bio-about` now owns three body slots.** An about section with several
+paragraphs is the ordinary shape and one slot was never enough.
+
+**The governance did its job at every step, and that was the point of doing it
+this way.** A capability change at an unchanged pack version was rejected. The
+executable digests had to be re-audited by hand. The catalogue's audited field
+ledger had to be updated deliberately. The generated schema and documentation
+had to be regenerated. Six tests encoded the old slot numbering and each had to
+be looked at rather than adjusted — one of them, `test_reporting_a_static_only_field_does_not_change_any_score`,
+only passed before because this template happened to lack a section title, so it
+was given a field the template still cannot hold rather than being weakened.
+1.5.0's digests are now immutable history and 1.6.0 is the current release.
+
+**`bio-about` did not help edca, and it is worth saying why.** That section
+reads `split_media` — iteration 40 taught the pipeline to recognise a picture
+beside its copy — so it matches the split templates, which own one body slot
+each. Widening those too would be a second capability change in a release whose
+first one has just been measured, and each deserves its own measurement. Filed
+as VF-235.
+
+**What remains on the leading site is five losses**: three sections with a
+section-level `body` that card templates have no field for, one decorative
+mascot, and one action. None is a section heading any more.

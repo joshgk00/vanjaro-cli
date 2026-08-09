@@ -296,8 +296,13 @@ def test_plan_is_deterministic_and_emits_current_library_format_without_sample_c
     assert first == second
     assert first.entries[0].template == "Feature Cards (3-up)"
     assert first.entries[0].block.name == "Home Feature Cards"
-    assert library[0]["overrides"]["heading_1"] == "Service 1"
-    assert library[0]["overrides"]["heading_3"] == ""
+    # The section heading reaches the build now that the card templates declare
+    # one; before that it was dropped and the first card title took heading_1.
+    assert library[0]["overrides"]["heading_1"] == "Our Services"
+    assert library[0]["overrides"]["heading_2"] == "Service 1"
+    # Two cards in a three-up: the unused card slot is cleared so the
+    # template's own sample copy cannot reach the page.
+    assert library[0]["overrides"]["heading_4"] == ""
     assert len(library[0]["template_digest"]) == 64
     assert "Feature Three" not in str(library)
     assert deserialize_composition_plan(serialize_composition_plan(first)) == first

@@ -43,8 +43,12 @@ EXPECTED_FIELDS_BY_TEMPLATE = {
     "Cards/class-photo-cards-4up.json": {
         "section_title", "subtitle", "item.title", "item.body", "item.media", "item.tag", "item.action"
     },
-    "Cards/feature-cards-3up.json": {"item.title", "item.body", "item.action", "item.media"},
-    "Cards/feature-cards-4up.json": {"item.title", "item.body", "item.media"},
+    "Cards/feature-cards-3up.json": {
+        "section_title", "item.title", "item.body", "item.action", "item.media"
+    },
+    "Cards/feature-cards-4up.json": {
+        "section_title", "item.title", "item.body", "item.media"
+    },
     "Cards/gallery-3up.json": {
         "section_title", "section_body", "item.title", "item.meta", "item.media"
     },

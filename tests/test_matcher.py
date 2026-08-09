@@ -321,11 +321,12 @@ def test_maintainability_accounts_for_css_editability_and_reuse() -> None:
 
     assert reused.subscores.maintainability > baseline.subscores.maintainability
     assert css_heavy.subscores.maintainability < baseline.subscores.maintainability
-    # This item-only template deliberately has no section-title slot. The
-    # coverage rose from 0.5 when the template gained an editable media slot
-    # (VF-214): more of the observed content now has somewhere real to go.
-    assert reused.maintainability.editable_content_coverage == 0.75
-    assert any("section_title" in issue for issue in reused.missing_requirements)
+    # Coverage reached 1.0 in pack 1.6.0, when this template gained the
+    # section-title slot it had always lacked: every observed field now has
+    # somewhere real to go. It was 0.5, then 0.75 when an editable media slot
+    # arrived in VF-214.
+    assert reused.maintainability.editable_content_coverage == 1.0
+    assert not any("section_title" in issue for issue in reused.missing_requirements)
     assert reused.maintainability.global_block_reuse
 
 
@@ -439,7 +440,12 @@ def test_a_field_bound_to_an_editable_slot_is_not_reported() -> None:
 def test_reporting_a_static_only_field_does_not_change_any_score() -> None:
     """Editable coverage already excluded these; only the report was missing."""
 
-    section = _section(item_fields=("title", "body", "media"))
+    # A section-level body has no slot in a card template even after pack
+    # 1.6.0 gave it a section title, so this section still has a field the
+    # template cannot represent.
+    section = _section(
+        section_roles=("section_title", "body"), item_fields=("title", "body", "media")
+    )
     candidate = match_section(section, [_entry("feature-cards-3up.json")]).candidates[0]
 
     assert candidate.subscores.fields < 1.0
