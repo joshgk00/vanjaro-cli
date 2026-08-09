@@ -22,8 +22,8 @@ def _write_plan(root: Path, project_id: str, *warnings: str) -> None:
     entry = CompositionPlanEntry(
         id="entry-1",
         source_section_id=f"{project_id}.section.1",
-        template_id="Cards/testimonial-cards-3up",
-        template="testimonial-cards-3up",
+        template_id="Cards/pricing-cards-3up",
+        template="pricing-cards-3up",
         match=PlanMatch(score=0.8, confidence="high"),
         block=PlanBlock(name=f"{project_id}-block", category="Cards"),
         warnings=tuple(warnings),
@@ -52,7 +52,7 @@ def test_the_report_names_the_template_and_the_field(tmp_path: Path) -> None:
     payload = json.loads(result.output)
     assert payload["status"] == "ok"
     assert payload["projects"] == ["site-a"]
-    assert payload["gaps"][0]["template_id"] == "Cards/testimonial-cards-3up"
+    assert payload["gaps"][0]["template_id"] == "Cards/pricing-cards-3up"
     assert payload["gaps"][0]["field"] == "section_title"
     assert payload["dropped_field_count"] == 1
 

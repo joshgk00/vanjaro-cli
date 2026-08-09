@@ -1,0 +1,105 @@
+{
+  "modifiers": {
+    "path": "modifiers/1.0.0.json",
+    "sha256": "331b7c14af6ae87ac9d04a6559ff9ae3ed4c252a21be80c6fa5159c1f720f087",
+    "version": "1.0.0"
+  },
+  "name": "clicks-and-mortars",
+  "schema_version": "1.0",
+  "templates": {
+    "path": "templates/1.7.0.json",
+    "sha256": "9a5c7da6788d93f2f20e4133b03cb889440cbaffbf69a0fadb6ade5629ed686b",
+    "version": "1.7.0"
+  },
+  "upgrade_rules": [
+    {
+      "compatible_capability_schema_change": true,
+      "compatible_modifier_changes": [],
+      "compatible_template_changes": [
+        "Cards/blog-post-cards-3up",
+        "Cards/blog-post-cards-4up",
+        "Cards/class-photo-cards-4up",
+        "Cards/feature-cards-3up",
+        "Cards/feature-cards-4up",
+        "Cards/gallery-3up",
+        "Cards/gallery-6up",
+        "Cards/pricing-cards-3up",
+        "Cards/team-member-grid-4up",
+        "Cards/testimonial-cards-3up",
+        "Content/bio-about",
+        "Content/contact-section",
+        "Content/faq-accordion",
+        "Content/logo-bar",
+        "Content/ribbon-marquee",
+        "Content/rich-text",
+        "Content/split-media-reverse",
+        "Content/split-media",
+        "Content/stats-band-3up",
+        "Content/stats-grid-4up",
+        "Content/video-feature",
+        "CTAs/cta-banner",
+        "CTAs/cta-split",
+        "Heroes/centered-hero",
+        "Heroes/photo-band",
+        "Heroes/split-hero",
+        "Lists/icon-feature-list",
+        "Navigation/footer-3col",
+        "Navigation/footer-4col",
+        "Navigation/navbar-brand-links-cta",
+        "Navigation/navbar-brand-links"
+      ],
+      "from_version": "1.0.0",
+      "modifier_replacements": {},
+      "notes": [
+        "Adds validated physical slot ownership and cardinality metadata for all templates.",
+        "Reviewed executable fixes are limited to gallery placeholder copy and icon-list mobile columns: Cards/gallery-3up, Cards/gallery-6up, Lists/icon-feature-list"
+      ],
+      "template_replacements": {}
+    },
+    {
+      "compatible_capability_schema_change": true,
+      "compatible_modifier_changes": [],
+      "compatible_template_changes": [
+        "Cards/blog-post-cards-3up",
+        "Cards/blog-post-cards-4up",
+        "Cards/class-photo-cards-4up",
+        "Cards/feature-cards-3up",
+        "Cards/feature-cards-4up",
+        "Cards/gallery-3up",
+        "Cards/gallery-6up",
+        "Cards/pricing-cards-3up",
+        "Cards/team-member-grid-4up",
+        "Cards/testimonial-cards-3up",
+        "Content/bio-about",
+        "Content/contact-section",
+        "Content/faq-accordion",
+        "Content/logo-bar",
+        "Content/ribbon-marquee",
+        "Content/rich-text",
+        "Content/split-media-reverse",
+        "Content/split-media",
+        "Content/stats-band-3up",
+        "Content/stats-grid-4up",
+        "Content/video-feature",
+        "CTAs/cta-banner",
+        "CTAs/cta-split",
+        "Heroes/centered-hero",
+        "Heroes/photo-band",
+        "Heroes/split-hero",
+        "Lists/icon-feature-list",
+        "Navigation/footer-3col",
+        "Navigation/footer-4col",
+        "Navigation/navbar-brand-links-cta",
+        "Navigation/navbar-brand-links"
+      ],
+      "from_version": "1.0.1",
+      "modifier_replacements": {},
+      "notes": [
+        "Adds validated physical slot ownership and cardinality metadata for all templates.",
+        "Reviewed executable fixes are limited to gallery placeholder copy and icon-list mobile columns: Cards/gallery-3up, Cards/gallery-6up, Lists/icon-feature-list"
+      ],
+      "template_replacements": {}
+    }
+  ],
+  "version": "1.7.0"
+}

@@ -59,7 +59,7 @@ EXPECTED_FIELDS_BY_TEMPLATE = {
     "Cards/team-member-grid-4up.json": {
         "section_title", "section_body", "item.title", "item.role", "item.body", "item.media"
     },
-    "Cards/testimonial-cards-3up.json": {"item.quote", "item.author"},
+    "Cards/testimonial-cards-3up.json": {"section_title", "item.quote", "item.author"},
     "Content/bio-about.json": {"title", "eyebrow", "body", "media"},
     "Content/contact-section.json": {
         "section_title", "section_body", "contact_items", "action_title", "action_body", "action"

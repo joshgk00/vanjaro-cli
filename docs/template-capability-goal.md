@@ -264,6 +264,46 @@ declaring a field for it.
 - Governed release; ledger and generated artefacts updated in the same commit.
 - Corpus unchanged; all three real sites reported.
 
+**Premise wrong for two of the three sections (iteration 62), and TC-2 is why
+it was caught.** `keys-to-success.section.7` is a grid of instructors and
+`.section.8` a grid of blog posts. Their source markup is
+`team-member-grid-4up` and `blog-post-cards-4up` — templates that *already*
+declare `section_body`, in the exact slot the copy sits in. Both sections were
+routed to `feature-cards-4up`, which does not, because the extractor reduces
+every card-shaped repeat group to kind `card` and role `feature_cards`. Neither
+correct template appears even in the top-three alternatives. Widening
+`feature-cards-4up` would have bound the copy and buried the routing defect, and
+the report would have gone quiet while a team grid kept being built as generic
+feature cards. Filed as TC-107.
+
+What remains of TC-103 is `section.5` alone, whose source *is* a
+`class-photo-cards-4up` section — and even there the content is an eyebrow above
+the headline, not a body under it. It is one section, so it now ranks below work
+with more evidence. Do not widen a card template for it until TC-107 has settled
+what the section actually is.
+
+### TC-107 — A card-shaped grid is not the same kind of thing as a card grid
+
+**Dependencies:** none; blocks the rest of TC-103
+
+The extractor emits repeat kind `card` and section role `feature_cards` for any
+grid of image-plus-title-plus-text, so a grid of people, a grid of blog posts
+and a grid of features are indistinguishable to the matcher. The library
+already has `team-member-grid-4up` (kind `person`) and `blog-post-cards-4up`
+(kind `article`); nothing can ever route to them from an HTML source.
+
+This is the recurring failure in a new dress: a *shape* is not a kind of thing,
+just as a tag is not. Measured cost today is two of `kts-fidelity`'s five
+losses, plus two sections built from the wrong template with no loss recorded at
+all — the shape fits, so nothing complains.
+
+**Acceptance criteria**
+
+- A grid of people routes to a person template and a grid of posts to an article
+  template, on evidence from the items rather than from the source's markup ids.
+- `semantic_role_accuracy` and `template_top1_accuracy` do not fall.
+- No benchmark annotation, fixture or threshold edited.
+
 ### TC-104 — Five repeat templates cannot hold a section heading
 
 **Dependencies:** TC-103 (same shape, same release mechanics — do it after, so
@@ -278,6 +318,18 @@ one that was never the target.
 **Verify first (TC-2):** confirm each of the five actually receives sections
 carrying a heading. A template nothing routes to does not need a wider field; it
 needs deleting or a routing fix, and that is a different task.
+
+**One of the five done — agency pack 1.7.0 (iteration 62).**
+`Cards/testimonial-cards-3up` declares `section_title`; its three authors moved
+from `heading_1..3` to `heading_2..4`. It was the only one of the five with
+measured evidence: Northstar's testimonial section carries the heading "Trusted
+by focused teams" and was dropping it. Northstar content losses 1 → 0, coverage
+0.7727 → 0.8182, and corpus `high_confidence_precision` rose 0.9333 → 0.9444.
+
+`pricing-cards-3up`, `ribbon-marquee`, `stats-band-3up` and `icon-feature-list`
+are still unverified — no section on any site has demanded a heading from them.
+Widening them now would repeat 1.6.0's mistake, where the unmeasured half of the
+release helped nothing.
 
 ### TC-106 — The benchmark corpus is outside the gap report
 
@@ -310,6 +362,74 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### Iteration 62 — the top-ranked gap was not a gap, and the second one was
+
+The report's rank 1 was `Cards/feature-cards-4up`/`body`, three sections of
+`keys-to-success`. TC-2 requires proving the section is classified correctly
+before widening anything, so I read the source rather than the plan.
+
+**Two of the three sections are routed to the wrong template.**
+`keys-to-success.section.7` is a grid of instructors and `.section.8` a grid of
+blog posts, and their source markup is `team-member-grid-4up` and
+`blog-post-cards-4up` — templates that already declare `section_body`, in the
+very slot the dropped copy occupies. Both were matched to `feature-cards-4up`,
+which does not declare it, and neither correct template appears in the top three
+alternatives. The cause is that the extractor gives every card-shaped repeat
+group the kind `card` and the role `feature_cards`, so a person, an article and
+a feature are the same thing to the matcher. **Widening `feature-cards-4up`
+would have bound the copy and buried the routing defect** — the report would
+have gone quiet while a team grid kept being built as generic feature cards.
+Filed as TC-107. This is the recurring failure in a new dress: a *shape* is not
+a kind of thing, just as a tag is not.
+
+The third section is different again. `section.5` really is a
+`class-photo-cards-4up` section, but its copy — "Our Classes" — sits *above* the
+headline as an eyebrow, not below it as a deck. TC-103 was filed calling it "the
+short line that introduces the cards"; it is not a line that introduces
+anything, and its extracted order (13, after every card) does not match the
+source either.
+
+**Rank 2 verified clean, so that is what shipped.** Northstar's section 4:
+role `testimonials` at 0.95 confidence, repeat kind `testimonial`, two quotes
+with authors, matched to `Cards/testimonial-cards-3up` at 0.87 against a next
+alternative of 0.40. Correctly classified, correctly routed, and the template
+simply had no field for the heading "Trusted by focused teams". **Agency pack
+1.7.0** declares `section_title` on it; the three authors move from
+`heading_1..3` to `heading_2..4`.
+
+One capability change, per TC-3. The other four templates lacking `section_title`
+stay unverified — no section anywhere has demanded a heading from them, and
+1.6.0's lesson is that the unmeasured half of a release helps nothing.
+
+**Six tests failed and none was adjusted to pass.** The audited field ledger and
+the slot-key contract were updated deliberately, because changing them *is* the
+release. `_testimonial_columns` indexed `components[0]` to find the grid, which
+the new heading displaced — replaced with a search by type, since a position is
+not a kind of thing either. The column-expansion test still passed untouched,
+but its overrides no longer meant what its docstring said, so its data was
+corrected to a section heading plus four quote-author pairs. Two tests I wrote
+in iteration 61 used `testimonial-cards-3up` as the example of a template that
+*still* lacks a section title; that became false, so they moved to
+`pricing-cards-3up`, which preserves what they were testing.
+
+**Evidence.** Suite 2,156 passing, 16 deselected. Corpus: nine of ten metrics
+unchanged; `high_confidence_precision` **rose 0.9333 (14/15) → 0.9444 (17/18)**
+as more sections reached high confidence. No threshold or regression failures.
+All three sites re-analysed `--refresh --render` (`action == "execute"`) and
+re-planned `--refresh`:
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.25 | 1 | false | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.8971 | 0 | true | 5 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.7727 → **0.8182** | 0 | true | 1 → **0** |
+
+**The control site now loses nothing.** It has never been the target of a fix,
+which is the point: the gap that closed it was found by measurement across the
+corpus rather than by looking at the site in hand. The ranked report falls from
+five gaps and eight dropped fields to four and six, with two entries correctly
+reported as stale rather than ranked.
 
 ### Iteration 61 — the join exists, and it found two gaps nobody had filed
 

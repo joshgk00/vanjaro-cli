@@ -253,17 +253,17 @@ def test_a_gap_the_library_has_since_closed_is_not_ranked() -> None:
 
 
 def test_a_gap_the_library_still_has_stays_ranked() -> None:
-    """The guard above must not swallow live work: `testimonial-cards-3up` has
-    no section title, and the report has to keep saying so."""
+    """The guard above must not swallow live work: `pricing-cards-3up` has no
+    section title, and the report has to keep saying so."""
 
     catalog = {entry.template_id: entry.capabilities for entry in load_template_catalog()}
     report = build_capability_gap_report(
-        [_project("site", _entry("s.4", "Cards/testimonial-cards-3up", (_uneditable("section_title"),)))],
+        [_project("site", _entry("s.4", "Cards/pricing-cards-3up", (_uneditable("section_title"),)))],
         catalog=catalog,
     )
 
     assert [(gap.template_id, gap.field) for gap in report.gaps] == [
-        ("Cards/testimonial-cards-3up", "section_title")
+        ("Cards/pricing-cards-3up", "section_title")
     ]
     assert report.stale == ()
 

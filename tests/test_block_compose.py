@@ -874,7 +874,12 @@ def test_unit_expansion_does_not_mutate_original():
 
 
 def _testimonial_columns(composed: dict) -> list[dict]:
-    return composed["template"]["components"][0]["components"][0]["components"]
+    grid = next(
+        component
+        for component in composed["template"]["components"]
+        if component["type"] == "grid"
+    )
+    return grid["components"][0]["components"]
 
 
 def test_testimonial_slot_keys_unchanged_by_chrome():
@@ -882,18 +887,22 @@ def test_testimonial_slot_keys_unchanged_by_chrome():
     not an override slot — enumerate_slots must list exactly the same
     heading/text/background_image keys, in the same order, as before the
     chrome existed. A test-registered custom-blocks mapping keyed on these
-    slot names would otherwise silently break."""
+    slot names would otherwise silently break.
+
+    `heading_1` is the section's own heading, which the template gained in pack
+    1.7.0; the three authors follow it at `heading_2` onward."""
     template = find_template("Testimonial Cards (3-up)")
 
     slots = enumerate_slots(template["template"])
 
     assert [slot["key"] for slot in slots] == [
-        "text_1",
         "heading_1",
-        "text_2",
+        "text_1",
         "heading_2",
-        "text_3",
+        "text_2",
         "heading_3",
+        "text_3",
+        "heading_4",
         "background_image",
     ]
 
@@ -918,10 +927,11 @@ def test_testimonial_column_expansion_carries_chrome_into_cloned_card():
     not leave the 4th card without a rating."""
     template = find_template("Testimonial Cards (3-up)")
     overrides = {
-        "text_1": "Quote one.", "heading_1": "Name One",
-        "text_2": "Quote two.", "heading_2": "Name Two",
-        "text_3": "Quote three.", "heading_3": "Name Three",
-        "text_4": "Quote four.", "heading_4": "Name Four",
+        "heading_1": "What clients say",
+        "text_1": "Quote one.", "heading_2": "Name One",
+        "text_2": "Quote two.", "heading_3": "Name Two",
+        "text_3": "Quote three.", "heading_4": "Name Three",
+        "text_4": "Quote four.", "heading_5": "Name Four",
     }
 
     composed = apply_overrides(template, overrides)
