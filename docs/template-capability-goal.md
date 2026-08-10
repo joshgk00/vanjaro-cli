@@ -508,6 +508,29 @@ loop has twice reverted. The removed elements carry no visitor-facing text — b
 they do carry hrefs, and whether a social profile URL is content worth keeping is
 the question to settle first.
 
+### TC-117 — The report ranks gaps from matches the matcher does not believe
+
+**Dependencies:** none. **Filed with a measurement, not fixed.**
+
+Of the seventeen entries in the ranked queue, **seven come from sections whose
+match the matcher scored `low` confidence**. The pipeline already says it does
+not believe those pairings, and the report ranks the resulting losses as missing
+fields regardless.
+
+The corpus has an answer key and a loss on a wrongly matched section is held back
+as a routing defect. A project workspace has none, so the same loss reads as a
+capability gap — which is how `rendered-home`'s two testimonial sections, matched
+to `cta-split` at 0.3794 and 0.4941, produced entries asking for a CTA that holds
+thirteen actions, six pictures and fifteen paragraphs.
+
+Confidence is the signal a project *does* have, and the report ignores it.
+
+**Not a simple hold-back.** A low-confidence match can still be the right
+template with a real gap behind it, so suppressing on confidence alone would hide
+genuine work. The question is whether such an entry should be ranked lower,
+marked, or held — and that needs measuring against a queue, which is its own
+iteration.
+
 ### TC-112 — Add measured sources until the held items have a second section
 
 **Dependencies:** none. **This is what unblocks TC-104, TC-109, TC-110 and TC-111.**
@@ -628,6 +651,84 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — evidence 7/7: `rendered-home`, and the closing verdict on TC-112
+
+Last source. **Nothing promoted.** The queue grew from 12 gaps to **17**, and
+almost every new entry came from a match the matcher did not believe.
+
+`rendered-home` is seven sections and five of them block. Two testimonial
+sections matched `CTAs/cta-split` at **0.3794 and 0.4941**, which produced
+entries asking for a CTA that holds thirteen actions, six pictures and fifteen
+paragraphs. A feature-card section matched `ribbon-marquee` at 0.4432. Its
+`section.7` is the **same footer block as `wwo.section.5`** — the same site
+captured on two pages — so rank 1's "four sections across three sources" is one
+genuine call to action and three pieces of chrome.
+
+**Measured rather than counted by hand: seven of the seventeen entries rest on a
+`low` confidence match.** The pipeline already says it does not believe those
+pairings. Filed as TC-117.
+
+### The verdict on TC-112
+
+**Seven real sources were the wrong instrument, and running them was the right
+way to find that out.**
+
+*Promoted, one:* `Content/rich-text`/`media`, shipped as **agency pack 1.11.0**
+on two genuine sections from two sources — a stacked image with text had no
+template in the library at all.
+
+*Declined, one:* `Content/rich-text`/`primary_action`, which finished with the
+highest count in the queue — four sections across three sources — and one
+genuine instance. Reading beats counting, every time.
+
+*Still held at one section:* `feature-cards-4up`/`eyebrow` (TC-109),
+`logo-bar`/`item.label` and `stats-band-3up`/`item.title` (TC-111),
+`blog-post-cards-3up`/`primary_action`, `rich-text`/`subtitle`,
+`rich-text`/`body` capacity, `cta-banner`/`action` capacity. TC-104's three
+unverified templates never appeared at all.
+
+*Noise:* seven of seventeen entries come from low-confidence matches, and five
+more trace to two specific misroutes. **The queue is now majority noise.**
+
+*What the loop actually found* — four extraction defects and one report defect,
+none of which more sources will fix:
+
+- **TC-113** — a `gallery` section builds no repeat group, and the one-line fix
+  raises coverage while silently dropping five pictures and two headings.
+- **TC-114** — `static_role` calls any section holding one `<blockquote>` a
+  testimonials section, overriding the careful rule that already exists.
+- **TC-115** — a non-repeating section emits its title and one eyebrow and
+  silently drops every other heading, which is why TC-114 cannot be fixed alone.
+- **TC-116** — every `<a href>` becomes a `primary_action`, so page chrome and
+  citations inside prose read as calls to action.
+- **TC-117** — the report ranks gaps from matches the matcher scored `low`,
+  because only the corpus carries an answer key.
+
+**The library was not what was limiting fidelity.** Six of seven sources
+promoted nothing because the sections that would have promoted them were
+misclassified before they reached a template. Adding pages measures extraction,
+and extraction is where the work is.
+
+**Evidence.** Suite 2,186 passing, 16 deselected. Benchmark aggregate identical
+on all ten metrics across all seven iterations, no threshold or regression
+failures at any point.
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 0.0 | 1 | false | 1 |
+| `contact-page` | 2 | 2 rendered | 62 | 0.75 | 0 | true | 1 |
+| `oasis-probe` | 5 | 5 rendered | 155 | 0.087 | 3 | false | 0 |
+| `oasis-lighting` | 2 | 2 rendered | 62 | 0.1875 | 0 | true | 3 |
+| `wwo` | 5 | 4 rendered, 1 static | 124 | 0.16 | 2 | false | 4 |
+| `post-security` | 2 | 2 rendered | 62 | 0.0 | 1 | false | 1 |
+| `rendered-home` (new) | 7 | 6 rendered, 1 static | 187 | 0.1143 | 5 | false | 3 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+TC-112 is complete: all seven sources added, sixteen sources and sixty-three
+sections now measured. The loop stops here.
 
 ### 2026-08-10 — evidence 6/7: `post-security`, the loop's first promotion, and its second refusal
 
