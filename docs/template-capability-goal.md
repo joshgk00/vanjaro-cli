@@ -532,6 +532,43 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-10 — evidence 2/7: `contact-page`, and a check that was right to say no
+
+Second source of TC-112. **Nothing promoted, and no code changed** — which is
+what most iterations of this loop should look like.
+
+`contact.html` gives two sections: the site navigation, and a `rich_text` band
+holding "Contact Us", a deck, and two paragraphs. It plans valid at 0.75
+coverage with one loss, `Content/rich-text`/`subtitle` — the deck. `rich-text`
+declares `title` and four `body` slots and no subtitle, so the loss is real and
+the queue grows to five entries, all still one section each.
+
+**A contact page classified as rich text looks wrong, and it is not.** The
+capture has a `<form>` with eleven inputs, so the obvious reading is that the
+contact detector missed a form. Nine of those inputs are ASP.NET hidden postback
+fields, and the two visible ones are DNN search boxes —
+`dnn$dnnSEARCH$txtSearch` and `dnn$dnnSEARCH3$txtSearch`. `has_form_fields`
+returns False, exactly as its docstring intends: "One field and a button is a
+search box or a newsletter signup, which is not a contact form." There is no
+contact form on this page, and the section really is a heading and some copy.
+
+Worth recording because the alternative was to *fix* something that was working,
+which would have cost a real check its judgement.
+
+**Evidence.** Suite 2,186 passing, 16 deselected, unchanged. Benchmark aggregate
+identical on all ten metrics, no threshold or regression failures.
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 0.0 | 1 | false | 1 |
+| `contact-page` (new) | 2 | 2 rendered | 62 | 0.75 | 0 | true | 1 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+Queue: **4 gaps and 4 dropped fields to 5 and 5**, every one still a single
+section. Five sources remain.
+
 ### 2026-08-10 — evidence 1/7: `cmw-blog`, and `<article>` was not a kind of thing
 
 First source of TC-112. **Nothing promoted to a second section**, which is the
