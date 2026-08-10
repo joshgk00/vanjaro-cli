@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import re
 from pathlib import Path
 
 import pytest
@@ -211,6 +212,114 @@ def test_section_field_capacity_matches_the_audited_ledger() -> None:
                 f"{entry.relative_path} field {name!r} owns {contract.slots_per_owner} "
                 f"slots, audited for {expected}"
             )
+
+
+def _section_fields(entry) -> set[str]:
+    return {
+        name
+        for name, contract in entry.capabilities.physical_fields.items()
+        if contract.owner == "section"
+    }
+
+
+# One design at two widths, and what the wider one holds that the narrower does
+# not. Every entry is a gap nobody has measured yet: no site has asked a 3-up
+# blog grid for a section body or a load-more button, and widening a template on
+# symmetry alone repeats pack 1.6.0's mistake, where the half of the release
+# with no evidence behind it helped nothing.
+KNOWN_WIDTH_VARIANT_ASYMMETRY = {
+    ("Cards/blog-post-cards", "3up", "4up"): {"section_body", "action"},
+}
+
+# Templates that repeat the same kind of thing but deliberately offer different
+# section-level fields. Unlike the table above these are not gaps.
+DECLARED_REPEAT_KIND_EXCEPTIONS = {
+    # The CTA is the whole difference between the two navbars, and it is in the
+    # name of the template that has it.
+    ("navigation_item", "action"),
+    # A class card grid introduces itself with a line under the heading; the
+    # feature grids do not. Unmeasured either way — no site has asked.
+    ("card", "subtitle"),
+    # A stats band is a strip with no heading of its own; the grid has one.
+    ("stat", "section_title"),
+    # The 3-up blog grid's missing fields, tracked in full above.
+    ("article", "section_body"),
+    ("article", "action"),
+}
+
+
+def test_one_design_at_two_widths_holds_the_same_things() -> None:
+    """`blog-post-cards-4up` could hold a section body and `-3up` could not,
+    though they are the same design at two widths — an authoring accident that
+    cost three sections on `keys-to-success` before anyone noticed.
+
+    Section-level fields only. A narrower card dropping a per-card button is a
+    design decision about the card; what the *section* can hold is not.
+    """
+
+    families: dict[tuple[str, str], list[tuple[str, str]]] = {}
+    for entry in load_template_catalog(TEMPLATES_DIR):
+        match = re.fullmatch(r"(?P<stem>.*?)-(?P<count>\d+)(?P<unit>up|col)", entry.template_id)
+        if match:
+            families.setdefault((match["stem"], match["unit"]), []).append(
+                (match["count"], entry.template_id)
+            )
+
+    compared = 0
+    for (stem, unit), members in sorted(families.items()):
+        if len(members) < 2:
+            continue
+        by_id = {
+            entry.template_id: entry
+            for entry in load_template_catalog(TEMPLATES_DIR)
+            if entry.template_id in {template_id for _, template_id in members}
+        }
+        ordered = sorted(members, key=lambda member: int(member[0]))
+        base_count, base_id = ordered[0]
+        base = _section_fields(by_id[base_id])
+        for count, template_id in ordered[1:]:
+            compared += 1
+            difference = base.symmetric_difference(_section_fields(by_id[template_id]))
+            allowed = KNOWN_WIDTH_VARIANT_ASYMMETRY.get(
+                (stem, f"{base_count}{unit}", f"{count}{unit}"), set()
+            )
+            assert difference == allowed, (
+                f"{stem} differs between {base_count}{unit} and {count}{unit} on "
+                f"{sorted(difference)}; the same design at two widths must hold the same things"
+            )
+    assert compared >= 4, "the width-variant families stopped being compared"
+
+
+def test_templates_repeating_the_same_kind_offer_the_same_section_fields() -> None:
+    """The broader property, and the reason the library drifted: a section body
+    reached `gallery-3up` and `team-member-grid-4up` and not `feature-cards-4up`,
+    so whether a card grid could introduce itself depended on which grid it was.
+
+    Every exception is named above with why. An asymmetry that is not listed is
+    a new one, and new ones are what this test exists to stop.
+    """
+
+    by_kind: dict[str, list] = {}
+    for entry in load_template_catalog(TEMPLATES_DIR):
+        group = entry.capabilities.repeat_group
+        if group:
+            by_kind.setdefault(group.kind, []).append(entry)
+
+    compared = 0
+    for kind, entries in sorted(by_kind.items()):
+        if len(entries) < 2:
+            continue
+        compared += 1
+        shared: set[str] = set.union(*(_section_fields(entry) for entry in entries))
+        common: set[str] = set.intersection(*(_section_fields(entry) for entry in entries))
+        unexplained = {
+            field for field in shared - common if (kind, field) not in DECLARED_REPEAT_KIND_EXCEPTIONS
+        }
+        assert not unexplained, (
+            f"templates repeating {kind!r} disagree on {sorted(unexplained)}; "
+            "declare the difference as deliberate or close it in a governed release"
+        )
+    assert compared >= 6, "the multi-template repeat kinds stopped being compared"
 
 
 def test_physical_contracts_own_every_primary_visitor_slot_exactly_once() -> None:

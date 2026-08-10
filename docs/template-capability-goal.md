@@ -366,6 +366,19 @@ Assert that templates sharing a repeat kind declare the same section-level
 fields, with deliberate exceptions declared in the test. This is what turns the
 work above from six fixes into a property.
 
+**TC-105 done (iteration 65).** Two tests, because "the same repeat kind" turned
+out to be two properties of different strength.
+`test_one_design_at_two_widths_holds_the_same_things` compares templates whose
+ids differ only by their count suffix — the sharp property, and the one the
+problem statement leads with. It has exactly one exception:
+`blog-post-cards-3up` lacks the `section_body` and `action` that `-4up` has.
+`test_templates_repeating_the_same_kind_offer_the_same_section_fields` is the
+broad one, with four declared exceptions. Both were proved to fail by removing a
+declared exception and watching the assertion fire.
+
+The four unmeasured asymmetries stay listed rather than closed. A test whose
+exceptions are honest is worth more than a release nobody measured.
+
 ## Completion rule
 
 Passing tests or shipping one pack release does not complete this goal. It
@@ -374,6 +387,56 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### Iteration 65 — the asymmetry becomes a failing check instead of a discovery
+
+TC-105. No template changed and no pack was released; this iteration only makes
+the next accidental asymmetry fail a test rather than cost a site three sections.
+
+**"Templates sharing a repeat kind" is two properties, not one.** Grouping by
+repeat kind puts `class-photo-cards-4up` beside `feature-cards-3up` because both
+repeat a `card` — different designs that happen to share a generic word. It also
+puts `blog-post-cards-3up` beside `-4up`, which are one design at two widths.
+Only the second pairing carries an obligation strong enough that any difference
+is a defect, and that pairing is the one the goal's problem statement leads with.
+
+So there are two tests. The sharp one compares templates whose ids differ only
+by their count suffix — four families, `blog-post-cards`, `feature-cards`,
+`gallery` and `footer` — and has **one** exception: `blog-post-cards-3up` lacks
+the `section_body` and `action` its wider twin declares. The broad one compares
+by repeat kind and carries four declared exceptions, each with its reason: the
+navbar pair differs by the CTA that is in its name, a class-card grid has a
+subtitle the feature grids do not, a stats *band* has no heading where the
+*grid* does, and the blog pair's gap again.
+
+Section-level fields only, deliberately. `feature-cards-3up` offers a per-card
+button and `-4up` does not, which is a real decision about a narrower card. What
+the *section* can hold is not that kind of decision.
+
+**Both tests were proved to fail.** A green suite can mean nothing was checking —
+iteration 64's lesson — so each assertion was exercised by deleting a declared
+exception and confirming the failure names the right templates and fields. The
+first attempt to prove it went differently and taught something: mutating
+`gallery-6up` to drop `section_body` was rejected by two *existing* invariants
+before either new test ran, because a manifest may not drop a field whose
+executable slot remains. That direction was already guarded. What was not
+guarded, and now is, is a field that never arrives.
+
+**The four unmeasured asymmetries are listed, not closed.** No site has asked a
+3-up blog grid for a section body, a feature grid for a subtitle, or a stats band
+for a heading. Widening them on symmetry alone would repeat pack 1.6.0, where the
+half of the release with no evidence behind it helped nothing.
+
+**Evidence.** Suite 2,162 → 2,164 passing, 16 deselected. Corpus unchanged on all
+ten metrics, no threshold or regression failures. All three sites re-analysed
+`--refresh --render` (`action == "execute"`) and re-planned `--refresh`, all
+unchanged, all valid, none blocking:
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
 
 ### Iteration 64 — the split pair catches up with the template it mirrors
 
