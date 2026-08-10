@@ -68,7 +68,7 @@ EXPECTED_FIELDS_BY_TEMPLATE = {
     "Content/faq-accordion.json": {"section_title", "item.question", "item.answer"},
     "Content/logo-bar.json": {"section_title", "item.media"},
     "Content/ribbon-marquee.json": {"item.body"},
-    "Content/rich-text.json": {"title", "body"},
+    "Content/rich-text.json": {"title", "media", "body"},
     "Content/split-media-reverse.json": {"title", "subtitle", "body", "action", "media"},
     "Content/split-media.json": {"media", "title", "subtitle", "body", "action"},
     "Content/stats-band-3up.json": {"section_title", "item.value", "item.label"},

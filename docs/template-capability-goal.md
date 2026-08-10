@@ -629,6 +629,62 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-10 — evidence 6/7: `post-security`, the loop's first promotion, and its second refusal
+
+Sixth source of TC-112, and the first to promote something. **Agency pack
+1.11.0** ships one capability change; a second candidate with a larger count was
+declined.
+
+**Promoted: `Content/rich-text`/`media`.** `oasis-probe.section.2` is a heading,
+a photograph and a paragraph in a single column; `post-security.section.2` is a
+blog post with a featured image above eight paragraphs. Two genuine sections on
+two sources, both wanting the same thing, and the library had nothing for it:
+`rich-text` declared `media_positions: ["none"]` with no image component at all,
+while `split-media` and `bio-about` are two-column and `photo-band` carries no
+copy. **A stacked image with text had no template.** `rich-text` now declares an
+optional `media` slot between its heading and its copy, and `media_positions`
+widened to `["none", "top"]` so a text-only block still matches as it did.
+`oasis-probe` content losses 1 → 0, and the entry left the queue.
+
+**Declined: `Content/rich-text`/`primary_action`, now showing three sections
+across two sources.** The count is the most compelling in the queue and it is
+still wrong. Reading them: `wwo.section.4` is a real call to action — "Get
+Started!" to `/contact-us`. `wwo.section.5` is page chrome. And
+`post-security.section.2`'s six are four tag links to `/blog`, a **citation
+inside a paragraph**, and a "Back to blog home" button. One genuine instance
+across three sections.
+
+The citation is TC-116 showing its cost: the extractor lifts every `<a href>`
+out as a `primary_action`, so a link inside prose becomes a separate call to
+action and its text is counted twice. A queue entry can accumulate sections
+without accumulating evidence, and the only defence is reading them.
+
+**Corpus exposure was checked before the release, not after.** Exactly one
+benchmark section lists `rich-text` as a candidate at all, third at 0.6942
+against a hero at 0.9344. The aggregate is identical on all ten metrics
+afterwards.
+
+**Evidence.** Suite 2,186 passing, 16 deselected. Benchmark aggregate identical,
+no threshold or regression failures.
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 0.0 | 1 | false | 1 |
+| `contact-page` | 2 | 2 rendered | 62 | 0.75 | 0 | true | 1 |
+| `oasis-probe` | 5 | 5 rendered | 155 | 0.087 | 3 | false | 1 → **0** |
+| `oasis-lighting` | 2 | 2 rendered | 62 | 0.1875 | 0 | true | 3 |
+| `wwo` | 5 | 4 rendered, 1 static | 124 | 0.16 | 2 | false | 4 |
+| `post-security` (new) | 2 | 2 rendered | 62 | 0.0 | 1 | false | 1 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+`post-security` still blocks: its eight paragraphs overflow `rich-text`'s four
+body slots, and its featured image is a `file:///portals/...` path the capture
+cannot resolve. The overflow is a new single-section entry.
+
+Queue: **12 gaps, 14 dropped fields.** One source remains.
+
 ### 2026-08-10 — evidence 5/7: `wwo`, an apparent promotion that was one page's habit
 
 Fifth source of TC-112. **Nothing promoted**, though the ranked report said
