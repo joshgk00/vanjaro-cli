@@ -393,6 +393,26 @@ The alias table needed nothing, and `class-photo-cards-4up` is correctly named:
 subtitle. It only looked inverted because the `keys-to-success` page used those
 two slots for a kicker and a headline.
 
+### TC-109 — No card template can hold a kicker, and one section wants one
+
+**Dependencies:** none. **Held on evidence, not blocked.**
+
+`keys-to-success.section.5` opens with "Our Classes" above "MOST POPULAR
+CLASSES". No card template declares `eyebrow`, so the kicker is dropped. It is
+the last entry in the ranked report and the only content any tracked project
+still loses to a missing field.
+
+**Deliberately not closed at one section.** Adding `eyebrow` to
+`feature-cards-4up` alone would break the family symmetry TC-105 now asserts;
+adding it to all eight card templates is a large capability change for a single
+data point, which is what pack 1.6.0's unmeasured half already cost. Routing
+does not rescue it either: the template this page was built from,
+`class-photo-cards-4up`, has no eyebrow field, and its second heading is a
+subtitle. The page put a kicker where its template expects a headline.
+
+Re-open when a second section on any site wants a kicker above a card grid.
+That makes it a shape the library meets rather than one page's editorial choice.
+
 ### TC-105 — Family symmetry becomes a test
 
 **Dependencies:** TC-103, TC-104
@@ -422,6 +442,58 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### Iteration 68 — a deliberate omission was being ranked as a gap, and the queue runs out
+
+The report's remaining media entry was `video-feature`/`decorative_media` on
+`keys-to-success.section.10`. The extractor puts it there on purpose: the
+`_feature_media` branch keeps a mascot floated beside the video out of the
+section's media, because counting it made the section overflow a template that
+holds one picture. **The report was ranking that decision as a defect**, and
+acting on it would have asked for a field whose only purpose is to undo it.
+
+`decorative_media` is now held back with its reason recorded, alongside forms,
+unresolved assets and unsupported interactions. Unlike the form rule this needs
+no corroborating evidence in the plan: the role is assigned in exactly one place
+in the codebase, and only where the decision was made. No template declares the
+field, and none should.
+
+An existing ranking test had used `decorative_media` as its example of a
+one-section gap, so it stopped meaning what it said. Its data changed to a field
+that really is one. Both new tests were proved in both directions — removing the
+rule fails them, and widening it to hold back every field fails the guard that a
+real loss on the same template still ranks.
+
+**The ranked report is now one entry**, and that entry is deliberately not being
+closed. `feature-cards-4up`/`eyebrow` is one section wanting a kicker above a
+card grid. Widening one card template breaks the symmetry TC-105 asserts;
+widening all eight is a large capability change for a single data point, which
+is what 1.6.0's unmeasured half already cost. Filed as TC-109, to re-open when a
+second section anywhere wants the same thing.
+
+**Evidence.** Suite 2,168 → 2,170 passing, 16 deselected. Corpus unchanged on all
+ten metrics, no threshold or regression failures. All three sites re-analysed
+`--refresh --render` (`action == "execute"`) and re-planned `--refresh`:
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+**Where the goal stands.** TM1 and TM2 are done. TM3 has run the ranked queue
+from five gaps and eight dropped fields down to one, and the one that remains is
+a judgement recorded rather than work outstanding. TM4 has its symmetry test,
+its capacity ledger and its slot-position test; the regression test that the
+report *stays* empty is not reachable, because the projects it would read are
+build artefacts and are not committed.
+
+What is left needs a decision rather than an iteration. **TC-106** would run the
+planner over benchmark cases so corpus-wide really means corpus-wide — but that
+changes what the offline benchmark computes, and a prior regime change moved a
+site from 79.4 to 59.4 with no quality change, so it is a scoring-regime call.
+**TC-104**'s four remaining templates and **TC-109** are both held on evidence,
+which is the discipline working rather than a blockage. The loop stops here.
 
 ### Iteration 67 — a subtitle wearing the other name
 

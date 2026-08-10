@@ -91,11 +91,11 @@ def test_the_worst_gap_ranks_first_across_sites() -> None:
                 _entry("f.1", "Cards/feature-cards-4up", (_uneditable("body"),)),
                 _entry("f.2", "Cards/feature-cards-4up", (_uneditable("body"),)),
             ),
-            _project("near", _entry("n.1", "Content/video-feature", (_uneditable("decorative_media"),))),
+            _project("near", _entry("n.1", "Content/video-feature", (_uneditable("primary_action"),))),
         ]
     )
 
-    assert [gap.field for gap in report.gaps] == ["body", "decorative_media"]
+    assert [gap.field for gap in report.gaps] == ["body", "primary_action"]
     assert report.gaps[0].dropped_field_count == 2
     assert report.gaps[0].projects == ("far",)
 
@@ -178,6 +178,41 @@ def test_a_form_field_nobody_inventoried_is_still_a_gap() -> None:
 
     assert [gap.field for gap in report.gaps] == ["form_field"]
     assert report.held_back == ()
+
+
+def test_a_picture_the_extractor_called_decoration_is_not_a_gap() -> None:
+    """A mascot floated beside a video was deliberately kept out of the media
+    the template holds, because counting it made the section overflow. Ranking
+    it would ask for a field that undoes that decision."""
+
+    report = build_capability_gap_report(
+        [_project("site", _entry("s.10", "Content/video-feature", (_uneditable("decorative_media"),)))]
+    )
+
+    assert report.gaps == ()
+    assert report.held_back[0].reason == (
+        "the extractor classified this picture as decoration, not content"
+    )
+
+
+def test_real_content_dropped_by_the_same_template_still_ranks() -> None:
+    """The rule holds back one field, not the template that carried it."""
+
+    report = build_capability_gap_report(
+        [
+            _project(
+                "site",
+                _entry(
+                    "s.10",
+                    "Content/video-feature",
+                    (_uneditable("decorative_media"), _uneditable("primary_action")),
+                ),
+            )
+        ]
+    )
+
+    assert [gap.field for gap in report.gaps] == ["primary_action"]
+    assert len(report.held_back) == 1
 
 
 def test_an_asset_that_resolved_to_nothing_is_not_a_template_gap() -> None:

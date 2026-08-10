@@ -27,6 +27,9 @@ held out deliberately, each recorded with its reason rather than dropped:
 * An asset that resolved to nothing. The template had the slot; the picture
   never arrived. That is an acquisition defect wearing a binding warning.
 * An unsupported interaction. A missing behaviour is not a missing field.
+* A picture the extractor already called decoration. A mascot floated beside a
+  video was deliberately kept out of the media the template holds; ranking it
+  would ask for a field that undoes that decision.
 
 This module is pure: no network, filesystem, or model calls.
 """
@@ -75,6 +78,11 @@ _UNSUPPORTED_INTERACTION = re.compile(r"^required interaction '(?P<name>[^']+)' 
 # A field whose name says the content belongs to a form. The plan carries the
 # form's own inventory, so the check below confirms rather than assumes.
 _FORM_FIELD_NAMES = frozenset({"form_field", "form_fields"})
+
+# The extractor's own word for a picture it decided is decoration rather than
+# content. Unlike a form field this needs no corroboration: nothing else ever
+# assigns the role, and it is assigned only where the decision was made.
+_DECORATIVE_FIELD_NAMES = frozenset({"decorative_media"})
 
 
 class _GapModel(BaseModel):
@@ -171,6 +179,8 @@ def _held_back_reason(entry: CompositionPlanEntry, warning: str, field: str | No
         return f"{interaction['name']!r} is a missing behaviour, not a missing field"
     if field in _FORM_FIELD_NAMES and entry.form_fields:
         return "a form is never rebuilt from a template; its fields travel as a placeholder"
+    if field in _DECORATIVE_FIELD_NAMES:
+        return "the extractor classified this picture as decoration, not content"
     return None
 
 
