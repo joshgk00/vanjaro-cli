@@ -439,6 +439,51 @@ The real fix has to make the pictures items *without* discarding what is not one
 of them. That is a change to how a card grid's leftovers are handled, not a map
 entry, and it deserves its own iteration with the retention check in front of it.
 
+### TC-114 — One pull-quote makes a whole page testimonials, and the careful rule is overridden
+
+**Dependencies:** none. **Filed rather than fixed — the fix needs TC-115 first.**
+
+`oasis-lighting` is one page holding a heading, six photographs, three
+paragraphs, four links and a single pull-quote. It is classified `testimonials`
+and matched to `Cards/testimonial-cards-3up`, losing the photographs, the copy
+and every link — three dropped fields on one section.
+
+`static_role` returns `testimonials` for *any* element containing a
+`<blockquote>`, with no count and no test for competing content. The legacy
+`_classify_section` has always been careful here — "A blockquote only signals a
+testimonial section when quotes are the point: several of them, or a lone quote
+with no competing gallery/cards" — and calls this page a gallery. **The careful
+rule is overridden by the careless one**, because a static role outranks the
+other classifier whenever it returns anything but `rich_text`. That is the same
+shape as the `<article>` finding in evidence 1/7, and this is its second
+instance.
+
+The corpus is safe from the correction: its two blockquote sections carry two
+and three quotes.
+
+**Applying it costs content anyway, which is why it is filed.** With the rule
+corrected the section stops being testimonials — and retention falls from 25
+elements to 23, because the pull-quote is an `<h3>` inside the blockquote and
+nothing else picks it up. See TC-115. A document-level loss is worse than a
+binding-level one: a dropped field is visible in the report and fixable by
+widening a template, while content that never reaches the design document cannot
+be recovered downstream at all.
+
+### TC-115 — A non-repeat section keeps two headings and silently drops the rest
+
+**Dependencies:** none. **Blocks TC-114.**
+
+Enrichment emits a section's most prominent heading as `section_title` and, at
+most, one smaller heading above it as `eyebrow`. Every other heading in a
+non-repeating section is never emitted. On `oasis-lighting` that is the page's
+pull-quote, written as an `<h3>` inside a `<blockquote>`.
+
+This is invisible to every check the loop runs. It is not a dropped field, so no
+plan warning names it; it is not a coverage change, because the element never
+reaches the document to be counted; and no project reports retention.
+
+Fixing TC-114 without this would trade a misclassification for a silent loss.
+
 ### TC-112 — Add measured sources until the held items have a second section
 
 **Dependencies:** none. **This is what unblocks TC-104, TC-109, TC-110 and TC-111.**
@@ -559,6 +604,58 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — evidence 4/7: `oasis-lighting`, a second override, and a queue filling with noise
+
+Fourth source of TC-112. **Nothing promoted, and the fix was reverted for the
+second iteration running** — this time on a check the loop would not have caught.
+
+`oasis-lighting` is one page carrying a heading, six photographs, three
+paragraphs, four links and a single pull-quote. It is classified `testimonials`
+and matched to `testimonial-cards-3up`, losing the photographs, the copy and
+every link. `static_role` returns `testimonials` for *any* element containing a
+`<blockquote>`; the legacy `_classify_section` requires quotes to be the point —
+several of them, or a lone quote with nothing competing — and calls this page a
+gallery. **The careful rule is overridden by the careless one**, exactly as
+`<article>` was in evidence 1/7. That override now has two instances.
+
+The corpus was checked before touching anything: its two blockquote sections
+carry two and three quotes, so the correction leaves them alone.
+
+**Applying it cost content anyway.** Retention fell 25 elements → 23: the
+pull-quote is an `<h3>` inside the blockquote, and enrichment emits a
+non-repeating section's most prominent heading plus at most one eyebrow, so
+every other heading is silently dropped. Filed as TC-115, which blocks TC-114.
+
+**A document-level loss is worse than a binding-level one**, which is why this
+was reverted rather than shipped. A dropped field is named in the report and can
+be closed by widening a template. Content that never reaches the design document
+is invisible to every check the loop runs — no plan warning names it, coverage
+cannot see it because the element was never counted, and no project reports
+retention.
+
+**Five of the eleven queue entries are now fallout from two misroutes.**
+Entries 3–5 are TC-114's, entries 10–11 are TC-113's. The report cannot tell,
+because only the benchmark corpus carries `acceptable_templates`. On the corpus
+a loss from a wrongly matched section is held back as a routing defect; on a
+project workspace the same loss reads as a missing field. The queue is filling
+with noise, and the fix is not more sources.
+
+**Evidence.** Suite 2,186 passing, 16 deselected, unchanged. Benchmark aggregate
+identical on all ten metrics, no threshold or regression failures.
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 0.0 | 1 | false | 1 |
+| `contact-page` | 2 | 2 rendered | 62 | 0.75 | 0 | true | 1 |
+| `oasis-probe` | 5 | 5 rendered | 155 | 0.087 | 3 | false | 1 |
+| `oasis-lighting` (new) | 2 | 2 rendered | 62 | 0.1875 | 0 | true | 3 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+Queue: **8 gaps and 8 dropped fields to 11 and 11**, every one still a single
+section, and five of them noise. Three sources remain.
 
 ### 2026-08-10 — evidence 3/7: `oasis-probe`, and a fix that raised coverage while losing content
 
