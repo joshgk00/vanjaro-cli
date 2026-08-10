@@ -380,6 +380,19 @@ descriptive line as its `subtitle`, which is the opposite of what the names
 suggest. And whether the alias table or the template declarations are the thing
 to correct.
 
+**TC-108 done — agency pack 1.9.0 (iteration 67), and the filing was half
+wrong.** Reading all seven component trees settled it: six templates place the
+second heading below the first and five of those correctly call it `subtitle`;
+`video-feature` places its `eyebrow` first and is correct. **Exactly one
+template was misnamed** — `bio-about` declared an `eyebrow` in the slot *below*
+its title, with "Jane Smith, Founder & CEO" as its own sample copy. That is a
+subtitle. It is now called one.
+
+The alias table needed nothing, and `class-photo-cards-4up` is correctly named:
+"Our Classes" over "Explore our most popular classes" is an ordinary title and
+subtitle. It only looked inverted because the `keys-to-success` page used those
+two slots for a kicker and a headline.
+
 ### TC-105 — Family symmetry becomes a test
 
 **Dependencies:** TC-103, TC-104
@@ -409,6 +422,56 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### Iteration 67 — a subtitle wearing the other name
+
+TC-108, shipped as **agency pack 1.9.0**. I filed this last iteration as a
+vocabulary split needing the alias table widened. Reading the seven component
+trees says otherwise, and the smaller answer is the right one.
+
+| template | first heading | second heading |
+|---|---|---|
+| `video-feature` | **`eyebrow`** | `title` |
+| `bio-about` | `title` | **`eyebrow`** |
+| `class-photo-cards-4up` | `section_title` | `subtitle` |
+| `split-media`, `split-media-reverse` | `title` | `subtitle` |
+| `cta-banner`, `cta-split` | `title` | `subtitle` |
+
+**Six templates put the second heading below the first; five call it a subtitle
+and one called it an eyebrow.** `bio-about`'s own sample copy gives it away —
+"About Us" then "Jane Smith, Founder & CEO", which is a headline and the line
+under it. The field is now `subtitle`. Two lines changed; the executable
+template is byte-identical, so the audited executable digest did not move and
+only the release payload did.
+
+**The alias table needed nothing.** Both names mean what they say, and
+`class-photo-cards-4up` is correctly named too: "Our Classes" over "Explore our
+most popular classes" is an ordinary title and subtitle. It only read as
+inverted because the `keys-to-success` page used those two slots for a kicker
+and a headline — which is the page's choice, not the template's error.
+
+**Nothing measured changed, and that is the honest report.** No plan bound
+`bio-about.eyebrow`; the only eyebrow binding in the repository is on
+`video-feature`, which keeps its field. The defect was latent: a section's
+kicker binding to that slot would have been published *under* the headline it
+belongs above, and a deck could never reach the slot built for it.
+
+So the release ships with a test rather than a number.
+`test_an_eyebrow_slot_opens_above_its_title_and_a_subtitle_follows_it` reads
+each template's real slot order and asserts the name matches the position. It
+was proved in both directions: restoring `bio-about`'s old name fails it, and so
+does renaming `video-feature`'s correct `eyebrow` to `subtitle`.
+
+**Evidence.** Suite 2,167 → 2,168 passing, 16 deselected. Corpus unchanged on all
+ten metrics, no threshold or regression failures. All three sites re-analysed
+`--refresh --render` (`action == "execute"`) and re-planned `--refresh`, all
+unchanged:
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
 
 ### Iteration 66 — the queue was asking for a body field to hold a kicker
 

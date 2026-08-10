@@ -24,9 +24,9 @@ from vanjaro_cli.design.template_catalog import (
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_REGISTRY = _PROJECT_ROOT / "artifacts" / "agency-packs"
 _PACK_NAME = "clicks-and-mortars"
-_TEMPLATE_VERSION = "1.8.0"
+_TEMPLATE_VERSION = "1.9.0"
 _MODIFIER_VERSION = "1.0.0"
-_PACK_VERSION = "1.8.0"
+_PACK_VERSION = "1.9.0"
 _HISTORICAL_DIGESTS = {
     "templates/1.0.0.json": "c4e1316345e4c275ae9fb99312a3c2014de1ce39781a547b6a2d8685f42c8a73",
     "modifiers/1.0.0.json": "331b7c14af6ae87ac9d04a6559ff9ae3ed4c252a21be80c6fa5159c1f720f087",
@@ -46,6 +46,8 @@ _HISTORICAL_DIGESTS = {
     "packs/1.6.0.json": "fda4c2c7e22b748a835e6ff9666988d17f66e015b81ac7859bc66bed096bfcdd",
     "templates/1.7.0.json": "9a5c7da6788d93f2f20e4133b03cb889440cbaffbf69a0fadb6ade5629ed686b",
     "packs/1.7.0.json": "dcb59f70c68b830544d8467632163435a62bdb49eeeb5693aec0b3d2fb2c65be",
+    "templates/1.8.0.json": "870f4a773cce0d88162d7d5bec0a234ccfd7473529138399b7b67f37fd855d37",
+    "packs/1.8.0.json": "f03c7ce7097073df87f609855e3d43554da8a52ca162059179b75a0594fbaef5",
 }
 _AUDITED_EXECUTABLE_DIGESTS = {
     "CTAs/cta-banner": "f1af9e60b5086e510411ac5548097bdcfc5530ee1d474caa55cb04f3c2fe3028",
@@ -86,8 +88,8 @@ _REVIEWED_EXECUTABLE_CHANGES = (
     "Lists/icon-feature-list",
 )
 _CURRENT_RELEASE_DIGESTS = {
-    "templates/1.8.0.json": "870f4a773cce0d88162d7d5bec0a234ccfd7473529138399b7b67f37fd855d37",
-    "packs/1.8.0.json": "f03c7ce7097073df87f609855e3d43554da8a52ca162059179b75a0594fbaef5",
+    "templates/1.9.0.json": "69c601878bd63500922aafe4bb5216c9dafd4808c10ca019b0c20faea33da516",
+    "packs/1.9.0.json": "7ca77c0932137b1686d9a4478e070124566d1ed9ec5001d4b8ffee3277fe0f82",
 }
 
 

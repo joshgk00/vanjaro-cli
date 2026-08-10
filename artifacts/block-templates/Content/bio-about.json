@@ -24,7 +24,7 @@
     "repeat_group": null,
     "fields": {
       "title": "required",
-      "eyebrow": "optional",
+      "subtitle": "optional",
       "body": "required",
       "media": "required"
     },
@@ -37,7 +37,7 @@
         ],
         "slots_per_owner": 1
       },
-      "eyebrow": {
+      "subtitle": {
         "owner": "section",
         "slot_type": "heading",
         "slots": [

@@ -61,7 +61,7 @@ EXPECTED_FIELDS_BY_TEMPLATE = {
         "section_title", "section_body", "item.title", "item.role", "item.body", "item.media"
     },
     "Cards/testimonial-cards-3up.json": {"section_title", "item.quote", "item.author"},
-    "Content/bio-about.json": {"title", "eyebrow", "body", "media"},
+    "Content/bio-about.json": {"title", "subtitle", "body", "media"},
     "Content/contact-section.json": {
         "section_title", "section_body", "contact_items", "action_title", "action_body", "action"
     },
@@ -320,6 +320,35 @@ def test_templates_repeating_the_same_kind_offer_the_same_section_fields() -> No
             "declare the difference as deliberate or close it in a governed release"
         )
     assert compared >= 6, "the multi-template repeat kinds stopped being compared"
+
+
+def test_an_eyebrow_slot_opens_above_its_title_and_a_subtitle_follows_it() -> None:
+    """The two names are a claim about position, and the claim has to be true.
+
+    `bio-about` declared an `eyebrow` whose slot renders *below* its title, with
+    "Jane Smith, Founder & CEO" as its own sample copy — a subtitle wearing the
+    other name. Nothing caught it, and a section's kicker binding there would
+    have been published under the headline it belongs above.
+    """
+
+    checked = 0
+    for entry in load_template_catalog(TEMPLATES_DIR):
+        physical = entry.capabilities.physical_fields
+        title = physical.get("title") or physical.get("section_title")
+        if title is None:
+            continue
+        order = [slot["key"] for slot in primary_slots(load_template_data(entry)["template"])]
+        title_at = order.index(title.slots[0])
+        for name, expected_above in (("eyebrow", True), ("subtitle", False)):
+            contract = physical.get(name)
+            if contract is None:
+                continue
+            checked += 1
+            assert (order.index(contract.slots[0]) < title_at) is expected_above, (
+                f"{entry.relative_path} declares {name!r} "
+                f"{'below' if expected_above else 'above'} its title"
+            )
+    assert checked >= 6, "the templates naming a kicker or a deck stopped being checked"
 
 
 def test_physical_contracts_own_every_primary_visitor_slot_exactly_once() -> None:
