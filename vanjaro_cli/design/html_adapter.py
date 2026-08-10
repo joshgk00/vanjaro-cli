@@ -75,6 +75,7 @@ __all__ = [
 _ROLE_BY_LEGACY_TYPE = {
     "hero": "hero",
     "cards": "feature_cards",
+    "team": "team_grid",
     "testimonial": "testimonials",
     "cta": "call_to_action",
     "content": "rich_text",
@@ -90,6 +91,7 @@ _ROLE_BY_LEGACY_TYPE = {
 
 _REPEAT_KIND_BY_TYPE = {
     "cards": "card",
+    "team": "team_member",
     "testimonial": "testimonial",
     "gallery": "gallery_item",
     "blog_cards": "blog_post",

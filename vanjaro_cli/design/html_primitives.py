@@ -12,7 +12,7 @@ from vanjaro_cli.design.serialization import stable_design_id
 
 
 GRID_SECTION_TYPES = frozenset(
-    {"cards", "testimonial", "gallery", "blog_cards", "pricing", "stats"}
+    {"cards", "team", "testimonial", "gallery", "blog_cards", "pricing", "stats"}
 )
 
 

@@ -1285,6 +1285,90 @@ def test_blog_cards_without_per_card_buttons_preserve_alignment():
 
 
 # ---------------------------------------------------------------------------
+# A card-shaped grid is not the same kind of thing as a card grid
+# ---------------------------------------------------------------------------
+
+
+def _card_grid(section_heading: str, cards: list[tuple[str, str]]) -> str:
+    """A grid whose cards carry nothing but a picture, a name and a line.
+
+    This is the shape a person grid, a post grid and a feature grid all share,
+    so the section heading is the only thing telling them apart.
+    """
+
+    blocks = "".join(
+        f'<div class="col"><img src="/{index}.jpg"><h3>{title}</h3><p>{body}</p></div>'
+        for index, (title, body) in enumerate(cards, start=1)
+    )
+    heading = f"<h2>{section_heading}</h2>" if section_heading else ""
+    return _wrap(
+        "<section><h1>Welcome</h1><a class='btn' href='/x'>Go</a></section>"
+        f"<section>{heading}<div class='row'>{blocks}</div></section>"
+    )
+
+
+def test_a_grid_the_section_calls_instructors_is_a_team_grid():
+    """Nothing in these cards says "person" — no link, no date, no excerpt. The
+    section's own heading is the only evidence, and it is enough."""
+
+    html = _card_grid(
+        "MEET THE INSTRUCTORS",
+        [("Julia", "Guitar and Ukelele"), ("Ben", "Trombone"), ("Jahn", "Instructor")],
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[1]["type"] == "team"
+
+
+def test_a_grid_the_section_calls_blogs_is_a_post_grid():
+    html = _card_grid(
+        "BLOGS",
+        [("First title", "Music"), ("Second title", "Music"), ("Third title", "Music")],
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[1]["type"] == "blog_cards"
+
+
+def test_a_grid_whose_heading_names_nothing_stays_a_card_grid():
+    html = _card_grid(
+        "MOST POPULAR CLASSES",
+        [("Prelude", "Age 0-5"), ("Symphony", "All ages"), ("Finale", "Adults")],
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[1]["type"] == "cards"
+
+
+def test_a_card_title_never_names_the_section():
+    """With no heading of its own, the section's first heading belongs to the
+    first card — and a post titled "Post One" would name the whole grid."""
+
+    html = _card_grid(
+        "",
+        [("Post One", "No button."), ("Post Two", "Nor here."), ("Post Three", "Nor here.")],
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[1]["type"] == "cards"
+
+
+def test_a_team_grid_reaches_the_team_template_and_keeps_its_kind():
+    """The point of the classification: `team-member-grid-4up` declares repeat
+    kind `person` and section role `team_grid`, and nothing from HTML could
+    reach either before."""
+
+    from vanjaro_cli.design.html_adapter import _REPEAT_KIND_BY_TYPE, _ROLE_BY_LEGACY_TYPE
+
+    assert _ROLE_BY_LEGACY_TYPE["team"] == "team_grid"
+    assert _REPEAT_KIND_BY_TYPE["team"] == "team_member"
+
+
+# ---------------------------------------------------------------------------
 # Wrapper descent (_top_level_sections via extract_sections)
 # ---------------------------------------------------------------------------
 

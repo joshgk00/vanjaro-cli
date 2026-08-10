@@ -304,6 +304,13 @@ all — the shape fits, so nothing complains.
 - `semantic_role_accuracy` and `template_top1_accuracy` do not fall.
 - No benchmark annotation, fixture or threshold edited.
 
+**TC-107 done (iteration 63).** A card grid now takes its kind from the heading
+the section gives itself, in the same words the Figma adapter already reads off
+a frame name — the HTML side simply had no equivalent. `keys-to-success`
+sections 7 and 8 route to `team-member-grid-4up` (0.9589, high) and
+`blog-post-cards-4up` (0.9509, high) instead of `feature-cards-4up` at medium.
+kts coverage 0.8971 → 0.9412 and losses 5 → 2; corpus unchanged.
+
 ### TC-104 — Five repeat templates cannot hold a section heading
 
 **Dependencies:** TC-103 (same shape, same release mechanics — do it after, so
@@ -362,6 +369,62 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### Iteration 63 — a card-shaped grid learns what kind of thing it holds
+
+TC-107. Two of `keys-to-success`'s card sections are a grid of instructors and a
+grid of blog posts, and both were being built as generic feature cards.
+
+**There is no evidence in the cards themselves.** Both grids are picture,
+heading, one short line — no link, no date, no excerpt, no author. The existing
+`_looks_like_blog_cards` detector wants a "Read More" link or a `post`-classed
+block with a forty-character excerpt, and correctly finds neither. A detector
+that reads only the items has nothing to go on, which is why both templates
+built for people and for posts were unreachable from any HTML source.
+
+**What separates them is the heading the section gives itself.** "MEET THE
+INSTRUCTORS" over a grid says what the grid holds, in the author's own
+visitor-facing words. This is not a new idea in the codebase: the Figma adapter
+already classifies `team_grid` from "team"/"instructors"/"people cards" and
+`blog_cards` from "blogs"/"articles"/"latest news", read off a frame's name. The
+HTML side had no equivalent, so this is parity rather than invention — and the
+two adapters now produce the same role vocabulary.
+
+**The first version read the wrong heading.** It took `content["headings"][0]`,
+which is the *section's* heading only when the section has one; where it does
+not, the first heading belongs to the first card. An existing test caught it
+immediately — a fixture of three `<article>` posts titled "Post One", "Post Two"
+and "Post Three" became a blog grid on the strength of a card title. The rule
+now reads the first heading that lies outside every card, and returns nothing
+when there is none.
+
+**Then the sections stopped binding altogether, and the corpus never noticed.**
+With the new roles in place, kts coverage fell 0.8971 → 0.5147 and two sections
+began blocking. `html_ownership` decides the repeat kind from the section role,
+and `team_grid`/`blog_cards` were in none of its four role sets — so no group
+was built at all, the cards collapsed into section-level content, and both
+sections matched `CTAs/cta-split` at semantic compatibility 0.000. The offline
+benchmark stayed at 1.0 throughout, because no benchmark case has a team or blog
+grid. **Only the three real sites showed it.** The four scattered role sets are
+now one named map of card-grid roles to what their cards are.
+
+**Evidence.** Suite 2,156 → 2,161 passing, 16 deselected. Corpus unchanged —
+all ten metrics identical, including `semantic_role_accuracy` 1.0 and
+`template_top1_accuracy` 0.92, with no threshold or regression failures. All
+three sites re-analysed `--refresh --render` (`action == "execute"`) and
+re-planned `--refresh`:
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.25 | 1 | false | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.8971 → **0.9412** | 0 | true | 5 → **2** |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+Section 7 matches `team-member-grid-4up` at 0.9589 **high**, up from
+`feature-cards-4up` at 0.9204 medium; section 8 matches `blog-post-cards-4up` at
+0.9509 **high**, up from 0.9000 medium. Both are the templates the source page
+was built from. The ranked report falls from five gaps and eight dropped fields
+to **three gaps and three dropped fields**, each now a single section.
 
 ### Iteration 62 — the top-ranked gap was not a gap, and the second one was
 

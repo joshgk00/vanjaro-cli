@@ -54,6 +54,17 @@ def _depth(element: Tag, root: Tag) -> int:
     return depth
 
 
+# Sections that are a grid of repeated cards, and what each grid's cards are.
+# They are read identically — picture, heading, line of text — and differ only
+# in the kind of thing repeated, which decides the templates they can reach.
+_CARD_GRID_REPEAT_KIND = {
+    "feature_cards": "card",
+    "project_gallery": "card",
+    "team_grid": "team_member",
+    "blog_cards": "blog_post",
+}
+
+
 def repeating_subtrees(root: Tag, *, minimum: int = 2) -> list[Tag]:
     """Find repeated card-shaped subtrees when no card vocabulary applies.
 
@@ -385,8 +396,8 @@ def enrich_section_from_static_dom(
         elif role == "process_steps":
             repeat_kind = "other"
             repeat_items = list(root.select(".elementor-column, [class*='step']"))
-        elif role in {"feature_cards", "project_gallery"}:
-            repeat_kind = "card"
+        elif role in _CARD_GRID_REPEAT_KIND:
+            repeat_kind = _CARD_GRID_REPEAT_KIND[role]
             repeat_items = (
                 list(root.find_all("article"))
                 or list(root.select(".card, .e-loop-item, .service-list > *"))
@@ -452,7 +463,7 @@ def enrich_section_from_static_dom(
                     fields["number"] = add("stat", "step_number", number.get_text(" ", strip=True), group_id=group_id)
                 if isinstance(heading, Tag):
                     fields["title"] = add("heading", "step_title", heading.get_text(" ", strip=True), group_id=group_id)
-            elif role in {"feature_cards", "project_gallery"}:
+            elif role in _CARD_GRID_REPEAT_KIND:
                 media = item.find("img")
                 heading = item.find(["h2", "h3", "h4"])
                 body = item.find("p")
@@ -530,12 +541,12 @@ def enrich_section_from_static_dom(
         section["content"] = elements
         section["groups"] = groups
     item_count = len(groups[0]["items"]) if groups else 0
-    if role in {"feature_cards", "project_gallery", "testimonials"}:
+    if role in _CARD_GRID_REPEAT_KIND or role == "testimonials":
         section["layout"] = {
             "kind": "grid",
             "contained": True,
             "columns": max(1, min(item_count or 3, 4)),
-            "media_position": "top" if role in {"feature_cards", "project_gallery"} else "none",
+            "media_position": "top" if role in _CARD_GRID_REPEAT_KIND else "none",
             "alignment": "left",
             "full_bleed": False,
         }
@@ -630,7 +641,7 @@ def add_inferred_static_responsive(
         record(BreakpointName.MOBILE, navigation="collapsed", direction="vertical")
     elif role == "process_steps" and item_count > 1:
         record(BreakpointName.MOBILE, direction="vertical")
-    elif item_count > 1 and role in {"feature_cards", "project_gallery", "testimonials", "stats"}:
+    elif item_count > 1 and (role in _CARD_GRID_REPEAT_KIND or role in {"testimonials", "stats"}):
         record(BreakpointName.MOBILE, columns=1)
         if item_count >= 3:
             record(BreakpointName.TABLET, columns=2)

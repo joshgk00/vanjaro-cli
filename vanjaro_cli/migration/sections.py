@@ -34,6 +34,7 @@ TEMPLATE_MAP: dict[str, str] = {
     "bio": "Bio / About",
     "gallery": "Gallery (3-up)",
     "blog_cards": "Blog Post Cards (3-up)",
+    "team": "Team Member Grid (4-up)",
     "faq": "FAQ Accordion",
     "pricing": "Pricing Cards (3-up)",
     "stats": "Stats Grid (4-up)",
@@ -1022,7 +1023,7 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
         if c.find(["h2", "h3", "h4"]) or c.find("img")
     ]
     if len(repeated) >= 3:
-        return "cards"
+        return _named_card_kind(element, repeated) or "cards"
 
     # Card grids buried under wrapper markup (CMS module chrome): a group of
     # same-class sibling blocks each carrying its own heading is a card row
@@ -1034,7 +1035,7 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
         with_text = sum(1 for member in group if member.find("p"))
         if with_image >= len(group) // 2 and with_image > with_text:
             return "gallery"
-        return "cards"
+        return _named_card_kind(element, group) or "cards"
 
     # CTA: short (one heading + one button) with little else
     if (
@@ -1172,6 +1173,49 @@ def _looks_like_gallery(element: Tag) -> bool:
 
 
 _BLOG_POST_CLASS = re.compile(r"\b(?:list-post|blog-post|post-item|article)\b", re.IGNORECASE)
+
+# What a section calls itself, in the same words the Figma adapter already
+# reads off a frame's name. The HTML side had no equivalent, so a grid of
+# people and a grid of posts were both plain cards.
+_CARD_KIND_BY_HEADING_STEM = (
+    ("team", ("team", "instructor", "teacher", "faculty", "staff", "people")),
+    ("blog_cards", ("blog", "article", "news", "post")),
+)
+
+
+def _named_card_kind(element: Tag, cards: list[Tag]) -> str | None:
+    """Read a card grid's kind off the heading the section gives itself.
+
+    A grid of people, a grid of blog posts and a grid of features are the same
+    shape: picture, heading, line of text. Nothing in the items separates them
+    — the instructors on `keys-to-success` carry no link, no date and no
+    excerpt — so a detector that only reads the cards must call all three
+    `cards`, and the two templates built for people and for posts become
+    unreachable from HTML.
+
+    A shape is not a kind of thing. What distinguishes them is the section's
+    own heading: "MEET THE INSTRUCTORS" over a grid says what the grid holds,
+    in the author's own visitor-facing words. The Figma adapter already reads
+    exactly these words off a frame's name; this is the HTML side of the same
+    vocabulary.
+
+    Only a heading outside every card is read. The section's first heading is
+    its own only when it has one — where it does not, the first heading belongs
+    to the first card, and a post titled "Post One" would name the section.
+    """
+
+    claimed = {id(node) for card in cards for node in [card, *card.find_all(True)]}
+    heading = next(
+        (tag for tag in element.find_all(_HEADING_TAGS) if id(tag) not in claimed),
+        None,
+    )
+    if heading is None:
+        return None
+    words = re.findall(r"[a-z]+", heading.get_text(" ", strip=True).casefold())
+    for kind, stems in _CARD_KIND_BY_HEADING_STEM:
+        if any(word.startswith(stem) for word in words for stem in stems):
+            return kind
+    return None
 
 
 def _looks_like_blog_cards(element: Tag) -> bool:
