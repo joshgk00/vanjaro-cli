@@ -411,6 +411,34 @@ The alias table needed nothing, and `class-photo-cards-4up` is correctly named:
 subtitle. It only looked inverted because the `keys-to-success` page used those
 two slots for a kicker and a headline.
 
+### TC-113 — A `gallery` section builds no repeat group, and the obvious fix loses content
+
+**Dependencies:** none. **Filed rather than fixed — the naive fix is worse.**
+
+`oasis-probe.section.4` is a gallery: an eyebrow, a heading, and seven linked
+photographs. It matches `Content/video-feature` at **0.4827, low**, warning that
+"media needs 7 slots, template owns 1".
+
+The cause is an omission in `html_ownership._CARD_GRID_REPEAT_KIND`, which lists
+`project_gallery` but not `gallery`. Without an entry the section builds no
+repeat group, so every gallery template scores as though the section repeated
+nothing and a one-picture video feature wins. The corpus's `project_gallery`
+section does build a group and reaches `gallery-3up` at 0.9164, which is what
+this section should be doing.
+
+**Adding `"gallery": "card"` to the map is not the fix.** Measured: the section
+then routes correctly to `Cards/gallery-3up` at 0.8643 high, and coverage rises
+0.087 → 0.167 — while the design document loses the eyebrow, the heading and
+five of the seven pictures. `repeating_subtrees` finds two like-signature
+subtrees in this markup, the enrichment branch keeps only those, and everything
+else is never emitted. **No loss warning is raised, because the content is not
+dropped at binding — it is never extracted.** Coverage went up while content
+went missing, which is the one direction the loop's usual alarm cannot see.
+
+The real fix has to make the pictures items *without* discarding what is not one
+of them. That is a change to how a card grid's leftovers are handled, not a map
+entry, and it deserves its own iteration with the retention check in front of it.
+
 ### TC-112 — Add measured sources until the held items have a second section
 
 **Dependencies:** none. **This is what unblocks TC-104, TC-109, TC-110 and TC-111.**
@@ -531,6 +559,62 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — evidence 3/7: `oasis-probe`, and a fix that raised coverage while losing content
+
+Third source of TC-112. **Nothing promoted.** The source found a real defect,
+and the obvious fix for it turned out to be worse than the defect — so it is
+filed as TC-113 and nothing shipped.
+
+`oasis-probe` gives five sections and plans invalid: three block, all on
+`file:///Portals/...` images that this saved capture cannot resolve, which the
+report already holds back as acquisition defects. Section 4 is the interesting
+one — a gallery with an eyebrow, a heading and seven linked photographs, matched
+to `Content/video-feature` at **0.4827, low**, warning "media needs 7 slots,
+template owns 1".
+
+The cause is a one-line omission: `_CARD_GRID_REPEAT_KIND` lists
+`project_gallery` and not `gallery`, so the section builds no repeat group and
+every gallery template scores as though it repeated nothing.
+
+**Adding the missing entry fixed the routing and lost the content.** Measured
+with the change in place: the section reaches `Cards/gallery-3up` at 0.8643
+high, and coverage rises 0.087 → 0.167 — while the design document drops from
+an eyebrow, a heading and seven pictures to two card items and nothing else.
+`repeating_subtrees` finds two like-signature subtrees here, the enrichment
+branch keeps only those, and the rest is never emitted. **No warning is raised,
+because the content is not dropped at binding — it is never extracted.**
+
+That is the direction this loop's usual alarm cannot see. The standing
+instruction is to treat a coverage *drop* as the signal; here coverage went
+**up** on a section that had just lost five pictures and both its headings. The
+check that would have caught it is retention, and no project reports it.
+
+Reverted, and confirmed the section is whole again: seven media, six actions, an
+eyebrow and a title. The real fix has to make the pictures items without
+discarding what is not one, which is a change to how a card grid treats its
+leftovers rather than a map entry.
+
+**Three of the eight queue entries now come from that one misrouted section** —
+`video-feature`/`media` (owns 1, needs 7), `video-feature`/`action` (owns 1,
+needs 6), and indirectly the low match itself. The report cannot tell, because
+only the benchmark corpus carries `acceptable_templates`; a project workspace
+has no answer key, so a misroute there reads as a capability gap.
+
+**Evidence.** Suite 2,186 passing, 16 deselected, unchanged. Benchmark aggregate
+identical on all ten metrics, no threshold or regression failures.
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 0.0 | 1 | false | 1 |
+| `contact-page` | 2 | 2 rendered | 62 | 0.75 | 0 | true | 1 |
+| `oasis-probe` (new) | 5 | 5 rendered | 155 | 0.087 | 3 | false | 1 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+Queue: **5 gaps and 5 dropped fields to 8 and 8**, every one still a single
+section. Four sources remain.
 
 ### 2026-08-10 — evidence 2/7: `contact-page`, and a check that was right to say no
 
