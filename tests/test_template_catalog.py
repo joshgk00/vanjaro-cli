@@ -175,6 +175,44 @@ def test_declared_fields_match_audited_semantic_slot_ownership() -> None:
         )
 
 
+AUDITED_MULTI_SLOT_CAPACITY = {
+    # Several paragraphs of copy beside a picture. Widened in packs 1.6.0
+    # (bio-about) and 1.8.0 (the split pair), which are the same shape.
+    ("Content/bio-about.json", "body"): 3,
+    ("Content/split-media.json", "body"): 3,
+    ("Content/split-media-reverse.json", "body"): 3,
+    ("Content/rich-text.json", "body"): 4,
+    # Lists: an address block, and a footer's columns of links.
+    ("Content/contact-section.json", "contact_items"): 3,
+    ("Navigation/footer-3col.json", "contact_items"): 6,
+    ("Navigation/footer-4col.json", "contact_items"): 6,
+}
+
+
+def test_section_field_capacity_matches_the_audited_ledger() -> None:
+    """A template that can hold three paragraphs where it once held one is a
+    capability change, and every capability change is a governed release.
+
+    The field ledger above audits which fields a template declares, so adding
+    one is deliberate. Capacity had no equivalent: `slots_per_owner` could go
+    from one to three with nothing but the executable digest to notice, and a
+    digest records that something changed, not that anyone meant it.
+
+    Only section-owned fields are listed. A repeat item's capacity is how many
+    slots each item owns, which the repeat group already governs.
+    """
+
+    for entry in load_template_catalog(TEMPLATES_DIR):
+        for name, contract in entry.capabilities.physical_fields.items():
+            if contract.owner != "section":
+                continue
+            expected = AUDITED_MULTI_SLOT_CAPACITY.get((entry.relative_path, name), 1)
+            assert contract.slots_per_owner == expected, (
+                f"{entry.relative_path} field {name!r} owns {contract.slots_per_owner} "
+                f"slots, audited for {expected}"
+            )
+
+
 def test_physical_contracts_own_every_primary_visitor_slot_exactly_once() -> None:
     for entry in load_template_catalog(TEMPLATES_DIR):
         data = load_template_data(entry)

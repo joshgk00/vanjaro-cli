@@ -50,9 +50,11 @@
         "owner": "section",
         "slot_type": "text",
         "slots": [
-          "text_1"
+          "text_1",
+          "text_2",
+          "text_3"
         ],
-        "slots_per_owner": 1
+        "slots_per_owner": 3
       },
       "action": {
         "owner": "section",
@@ -151,6 +153,26 @@
                       {"name": "mt-3", "active": false}
                     ],
                     "attributes": {"id": "tpl-splitr-t1"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A further paragraph.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-splitr-t2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "A further paragraph.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-splitr-t3"}
                   },
                   {
                     "type": "button",

@@ -244,6 +244,11 @@ picture beside three paragraphs before widening anything.
 - One governed release, digests re-audited, prior versions immutable.
 - `edca-pilot` blocking count falls; corpus unchanged; all three sites reported.
 
+**TC-102 done — agency pack 1.8.0 (iteration 64).** `Content/split-media` and
+`split-media-reverse` own three body slots, matching `bio-about`, which is the
+identical layout. `edca-pilot` coverage 0.25 → 0.6667, blocking 1 → 0, and its
+plan is **valid for the first time**. Corpus unchanged.
+
 ### TC-103 — Twelve repeat templates cannot introduce their own items
 
 **Dependencies:** none
@@ -369,6 +374,59 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### Iteration 64 — the split pair catches up with the template it mirrors
+
+TC-102, shipped as **agency pack 1.8.0**. `edca.home.section.2` is "Who is EDCA
+Consulting?" over a picture and three paragraphs, and `split-media-reverse` owned
+one body slot, so two paragraphs were dropped.
+
+**TC-2 nearly sent this somewhere else.** A heading asking who a company is,
+above a picture and three paragraphs, is an *about* section — and `bio-about`
+already owns three body slots, so reclassifying it would have bound everything
+with no release at all. Two things ruled that out. `bio-about` places its media
+on the **left** and this section's is on the right, with no reversed variant, so
+the content would have been bought with a mirrored layout. And the three
+templates declare the identical layout — `split`, two columns — differing only in
+media side and, arbitrarily, in how many paragraphs they can hold. That
+asymmetry is the defect, not the classification.
+
+So both halves of the mirrored pair were widened, not just the one with
+evidence. Fixing only `split-media-reverse` would have left the library holding
+three paragraphs when the picture is on the right and one when it is on the left,
+which is the state TC-5 exists to prevent. Three slots, matching `bio-about`,
+because that is the family's number — not because edca happens to need exactly
+three.
+
+**Nothing audited capacity, so this release added the ledger for it.** The
+suite went green on the first run, which was itself the finding: the field
+ledger makes *adding a field* deliberate, but `slots_per_owner` could go from
+one to three with only the executable digest to notice — and a digest records
+that something changed, not that anyone meant it. `test_section_field_capacity_
+matches_the_audited_ledger` now pins every section-owned multi-slot field. Writing
+it immediately turned up one I had not known about: `contact-section` holds three
+contact lines. Seven fields are audited; everything else owns one slot.
+
+**Evidence.** Suite 2,161 → 2,162 passing, 16 deselected. Corpus unchanged on
+all ten metrics, no threshold or regression failures. All three sites re-analysed
+`--refresh --render` (`action == "execute"`) and re-planned `--refresh`:
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.25 → **0.6667** | 1 → **0** | false → **true** | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+**`edca-pilot` produces a valid plan for the first time.** Its section 2 now
+scores 0.9288 high; the capacity shortfall had been multiplying its match score
+down, so widening the template both bound the paragraphs and lifted the section
+above the confidence floor. Its one remaining loss is the contact form, which is
+policy rather than a defect — forms are never rebuilt from a template.
+
+The ranked report is down to **two gaps and two dropped fields**, both single
+sections on `kts-fidelity`, and neither has a filed task: the "Our Classes"
+eyebrow and a decorative mascot. Every backlog item with measured evidence
+behind it is now closed.
 
 ### Iteration 63 — a card-shaped grid learns what kind of thing it holds
 
