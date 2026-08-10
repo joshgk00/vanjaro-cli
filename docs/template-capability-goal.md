@@ -411,6 +411,36 @@ The alias table needed nothing, and `class-photo-cards-4up` is correctly named:
 subtitle. It only looked inverted because the `keys-to-success` page used those
 two slots for a kicker and a headline.
 
+### TC-112 — Add measured sources until the held items have a second section
+
+**Dependencies:** none. **This is what unblocks TC-104, TC-109, TC-110 and TC-111.**
+
+Everything left in the queue is held for the same reason: one section of
+evidence, and the rule is not to widen a template for one page's editorial
+choice. That is not a blockage to argue past — it is a shortage of measured
+sources, and the fix is more of them.
+
+Seven captured pages already sit in `artifacts/migration/` from sites benchmarked
+before: `cmw-blog`, `contact`, `oasis-lighting`, `oasis-probe`, `post-security`,
+`rendered-home`, `wwo`. (`edca-home.html` is byte-identical to the source
+`edca-pilot` already uses, so it adds nothing.) They are real pages, so they are
+honest evidence — unlike a fixture authored to want the shape being tested for,
+which would be rigging the answer.
+
+**One source per iteration.** Add it as a project, analyse and plan it, then
+re-run the ranked report and record which held items gained a section. When one
+reaches two sections on two sources it stops being one page's quirk and becomes
+a shape the library should meet, and that iteration closes it in a governed
+release under the ordinary rules.
+
+**Acceptance criteria**
+
+- Each iteration adds exactly one source and reports what the queue did.
+- A held item promoted to two sections is released; one that stays at one is
+  left alone and said so.
+- No benchmark annotation, fixture or threshold edited to make an item promote.
+- The ten corpus metrics and all three real sites reported every iteration.
+
 ### TC-110 — Four corpus sections carry a list their template cannot hold
 
 **Dependencies:** none. **Held on evidence, not blocked.**
