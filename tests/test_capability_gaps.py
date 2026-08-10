@@ -403,6 +403,61 @@ def test_a_project_has_no_answer_key_so_nothing_is_held_back_for_routing() -> No
     assert [gap.field for gap in report.gaps] == ["hero_media"]
 
 
+def test_a_per_item_field_on_a_template_that_repeats_nothing_is_not_a_gap() -> None:
+    """`cta-banner` repeats nothing, so there is no item for `item.event_type`
+    to belong to and declaring one would give the template nowhere to put a
+    second value. The section carries a list, which is a bigger question."""
+
+    catalog = {entry.template_id: entry.capabilities for entry in load_template_catalog()}
+    report = build_capability_gap_report(
+        [_project("site", _entry("s.4", "CTAs/cta-banner", (_uneditable("item.event_type"),)))],
+        catalog=catalog,
+    )
+
+    assert report.gaps == ()
+    assert "repeats nothing" in report.held_back[0].reason
+
+
+def test_a_per_item_field_on_a_template_that_does_repeat_still_ranks() -> None:
+    """`logo-bar` repeats logos and holds only their pictures, so a logo's name
+    is a field it could have and does not."""
+
+    catalog = {entry.template_id: entry.capabilities for entry in load_template_catalog()}
+    report = build_capability_gap_report(
+        [_project("site", _entry("s.1", "Content/logo-bar", (_uneditable("item.label"),)))],
+        catalog=catalog,
+    )
+
+    assert [(gap.template_id, gap.field) for gap in report.gaps] == [
+        ("Content/logo-bar", "item.label")
+    ]
+    assert report.held_back == ()
+
+
+def test_a_section_level_field_on_a_non_repeating_template_still_ranks() -> None:
+    """The rule is about per-item fields. A section-level field on the same
+    template is an ordinary gap and must not be swept up with them."""
+
+    catalog = {entry.template_id: entry.capabilities for entry in load_template_catalog()}
+    report = build_capability_gap_report(
+        [_project("site", _entry("s.4", "CTAs/cta-banner", (_uneditable("eyebrow"),)))],
+        catalog=catalog,
+    )
+
+    assert [gap.field for gap in report.gaps] == ["eyebrow"]
+
+
+def test_without_a_catalog_the_repeat_group_cannot_be_checked() -> None:
+    """The report still works with no library to consult; it just cannot make
+    this judgement, and it says nothing rather than guessing."""
+
+    report = build_capability_gap_report(
+        [_project("site", _entry("s.4", "CTAs/cta-banner", (_uneditable("item.event_type"),)))]
+    )
+
+    assert [gap.field for gap in report.gaps] == ["item.event_type"]
+
+
 def test_a_gap_the_library_has_since_closed_is_not_ranked() -> None:
     """Pack 1.6.0 gave `feature-cards-3up` a section title. A plan written
     before it still reports the loss, and some plans cannot be refreshed to find

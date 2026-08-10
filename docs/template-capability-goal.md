@@ -411,6 +411,47 @@ The alias table needed nothing, and `class-photo-cards-4up` is correctly named:
 subtitle. It only looked inverted because the `keys-to-success` page used those
 two slots for a kicker and a headline.
 
+### TC-110 — Four corpus sections carry a list their template cannot hold
+
+**Dependencies:** none. **Held on evidence, not blocked.**
+
+`harbor.about` carries two bullets ("Documented handoffs", "Plain-language
+reporting") and matches `split-media`. `riverkind.cta` carries two event types
+("Weekday crews", "Weekend crews") and matches `cta-banner`. Both templates are
+named by the sections' own annotations as acceptable, and **neither declares a
+repeat group at all** — so the list has nowhere to go.
+
+The report used to rank these as four separate missing fields —
+`item.benefit`, `item.text`, `item.event_type`, `item.label` — which invites
+adding `item.event_type` to a banner that repeats nothing. They are now held
+back, because a per-item field on a non-repeating template has no item to
+attach to.
+
+The real question is whether a split or a CTA should be able to carry a short
+list, and it is one question rather than four fields. Two sections, two
+families. Re-open when a third source wants the same shape, or when someone
+decides the families should repeat.
+
+### TC-111 — A logo's name and a process step's title have nowhere to go
+
+**Dependencies:** none. **Held on evidence, not blocked.**
+
+The two `item.*` gaps that survive are on templates that *do* repeat, so the
+field really is missing rather than misplaced:
+
+- `Content/logo-bar` repeats `logo` and declares only `item.media`;
+  `figma-auto-layout-saas` gives each logo a label.
+- `Content/stats-band-3up` repeats `stat` and declares `item.value` and
+  `item.label`; `html-elementor-studio`'s process steps give each item a number
+  and a title, and the title has no field.
+
+The second is correctly routed, and measurably so: `icon-feature-list` is also
+acceptable for that section and would lose *two* fields where the stats band
+loses one, so the matcher chose the template that keeps more — a choice pack
+1.10.0 improved by giving the band a section title.
+
+One section each. Same discipline as TC-109.
+
 ### TC-109 — No card template can hold a kicker, and one section wants one
 
 **Dependencies:** none. **Held on evidence, not blocked.**
@@ -460,6 +501,61 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — the `item.*` shape: four of six were the wrong question
+
+Six of the seven remaining gaps were `item.*` — a field on a repeat item the
+matched template's items do not declare. No template was widened; the shape was
+measured first, and **every one of the four sections had the same thing in
+common: the extractor labelled its group `other`**, its own word for a repeated
+structure it could not name.
+
+| section | role | template | template repeats | item fields |
+|---|---|---|---|---|
+| `html-dnn-services.section.4` | split_feature | `split-media` | **nothing** | `text` |
+| `figma-freeform-nonprofit` volunteer-cta | call_to_action | `cta-banner` | **nothing** | `label` |
+| `figma-auto-layout-saas` logo-cloud | logo_cloud | `logo-bar` | `logo` | `label` |
+| `html-elementor-studio.section.3` | process_steps | `stats-band-3up` | `stat` | `number`, `title` |
+
+**Two of the templates repeat nothing at all**, and that splits the six cleanly.
+Asking for `item.event_type` on `cta-banner` is a category error: there is no
+item for the field to belong to, and declaring one would not give the banner
+anywhere to put a second value. The corpus's own annotations describe what is
+really there — `harbor.about` has a `list_item` group of two bullets,
+`riverkind.cta` a `list_item` group of two event types — and name those very
+templates as acceptable. So a per-item field on a non-repeating template is now
+held back, with the real question recorded: whether a split or a CTA should be
+able to carry a short list. **That is one question, not four missing fields.**
+Filed as TC-110.
+
+The other two survive as genuine gaps, because their templates do repeat and
+simply lack the field. Filed as TC-111, one section each, held under TC-109's
+rule. One premise of mine died here: I expected the process-steps section to be
+misrouted, since `icon-feature-list` is also acceptable and declares
+`item.title`. Measured, it is the opposite — `icon-feature-list` would lose
+*two* fields (`item.number` and `section_title`) where the stats band loses one,
+so the matcher chose the template that keeps more. Pack 1.10.0 is part of why.
+
+The new rule was proved three ways: removing it fails the positive test,
+applying it to every field fails the guard that a section-level field on the
+same template still ranks, and applying it regardless of the repeat group fails
+the guard that `logo-bar`'s missing label still ranks.
+
+**Evidence.** Suite 2,177 → 2,181 passing, 16 deselected. Benchmark aggregate
+identical on all ten metrics, no threshold or regression failures. All three
+sites re-analysed `--refresh --render` (`action == "execute"`) and re-planned
+`--refresh`, all unchanged:
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+The ranked queue falls from **7 gaps and 7 dropped fields to 3 and 3**, and all
+three are single sections held deliberately: TC-109's kicker, TC-111's logo
+label and step title. Nothing in the queue now has enough evidence to justify a
+release, which is where the discipline says to stop rather than to widen.
 
 ### 2026-08-10 — pack 1.10.0: the evidence TC-104 waited four iterations for
 

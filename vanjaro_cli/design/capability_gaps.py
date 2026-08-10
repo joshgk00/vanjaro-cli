@@ -38,6 +38,10 @@ held out deliberately, each recorded with its reason rather than dropped:
 * A loss on a section that matched a template the corpus says is wrong for it.
   Widening that template would bind the content and bury the routing defect,
   which is how a team grid spent three releases being built as feature cards.
+* A per-item field on a template that repeats nothing. There is no item for it
+  to belong to, so declaring one would not give the template anywhere to put a
+  second value. The section carries a list its template family cannot hold,
+  which is a larger question than a missing field.
 
 This module is pure: no network, filesystem, or model calls.
 """
@@ -260,7 +264,12 @@ class _Accumulator:
             self.owned = owned if self.owned is None else min(self.owned, owned)
 
 
-def _held_back_reason(section: SectionLosses, warning: str, field: str | None) -> str | None:
+def _held_back_reason(
+    section: SectionLosses,
+    warning: str,
+    field: str | None,
+    catalog: Mapping[str, CapabilityManifest] | None,
+) -> str | None:
     """Say why a loss is not a capability gap, or None when it is one."""
 
     if _ASSET_UNBOUND.match(warning):
@@ -278,6 +287,18 @@ def _held_back_reason(section: SectionLosses, warning: str, field: str | None) -
             + " or ".join(section.expected_templates)
             + " here, so this is a routing defect rather than a missing field"
         )
+    if field and field.startswith("item.") and catalog is not None:
+        manifest = catalog.get(section.template_id)
+        if manifest is not None and manifest.repeat_group is None:
+            # The section brought a repeated list to a template that repeats
+            # nothing, so there is no item for the field to belong to. Declaring
+            # one would not give the template somewhere to put a second value.
+            # The real question is whether this template family should repeat at
+            # all, which is a bigger one than a missing field.
+            return (
+                "the template repeats nothing, so a per-item field has no item to "
+                "attach to; the section carries a list this template family cannot hold"
+            )
     return None
 
 
@@ -364,7 +385,7 @@ def build_capability_gap_report(
             for warning in section.warnings:
                 classified = _classify(warning)
                 field = classified[1] if classified else None
-                reason = _held_back_reason(section, warning, field)
+                reason = _held_back_reason(section, warning, field, catalog)
                 if reason is not None:
                     held_back.append(
                         HeldBackLoss(
