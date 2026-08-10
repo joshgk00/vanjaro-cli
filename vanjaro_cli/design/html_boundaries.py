@@ -9,7 +9,7 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup, Tag
 from pydantic import JsonValue
 
-from vanjaro_cli.migration.sections import has_form_fields
+from vanjaro_cli.migration.sections import dated_card_kind, has_form_fields
 
 
 STABLE_NAV_MIN_LINKS = 2
@@ -315,7 +315,10 @@ def static_role(element: Tag, section_index: int) -> str:
     if len(repeat_articles) >= 2:
         if any(token in hints for token in ("project", "gallery", "portfolio", "loop")):
             return "project_gallery"
-        return "feature_cards"
+        # `<article>` is the element a blog post is written in, so reading a row
+        # of them as feature cards takes the tag for the kind of thing. When the
+        # articles carry publication dates they say what they are.
+        return dated_card_kind(repeat_articles) or "feature_cards"
     if "hero" in _hint_tokens(hints) or (element.find("h1") is not None and section_index <= 1):
         return "hero"
     if "cta" in _hint_tokens(hints):

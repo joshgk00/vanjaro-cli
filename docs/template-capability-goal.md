@@ -532,6 +532,66 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-10 — evidence 1/7: `cmw-blog`, and `<article>` was not a kind of thing
+
+First source of TC-112. **Nothing promoted to a second section**, which is the
+ordinary outcome and not a reason to reach for a release. What the source did do
+is expose a classification defect that would have poisoned the queue for the
+next six iterations.
+
+`cmw-blog` section 2 is a listing of ten posts, each an image, a title and a
+**date** — "Nov 13, 2017", "Sep 21, 2017". It came out as `feature_cards`, so
+`primary_action` had nowhere to go and the queue ranked *"give
+`feature-cards-4up` a primary_action field"* — the wrong question, since
+`blog-post-cards-4up` already declares one.
+
+**Two blind spots, one after the other.** The heading rule from iteration 63
+reads the first heading outside the cards, and a blog listing routinely has no
+heading at all — the grid is the whole section. The cards answer for themselves
+where a heading cannot: iteration 63 recorded that the `keys-to-success` grids
+had "no link, no date, no excerpt", and here there is a date on every card. I
+checked the corpus first — every card body there is a descriptive sentence, none
+date-like — then added the rule.
+
+That fixed `extract_sections` and changed nothing, because **`static_role`
+outranks it and has the same blind spot in a purer form**: a row of two or more
+`<article>` elements returns `feature_cards`. `<article>` is the element a blog
+post is written in. Taking it for a feature card is the recurring failure at its
+most literal, and the date rule is now shared by both classifiers rather than
+duplicated.
+
+The section routes to `Cards/blog-post-cards-3up` with repeat kind `blog_post`.
+
+**Its plan then got worse, and that is honest.** Coverage fell 0.4878 → 0.0 and
+the section now blocks — because `blog-post-cards-3up` declares `item.media`
+**required** where `feature-cards-4up` had it optional, and all ten card images
+in this capture resolve to nothing (a saved page pointing at `file:///portals/...`
+that does not exist). The correct template refuses to build a post grid with no
+pictures. That is an acquisition limit of the source, not a routing regression,
+and the ranked report holds those unresolved assets back as such.
+
+**One thing worth noting for the next source.** The new queue entry is
+`blog-post-cards-3up`/`primary_action`, and that is not a new asymmetry — it is
+the one TC-105's `KNOWN_WIDTH_VARIANT_ASYMMETRY` table already names, whose
+entry read "a gap nobody has measured yet". It now has one measured section.
+One, not two.
+
+**Evidence.** Suite 2,181 → 2,186 passing, 16 deselected. Benchmark aggregate
+identical on all ten metrics, no threshold or regression failures. The date rule
+was proved four ways: removing it, dropping its majority threshold, letting a
+bare month and year count, and putting it ahead of the heading each fail a
+different test.
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `cmw-blog` (new) | 2 | 2 rendered | 62 | 0.0 | 1 | false | 1 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+Queue: **3 gaps and 3 dropped fields to 4 and 4**, all still single sections.
+Six sources remain.
+
 ### 2026-08-10 — the `item.*` shape: four of six were the wrong question
 
 Six of the seven remaining gaps were `item.*` — a field on a repeat item the

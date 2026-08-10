@@ -1357,6 +1357,88 @@ def test_a_card_title_never_names_the_section():
     assert sections[1]["type"] == "cards"
 
 
+def test_a_headless_grid_of_dated_cards_is_a_post_grid():
+    """A blog listing routinely has no heading — the grid is the whole section —
+    so the heading rule has nothing to read. Its cards answer for themselves:
+    every one carries a publication date, which a feature card does not."""
+
+    html = _card_grid(
+        "",
+        [
+            ("Platform Options for Your Website", "Nov 13, 2017"),
+            ("It's Time to Get Serious About Security", "Sep 21, 2017"),
+            ("5 Signs Your Website Is Boring", "Aug 2, 2017"),
+        ],
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[1]["type"] == "blog_cards"
+
+
+def test_a_headless_grid_of_described_cards_is_still_a_card_grid():
+    """The date is the whole signal. Cards carrying a line of description are
+    features, and calling them posts would route them away from their template."""
+
+    html = _card_grid(
+        "",
+        [
+            ("Strategy", "Align the team around a practical plan."),
+            ("Design", "Shape accessible experiences people trust."),
+            ("Build", "Deliver maintainable systems that last."),
+        ],
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[1]["type"] == "cards"
+
+
+def test_a_month_and_year_alone_is_not_a_publication_date():
+    """Narrow on purpose: "Nov 2017" reads as a period a feature might cover,
+    not the day a post went out."""
+
+    html = _card_grid(
+        "",
+        [("Winter programme", "Nov 2017"), ("Spring programme", "Mar 2018"), ("Summer", "Jun 2018")],
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[1]["type"] == "cards"
+
+
+def test_one_dated_card_among_many_does_not_make_a_post_grid():
+    """A single card mentioning a date is a coincidence. The claim is that the
+    grid is a listing, and that needs most of it to be dated."""
+
+    html = _card_grid(
+        "",
+        [
+            ("Strategy", "Align the team around a practical plan."),
+            ("Design", "Shape accessible experiences people trust."),
+            ("Our 2017 retrospective", "Nov 13, 2017"),
+        ],
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[1]["type"] == "cards"
+
+
+def test_a_named_heading_still_wins_over_the_cards_dates():
+    """The section's own word for itself outranks an inference from its items."""
+
+    html = _card_grid(
+        "MEET THE INSTRUCTORS",
+        [("Julia", "Nov 13, 2017"), ("Ben", "Sep 21, 2017"), ("Jahn", "Aug 2, 2017")],
+    )
+
+    sections = extract_sections(html, BASE_URL)
+
+    assert sections[1]["type"] == "team"
+
+
 def test_a_team_grid_reaches_the_team_template_and_keeps_its_kind():
     """The point of the classification: `team-member-grid-4up` declares repeat
     kind `person` and section role `team_grid`, and nothing from HTML could

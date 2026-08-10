@@ -17,6 +17,7 @@ __all__ = [
     "extract_form_fields",
     "visible_form_fields",
     "extract_page_title",
+    "dated_card_kind",
     "extract_global_element",
     "collect_image_urls",
     "TEMPLATE_MAP",
@@ -1023,7 +1024,7 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
         if c.find(["h2", "h3", "h4"]) or c.find("img")
     ]
     if len(repeated) >= 3:
-        return _named_card_kind(element, repeated) or "cards"
+        return _named_card_kind(element, repeated) or dated_card_kind(repeated) or "cards"
 
     # Card grids buried under wrapper markup (CMS module chrome): a group of
     # same-class sibling blocks each carrying its own heading is a card row
@@ -1035,7 +1036,7 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
         with_text = sum(1 for member in group if member.find("p"))
         if with_image >= len(group) // 2 and with_image > with_text:
             return "gallery"
-        return _named_card_kind(element, group) or "cards"
+        return _named_card_kind(element, group) or dated_card_kind(group) or "cards"
 
     # CTA: short (one heading + one button) with little else
     if (
@@ -1216,6 +1217,46 @@ def _named_card_kind(element: Tag, cards: list[Tag]) -> str | None:
         if any(word.startswith(stem) for word in words for stem in stems):
             return kind
     return None
+
+
+_MONTHS = (
+    "january february march april may june july august september october "
+    "november december jan feb mar apr jun jul aug sep sept oct nov dec"
+).split()
+_DATED_CARD = re.compile(
+    r"^(?:" + "|".join(_MONTHS) + r")\.?\s+\d{1,2},?\s+\d{4}$"
+    r"|^\d{1,2}\s+(?:" + "|".join(_MONTHS) + r")\.?\s+\d{4}$"
+    r"|^\d{4}-\d{2}-\d{2}$"
+    r"|^\d{1,2}[/.]\d{1,2}[/.]\d{2,4}$",
+    re.IGNORECASE,
+)
+
+
+def dated_card_kind(cards: list[Tag]) -> str | None:
+    """Read a headless card grid's kind off a date on its cards.
+
+    `_named_card_kind` needs a heading, and a blog listing routinely has none —
+    the grid is the whole section. Its cards answer the question themselves:
+    every one carries a publication date, which a feature card does not.
+
+    Iteration 63 recorded that the `keys-to-success` grids offered "no link, no
+    date, no excerpt", which is why the heading had to do the work there. Where
+    a date *is* present it is better evidence than a heading, because it comes
+    from the items whose kind is in question.
+    """
+
+    if len(cards) < 3:
+        return None
+    dated = 0
+    for card in cards:
+        texts = (
+            leaf.get_text(" ", strip=True)
+            for leaf in card.find_all(True)
+            if leaf.find(True) is None
+        )
+        if any(_DATED_CARD.match(text) for text in texts):
+            dated += 1
+    return "blog_cards" if dated * 2 >= len(cards) else None
 
 
 def _looks_like_blog_cards(element: Tag) -> bool:
