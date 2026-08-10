@@ -484,6 +484,30 @@ reaches the document to be counted; and no project reports retention.
 
 Fixing TC-114 without this would trade a misclassification for a silent loss.
 
+### TC-116 — A link with no text is counted as a call to action
+
+**Dependencies:** none. **Filed rather than fixed — extraction, and the loop has
+reverted two of those already.**
+
+`wwo.section.5` reports five `primary_action` elements. Two are real — an email
+link and a telephone number. **Three are social icons whose anchors carry no
+text at all**, Facebook, Twitter and Google+.
+
+`html_ownership` emits `primary_action` for every `<a href>` it finds, with no
+test that the anchor says anything. Both measurement scripts already know
+better: they were brought into agreement in iteration 55 on exactly this point,
+requiring an action to carry a label, because "an action with no label is not the
+call" and a thumbnail wrapped in a link must not supply the accent colour. The
+extractor was never given the same rule.
+
+The consequence is visible here: a section reads as carrying five calls to
+action where it has two, and its match is scored against that.
+
+Fixing it removes elements from the design document, which is the direction the
+loop has twice reverted. The removed elements carry no visitor-facing text — but
+they do carry hrefs, and whether a social profile URL is content worth keeping is
+the question to settle first.
+
 ### TC-112 — Add measured sources until the held items have a second section
 
 **Dependencies:** none. **This is what unblocks TC-104, TC-109, TC-110 and TC-111.**
@@ -604,6 +628,58 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — evidence 5/7: `wwo`, an apparent promotion that was one page's habit
+
+Fifth source of TC-112. **Nothing promoted**, though the ranked report said
+otherwise at first glance.
+
+`wwo` put `Content/rich-text`/`primary_action` at rank 1 with **two sections**,
+which is the bar for a release. Reading them settles it the other way:
+
+- `section.4` is a real content block — "Website Only", a paragraph, and a
+  "Get Started!" button pointing at `/contact-us`. A genuine rich-text section
+  with a call to action.
+- `section.5` is page chrome — body copy, an obfuscated email link, a telephone
+  number, and three social links. It sits in a DNN content pane rather than the
+  page's `<footer>` element, so nothing recognises it as chrome.
+
+Two sections on one page, one of which is not the shape it claims. That is
+precisely the "one page's editorial choice" the two-source rule exists to catch,
+so the entry stays at one genuine section and nothing ships.
+
+**It did expose something exact.** Three of `section.5`'s five "calls to action"
+are social icons whose anchors carry **no text at all**. Both measurement scripts
+have required an action to carry a label since iteration 55 — "an action with no
+label is not the call" — and the extractor was never given the same rule. So a
+section reads as carrying five calls to action where it has two, and is scored
+against that. Filed as TC-116, not fixed: the fix removes elements from the
+design document, which is the direction this loop has already reverted twice, and
+whether a social profile URL is content worth keeping needs settling first.
+
+The TC-110 hold-back earned its keep here — `cta-split` took a nine-item list
+from `section.3` and the report correctly declined to rank `item.benefit` and
+`item.text` as missing fields on a template that repeats nothing.
+
+`wwo` is also the first source with a section measured **statically** rather than
+rendered: four of five carry rendered provenance, one does not.
+
+**Evidence.** Suite 2,186 passing, 16 deselected, unchanged. Benchmark aggregate
+identical on all ten metrics, no threshold or regression failures.
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 0.0 | 1 | false | 1 |
+| `contact-page` | 2 | 2 rendered | 62 | 0.75 | 0 | true | 1 |
+| `oasis-probe` | 5 | 5 rendered | 155 | 0.087 | 3 | false | 1 |
+| `oasis-lighting` | 2 | 2 rendered | 62 | 0.1875 | 0 | true | 3 |
+| `wwo` (new) | 5 | 4 rendered, 1 static | 124 | 0.16 | 2 | false | 4 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+Queue: **11 gaps to 12**, 13 dropped fields. Rank 1 has two sections and one of
+them does not count. Two sources remain.
 
 ### 2026-08-10 — evidence 4/7: `oasis-lighting`, a second override, and a queue filling with noise
 
