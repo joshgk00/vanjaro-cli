@@ -358,6 +358,15 @@ adds to what the benchmark measures. Treat it as a scoring-regime question — a
 prior regime change moved a site from 79.4 to 59.4 with no quality change — not
 as an extension of the report.
 
+**TC-106 done (2026-08-10), and it needed no regime change at all.** The premise
+was wrong: closing this does not require the planner. A match already knows
+which requirements its chosen template cannot meet, and the planner copies
+exactly those strings into an entry's warnings, so the report reads matches for
+corpus cases and plans for projects and both speak one vocabulary. The benchmark
+computes what it always did — its aggregate is byte-identical — because nothing
+was added to it. The corpus was dark for thirty-odd iterations and had **seven
+gaps in it**, including the measured evidence TC-104 was waiting for.
+
 ### TC-108 — One editorial part, two field names, and neither reaches the other
 
 **Dependencies:** none
@@ -442,6 +451,71 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — TC-106: the corpus was dark, and it had seven gaps in it
+
+**The filing's premise was wrong, and that is the whole result.** TC-106 said
+closing it meant running the planner over benchmark cases, which would change
+what the benchmark computes — a scoring-regime call. It does not. A match
+already records which requirements its chosen template cannot meet, and the
+planner copies *exactly those strings* into an entry's warnings. So the report
+now reads matches for corpus cases and plans for projects, both speak one
+vocabulary, and **the benchmark's aggregate is byte-identical** because nothing
+was added to it.
+
+What a match cannot report is losses that appear only at binding: an asset that
+resolved to nothing, and the planner's second word about a capacity overflow.
+Neither costs anything — the first is held back as an acquisition defect
+wherever it is seen, and the second repeats a warning the match already made.
+
+`load_benchmark_predictions` moved out of the benchmark command verbatim, into
+`design/benchmark_corpus.py`, so both callers read one corpus rather than two.
+
+**The queue went from 1 gap to 8.** Seven were invisible, on the five cases the
+pipeline is actually measured against:
+
+| rank | template | field | sections |
+|---|---|---|---|
+| 1 | `Content/stats-band-3up` | `section_title` | **2** (dnn-services, elementor-studio) |
+| 2–3 | `CTAs/cta-banner` | `item.event_type`, `item.label` | 1 (figma-nonprofit) |
+| 4 | `Cards/feature-cards-4up` | `eyebrow` | 1 (kts) |
+| 5 | `Content/logo-bar` | `item.label` | 1 (figma-saas) |
+| 6–7 | `Content/split-media` | `item.benefit`, `item.text` | 1 (dnn-services) |
+| 8 | `Content/stats-band-3up` | `item.title` | 1 (elementor-studio) |
+
+**Rank 1 is the evidence TC-104 was waiting for.** `stats-band-3up` was one of
+the four templates left unwidened for want of a measured section; it now has two,
+on two different cases, and both matched it correctly. It is a governed release
+whenever someone wants to take it.
+
+**The corpus also answers a question projects cannot**, and that turned out to
+matter immediately. Annotations declare `acceptable_templates` per section, so
+where a section matched something the corpus says is wrong, a loss on it is a
+routing defect and not a missing field. One gap was exactly that:
+`centered-hero`/`hero_media` on `figma-freeform-nonprofit`, whose annotation
+expects `split-hero` or `split-media-reverse`. Widening `centered-hero` would
+have bound the content and buried the reason it was reached — the same mistake
+iteration 62 caught by hand on `keys-to-success`. It is now held back with that
+reason, and a project, which has no answer key, is never second-guessed this way.
+
+Every assertion was proved by breaking the property: removing the routing guard
+fails it, treating an absent expectation as a mismatch fails the project guard,
+and treating every expectation as a mismatch fails the guard that the corpus's
+real gaps still rank.
+
+**Evidence.** Suite 2,170 → 2,177 passing, 16 deselected. Benchmark aggregate
+identical to the run before this change on all ten metrics; no threshold or
+regression failures. All three sites re-analysed `--refresh --render`
+(`action == "execute"`) and re-planned `--refresh`, all unchanged:
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+`kts-fidelity` errored once during analysis and reproduced on retry, as it has
+before; the figures above are from the successful run, not the stale artifact.
 
 ### Iteration 68 — a deliberate omission was being ranked as a gap, and the queue runs out
 

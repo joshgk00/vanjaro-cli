@@ -12,8 +12,16 @@ from __future__ import annotations
 import pytest
 
 from vanjaro_cli.design.capability_gaps import (
+    MatchedCase,
     PlannedProject,
     build_capability_gap_report,
+)
+from vanjaro_cli.design.matcher import (
+    ConfidenceLevel,
+    MaintainabilitySignals,
+    MatchSubscores,
+    TemplateMatchCandidate,
+    TemplateMatchResult,
 )
 from vanjaro_cli.design.composition import (
     CompositionPlan,
@@ -269,6 +277,130 @@ def test_a_static_only_field_is_a_gap_of_its_own_kind() -> None:
     report = build_capability_gap_report([_project("site", _entry("s.1", "Cards/gallery-3up", (warning,)))])
 
     assert [(gap.field, gap.kind) for gap in report.gaps] == [("body", "static_only")]
+
+
+def _match(section: str, template_id: str, missing: tuple[str, ...]) -> TemplateMatchResult:
+    candidate = TemplateMatchCandidate(
+        template_id=template_id,
+        template_name=template_id.split("/")[-1],
+        score=0.8,
+        confidence=ConfidenceLevel.HIGH,
+        subscores=MatchSubscores(
+            semantic_role=1.0,
+            fields=0.8,
+            repeat_group=1.0,
+            layout=1.0,
+            responsive=1.0,
+            style=1.0,
+            interaction=1.0,
+            maintainability=1.0,
+        ),
+        missing_requirements=missing,
+        reasons=(),
+        maintainability=MaintainabilitySignals(
+            native_component_ratio=1.0,
+            editable_content_coverage=0.8,
+            required_modifier_count=0,
+            estimated_css_bytes=0,
+            estimated_css_selectors=0,
+            uses_custom_code=False,
+            global_block_reuse=False,
+            template_reuse_count=1,
+        ),
+    )
+    return TemplateMatchResult(
+        section_id=section,
+        candidates=(candidate,),
+        selected_candidate=candidate,
+        blocking=False,
+    )
+
+
+def test_a_benchmark_case_reports_gaps_without_a_plan() -> None:
+    """The corpus never builds a composition plan, so for thirty-odd iterations
+    the ranked queue covered the projects someone had open and none of the five
+    cases the pipeline is measured against."""
+
+    report = build_capability_gap_report(
+        [
+            MatchedCase(
+                case_id="html-dnn-services",
+                matches=(_match("s.3", "Content/stats-band-3up", (_uneditable("section_title"),)),),
+            )
+        ]
+    )
+
+    assert [(gap.template_id, gap.field) for gap in report.gaps] == [
+        ("Content/stats-band-3up", "section_title")
+    ]
+    assert report.gaps[0].projects == ("html-dnn-services",)
+    assert report.section_count == 1
+
+
+def test_a_case_and_a_project_losing_the_same_field_are_one_gap() -> None:
+    """Ranking is by sections lost wherever they are, or a gap that costs one
+    section in each of two places would rank below one costing two in either."""
+
+    report = build_capability_gap_report(
+        [
+            _project("site", _entry("s.1", "Content/stats-band-3up", (_uneditable("section_title"),))),
+            MatchedCase(
+                case_id="case",
+                matches=(_match("s.3", "Content/stats-band-3up", (_uneditable("section_title"),)),),
+            ),
+        ]
+    )
+
+    assert len(report.gaps) == 1
+    assert report.gaps[0].dropped_field_count == 2
+    assert report.gaps[0].projects == ("case", "site")
+
+
+def test_a_loss_on_a_wrongly_matched_section_is_a_routing_defect() -> None:
+    """The corpus says which templates are acceptable. Widening the one that
+    won anyway would bind the content and bury the reason it was reached."""
+
+    report = build_capability_gap_report(
+        [
+            MatchedCase(
+                case_id="case",
+                matches=(_match("s.0", "Heroes/centered-hero", (_uneditable("hero_media"),)),),
+                expected_templates=(("split-hero", "split-media-reverse"),),
+            )
+        ]
+    )
+
+    assert report.gaps == ()
+    assert "routing defect" in report.held_back[0].reason
+
+
+def test_a_loss_on_an_acceptable_template_still_ranks() -> None:
+    """The guard must not swallow the corpus's real gaps: `stats-band-3up` is
+    the template its sections are supposed to match, and it has no heading."""
+
+    report = build_capability_gap_report(
+        [
+            MatchedCase(
+                case_id="case",
+                matches=(_match("s.3", "Content/stats-band-3up", (_uneditable("section_title"),)),),
+                expected_templates=(("stats-band-3up", "icon-feature-list"),),
+            )
+        ]
+    )
+
+    assert [gap.field for gap in report.gaps] == ["section_title"]
+    assert report.held_back == ()
+
+
+def test_a_project_has_no_answer_key_so_nothing_is_held_back_for_routing() -> None:
+    """Only the corpus knows which template a section should match. A project
+    plan must not be second-guessed by an empty expectation."""
+
+    report = build_capability_gap_report(
+        [_project("site", _entry("s.1", "Heroes/centered-hero", (_uneditable("hero_media"),)))]
+    )
+
+    assert [gap.field for gap in report.gaps] == ["hero_media"]
 
 
 def test_a_gap_the_library_has_since_closed_is_not_ranked() -> None:

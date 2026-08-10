@@ -18,8 +18,13 @@ drop it silently. `project_planning._content_losses` lists section ids and field
 names for one project, with no template attribution and no way to compare two
 sites.
 
+Two kinds of source feed it. A project workspace has a composition plan; the
+benchmark corpus never builds one, so its cases are read from their matches
+instead — the planner copies a match's unmet requirements into an entry's
+warnings verbatim, so both paths speak one vocabulary.
+
 Not every loss is a capability gap, and ranking one that isn't would send the
-next iteration to widen a template that is behaving correctly. Three kinds are
+next iteration to widen a template that is behaving correctly. These kinds are
 held out deliberately, each recorded with its reason rather than dropped:
 
 * A form field. A form is never rebuilt from a template, so no template should
@@ -30,6 +35,9 @@ held out deliberately, each recorded with its reason rather than dropped:
 * A picture the extractor already called decoration. A mascot floated beside a
   video was deliberately kept out of the media the template holds; ranking it
   would ask for a field that undoes that decision.
+* A loss on a section that matched a template the corpus says is wrong for it.
+  Widening that template would bind the content and bury the routing defect,
+  which is how a team grid spent three releases being built as feature cards.
 
 This module is pure: no network, filesystem, or model calls.
 """
@@ -41,16 +49,19 @@ from collections import defaultdict
 from collections.abc import Iterable, Mapping
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, JsonValue
 
-from vanjaro_cli.design.composition import CompositionPlan, CompositionPlanEntry
+from vanjaro_cli.design.composition import CompositionPlan
+from vanjaro_cli.design.matcher import TemplateMatchResult
 from vanjaro_cli.design.template_catalog import CapabilityManifest
 
 __all__ = [
     "CapabilityGap",
     "CapabilityGapReport",
     "HeldBackLoss",
+    "MatchedCase",
     "PlannedProject",
+    "SectionLosses",
     "StaleGap",
     "build_capability_gap_report",
 ]
@@ -89,11 +100,91 @@ class _GapModel(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
 
+class SectionLosses(_GapModel):
+    """One section, the template it chose, and what that template could not hold."""
+
+    source_id: str = Field(min_length=1)
+    section_id: str = Field(min_length=1)
+    template_id: str = Field(min_length=1)
+    warnings: tuple[str, ...] = ()
+    form_fields: tuple[dict[str, JsonValue], ...] = ()
+    # The templates a source says are right for this section, where a source
+    # says so at all. Only the benchmark corpus does; a project has no answer
+    # key, and an empty tuple means the question was not asked.
+    expected_templates: tuple[str, ...] = ()
+
+    @property
+    def matched_an_expected_template(self) -> bool:
+        if not self.expected_templates:
+            return True
+        return self.template_id.rsplit("/", 1)[-1] in self.expected_templates
+
+
 class PlannedProject(_GapModel):
     """One plan and the name to report it under."""
 
     project_id: str = Field(min_length=1)
     plan: CompositionPlan
+
+    @property
+    def source_id(self) -> str:
+        return self.project_id
+
+    def section_losses(self) -> tuple[SectionLosses, ...]:
+        return tuple(
+            SectionLosses(
+                source_id=self.project_id,
+                section_id=entry.source_section_id,
+                template_id=entry.template_id,
+                warnings=entry.warnings,
+                form_fields=entry.form_fields,
+            )
+            for entry in self.plan.entries
+        )
+
+
+class MatchedCase(_GapModel):
+    """One benchmark case, read from its matches rather than from a plan.
+
+    The offline corpus never builds a composition plan, so for thirty-odd
+    iterations the ranked queue covered four project workspaces and none of the
+    five cases the pipeline is actually measured against. A match already knows
+    which requirements its chosen template cannot meet, and the planner copies
+    exactly those strings into an entry's warnings — so the two paths speak one
+    vocabulary rather than two.
+
+    What a match cannot report is the losses that only appear at binding time:
+    an asset that resolved to nothing, and the planner's second word about a
+    capacity overflow. Neither costs the report anything. The first is held back
+    as an acquisition defect wherever it is seen, and the second repeats a
+    warning the match already made.
+    """
+
+    case_id: str = Field(min_length=1)
+    matches: tuple[TemplateMatchResult, ...] = ()
+    # Section order, from the case's annotations: which templates each section
+    # may acceptably match. The corpus is the one source that knows.
+    expected_templates: tuple[tuple[str, ...], ...] = ()
+
+    @property
+    def source_id(self) -> str:
+        return self.case_id
+
+    def section_losses(self) -> tuple[SectionLosses, ...]:
+        return tuple(
+            SectionLosses(
+                source_id=self.case_id,
+                section_id=result.section_id,
+                template_id=result.selected_candidate.template_id,
+                warnings=result.selected_candidate.missing_requirements,
+                expected_templates=(
+                    self.expected_templates[index]
+                    if index < len(self.expected_templates)
+                    else ()
+                ),
+            )
+            for index, result in enumerate(self.matches)
+        )
 
 
 class CapabilityGap(_GapModel):
@@ -169,7 +260,7 @@ class _Accumulator:
             self.owned = owned if self.owned is None else min(self.owned, owned)
 
 
-def _held_back_reason(entry: CompositionPlanEntry, warning: str, field: str | None) -> str | None:
+def _held_back_reason(section: SectionLosses, warning: str, field: str | None) -> str | None:
     """Say why a loss is not a capability gap, or None when it is one."""
 
     if _ASSET_UNBOUND.match(warning):
@@ -177,10 +268,16 @@ def _held_back_reason(entry: CompositionPlanEntry, warning: str, field: str | No
     interaction = _UNSUPPORTED_INTERACTION.match(warning)
     if interaction:
         return f"{interaction['name']!r} is a missing behaviour, not a missing field"
-    if field in _FORM_FIELD_NAMES and entry.form_fields:
+    if field in _FORM_FIELD_NAMES and section.form_fields:
         return "a form is never rebuilt from a template; its fields travel as a placeholder"
     if field in _DECORATIVE_FIELD_NAMES:
         return "the extractor classified this picture as decoration, not content"
+    if not section.matched_an_expected_template:
+        return (
+            "the corpus expects "
+            + " or ".join(section.expected_templates)
+            + " here, so this is a routing defect rather than a missing field"
+        )
     return None
 
 
@@ -238,7 +335,7 @@ def _stale_reason(gap: CapabilityGap, catalog: Mapping[str, CapabilityManifest])
 
 
 def build_capability_gap_report(
-    projects: Iterable[PlannedProject],
+    sources: Iterable[PlannedProject | MatchedCase],
     *,
     catalog: Mapping[str, CapabilityManifest] | None = None,
 ) -> CapabilityGapReport:
@@ -260,20 +357,20 @@ def build_capability_gap_report(
     project_ids: list[str] = []
     section_count = 0
 
-    for project in projects:
-        project_ids.append(project.project_id)
-        section_count += len(project.plan.entries)
-        for entry in project.plan.entries:
-            for warning in entry.warnings:
+    for source in sources:
+        project_ids.append(source.source_id)
+        for section in source.section_losses():
+            section_count += 1
+            for warning in section.warnings:
                 classified = _classify(warning)
                 field = classified[1] if classified else None
-                reason = _held_back_reason(entry, warning, field)
+                reason = _held_back_reason(section, warning, field)
                 if reason is not None:
                     held_back.append(
                         HeldBackLoss(
-                            template_id=entry.template_id,
-                            project_id=project.project_id,
-                            section_id=entry.source_section_id,
+                            template_id=section.template_id,
+                            project_id=source.source_id,
+                            section_id=section.section_id,
                             warning=warning,
                             reason=reason,
                         )
@@ -282,8 +379,8 @@ def build_capability_gap_report(
                 if classified is None:
                     continue
                 kind, name, demanded, owned = classified
-                accumulated[(entry.template_id, name, kind)].record(
-                    project.project_id, entry.source_section_id, demanded, owned
+                accumulated[(section.template_id, name, kind)].record(
+                    source.source_id, section.section_id, demanded, owned
                 )
 
     gaps = [

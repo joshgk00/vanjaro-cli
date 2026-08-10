@@ -8,15 +8,22 @@ from pathlib import Path
 import click
 
 from vanjaro_cli.commands.helpers import exit_error
+from vanjaro_cli.design.benchmark_corpus import (
+    DEFAULT_MANIFEST,
+    load_benchmark_predictions,
+    read_benchmark_manifest,
+)
 from vanjaro_cli.design.capability_gaps import (
     CapabilityGapReport,
+    MatchedCase,
     PlannedProject,
     build_capability_gap_report,
 )
 from vanjaro_cli.design.composition import deserialize_composition_plan
+from vanjaro_cli.design.metrics import BenchmarkFixtureError
 from vanjaro_cli.design.template_catalog import TemplateCatalogError, load_template_catalog
 
-__all__ = ["capability_gaps", "collect_planned_projects"]
+__all__ = ["capability_gaps", "collect_benchmark_cases", "collect_planned_projects"]
 
 _PLAN_RELATIVE_PATH = Path("plans") / "composition-plan.json"
 
@@ -65,6 +72,35 @@ def _report_payload(report: CapabilityGapReport) -> dict:
     }
 
 
+def collect_benchmark_cases(manifest: Path) -> list[MatchedCase]:
+    """Match every committed benchmark case, in manifest order.
+
+    The benchmark scores extraction and matching and never builds a plan, so
+    without this the ranked queue covers the projects someone happens to have
+    open and none of the cases the pipeline is measured against.
+    """
+
+    corpus = read_benchmark_manifest(manifest)
+    annotations = {
+        case["id"]: manifest.parent / case["annotations"] for case in corpus.get("cases", [])
+    }
+    predictions = load_benchmark_predictions(manifest, ())
+    cases: list[MatchedCase] = []
+    for case_id, prediction in predictions.items():
+        expected = json.loads(annotations[case_id].read_text(encoding="utf-8"))
+        cases.append(
+            MatchedCase(
+                case_id=case_id,
+                matches=prediction.matches,
+                expected_templates=tuple(
+                    tuple(section.get("acceptable_templates", ()))
+                    for section in expected["expected"]["sections"]
+                ),
+            )
+        )
+    return cases
+
+
 def _describe(gap_kind: str, demanded: int | None, owned: int | None) -> str:
     if gap_kind == "insufficient_capacity":
         return f"owns {owned}, needs {demanded}"
@@ -85,7 +121,25 @@ def _describe(gap_kind: str, demanded: int | None, owned: int | None) -> str:
     is_flag=True,
     help="Also list losses that are not capability gaps, with the reason each was held back.",
 )
-def capability_gaps(root: Path, as_json: bool, held_back: bool) -> None:
+@click.option(
+    "--benchmark/--no-benchmark",
+    "include_benchmark",
+    default=True,
+    help="Include the committed benchmark corpus, which has no plans to read. On by default.",
+)
+@click.option(
+    "--manifest",
+    type=click.Path(path_type=Path, dir_okay=False),
+    default=DEFAULT_MANIFEST,
+    help="Benchmark manifest to match against.",
+)
+def capability_gaps(
+    root: Path,
+    as_json: bool,
+    held_back: bool,
+    include_benchmark: bool,
+    manifest: Path,
+) -> None:
     """Rank the template fields that dropped visitor content, worst first."""
 
     if not root.is_dir():
@@ -99,14 +153,21 @@ def capability_gaps(root: Path, as_json: bool, held_back: bool) -> None:
     except TemplateCatalogError as exc:
         exit_error(f"cannot read the template library: {'; '.join(exc.issues)}", as_json)
 
-    report = build_capability_gap_report(projects, catalog=catalog)
+    cases: list[MatchedCase] = []
+    if include_benchmark:
+        try:
+            cases = collect_benchmark_cases(manifest)
+        except (BenchmarkFixtureError, OSError, ValueError) as exc:
+            exit_error(f"cannot match the benchmark corpus: {exc}", as_json)
+
+    report = build_capability_gap_report([*projects, *cases], catalog=catalog)
 
     if as_json:
         click.echo(json.dumps({"status": "ok", **_report_payload(report)}, sort_keys=True))
         return
 
     click.echo(
-        f"Scanned {len(report.projects)} planned project(s), "
+        f"Scanned {len(report.projects)} source(s), "
         f"{report.section_count} section(s): {', '.join(report.projects) or 'none'}"
     )
     if not report.gaps:

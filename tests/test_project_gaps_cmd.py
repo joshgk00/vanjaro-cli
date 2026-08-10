@@ -46,7 +46,9 @@ def _write_plan(root: Path, project_id: str, *warnings: str) -> None:
 def test_the_report_names_the_template_and_the_field(tmp_path: Path) -> None:
     _write_plan(tmp_path, "site-a", "source field 'section_title' is not editable by template")
 
-    result = CliRunner().invoke(project, ["capability-gaps", str(tmp_path), "--json"])
+    result = CliRunner().invoke(
+        project, ["capability-gaps", str(tmp_path), "--no-benchmark", "--json"]
+    )
 
     assert result.exit_code == 0, result.output
     payload = json.loads(result.output)
@@ -64,7 +66,9 @@ def test_a_project_that_has_not_planned_yet_is_skipped(tmp_path: Path) -> None:
     _write_plan(tmp_path, "planned", "source field 'section_title' is not editable by template")
     (tmp_path / "unplanned" / "sources").mkdir(parents=True)
 
-    result = CliRunner().invoke(project, ["capability-gaps", str(tmp_path), "--json"])
+    result = CliRunner().invoke(
+        project, ["capability-gaps", str(tmp_path), "--no-benchmark", "--json"]
+    )
 
     assert result.exit_code == 0, result.output
     assert json.loads(result.output)["projects"] == ["planned"]
@@ -73,7 +77,7 @@ def test_a_project_that_has_not_planned_yet_is_skipped(tmp_path: Path) -> None:
 def test_a_workspace_with_no_gaps_says_so(tmp_path: Path) -> None:
     _write_plan(tmp_path, "clean")
 
-    result = CliRunner().invoke(project, ["capability-gaps", str(tmp_path)])
+    result = CliRunner().invoke(project, ["capability-gaps", str(tmp_path), "--no-benchmark"])
 
     assert result.exit_code == 0, result.output
     assert "No template capability gaps" in result.output
@@ -89,8 +93,36 @@ def test_a_missing_root_is_an_error(tmp_path: Path) -> None:
 def test_held_back_losses_are_listed_only_when_asked(tmp_path: Path) -> None:
     _write_plan(tmp_path, "site-a", "required interaction 'form' is unsupported")
 
-    quiet = CliRunner().invoke(project, ["capability-gaps", str(tmp_path)])
-    verbose = CliRunner().invoke(project, ["capability-gaps", str(tmp_path), "--held-back"])
+    quiet = CliRunner().invoke(project, ["capability-gaps", str(tmp_path), "--no-benchmark"])
+    verbose = CliRunner().invoke(
+        project, ["capability-gaps", str(tmp_path), "--no-benchmark", "--held-back"]
+    )
 
     assert "held back" not in quiet.output
     assert "held back: 'form' is a missing behaviour" in verbose.output
+
+
+def test_the_benchmark_corpus_is_included_by_default(tmp_path: Path) -> None:
+    """The corpus has no plans, so without this the ranked queue covers whatever
+    projects someone happens to have open and none of the cases the pipeline is
+    measured against."""
+
+    _write_plan(tmp_path, "site-a")
+
+    result = CliRunner().invoke(project, ["capability-gaps", str(tmp_path), "--json"])
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert "html-dnn-services" in payload["projects"]
+    assert payload["section_count"] > 1
+    assert any(gap["projects"] != ["site-a"] for gap in payload["gaps"])
+
+
+def test_the_corpus_can_be_left_out(tmp_path: Path) -> None:
+    _write_plan(tmp_path, "site-a")
+
+    result = CliRunner().invoke(
+        project, ["capability-gaps", str(tmp_path), "--no-benchmark", "--json"]
+    )
+
+    assert json.loads(result.output)["projects"] == ["site-a"]
