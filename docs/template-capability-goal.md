@@ -358,6 +358,28 @@ adds to what the benchmark measures. Treat it as a scoring-regime question — a
 prior regime change moved a site from 79.4 to 59.4 with no quality change — not
 as an extension of the report.
 
+### TC-108 — One editorial part, two field names, and neither reaches the other
+
+**Dependencies:** none
+
+Two templates declare `eyebrow` (`bio-about`, `video-feature`) and five declare
+`subtitle` (`class-photo-cards-4up`, both splits, both CTAs). `eyebrow` aliases
+only to `eyebrow` and `subtitle` only to `subtitle`, so a section carrying one
+can never reach a template offering the other.
+
+The distinction is real — an eyebrow opens above the headline, a subtitle
+follows it — but nothing in the library says which of the two a given slot
+renders, and the extractor only ever emits `subtitle` for a deck and `eyebrow`
+for a kicker. On `keys-to-success` that leaves the kicker unbindable by the
+template the page was built from.
+
+Two things to establish before changing anything. Whether each declaring
+template's slot actually sits above or below its heading — `class-photo-cards-4up`
+ships "Our Classes" as the sample copy of its **`section_title`** slot and the
+descriptive line as its `subtitle`, which is the opposite of what the names
+suggest. And whether the alias table or the template declarations are the thing
+to correct.
+
 ### TC-105 — Family symmetry becomes a test
 
 **Dependencies:** TC-103, TC-104
@@ -387,6 +409,51 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### Iteration 66 — the queue was asking for a body field to hold a kicker
+
+The ranked report's top entry was `feature-cards-4up`/`body` on
+`keys-to-success.section.5`. Acting on it would have given a card grid a body
+field. The source says otherwise: `<div class="vj-text text-primary fw-bold
+mb-1">Our Classes</div>` sits **above** `<h2>MOST POPULAR CLASSES</h2>`. It is a
+kicker, and a card grid is right to have no field for body copy.
+
+**`_eyebrow_for` already recognises this part — but only when the source spells
+it as a heading.** A Vanjaro page spells it `div.vj-text`, and
+`normalize_text_blocks` rewrites a text-bearing leaf div into a paragraph so the
+half-dozen `find_all("p")` call sites can see it. That rewrite is what turned the
+kicker into body copy: correct for its own purpose, and wrong here. A paragraph
+above the headline is now read as an eyebrow, mirroring the heading rule, and
+carries `implied: true` — the same admission `implied_title` makes when the
+source had no heading element to report a level from.
+
+**The content is still dropped, and that is the honest outcome.** Coverage does
+not move; the loss is renamed from `body` to `eyebrow`. What changes is that the
+queue now asks a true question. `feature-cards-4up` has no eyebrow field — but
+neither does `class-photo-cards-4up`, which is the template this very page was
+built from and which declares `subtitle` instead. Two templates in the library
+say `eyebrow`, five say `subtitle`, and neither name aliases to the other, so one
+editorial part is unreachable across most of the library. Filed as TC-108, with
+the detail that `class-photo-cards-4up` ships "Our Classes" as the sample copy of
+its `section_title` slot — the opposite of what the field names suggest.
+
+**Three tests, and each was made to fail on purpose.** Disabling the new rule
+fails the positive one. Removing its position check fails both guards, including
+the pre-existing heading-eyebrow guard. Removing the precedence that lets a real
+heading kicker win fails the third — but only after it was rewritten: as first
+written it passed either way, because it asserted which eyebrow was reported and
+not that the losing line survived. Without that assertion, a paragraph could be
+skipped as an eyebrow that was never emitted, and vanish.
+
+**Evidence.** Suite 2,164 → 2,167 passing, 16 deselected. Corpus unchanged on all
+ten metrics, no threshold or regression failures. All three sites re-analysed
+`--refresh --render` (`action == "execute"`) and re-planned `--refresh`:
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
 
 ### Iteration 65 — the asymmetry becomes a failing check instead of a discovery
 

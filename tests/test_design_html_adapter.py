@@ -1873,6 +1873,57 @@ def test_a_kicker_above_the_headline_is_kept_as_an_eyebrow() -> None:
     assert [e["value"] for e in section["content"] if e["role"] == "eyebrow"] == ["OUR MEDIA"]
 
 
+def test_a_kicker_spelled_as_copy_is_still_an_eyebrow() -> None:
+    """A Vanjaro page spells its kicker `div.vj-text`, which normalizes to a
+    paragraph — so `Our Classes` above `MOST POPULAR CLASSES` arrived as body
+    copy, and a card grid that rightly has no body field was asked for one."""
+
+    section = _enriched(
+        "<section><div class='vj-text'>Our Classes</div>"
+        "<h2>MOST POPULAR CLASSES</h2>"
+        "<div class='card'><h3>Prelude</h3><p>Age 0-5 yrs.</p></div>"
+        "<div class='card'><h3>Finale</h3><p>Lessons for adults.</p></div>"
+        "</section>",
+        "feature_cards",
+    )
+
+    assert [e["value"] for e in section["content"] if e["role"] == "eyebrow"] == ["Our Classes"]
+    assert not [e for e in section["content"] if e["role"] == "body"]
+    assert [e["value"] for e in section["content"] if e["role"] == "section_title"] == [
+        "MOST POPULAR CLASSES"
+    ]
+
+
+def test_a_short_line_below_the_headline_is_not_an_eyebrow() -> None:
+    """Position is the whole distinction. A short line under the headline is a
+    deck or body copy; only what opens above it is a kicker."""
+
+    section = _enriched(
+        "<section><h2>Studio hours</h2><div class='vj-text'>Weekdays only.</div>"
+        "<div class='vj-text'>We open at nine and close when the last lesson ends.</div>"
+        "</section>",
+        "rich_text",
+    )
+
+    assert not [e for e in section["content"] if e["role"] == "eyebrow"]
+    assert [e["value"] for e in section["content"] if e["role"] == "subtitle"] == ["Weekdays only."]
+
+
+def test_a_headings_kicker_wins_and_the_line_above_it_is_still_kept() -> None:
+    """Both spellings can appear at once. Reporting two eyebrows would give the
+    section a part it does not have — and the loser must not vanish, which is
+    what happens if it is skipped as an eyebrow that was never emitted."""
+
+    section = _enriched(
+        "<section><div class='vj-text'>Our studio</div><h5>OUR MEDIA</h5>"
+        "<h2>See what our students can do</h2><p>Copy that runs on.</p></section>",
+        "rich_text",
+    )
+
+    assert [e["value"] for e in section["content"] if e["role"] == "eyebrow"] == ["OUR MEDIA"]
+    assert "Our studio" in [e["value"] for e in section["content"] if e["role"] == "body"]
+
+
 def test_a_smaller_heading_below_the_title_is_not_an_eyebrow() -> None:
     """An eyebrow sits above the headline. A subheading below it does not."""
 

@@ -222,6 +222,28 @@ def _deck_paragraph(title: Tag | None, paragraphs: list[Tag]) -> Tag | None:
     return first if title in first.find_all_previous() else None
 
 
+def _eyebrow_paragraph(title: Tag | None, paragraphs: list[Tag]) -> Tag | None:
+    """Return the short line *above* a headline that is a kicker, not body copy.
+
+    `_eyebrow_for` already recognises this part, but only when the source spells
+    it as a heading. A Vanjaro page spells it `div.vj-text`, which
+    `normalize_text_blocks` rewrites to a paragraph, so `Our Classes` above
+    `MOST POPULAR CLASSES` arrived as body copy — and a card template that
+    rightly has no body field was asked for one.
+
+    Where the deck needs real copy after it to tell a deck from a lone short
+    paragraph, position carries this on its own: body copy does not open above
+    the headline it belongs to.
+    """
+
+    if title is None or not paragraphs:
+        return None
+    first = paragraphs[0]
+    if len(first.get_text(" ", strip=True)) > _DECK_MAXIMUM_CHARACTERS:
+        return None
+    return first if first in title.find_all_previous() else None
+
+
 def _media_side(columns: tuple[Tag, Tag] | None) -> str:
     if columns is None:
         return "left"
@@ -420,6 +442,12 @@ def enrich_section_from_static_dom(
             title = inferred_title
         else:
             inferred_title = None
+        body_paragraphs = [
+            paragraph
+            for paragraph in root.find_all("p")
+            if id(paragraph) not in repeated_nodes and paragraph is not inferred_title
+        ]
+        paragraph_eyebrow = _eyebrow_paragraph(title, body_paragraphs) if eyebrow is None else None
         if isinstance(title, Tag):
             attributes: dict[str, JsonValue] = {
                 "level": int(title.name[1]) if title.name[0] == "h" else 2
@@ -432,6 +460,15 @@ def enrich_section_from_static_dom(
                     "eyebrow",
                     eyebrow.get_text(" ", strip=True),
                     attributes={"level": int(eyebrow.name[1])},
+                )
+            elif isinstance(paragraph_eyebrow, Tag):
+                # The source spelled it as copy, so there is no heading level to
+                # report — the same admission `implied_title` makes.
+                add(
+                    "heading",
+                    "eyebrow",
+                    paragraph_eyebrow.get_text(" ", strip=True),
+                    attributes={"implied": True},
                 )
             add("heading", "section_title", title.get_text(" ", strip=True), attributes=attributes)
 
@@ -516,13 +553,10 @@ def enrich_section_from_static_dom(
                 attributes={"alt": "", "decorative": True},
                 asset_id=asset_id,
             )
-        body_paragraphs = [
-            paragraph
-            for paragraph in root.find_all("p")
-            if id(paragraph) not in repeated_nodes and paragraph is not inferred_title
-        ]
         deck = _deck_paragraph(title, body_paragraphs)
         for paragraph in body_paragraphs:
+            if paragraph is paragraph_eyebrow:
+                continue
             element_role = "subtitle" if paragraph is deck else "body"
             add("text", element_role, paragraph.get_text(" ", strip=True))
         # Enrichment replaces the content list wholesale, so a form inventoried
