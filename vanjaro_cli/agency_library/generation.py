@@ -24,9 +24,9 @@ from vanjaro_cli.design.template_catalog import (
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_REGISTRY = _PROJECT_ROOT / "artifacts" / "agency-packs"
 _PACK_NAME = "clicks-and-mortars"
-_TEMPLATE_VERSION = "1.9.0"
+_TEMPLATE_VERSION = "1.10.0"
 _MODIFIER_VERSION = "1.0.0"
-_PACK_VERSION = "1.9.0"
+_PACK_VERSION = "1.10.0"
 _HISTORICAL_DIGESTS = {
     "templates/1.0.0.json": "c4e1316345e4c275ae9fb99312a3c2014de1ce39781a547b6a2d8685f42c8a73",
     "modifiers/1.0.0.json": "331b7c14af6ae87ac9d04a6559ff9ae3ed4c252a21be80c6fa5159c1f720f087",
@@ -48,6 +48,8 @@ _HISTORICAL_DIGESTS = {
     "packs/1.7.0.json": "dcb59f70c68b830544d8467632163435a62bdb49eeeb5693aec0b3d2fb2c65be",
     "templates/1.8.0.json": "870f4a773cce0d88162d7d5bec0a234ccfd7473529138399b7b67f37fd855d37",
     "packs/1.8.0.json": "f03c7ce7097073df87f609855e3d43554da8a52ca162059179b75a0594fbaef5",
+    "templates/1.9.0.json": "69c601878bd63500922aafe4bb5216c9dafd4808c10ca019b0c20faea33da516",
+    "packs/1.9.0.json": "7ca77c0932137b1686d9a4478e070124566d1ed9ec5001d4b8ffee3277fe0f82",
 }
 _AUDITED_EXECUTABLE_DIGESTS = {
     "CTAs/cta-banner": "f1af9e60b5086e510411ac5548097bdcfc5530ee1d474caa55cb04f3c2fe3028",
@@ -70,7 +72,7 @@ _AUDITED_EXECUTABLE_DIGESTS = {
     "Content/rich-text": "4af781b10e213f737e970bcba13a5a2b0ad810c7d96e9d3bf732dd167905ab1b",
     "Content/split-media": "d9376ba0de763f083912eeab05bc2d9fb100afaf617ae11d6a7c2ae94aa34f3d",
     "Content/split-media-reverse": "c733cdca9fec50cbee834c570567b1265329f20dd5972a61818b4817475a9043",
-    "Content/stats-band-3up": "4fd51ee2a3fdb665b418bef9785c7d854fba5ebbe2ebf3427b86e32ae33fe6f7",
+    "Content/stats-band-3up": "55771a3d47f3836f31013d955503843ccd10b51a2bc26f95717f7a12d4a0b5e4",
     "Content/stats-grid-4up": "495a34d9c4d74c0ef65e8791661a22a2209522f6f3f999f0c6d3b25e97af7745",
     "Content/video-feature": "f67a7bb542e705ab2da6838e53111c85fa7cff4411cd1b96234ae72337bdcd72",
     "Heroes/centered-hero": "e523ecda49c5a3cb0fd43013ab0a2298d0fdaa44e50878154ea89ec55bbecaaa",
@@ -88,8 +90,8 @@ _REVIEWED_EXECUTABLE_CHANGES = (
     "Lists/icon-feature-list",
 )
 _CURRENT_RELEASE_DIGESTS = {
-    "templates/1.9.0.json": "69c601878bd63500922aafe4bb5216c9dafd4808c10ca019b0c20faea33da516",
-    "packs/1.9.0.json": "7ca77c0932137b1686d9a4478e070124566d1ed9ec5001d4b8ffee3277fe0f82",
+    "templates/1.10.0.json": "8cd5d3bfddd1d14d6c6ca71028b8a54abacdd8477b56c3842a85fc30182b4e77",
+    "packs/1.10.0.json": "65e006a5ecbaa15a447879a4e0f6118bec1f1b8f28b15000cc684b72a6f20e63",
 }
 
 

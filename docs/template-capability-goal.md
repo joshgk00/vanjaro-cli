@@ -343,6 +343,15 @@ are still unverified — no section on any site has demanded a heading from them
 Widening them now would repeat 1.6.0's mistake, where the unmeasured half of the
 release helped nothing.
 
+**A second done — agency pack 1.10.0 (2026-08-10).** TC-106 put the benchmark
+corpus into the queue and `stats-band-3up` came out at rank 1 with **two**
+sections, on two different cases, both matching a template their own annotation
+names as acceptable. `Content/stats-band-3up` now declares `section_title`; its
+three values moved from `heading_1..3` to `heading_2..4`. Corpus
+`high_confidence_precision` rose 0.9444 → 0.9474. Three templates remain
+unverified, and the discipline that held this one for four iterations is what
+produced its evidence.
+
 ### TC-106 — The benchmark corpus is outside the gap report
 
 **Dependencies:** none, but it changes what the benchmark computes
@@ -451,6 +460,51 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — pack 1.10.0: the evidence TC-104 waited four iterations for
+
+Rank 1 of the reopened queue was `Content/stats-band-3up`/`section_title` at two
+sections. **The classification check came from the corpus rather than from
+judgement**, which is what makes this different from the four iterations that
+held it: `html-dnn-services.harbor.stats` is annotated `acceptable_templates:
+['stats-band-3up']` and carries a `section_title` heading "A dependable partner";
+`html-elementor-studio.juniper.process` is annotated
+`['stats-band-3up', 'icon-feature-list']` and carries "Our process". Both matched
+a template their own answer key names, and both lost a heading the template had
+no field for.
+
+`stats-band-3up` gained a heading row mirroring `stats-grid-4up`'s, and its three
+values moved from `heading_1..3` to `heading_2..4`.
+
+**Closing an asymmetry leaves its excuse behind, and nothing said so.** The two
+stat templates were a declared exception in TC-105's table — `stats-grid-4up` had
+a heading and the band did not. With the band widened they agree, and the
+exception became a description of something that no longer happens. Removing it
+was in the brief; noticing that *nothing would have caught it if I had forgotten*
+was not. The symmetry test now asserts that every declared exception still
+describes a real asymmetry, and it was proved by putting the obsolete entry back
+and watching it fail. An excuse for a problem the library no longer has reads as
+a live exception to whoever decides what to work on next.
+
+**Evidence.** Suite 2,177 passing, 16 deselected. Corpus:
+`high_confidence_precision` **0.9444 (17/18) → 0.9474 (18/19)** as another
+section reached high confidence; the other nine metrics unchanged, no threshold
+or regression failures. All three sites re-analysed `--refresh --render`
+(`action == "execute"`) and re-planned `--refresh`, all unchanged — none of them
+uses a stats band with a heading:
+
+| site | sections | provenance | style obs | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|
+| `edca-pilot` | 4 | 4 rendered | 124 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 0.8182 | 0 | true | 0 |
+
+The ranked queue falls from **8 gaps and 9 dropped fields to 7 and 7**. What is
+left is six `item.*` entries and TC-109's eyebrow. The `item.*` shape is new and
+unexamined: a repeat group carrying fields its template's items do not declare —
+`item.event_type`, `item.label`, `item.benefit`, `item.text`, `item.title`. Some
+of those read like extraction naming rather than missing capability, and the next
+iteration should find out which before widening anything.
 
 ### 2026-08-10 — TC-106: the corpus was dark, and it had seven gaps in it
 

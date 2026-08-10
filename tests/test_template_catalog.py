@@ -71,7 +71,7 @@ EXPECTED_FIELDS_BY_TEMPLATE = {
     "Content/rich-text.json": {"title", "body"},
     "Content/split-media-reverse.json": {"title", "subtitle", "body", "action", "media"},
     "Content/split-media.json": {"media", "title", "subtitle", "body", "action"},
-    "Content/stats-band-3up.json": {"item.value", "item.label"},
+    "Content/stats-band-3up.json": {"section_title", "item.value", "item.label"},
     "Content/stats-grid-4up.json": {"section_title", "item.value", "item.label"},
     "Content/video-feature.json": {"eyebrow", "title", "body", "media", "action"},
     "CTAs/cta-banner.json": {"title", "subtitle", "body", "action", "background_media"},
@@ -240,8 +240,6 @@ DECLARED_REPEAT_KIND_EXCEPTIONS = {
     # A class card grid introduces itself with a line under the heading; the
     # feature grids do not. Unmeasured either way — no site has asked.
     ("card", "subtitle"),
-    # A stats band is a strip with no heading of its own; the grid has one.
-    ("stat", "section_title"),
     # The 3-up blog grid's missing fields, tracked in full above.
     ("article", "section_body"),
     ("article", "action"),
@@ -306,12 +304,14 @@ def test_templates_repeating_the_same_kind_offer_the_same_section_fields() -> No
             by_kind.setdefault(group.kind, []).append(entry)
 
     compared = 0
+    used: set[tuple[str, str]] = set()
     for kind, entries in sorted(by_kind.items()):
         if len(entries) < 2:
             continue
         compared += 1
         shared: set[str] = set.union(*(_section_fields(entry) for entry in entries))
         common: set[str] = set.intersection(*(_section_fields(entry) for entry in entries))
+        used |= {(kind, field) for field in shared - common}
         unexplained = {
             field for field in shared - common if (kind, field) not in DECLARED_REPEAT_KIND_EXCEPTIONS
         }
@@ -320,6 +320,15 @@ def test_templates_repeating_the_same_kind_offer_the_same_section_fields() -> No
             "declare the difference as deliberate or close it in a governed release"
         )
     assert compared >= 6, "the multi-template repeat kinds stopped being compared"
+
+    # A release that closes an asymmetry leaves its excuse behind, and an
+    # excuse for something that no longer happens reads as a live exception
+    # to anyone deciding what to work on next. Pack 1.10.0 closed the stat
+    # pair's, and nothing would have said so.
+    assert DECLARED_REPEAT_KIND_EXCEPTIONS <= used, (
+        "these exceptions describe asymmetries the library no longer has: "
+        f"{sorted(DECLARED_REPEAT_KIND_EXCEPTIONS - used)}"
+    )
 
 
 def test_an_eyebrow_slot_opens_above_its_title_and_a_subtitle_follows_it() -> None:
