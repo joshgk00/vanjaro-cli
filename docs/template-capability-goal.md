@@ -484,6 +484,14 @@ reaches the document to be counted; and no project reports retention.
 
 Fixing TC-114 without this would trade a misclassification for a silent loss.
 
+**TC-115 done.** Every heading a section owns is now emitted; the ones that are
+neither the title nor the eyebrow carry the role `subheading`. Retention across
+the ten projects rose **398 → 416** with no project losing an element. The two
+alias tables disagreed as well — binding has always accepted a `subheading` for
+a `subtitle` field while matching did not know the word — so
+`section_capability_aliases` now agrees with `binding_field_aliases`, and some of
+the recovered headings bind rather than merely arriving.
+
 ### TC-116 — A link with no text is counted as a call to action
 
 **Dependencies:** none. **Filed rather than fixed — extraction, and the loop has
@@ -686,6 +694,67 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — repair 2: eighteen headings that were never reaching the document
+
+TC-115. A section emitted its most prominent heading and at most one eyebrow;
+every other heading it owned was dropped before the design document existed.
+
+**My first measurement of the damage was wrong, and I nearly acted on it.**
+Counting headings per boundary candidate gave 29 dropped — but most of those are
+card titles inside repeat items, which are correctly emitted as `card_title`
+further down. Comparing what the source offers against what the document
+contains gives the honest figure: **25 headings present in the source and absent
+from the document**, concentrated in `rendered-home` (14), `oasis-probe` (6) and
+`oasis-lighting` (3). The two clean fixture sites lose none.
+
+They are ordinary things: `Branding Package`, `Tags`, `Gallery`, and the
+pull-quote written as an `<h3>` that TC-114 needs. Every heading a section owns
+is now emitted, with the role `subheading` for those that are neither the title
+nor the eyebrow.
+
+**Retention 398 → 416, and no project lost an element.** That is the number that
+matters, and it is the first time this loop has had it. `oasis-probe` +5,
+`rendered-home` +5, `kts-fidelity` +5, and one each on `oasis-lighting`, `wwo`
+and `post-security`.
+
+**Coverage fell on four projects, and that is the correct direction.** Coverage
+is the share of *arriving* content that binds, so eighteen new elements that no
+template holds lower the ratio while strictly improving what a build could keep.
+This is the exact inverse of the trap in TC-113, where coverage rose 0.087 →
+0.167 as five pictures and two headings vanished. **Retention is the arbiter;
+coverage alone cannot tell the two apart.** Losses rose from 16 to 20 across the
+projects, and a loss the report names is worth more than one nothing can see.
+
+**The alias tables disagreed with each other.** `binding_field_aliases` has
+always accepted a `subheading` for a `subtitle` field; `section_capability_
+aliases` did not know the word, so a section carrying one scored as though no
+template could hold it. They now agree, which is what took `rendered-home` from
+four losses back to three and `kts-fidelity` from three to two.
+
+Four mutations were tried against the new rule — removing it, dropping the title
+guard, dropping the eyebrow guard, and letting repeat-item headings through —
+and each failed the test written for it, the last of those being the one that
+would have doubled every card title in the document.
+
+**Evidence.** Suite 2,189 → 2,194 passing, 16 deselected. Benchmark aggregate
+identical on all ten metrics including `visitor_content_retention` and
+`semantic_role_accuracy`, no threshold or regression failures.
+
+| site | sections | provenance | style obs | retained | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 50 | 0.0 | 1 | false | 1 |
+| `contact-page` | 2 | 2 rendered | 62 | 13 | 0.75 | 0 | true | 1 |
+| `oasis-probe` | 5 | 5 rendered | 155 | 32 → **37** | 0.087 → 0.0714 | 3 | false | 0 → 1 |
+| `oasis-lighting` | 2 | 2 rendered | 62 | 25 → **26** | 0.1875 → 0.1765 | 0 | true | 3 → 4 |
+| `wwo` | 5 | 4 rendered, 1 static | 124 | 34 → **35** | 0.16 → 0.1538 | 2 | false | 4 → 5 |
+| `post-security` | 2 | 2 rendered | 62 | 25 → **26** | 0.0 | 1 | false | 1 → 2 |
+| `rendered-home` | 7 | 6 rendered, 1 static | 187 | 79 → **84** | 0.1143 → 0.1067 | 5 | false | 3 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 23 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 90 → **95** | 0.9412 → 0.942 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 27 | 0.8182 | 0 | true | 0 |
+
+TC-114 is unblocked: the pull-quote it would have cost now has somewhere to go.
 
 ### 2026-08-10 — repair 1: the alarm the last three reverts were missing
 

@@ -1924,6 +1924,73 @@ def test_a_headings_kicker_wins_and_the_line_above_it_is_still_kept() -> None:
     assert "Our studio" in [e["value"] for e in section["content"] if e["role"] == "body"]
 
 
+def test_every_other_heading_the_section_owns_survives() -> None:
+    """Only the title and one eyebrow were emitted, so a subsection label left
+    the document entirely — no plan warning names content that was never
+    extracted, and coverage cannot count what did not arrive."""
+
+    section = _enriched(
+        "<section><h2>What we offer</h2><p>Intro copy that runs on a while.</p>"
+        "<h3>Branding Package</h3><p>What the package includes.</p>"
+        "<h4>Tags</h4></section>",
+        "rich_text",
+    )
+
+    assert [e["value"] for e in section["content"] if e["role"] == "subheading"] == [
+        "Branding Package",
+        "Tags",
+    ]
+    assert [e["value"] for e in section["content"] if e["role"] == "section_title"] == [
+        "What we offer"
+    ]
+
+
+def test_the_title_is_not_also_reported_as_a_subheading() -> None:
+    section = _enriched(
+        "<section><h2>Studio hours</h2><h3>Weekends</h3><p>Copy.</p></section>",
+        "rich_text",
+    )
+
+    values = [e["value"] for e in section["content"] if e["role"] == "subheading"]
+    assert values == ["Weekends"]
+    assert "Studio hours" not in values
+
+
+def test_the_eyebrow_is_not_also_reported_as_a_subheading() -> None:
+    """The kicker already has a role. Reporting it twice would make the section
+    carry a heading it does not have."""
+
+    section = _enriched(
+        "<section><h5>OUR MEDIA</h5><h2>See what our students can do</h2>"
+        "<h3>Gallery</h3><p>Copy that runs on.</p></section>",
+        "rich_text",
+    )
+
+    assert [e["value"] for e in section["content"] if e["role"] == "eyebrow"] == ["OUR MEDIA"]
+    assert [e["value"] for e in section["content"] if e["role"] == "subheading"] == ["Gallery"]
+
+
+def test_a_cards_own_heading_is_a_card_title_not_a_subheading() -> None:
+    """A repeated item's heading already has an owner. Emitting it again at
+    section level would double every card title in the document."""
+
+    section = _enriched(
+        "<section><h2>Our services</h2>"
+        "<div class='card'><h3>Strategy</h3><p>Plan the work.</p></div>"
+        "<div class='card'><h3>Design</h3><p>Shape the work.</p></div>"
+        "<div class='card'><h3>Build</h3><p>Do the work.</p></div>"
+        "</section>",
+        "feature_cards",
+    )
+
+    assert [e["value"] for e in section["content"] if e["role"] == "card_title"] == [
+        "Strategy",
+        "Design",
+        "Build",
+    ]
+    assert not [e for e in section["content"] if e["role"] == "subheading"]
+
+
 def test_a_smaller_heading_below_the_title_is_not_an_eyebrow() -> None:
     """An eyebrow sits above the headline. A subheading below it does not."""
 

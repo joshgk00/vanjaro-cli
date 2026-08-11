@@ -126,6 +126,10 @@ _SECTION_CAPABILITY_ALIASES: Final = MappingProxyType({
     "section_title": ("section_title", "title"),
     "title": ("title", "section_title"),
     "subtitle": ("subtitle",),
+    # Binding has always accepted a `subheading` for a `subtitle` field;
+    # matching did not know the word, so a section carrying one scored as
+    # though the template could not hold it. The two tables now agree.
+    "subheading": ("subtitle",),
     "body": ("body", "section_body"),
     "section_body": ("section_body", "body"),
     "primary_action": ("action",),

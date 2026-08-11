@@ -472,6 +472,25 @@ def enrich_section_from_static_dom(
                 )
             add("heading", "section_title", title.get_text(" ", strip=True), attributes=attributes)
 
+        # Every other heading the section owns. Only the title and one eyebrow
+        # were emitted, so a subsection label — `Branding Package`, `Tags`,
+        # `Gallery` — and a pull-quote written as a heading left the document
+        # entirely. Nothing reported it: no plan warning names content that was
+        # never extracted, and coverage cannot count what did not arrive.
+        #
+        # A loss the report can see is worth more than one it cannot. These bind
+        # where a template offers a place for them and are named as dropped
+        # where it does not, which is a question someone can answer.
+        for heading in headings:
+            if heading is title or heading is eyebrow:
+                continue
+            add(
+                "heading",
+                "subheading",
+                heading.get_text(" ", strip=True),
+                attributes={"level": int(heading.name[1])},
+            )
+
         group_id = f"{section_id}.items"
         group_items: list[dict[str, JsonValue]] = []
         for item in repeat_items:

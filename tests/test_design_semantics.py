@@ -38,3 +38,12 @@ def test_observed_roles_map_to_capability_fields_without_source_branching() -> N
     assert section_capability_aliases("contact item") == ("contact_items",)
     assert section_capability_aliases("client code") == ("client_code",)
 
+
+def test_a_subheading_reaches_the_field_that_already_accepts_it() -> None:
+    """The two tables disagreed: binding has always accepted a `subheading` for a
+    `subtitle` field, while matching did not know the word — so a section
+    carrying one scored as though no template could hold it."""
+
+    assert "subheading" in binding_field_aliases("subtitle")
+    assert section_capability_aliases("subheading") == ("subtitle",)
+
