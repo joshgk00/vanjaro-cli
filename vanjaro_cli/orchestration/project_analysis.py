@@ -211,6 +211,7 @@ def run_project_analysis(
         "combined_sha256": hashlib.sha256(combined_serialized.encode("utf-8")).hexdigest(),
         "sources": index_sources,
     }
+    retained = content_elements_by_section(combined)
     report = {
         "schema_version": "1.0",
         "project_id": context.manifest.project.id,
@@ -221,6 +222,8 @@ def run_project_analysis(
         "warnings": len(combined.warnings),
         "unsupported_traits": combined.analysis.unsupported_traits,
         "section_confidence_mean": combined.analysis.section_confidence_mean,
+        "content_elements": sum(retained.values()),
+        "content_elements_by_section": retained,
     }
     _atomic_write_json(context.root / index_path, index)
     _atomic_write_json(context.root / report_path, report)
@@ -232,6 +235,31 @@ def run_project_analysis(
             f"{report['sections']} section(s)."
         ),
     )
+
+
+def content_elements_by_section(document: DesignDocument) -> dict[str, int]:
+    """Count the content elements each section reached the document with.
+
+    Coverage answers a different question — of the content that arrived, how
+    much reached a template field — so a section can lose five pictures and two
+    headings during extraction and see its coverage *rise*, because the ratio is
+    taken over what is left. That happened three times while repairing this
+    pipeline, and each time it was caught by counting elements by hand.
+
+    Nothing else reports it. `visitor_content_retention` exists, but only for the
+    benchmark corpus, which has annotations to compare against; a project has no
+    answer key and needs a simpler question: did this section arrive with fewer
+    pieces than it did last time?
+
+    Every element is counted, including those a template will later drop. The
+    question here is what extraction produced, not what binding kept.
+    """
+
+    return {
+        section.id: len(section.content)
+        for page in document.pages
+        for section in page.sections
+    }
 
 
 def merge_design_documents(
@@ -439,6 +467,7 @@ def _atomic_write_text(path: Path, value: str) -> None:
 
 __all__ = [
     "ProjectAnalysisError",
+    "content_elements_by_section",
     "merge_design_documents",
     "run_project_analysis",
     "source_input_files",

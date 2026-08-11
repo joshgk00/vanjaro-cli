@@ -508,6 +508,41 @@ loop has twice reverted. The removed elements carry no visitor-facing text — b
 they do carry hrefs, and whether a social profile URL is content worth keeping is
 the question to settle first.
 
+### TC-118 — A project reports no retention, so silent content loss is invisible
+
+**Dependencies:** none. **Blocks nothing formally, but every extraction repair
+needs it first.**
+
+`visitor_content_retention` exists only in `design/metrics.py`, for the benchmark
+corpus, which has annotations to compare against. A project's
+`analysis-report.json` carries sections, assets, pages, confidence and warnings —
+and no count of content at all.
+
+Coverage answers a different question. It is the share of *arriving* content that
+reached a template field, so a section can lose five pictures and two headings
+during extraction and see its coverage **rise**, because the ratio is taken over
+what is left. That happened three times while repairing this pipeline, and each
+time it was caught only by counting elements by hand.
+
+**TC-118 done.** `analysis-report.json` now carries `content_elements` and
+`content_elements_by_section`. Every element is counted, including those with no
+text value — a picture is exactly that, and pictures are what went missing.
+
+Baseline across the ten projects, **398 elements**:
+
+| project | sections | retained |
+|---|---|---|
+| `cmw-blog` | 2 | 50 |
+| `contact-page` | 2 | 13 |
+| `oasis-probe` | 5 | 32 |
+| `oasis-lighting` | 2 | 25 |
+| `wwo` | 5 | 34 |
+| `post-security` | 2 | 25 |
+| `rendered-home` | 7 | 79 |
+| `edca-pilot` | 4 | 23 |
+| `kts-fidelity` | 11 | 90 |
+| `northstar-recheck` | 5 | 27 |
+
 ### TC-117 — The report ranks gaps from matches the matcher does not believe
 
 **Dependencies:** none. **Filed with a measurement, not fixed.**
@@ -651,6 +686,53 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — repair 1: the alarm the last three reverts were missing
+
+First iteration of the extraction repair loop, and it builds the instrument
+rather than fixing anything. TC-118.
+
+Three repairs in the evidence loop silently dropped content, and each was caught
+only because I counted elements by hand. **In one of them coverage rose while
+five pictures and two headings vanished** — the ratio is taken over what
+survives, so losing content can improve it. Nothing in a project reported what
+extraction actually produced. `visitor_content_retention` exists, but only for
+the benchmark corpus, which has annotations to compare against; a project has no
+answer key and needs a plainer question — did this section arrive with fewer
+pieces than last time?
+
+`analysis-report.json` now carries `content_elements` and
+`content_elements_by_section`. The baseline across ten projects is **398
+elements**, recorded in TC-118 above, and every remaining task in this loop is
+measured against it.
+
+**Every element counts, including those with no text value**, and that turned out
+to matter. Three mutations were tried against the tests: removing the report
+field and omitting empty sections both failed as intended, but counting only
+elements with a value **passed** — nothing pinned it. A picture is an element
+with no text, and pictures are precisely what went missing before, so the alarm
+would have been blind to the case it exists for. A third test now pins it.
+
+**Evidence.** Suite 2,186 → 2,189 passing, 16 deselected. Benchmark aggregate
+identical on all ten metrics, no threshold or regression failures. All ten
+projects re-analysed `--refresh --render` and re-planned `--refresh`; coverage,
+blocking, validity and losses unchanged everywhere, which is expected for a
+change that only adds a measurement.
+
+| site | sections | provenance | style obs | retained | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 50 | 0.0 | 1 | false | 1 |
+| `contact-page` | 2 | 2 rendered | 62 | 13 | 0.75 | 0 | true | 1 |
+| `oasis-probe` | 5 | 5 rendered | 155 | 32 | 0.087 | 3 | false | 0 |
+| `oasis-lighting` | 2 | 2 rendered | 62 | 25 | 0.1875 | 0 | true | 3 |
+| `wwo` | 5 | 4 rendered, 1 static | 124 | 34 | 0.16 | 2 | false | 4 |
+| `post-security` | 2 | 2 rendered | 62 | 25 | 0.0 | 1 | false | 1 |
+| `rendered-home` | 7 | 6 rendered, 1 static | 187 | 79 | 0.1143 | 5 | false | 3 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 23 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 90 | 0.9412 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 27 | 0.8182 | 0 | true | 0 |
+
+Next is TC-115, which unblocks TC-114.
 
 ### 2026-08-10 — evidence 7/7: `rendered-home`, and the closing verdict on TC-112
 

@@ -9,12 +9,13 @@ from types import SimpleNamespace
 import pytest
 
 from vanjaro_cli.cli import cli
-from vanjaro_cli.design.models import BreakpointName, SourceKind, Viewport
+from vanjaro_cli.design.models import BreakpointName, DesignDocument, SourceKind, Viewport
 from vanjaro_cli.design.global_plan import split_global_sections
 from vanjaro_cli.design.sources import HtmlSourceRequest, analyze_source
 from vanjaro_cli.design.template_catalog import load_template_catalog
 from vanjaro_cli.orchestration.project_analysis import (
     ProjectAnalysisError,
+    content_elements_by_section,
     merge_design_documents,
     source_input_files,
 )
@@ -395,6 +396,93 @@ def test_render_is_part_of_the_analyze_fingerprint(runner, tmp_path: Path) -> No
     assert rendered_execution["status"] == "dry_run"
     assert rendered_execution["action"] == "execute"
     assert rendered_execution["input_fingerprint"] != static_fingerprint
+
+
+def test_the_analysis_report_counts_the_content_each_section_arrived_with(
+    runner, tmp_path: Path
+) -> None:
+    """Coverage answers a different question, so a section can lose pictures and
+    headings during extraction while its coverage rises — the ratio is taken over
+    what is left. Three repairs did exactly that, and each was caught by counting
+    elements by hand."""
+
+    root = tmp_path / "retention"
+    _init_local_html_project(runner, root)
+
+    analyzed = runner.invoke(cli, ["project", "analyze", str(root), "--json"])
+
+    assert analyzed.exit_code == 0, analyzed.output
+    report = json.loads(analyzed.output)["report"]
+    by_section = report["content_elements_by_section"]
+    assert by_section, "every analysed section reports what it arrived with"
+    assert report["content_elements"] == sum(by_section.values())
+
+    document = json.loads(
+        (root / "analysis" / "design-document.json").read_text(encoding="utf-8")
+    )
+    sections = [
+        section for page in document["pages"] for section in page["sections"]
+    ]
+    assert by_section == {
+        section["id"]: len(section["content"]) for section in sections
+    }
+
+
+def _mapped_sections(document: DesignDocument, change) -> DesignDocument:
+    return document.model_copy(
+        update={
+            "pages": tuple(
+                page.model_copy(
+                    update={"sections": tuple(change(s) for s in page.sections)}
+                )
+                for page in document.pages
+            )
+        }
+    )
+
+
+def test_a_section_that_arrives_empty_is_still_counted(runner, tmp_path: Path) -> None:
+    """A section reported as zero is the alarm working. Omitting empty sections
+    would hide the case the count exists for: one that arrives with nothing."""
+
+    root = tmp_path / "empty-count"
+    _init_local_html_project(runner, root)
+    runner.invoke(cli, ["project", "analyze", str(root), "--json"])
+    document = DesignDocument.model_validate_json(
+        (root / "analysis" / "design-document.json").read_text(encoding="utf-8")
+    )
+
+    counts = content_elements_by_section(
+        _mapped_sections(document, lambda s: s.model_copy(update={"content": ()}))
+    )
+
+    assert counts, "the sections are still reported"
+    assert set(counts.values()) == {0}
+
+
+def test_an_element_carrying_no_text_still_counts(runner, tmp_path: Path) -> None:
+    """A picture is an element with no text value, and pictures are what went
+    missing when a repair traded content for a better score. Counting only
+    valued elements would leave the alarm blind to exactly that."""
+
+    root = tmp_path / "valueless-count"
+    _init_local_html_project(runner, root)
+    runner.invoke(cli, ["project", "analyze", str(root), "--json"])
+    document = DesignDocument.model_validate_json(
+        (root / "analysis" / "design-document.json").read_text(encoding="utf-8")
+    )
+    blanked = _mapped_sections(
+        document,
+        lambda s: s.model_copy(
+            update={
+                "content": tuple(
+                    element.model_copy(update={"value": None}) for element in s.content
+                )
+            }
+        ),
+    )
+
+    assert content_elements_by_section(blanked) == content_elements_by_section(document)
 
 
 def test_content_losses_name_the_fields_a_build_will_drop() -> None:
