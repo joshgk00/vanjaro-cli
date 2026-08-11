@@ -752,6 +752,114 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-10 — CLOSING SUMMARY of the extraction repair loop
+
+Six tasks, six commits, and the queue is now held on evidence rather than on
+work. What each one changed:
+
+| # | task | commit | what it changed |
+|---|---|---|---|
+| 1 | TC-118 | `31fb3a7` | The analysis report counts retained content, per project and per section. Nothing else in the loop could have been judged without it. |
+| 2 | TC-115 | `51749db` | A non-repeating section kept its first two headings and dropped the rest; every remaining heading now arrives as `subheading`. |
+| 3 | TC-114 | `87324d7` | One pull-quote made a whole page testimonials. A section needs two quotes, or a quote and no image, before its role changes. |
+| 4 | TC-116 | `e471d61` | An anchor with no text was counted as a call to action, and a linked picture arrived as two things. An action must say something; a picture owns its own link. |
+| 5 | TC-113 | `1f9829d` | `repeating_subtrees` preferred the deepest candidate group; it now ranks by member count and uses depth only to break ties. |
+| 6 | TC-119 | `42a0edb` | A paragraph whose whole text is a link arrived twice. Only the action carries the destination, so the paragraph defers to it. |
+
+**The retention arc: 398 → 416 → 393 → 412 → 404.** Every move was measured
+across all ten projects before it was kept, and every fall was named element by
+element. TC-115 added 18 headings that had been silently discarded. TC-116 took
+23 away — 23 phantom actions built from anchors that said nothing, each one
+named. TC-113 restored 19 by finding the group that actually repeats. TC-119
+took 8 away, each a duplicate of an action that carries a URL the paragraph
+never did.
+
+**Coverage is not the arbiter, and this loop is the proof.** It fell during
+TC-115 because good content arrived that no template could hold. It rose during
+TC-116 because content that was never real stopped arriving. It rose in TC-113's
+first, wrong attempt while five real pictures and two headings vanished. Three
+different directions, three different meanings — retention decided all three.
+
+**Defects filed rather than fixed, and why.** TC-113 was filed after its obvious
+fix raised coverage and lost content. TC-114 was filed because it could not be
+fixed until TC-115 stopped the headings from being dropped. TC-116 was filed
+because the loop had a task in flight. TC-119 was filed the moment it was found,
+because it belonged to a different mechanism than the task that surfaced it.
+TC-117 was filed with a measurement and then resolved by holding back, not by
+suppressing. In every case the filing carried the measurement that justified it,
+and in TC-113's case the filed diagnosis turned out to be wrong — the cause was
+the ranking, not the missing map entry the filing named.
+
+**Four mutations passed that should not have**, each because two guards covered
+one fixture: TC-118's valued-element count, TC-116's picture rule, TC-113's
+nesting filter, and TC-117's confidence tier. TC-119 added a fifth of a different
+kind — the single-link arity check had no case that distinguished it in either
+direction, so the rule was restated to say what it means rather than pinned with
+a contrived fixture.
+
+**The queue now.** Nothing is blocked; four items are held on evidence and need a
+second measured section before they can be worked: TC-109 (a card kicker),
+TC-110 (a list on a non-repeating template), TC-111 (`logo-bar`/`item.label` and
+`stats-band`/`item.title`), and TC-104's three unverified templates. TC-112
+records the verdict that the eight captured pages cannot supply that second
+section — it has to come from new measured sources. TC-105 remains dependent on
+TC-103 and TC-104.
+
+**Final state.** Suite 2,213 passing, 16 deselected. Corpus identical on all ten
+metrics — `visitor_content_retention` 127/127, `semantic_role_accuracy` 25/25,
+`high_confidence_precision` 18/19, no threshold or regression failures. All ten
+projects re-analysed with `--refresh --render` (`execution.action == "execute"`)
+and re-planned with `--refresh`.
+
+### 2026-08-10 — repair 6: a link speaks for the paragraph that holds nothing else
+
+**TC-119.** `rendered-home.section.5` reported twelve elements reading "Read
+More" where the source has six anchors. The source says why:
+`<p><a class="home06-btn02" href="/blog/post/...">Read More</a></p>` — the
+paragraph sweep emits the paragraph as `body`, and the action loop emits the
+anchor it contains.
+
+The action survives, because it carries the destination the paragraph never had.
+`_is_only_a_link` claims a paragraph whose whole text comes from a link, and
+those paragraphs are filtered out of body copy before anything else reads them.
+
+**Retention 412 → 404, all of it `rendered-home` (94 → 86), and all eight named**
+— six "Read More" pointing at six different `/blog/post/…` URLs, one "SEE MORE"
+pointing at `/what-we-do/portfolio`, one "VIEW BLOG" pointing at `/blog`. Each
+survives as a `primary_action` carrying that href. The section's "Read More"
+count is now exactly six, one per source anchor. Coverage rose 0.1412 → 0.1558
+and losses held at 7: fewer elements arrive, and the ones that do bind better.
+
+**The rule says what it means.** The first version required exactly one link, and
+no mutation could distinguish that from "the first link" — a paragraph whose text
+comes entirely from its first link behaves identically either way. Rather than
+pin an arbitrary branch with a fixture built to justify it, the check now reads:
+the paragraph's whole text comes from a link. Five mutations break a test —
+removing the filter, claiming any paragraph that holds a link, dropping the
+has-text guard, claiming linkless paragraphs, and loosening equality to
+containment.
+
+**The has-text guard is not decoration.** An unlabelled anchor is not emitted as
+an action (TC-116), so a paragraph holding one has nothing to defer to; matching
+it on emptiness alone would drop the element with nothing taking its place. That
+guard needed its own fixture — the first three tests all passed with it removed.
+
+**Evidence.** Suite 2,213 passing. Corpus identical on every metric. Nine
+projects byte-identical in retention; `rendered-home` accounted for entirely.
+
+| site | elements | Δ | provenance | styles | coverage | blocking | losses |
+|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 50 | 0 | 50 rendered | 62 | 0.0 | 1 | 1 |
+| `contact-page` | 13 | 0 | 13 rendered | 62 | 0.75 | 0 | 1 |
+| `oasis-probe` | 31 | 0 | 31 rendered | 155 | 0.0909 | 3 | 1 |
+| `oasis-lighting` | 22 | 0 | 22 rendered | 62 | 0.0 | 1 | 1 |
+| `wwo` | 32 | 0 | 29 rendered, 3 static | 124 | 0.1739 | 2 | 5 |
+| `post-security` | 26 | 0 | 26 rendered | 62 | 0.0 | 1 | 2 |
+| `rendered-home` | 86 | −8 | 83 rendered, 3 static | 187 | 0.1558 | 5 | 7 |
+| `edca-pilot` | 23 | 0 | 23 rendered | 124 | 0.6667 | 0 | 1 |
+| `kts-fidelity` | 94 | 0 | 94 rendered | 352 | 0.9559 | 0 | 2 |
+| `northstar-recheck` | 27 | 0 | 27 rendered | 155 | 0.8182 | 0 | 0 |
+
 ### 2026-08-10 — repair 5: the gallery was never a leftovers problem
 
 TC-113, and the diagnosis the evidence loop filed was wrong about the cause.
