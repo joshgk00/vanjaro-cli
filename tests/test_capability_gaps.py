@@ -458,6 +458,77 @@ def test_without_a_catalog_the_repeat_group_cannot_be_checked() -> None:
     assert [gap.field for gap in report.gaps] == ["item.event_type"]
 
 
+def _low(section: str, template_id: str, warnings: tuple[str, ...]) -> CompositionPlanEntry:
+    return CompositionPlanEntry(
+        id=f"entry-{section}",
+        source_section_id=section,
+        template_id=template_id,
+        template=template_id.split("/")[-1],
+        match=PlanMatch(score=0.38, confidence="low"),
+        block=PlanBlock(name=f"block-{section}", category="CTAs"),
+        warnings=warnings,
+    )
+
+
+def test_a_loss_from_a_match_nobody_believed_is_not_a_gap() -> None:
+    """A wall of testimonials landed on a call-to-action, which then asked for
+    fifteen body slots. What the template failed to hold says nothing about the
+    template when nothing believed the pairing."""
+
+    report = build_capability_gap_report(
+        [
+            _project(
+                "site",
+                _low("s.5", "CTAs/cta-split", ("body needs 15 slots, template owns 1",)),
+            )
+        ]
+    )
+
+    assert report.gaps == ()
+    assert "low confidence" in report.held_back[0].reason
+
+
+def test_the_same_field_still_ranks_on_sections_that_were_believed() -> None:
+    """Held per section, not per gap. `rich-text`/`primary_action` spans four
+    sections across three sources and only one is unbelieved — suppressing the
+    whole entry would hide the credible instances."""
+
+    report = build_capability_gap_report(
+        [
+            _project(
+                "site",
+                _entry("s.4", "Content/rich-text", (_uneditable("primary_action"),)),
+                _low("s.5", "Content/rich-text", (_uneditable("primary_action"),)),
+            )
+        ]
+    )
+
+    assert [(gap.field, gap.sections) for gap in report.gaps] == [
+        ("primary_action", ("s.4",))
+    ]
+    assert len(report.held_back) == 1
+
+
+def test_a_medium_confidence_match_is_believed_enough_to_rank() -> None:
+    """Only `low` is the matcher disowning its choice. Most real gaps in the
+    queue sit at medium, and holding those back would empty it."""
+
+    medium = CompositionPlanEntry(
+        id="entry-s.1",
+        source_section_id="s.1",
+        template_id="Content/rich-text",
+        template="rich-text",
+        match=PlanMatch(score=0.62, confidence="medium"),
+        block=PlanBlock(name="block-s.1", category="Content"),
+        warnings=(_uneditable("subtitle"),),
+    )
+
+    report = build_capability_gap_report([_project("site", medium)])
+
+    assert [gap.field for gap in report.gaps] == ["subtitle"]
+    assert report.held_back == ()
+
+
 def test_a_gap_the_library_has_since_closed_is_not_ranked() -> None:
     """Pack 1.6.0 gave `feature-cards-3up` a section title. A plan written
     before it still reports the loss, and some plans cannot be refreshed to find

@@ -42,6 +42,11 @@ held out deliberately, each recorded with its reason rather than dropped:
   to belong to, so declaring one would not give the template anywhere to put a
   second value. The section carries a list its template family cannot hold,
   which is a larger question than a missing field.
+* A loss on a section the matcher itself gave low confidence. What a template
+  failed to hold says nothing about the template when nothing believed the
+  pairing — a call-to-action asked for fifteen body slots because a wall of
+  testimonials landed on it. Held per section rather than per gap: the same
+  field is often missing on sections that *were* believed.
 
 This module is pure: no network, filesystem, or model calls.
 """
@@ -116,6 +121,9 @@ class SectionLosses(_GapModel):
     # says so at all. Only the benchmark corpus does; a project has no answer
     # key, and an empty tuple means the question was not asked.
     expected_templates: tuple[str, ...] = ()
+    # What the matcher thought of its own choice. A project has no answer key,
+    # but it does have this.
+    match_confidence: str | None = None
 
     @property
     def matched_an_expected_template(self) -> bool:
@@ -142,6 +150,7 @@ class PlannedProject(_GapModel):
                 template_id=entry.template_id,
                 warnings=entry.warnings,
                 form_fields=entry.form_fields,
+                match_confidence=entry.match.confidence,
             )
             for entry in self.plan.entries
         )
@@ -181,6 +190,7 @@ class MatchedCase(_GapModel):
                 section_id=result.section_id,
                 template_id=result.selected_candidate.template_id,
                 warnings=result.selected_candidate.missing_requirements,
+                match_confidence=result.selected_candidate.confidence.value,
                 expected_templates=(
                     self.expected_templates[index]
                     if index < len(self.expected_templates)
@@ -286,6 +296,19 @@ def _held_back_reason(
             "the corpus expects "
             + " or ".join(section.expected_templates)
             + " here, so this is a routing defect rather than a missing field"
+        )
+    if section.match_confidence == "low":
+        # The matcher does not believe this pairing, so what the template failed
+        # to hold says nothing about the template. Held per section rather than
+        # per gap: the same field is often missing on sections that *were*
+        # believed, and suppressing the whole entry would hide real work.
+        #
+        # The corpus gets this from its annotations, where a loss on a wrongly
+        # matched section is already held back as a routing defect. A project has
+        # no answer key, and this is the signal it does have.
+        return (
+            "the matcher gave this pairing low confidence, so the loss describes "
+            "the match rather than the template"
         )
     if field and field.startswith("item.") and catalog is not None:
         manifest = catalog.get(section.template_id)

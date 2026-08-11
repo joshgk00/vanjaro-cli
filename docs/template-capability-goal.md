@@ -621,6 +621,16 @@ genuine work. The question is whether such an entry should be ranked lower,
 marked, or held — and that needs measuring against a queue, which is its own
 iteration.
 
+**TC-117 done: held per SECTION, not per gap.** Measured against the queue as it
+stood after five repairs, six of twenty-two entries rested on a low-confidence
+match and *no* gap rested on a high-confidence one. Four of the six were a single
+misroute asking a call-to-action for fifteen body slots, seven actions and six
+pictures. But the top entry, `rich-text`/`primary_action`, spanned four sections
+across three sources with only one unbelieved — suppressing the entry would have
+hidden the credible instances. Holding the section instead keeps it, at three.
+Queue **22 → 17 gaps, 28 → 20 dropped fields**; retention unchanged at 412, as a
+report-side change must leave it.
+
 ### TC-112 — Add measured sources until the held items have a second section
 
 **Dependencies:** none. **This is what unblocks TC-104, TC-109, TC-110 and TC-111.**
