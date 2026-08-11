@@ -439,6 +439,18 @@ The real fix has to make the pictures items *without* discarding what is not one
 of them. That is a change to how a card grid's leftovers are handled, not a map
 entry, and it deserves its own iteration with the retention check in front of it.
 
+**TC-113 done, and it was never about leftovers.** Re-measuring the naive change
+gave the same collapse — retention 31 → 21, the section down to two items — and
+showed why: `repeating_subtrees` was picking two `div.White` layout bands, one
+holding a single picture and the other holding all six cards. Everything else
+counted as inside a repeat item and was never emitted. The candidates were all
+there one level down: six `div.col-sm-4`, one picture each. The rule ranked by
+depth first, so the shallowest thing that happened to repeat won. **It now ranks
+by how many times a signature repeats, with depth only breaking a tie**, which
+keeps the original rule that a card is the card rather than the box inside it.
+No map entry was needed at all. Retention **393 → 412** with no project losing an
+element.
+
 ### TC-114 — One pull-quote makes a whole page testimonials, and the careful rule is overridden
 
 **Dependencies:** none. **Filed rather than fixed — the fix needs TC-115 first.**
@@ -569,6 +581,22 @@ Baseline across the ten projects, **398 elements**:
 | `edca-pilot` | 4 | 23 |
 | `kts-fidelity` | 11 | 90 |
 | `northstar-recheck` | 5 | 27 |
+
+### TC-119 — A paragraph that is only a link arrives twice
+
+**Dependencies:** none. **Pre-existing, found while measuring TC-113.**
+
+`rendered-home.section.5` reports twelve elements reading "Read More" where the
+source has six anchors — six as `primary_action` and six as `body`. A paragraph
+whose whole content is a link is emitted as body copy, and the link inside it as
+a call to action.
+
+Confirmed pre-existing: the section holds 34 elements and 12 "Read More" both
+before and after TC-113's change, so it is not that fix's doing.
+
+The paragraph is the link. Which of the two should survive is the question —
+probably the action, since it carries the destination — and the count is the
+measure of the fix.
 
 ### TC-117 — The report ranks gaps from matches the matcher does not believe
 
@@ -713,6 +741,71 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — repair 5: the gallery was never a leftovers problem
+
+TC-113, and the diagnosis the evidence loop filed was wrong about the cause.
+
+Re-measuring the naive change first — as the brief demanded, because TC-115 and
+TC-116 had both moved the ground — reproduced the same collapse: retention 31 →
+21, the gallery section down from fourteen elements to four. So the filing's
+warning held. But looking at *why* showed it was never about how a card grid
+treats its leftovers.
+
+**`repeating_subtrees` was picking two `div.White` layout bands** — one holding a
+single picture, the other holding all six cards. Everything outside those two
+counted as inside a repeat item, so the eyebrow, the headings and five pictures
+were never emitted. The real cards were one level down and perfectly uniform:
+
+| signature | members | pictures each |
+|---|---|---|
+| `div.White` | 2 | **1 and 6** |
+| `div.mb-20.row` | 2 | 3 and 3 |
+| `div.col-sm-4` | **6** | 1 each |
+
+The rule ranked candidates by depth first, so the shallowest thing that happened
+to repeat won. It now **ranks by how many times a signature repeats, with depth
+only breaking a tie** — which preserves the rule it was written for, that a card
+is the card and not the rounded box inside it. **No entry in
+`_CARD_GRID_REPEAT_KIND` was needed at all**, and the section's role never
+changed; it simply gained the group it always had.
+
+**Retention 393 → 412, no project down.** `oasis-probe`'s gallery holds the same
+fourteen elements, now as six cards with pictures and titles instead of loose
+media and stray headings, and its section heading is "Our Services" rather than
+one card's name. `rendered-home` gained nineteen, all in one section whose card
+grid was being read as three loose bodies.
+
+**A duplicate that was not mine.** `rendered-home.section.5` reports twelve
+"Read More" where the source has six anchors. Measuring the section before and
+after the change gave 34 elements and 12 either way, so it is pre-existing: a
+paragraph whose whole content is a link is emitted as body copy *and* the link as
+an action. Filed as TC-119 rather than folded in.
+
+Three mutations, and the third needed a fixture of its own — reverting the
+ranking and dropping the depth tiebreak each failed as intended, but removing the
+nesting filter passed, because no fixture had a signature nesting inside itself.
+That is the third time this loop a mutation has survived because two guards
+covered one case.
+
+**Evidence.** Suite 2,204 → 2,207 passing, 16 deselected. Benchmark aggregate
+identical on all ten metrics, no threshold or regression failures.
+
+| site | sections | provenance | style obs | retained | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 50 | 0.0 | 1 | false | 1 |
+| `contact-page` | 2 | 2 rendered | 62 | 13 | 0.75 | 0 | true | 1 |
+| `oasis-probe` | 5 | 5 rendered | 155 | 31 | 0.0909 | 3 | false | 1 |
+| `oasis-lighting` | 2 | 2 rendered | 62 | 22 | 0.0 | 1 | false | 1 |
+| `wwo` | 5 | 4 rendered, 1 static | 124 | 32 | 0.1739 | 2 | false | 5 |
+| `post-security` | 2 | 2 rendered | 62 | 26 | 0.0 | 1 | false | 2 |
+| `rendered-home` | 7 | 6 rendered, 1 static | 187 | 75 → **94** | 0.1212 → 0.1412 | 5 | false | 3 → 7 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 23 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 94 | 0.9559 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 27 | 0.8182 | 0 | true | 0 |
+
+New retention baseline **412**. All four extraction defects the evidence loop
+found are closed; the report-side TC-117 remains, plus the new TC-119.
 
 ### 2026-08-10 — repair 4: the only retention drop this loop should accept
 

@@ -59,6 +59,7 @@ def _depth(element: Tag, root: Tag) -> int:
 # in the kind of thing repeated, which decides the templates they can reach.
 _CARD_GRID_REPEAT_KIND = {
     "feature_cards": "card",
+    "gallery": "card",
     "project_gallery": "card",
     "team_grid": "team_member",
     "blog_cards": "blog_post",
@@ -76,8 +77,15 @@ def repeating_subtrees(root: Tag, *, minimum: int = 2) -> list[Tag]:
 
     Grouping by tag and class signature rather than by parent is deliberate:
     the cards on a real page were split across two `.row` containers, and a
-    single-parent scan would have found two groups of two. Outermost wins so
-    the card is the card, not the rounded box inside it.
+    single-parent scan would have found two groups of two.
+
+    The most repeated signature wins, and outermost only breaks a tie. Ranking
+    by depth first took whatever shallow wrapper happened to repeat: a services
+    grid had two `div.White` bands holding one picture and six, which is not a
+    repetition of anything, and six `div.col-sm-4` cards one level down. Reading
+    the bands as the cards kept two items and discarded the rest of the section.
+    A tie on count still prefers the outermost, so the card is still the card
+    rather than the rounded box inside it.
     """
 
     by_signature: dict[tuple[str, tuple[str, ...]], list[Tag]] = {}
@@ -94,7 +102,7 @@ def repeating_subtrees(root: Tag, *, minimum: int = 2) -> list[Tag]:
             continue
         if any(item is not other and item in other.parents for item in group for other in group):
             continue
-        ranked.append((_depth(group[0], root), -len(group), group))
+        ranked.append((-len(group), _depth(group[0], root), group))
     if not ranked:
         return []
     return min(ranked, key=lambda entry: entry[:2])[2]

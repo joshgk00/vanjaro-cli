@@ -1222,6 +1222,75 @@ def test_the_card_is_the_card_not_the_box_inside_it() -> None:
     assert [item.get("class") for item in items] == [["col-md-6", "col-12"]] * 4
 
 
+def test_two_bands_holding_unequal_content_are_not_the_repetition() -> None:
+    """A services grid had two `div.White` bands, one holding a single picture
+    and the other holding six, and six cards one level down. Ranking by depth
+    took the bands: two items, and the rest of the section discarded."""
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.design.html_ownership import repeating_subtrees
+
+    cards = "".join(
+        f"<div class='col-sm-4'><img src='/{n}.jpg'><h3>Service {n}</h3></div>"
+        for n in range(1, 7)
+    )
+    root = BeautifulSoup(
+        "<section>"
+        "<div class='White'><img src='/banner.jpg'><h2>Our Services</h2></div>"
+        f"<div class='White'>{cards}</div>"
+        "</section>",
+        "html.parser",
+    ).find("section")
+
+    items = repeating_subtrees(root)
+
+    assert [item.get("class") for item in items] == [["col-sm-4"]] * 6
+
+
+def test_a_tie_on_count_still_prefers_the_outermost() -> None:
+    """The card is still the card rather than the rounded box inside it — the
+    rule that ranking by count must not cost."""
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.design.html_ownership import repeating_subtrees
+
+    cards = "".join(
+        f"<div class='card'><div class='inner'><img src='/{n}.jpg'><h3>Item {n}</h3></div></div>"
+        for n in range(1, 4)
+    )
+    root = BeautifulSoup(f"<section>{cards}</section>", "html.parser").find("section")
+
+    items = repeating_subtrees(root)
+
+    assert [item.get("class") for item in items] == [["card"]] * 3
+
+
+def test_a_signature_that_nests_inside_itself_is_not_a_repetition() -> None:
+    """A wrapper sharing its class with what it wraps is one thing containing
+    another, not two of a kind — and taking it would make an item that holds
+    every other item."""
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.design.html_ownership import repeating_subtrees
+
+    root = BeautifulSoup(
+        "<section>"
+        "<div class='panel'><h2>Outer</h2><img src='/outer.jpg'>"
+        "<div class='panel'><h3>Inner</h3><img src='/inner.jpg'></div></div>"
+        "<div class='tile'><h3>One</h3><img src='/1.jpg'></div>"
+        "<div class='tile'><h3>Two</h3><img src='/2.jpg'></div>"
+        "</section>",
+        "html.parser",
+    ).find("section")
+
+    items = repeating_subtrees(root)
+
+    assert [item.get("class") for item in items] == [["tile"]] * 2
+
+
 def test_the_section_heading_is_not_swallowed_by_a_card() -> None:
     section = _enriched(_VANJARO_CARDS, "feature_cards")
 
