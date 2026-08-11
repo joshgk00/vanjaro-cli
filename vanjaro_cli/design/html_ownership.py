@@ -578,6 +578,17 @@ def enrich_section_from_static_dom(
                 continue
             element_role = "subtitle" if paragraph is deck else "body"
             add("text", element_role, paragraph.get_text(" ", strip=True))
+        # Who a quote is credited to. Only the testimonials branch read a `<cite>`,
+        # so the moment a section holding a pull-quote stopped being testimonials
+        # its attribution left the document — "Walt Whitman" under a line of
+        # Whitman. The quote itself survives as a heading; the name it belongs to
+        # should not need a particular section role to be kept.
+        for attribution in root.find_all(["cite", "figcaption"]):
+            if id(attribution) in repeated_nodes:
+                continue
+            credited = attribution.get_text(" ", strip=True)
+            if credited:
+                add("text", "author", credited)
         # Enrichment replaces the content list wholesale, so a form inventoried
         # by extraction is lost here unless it is re-emitted. The placeholder
         # that stands in for a form is built from these, and a form nobody

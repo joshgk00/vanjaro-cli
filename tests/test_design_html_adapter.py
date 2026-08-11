@@ -1991,6 +1991,42 @@ def test_a_cards_own_heading_is_a_card_title_not_a_subheading() -> None:
     assert not [e for e in section["content"] if e["role"] == "subheading"]
 
 
+def test_a_quotes_attribution_survives_outside_a_testimonials_section() -> None:
+    """Only the testimonials branch read a `<cite>`, so the moment a section
+    holding a pull-quote stopped being testimonials its attribution left the
+    document — "Walt Whitman" under a line of Whitman."""
+
+    section = _enriched(
+        "<section><h2>Lighting</h2>"
+        "<blockquote><h3>A leaf of grass is no less than the stars</h3>"
+        "<footer><cite>Walt Whitman</cite></footer></blockquote>"
+        "<p>Copy about lighting that runs on.</p></section>",
+        "rich_text",
+    )
+
+    assert [e["value"] for e in section["content"] if e["role"] == "author"] == [
+        "Walt Whitman"
+    ]
+
+
+def test_an_attribution_owned_by_a_repeated_item_is_not_reported_twice() -> None:
+    """A testimonial's own `<cite>` already becomes that item's author. Emitting
+    it again at section level would double every attribution on the page."""
+
+    section = _enriched(
+        "<section><h2>What clients say</h2>"
+        "<figure><blockquote>First quote.</blockquote><figcaption>Amir</figcaption></figure>"
+        "<figure><blockquote>Second quote.</blockquote><figcaption>Reese</figcaption></figure>"
+        "</section>",
+        "testimonials",
+    )
+
+    assert [e["value"] for e in section["content"] if e["role"] == "author"] == [
+        "Amir",
+        "Reese",
+    ]
+
+
 def test_a_smaller_heading_below_the_title_is_not_an_eyebrow() -> None:
     """An eyebrow sits above the headline. A subheading below it does not."""
 

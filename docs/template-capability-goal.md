@@ -464,7 +464,17 @@ and three quotes.
 **Applying it costs content anyway, which is why it is filed.** With the rule
 corrected the section stops being testimonials — and retention falls from 25
 elements to 23, because the pull-quote is an `<h3>` inside the blockquote and
-nothing else picks it up. See TC-115. A document-level loss is worse than a
+nothing else picks it up. See TC-115.
+
+**TC-114 done, once TC-115 had cleared the way and one more hole was closed.**
+With headings preserved the pull-quote survives, but retention still fell by one:
+the attribution `<cite>Walt Whitman</cite>` was read by the testimonials branch
+alone, so it left the document the moment the section stopped being testimonials.
+A `<cite>` or `<figcaption>` that no repeated item owns is now kept wherever it
+appears. Retention holds at **416 with no project losing an element**.
+`oasis-lighting` reclassifies from `testimonials` to `hero` — the pre-existing
+rule for a first content boundary carrying an `<h1>`, not something this change
+introduced. Whether it should be a gallery is TC-113's question. A document-level loss is worse than a
 binding-level one: a dropped field is visible in the report and fixable by
 widening a template, while content that never reaches the design document cannot
 be recovered downstream at all.
@@ -694,6 +704,58 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — repair 3: the careless rule stops overriding the careful one
+
+TC-114. `static_role` returned `testimonials` for any element containing a
+`<blockquote>` — no count, no test for competing content — and it outranks
+`_classify_section`, which has always required quotes to be the point and
+correctly called `oasis-lighting` a gallery. One pull-quote among six
+photographs made the whole page a quote grid.
+
+**The retention alarm earned its keep on the first try.** With the rule
+corrected, retention fell 416 → **415**. One element. The rule of this loop is
+to revert on any drop unless each lost element can be named and justified, so I
+named it: **"Walt Whitman"**, the attribution in a `<cite>` inside the
+blockquote. Only the testimonials branch ever read a `<cite>`, so the moment the
+section stopped being testimonials the name left the document. The quote itself
+survived, because repair 2 keeps every heading.
+
+An attribution is visitor content, and justifying its loss would have been the
+reflex this rule exists to prevent. A `<cite>` or `<figcaption>` that no repeated
+item owns is now kept wherever it appears. **Retention back to 416, no project
+down.**
+
+`oasis-lighting` reclassifies from `testimonials` to `hero`, which is the
+pre-existing rule for a first content boundary carrying an `<h1>` rather than
+anything this change introduced. Its coverage falls to 0 and it blocks — on
+`file:///` images the capture cannot resolve, which the report already holds back
+as acquisition defects. Whether the page should be a gallery is TC-113's
+question, and the answer is no longer being pre-empted by a stray quote.
+
+Six mutations, six distinct failures: reverting to any-blockquote, removing the
+count guard, removing the no-competing-content guard, ignoring an explicit
+`testimonial` class, removing the attribution emit, and letting a repeated item's
+own attribution through — that last one would have doubled every name on a real
+testimonials page.
+
+**Evidence.** Suite 2,194 → 2,200 passing, 16 deselected. Benchmark aggregate
+identical on all ten metrics, no threshold or regression failures.
+
+| site | sections | provenance | style obs | retained | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 50 | 0.0 | 1 | false | 1 |
+| `contact-page` | 2 | 2 rendered | 62 | 13 | 0.75 | 0 | true | 1 |
+| `oasis-probe` | 5 | 5 rendered | 155 | 37 | 0.0714 | 3 | false | 1 |
+| `oasis-lighting` | 2 | 2 rendered | 62 | 26 | 0.1765 → **0.0** | 0 → **1** | true → **false** | 4 → **1** |
+| `wwo` | 5 | 4 rendered, 1 static | 124 | 35 | 0.1538 | 2 | false | 5 |
+| `post-security` | 2 | 2 rendered | 62 | 26 | 0.0 | 1 | false | 2 |
+| `rendered-home` | 7 | 6 rendered, 1 static | 187 | 84 | 0.1067 | 5 | false | 3 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 23 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 95 | 0.942 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 27 | 0.8182 | 0 | true | 0 |
+
+Two of the four extraction defects the evidence loop found are now closed.
 
 ### 2026-08-10 — repair 2: eighteen headings that were never reaching the document
 

@@ -305,7 +305,14 @@ def static_role(element: Tag, section_index: int) -> str:
         return "navigation"
     if _is_link_bar(element):
         return "navigation"
-    if "testimonial" in hints or element.find("blockquote") is not None:
+    # A `<blockquote>` alone does not make a section testimonials. A page
+    # carrying one pull-quote beside six photographs read as a quote grid and
+    # lost the photographs, the copy and every link. `_classify_section` has
+    # always required quotes to be the point — several of them, or a lone quote
+    # with nothing competing — and this is the same judgement, which used to be
+    # overridden here because a static role outranks the other classifier.
+    quotes = element.find_all("blockquote")
+    if "testimonial" in hints or len(quotes) >= 2 or (quotes and element.find("img") is None):
         return "testimonials"
     if "stats" in hints or len(element.select("li strong")) >= 2:
         return "stats"
