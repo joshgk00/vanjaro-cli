@@ -2060,6 +2060,63 @@ def test_a_cards_own_heading_is_a_card_title_not_a_subheading() -> None:
     assert not [e for e in section["content"] if e["role"] == "subheading"]
 
 
+def test_a_paragraph_that_is_only_a_link_arrives_once() -> None:
+    """`<p><a href="/post">Read More</a></p>` is a link, and a page of blog
+    cards has six. Reading the paragraph as body copy and the anchor as a call
+    to action put the same words in twice, once with the destination and once
+    without."""
+
+    section = _enriched(
+        "<section><h2>From the blog</h2><p>Some genuine body copy here.</p>"
+        "<p><a class='btn' href='/blog/post/one'>Read More</a></p>"
+        "</section>",
+        "rich_text",
+    )
+
+    assert [e["value"] for e in section["content"] if e["role"] == "body"] == [
+        "Some genuine body copy here."
+    ]
+    actions = [e for e in section["content"] if e["role"] == "primary_action"]
+    assert [e["value"] for e in actions] == ["Read More"]
+    assert actions[0]["attributes"]["href"] == "/blog/post/one"
+
+
+def test_a_paragraph_with_a_link_inside_its_prose_is_still_body_copy() -> None:
+    """The rule is that the paragraph IS the link, not that it contains one. A
+    citation inside a sentence must not take the sentence with it."""
+
+    section = _enriched(
+        "<section><h2>Security</h2>"
+        "<p>Chrome users are <a href='https://example.invalid/s'>most of the web</a> "
+        "and the change affects them.</p>"
+        "<p>A second paragraph so the first is not a deck.</p></section>",
+        "rich_text",
+    )
+
+    prose = [
+        e["value"]
+        for e in section["content"]
+        if e["kind"] == "text" and "the change affects them" in (e["value"] or "")
+    ]
+    assert prose == ["Chrome users are most of the web and the change affects them."]
+
+
+def test_the_rule_claims_a_paragraph_only_when_a_link_supplies_its_text() -> None:
+    """An unlabelled anchor is not emitted as an action, so a paragraph holding
+    one has no action to defer to. Matching it on emptiness alone would drop the
+    element with nothing taking its place."""
+
+    from vanjaro_cli.design.html_ownership import _is_only_a_link
+
+    from bs4 import BeautifulSoup
+
+    empty = BeautifulSoup("<p><a href='#mm-1'></a></p>", "html.parser").find("p")
+    labelled = BeautifulSoup("<p><a href='/x'>Read More</a></p>", "html.parser").find("p")
+
+    assert _is_only_a_link(empty) is False
+    assert _is_only_a_link(labelled) is True
+
+
 def test_a_picture_wrapped_in_a_link_is_one_thing_not_two() -> None:
     """The thumbnail arrived twice — once as media and once as a call to action
     with nothing to read on it. The anchor is the picture's destination."""

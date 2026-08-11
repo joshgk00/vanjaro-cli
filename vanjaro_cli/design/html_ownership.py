@@ -163,6 +163,24 @@ def implied_title(root: Tag) -> Tag | None:
     return first
 
 
+def _is_only_a_link(paragraph: Tag) -> bool:
+    """Report whether a paragraph's whole content is one link.
+
+    `<p><a href="/post">Read More</a></p>` is a link, and a page of blog cards
+    has six of them. Reading the paragraph as body copy and the anchor as a call
+    to action put the same six words in the document twice, once with the
+    destination and once without.
+
+    The action keeps it, because the action carries where it goes.
+    """
+
+    link = paragraph.find("a", href=True)
+    if link is None:
+        return False
+    text = paragraph.get_text(" ", strip=True)
+    return bool(text) and text == link.get_text(" ", strip=True)
+
+
 def _text_leaves(item: Tag) -> list[Tag]:
     return [
         element
@@ -461,7 +479,9 @@ def enrich_section_from_static_dom(
         body_paragraphs = [
             paragraph
             for paragraph in root.find_all("p")
-            if id(paragraph) not in repeated_nodes and paragraph is not inferred_title
+            if id(paragraph) not in repeated_nodes
+            and paragraph is not inferred_title
+            and not _is_only_a_link(paragraph)
         ]
         paragraph_eyebrow = _eyebrow_paragraph(title, body_paragraphs) if eyebrow is None else None
         if isinstance(title, Tag):
