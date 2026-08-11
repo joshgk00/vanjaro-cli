@@ -361,12 +361,20 @@ def enrich_section_from_static_dom(
             role="editorial",
             provenance=[provenance],
         )
+        attributes: dict[str, JsonValue] = {"alt": str(tag.get("alt") or "")}
+        # Where the picture leads, recorded on the picture. A thumbnail wrapped
+        # in a link used to arrive twice — once as media and once as a call to
+        # action with no text — and the anchor is not a second piece of content,
+        # it is this one's destination.
+        anchor = tag.find_parent("a", href=True)
+        if anchor is not None:
+            attributes["href"] = str(anchor.get("href"))
         return add(
             "image",
             image_role,
             absolute,
             group_id=group_id,
-            attributes={"alt": str(tag.get("alt") or "")},
+            attributes=attributes,
             asset_id=asset_id,
         )
 
@@ -598,8 +606,23 @@ def enrich_section_from_static_dom(
         for link in root.find_all("a", href=True):
             if id(link) in repeated_nodes:
                 continue
+            # A picture wrapped in a link is one thing, not two. Its destination
+            # now travels on the image, so emitting an action here as well
+            # counted the same content twice and produced a call with nothing to
+            # read on it.
+            if link.find("img") is not None:
+                continue
+            # An action with no label is not the call — the rule both measurement
+            # scripts have applied since iteration 55, and which the extractor
+            # was never given. A social icon says what it is in `aria-label`; a
+            # menu's `mm-next` says nothing anywhere, and is chrome.
+            label = link.get_text(" ", strip=True) or str(
+                link.get("aria-label") or link.get("title") or ""
+            ).strip()
+            if not label:
+                continue
             kind = "button" if role in {"hero", "call_to_action"} or any("btn" in value.casefold() for value in link.get("class", [])) else "link"
-            add(kind, "primary_action", link.get_text(" ", strip=True), attributes={"href": link.get("href")})
+            add(kind, "primary_action", label, attributes={"href": link.get("href")})
 
     if elements:
         section["content"] = elements

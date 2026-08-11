@@ -526,6 +526,15 @@ loop has twice reverted. The removed elements carry no visitor-facing text — b
 they do carry hrefs, and whether a social profile URL is content worth keeping is
 the question to settle first.
 
+**TC-116 done, and the textless anchors turned out to be three different things.**
+Measured across the projects: some carry an accessible name in `aria-label` or
+`title`; some wrap a picture, which is their label; and a few — `mm-close`,
+`mm-next`, `mm-prev` — have no text, no name and no picture at all. So an action
+now takes its accessible name when it has no text, a picture wrapped in a link
+records its destination on the picture rather than arriving twice, and an anchor
+with nothing to read anywhere is not emitted. **Blank actions fell from twelve to
+zero and 27 pictures gained a destination they never had.**
+
 ### TC-118 — A project reports no retention, so silent content loss is invisible
 
 **Dependencies:** none. **Blocks nothing formally, but every extraction repair
@@ -704,6 +713,63 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-10 — repair 4: the only retention drop this loop should accept
+
+TC-116. `html_ownership` emitted a `primary_action` for every `<a href>` with no
+test that the anchor said anything, while both measurement scripts have required
+a label since iteration 55 — "an action with no label is not the call".
+
+**The textless anchors turned out to be three different things**, and measuring
+that before removing anything is what made the fix honest:
+
+| kind | count across three projects | what it is |
+|---|---|---|
+| carries `aria-label` or `title` | 6, 12, 6 | a social icon that says what it is |
+| wraps a picture | 9, 12, 9 (every picture had an `alt`) | the picture is the label |
+| nothing at all | 2, 5, 2 | `mm-close`, `mm-next`, `mm-prev` — menu chrome |
+
+So an action now takes its accessible name when it has no text; a picture wrapped
+in a link records its destination **on the picture** rather than arriving twice;
+and an anchor with nothing to read anywhere is not emitted.
+
+**Retention fell 416 → 393, and this is the one drop this loop should accept.**
+The rule is to revert unless every dropped element can be named and justified,
+and all 23 are: **27 pictures gained a destination they never had**, and the
+remainder are menu controls with an href like `#mm-1`. Nothing left the document
+that a reader could see — the anchors' accessible names survive as the pictures'
+`alt` text, which every one of them already carried. **Blank actions across all
+ten projects fell from twelve to zero.**
+
+Coverage *rose* on four projects — `kts-fidelity` 0.942 → 0.9559,
+`wwo` 0.1538 → 0.1739, `rendered-home` 0.1067 → 0.1212, `oasis-probe` 0.0714 →
+0.0909 — because phantom actions that could never bind are gone. That is coverage
+rising for the right reason, which is worth distinguishing from TC-113's trap
+where it rose because content vanished.
+
+**Five mutations, and one exposed a hole in my own test.** Removing the
+picture rule passed at first, because the label guard caught the same fixture —
+the rule only matters when the anchor *also* has an accessible name, which is
+the real case on a logo link. The test now uses one, and the mutation fails.
+
+**Evidence.** Suite 2,200 → 2,204 passing, 16 deselected. Benchmark aggregate
+identical on all ten metrics, no threshold or regression failures.
+
+| site | sections | provenance | style obs | retained | coverage | blocking | valid | losses |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 2 | 2 rendered | 62 | 50 | 0.0 | 1 | false | 1 |
+| `contact-page` | 2 | 2 rendered | 62 | 13 | 0.75 | 0 | true | 1 |
+| `oasis-probe` | 5 | 5 rendered | 155 | 31 | 0.0909 | 3 | false | 1 |
+| `oasis-lighting` | 2 | 2 rendered | 62 | 22 | 0.0 | 1 | false | 1 |
+| `wwo` | 5 | 4 rendered, 1 static | 124 | 32 | 0.1739 | 2 | false | 5 |
+| `post-security` | 2 | 2 rendered | 62 | 26 | 0.0 | 1 | false | 2 |
+| `rendered-home` | 7 | 6 rendered, 1 static | 187 | 75 | 0.1212 | 5 | false | 3 |
+| `edca-pilot` | 4 | 4 rendered | 124 | 23 | 0.6667 | 0 | true | 1 |
+| `kts-fidelity` | 11 | 11 rendered | 352 | 94 | 0.9559 | 0 | true | 2 |
+| `northstar-recheck` | 5 | 5 rendered | 155 | 27 | 0.8182 | 0 | true | 0 |
+
+New retention baseline: **393**. Three of the four extraction defects are closed;
+TC-113 and the report-side TC-117 remain.
 
 ### 2026-08-10 — repair 3: the careless rule stops overriding the careful one
 

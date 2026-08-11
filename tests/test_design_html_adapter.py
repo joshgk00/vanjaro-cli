@@ -1991,6 +1991,71 @@ def test_a_cards_own_heading_is_a_card_title_not_a_subheading() -> None:
     assert not [e for e in section["content"] if e["role"] == "subheading"]
 
 
+def test_a_picture_wrapped_in_a_link_is_one_thing_not_two() -> None:
+    """The thumbnail arrived twice — once as media and once as a call to action
+    with nothing to read on it. The anchor is the picture's destination."""
+
+    section = _enriched(
+        "<section><h2>Our work</h2><p>Copy about the work we do.</p>"
+        "<a href='/projects/one' aria-label='A finished project'>"
+        "<img src='/one.jpg' alt='A finished project'></a>"
+        "</section>",
+        "rich_text",
+    )
+
+    images = [e for e in section["content"] if e["kind"] == "image"]
+    assert [e["attributes"]["href"] for e in images] == ["/projects/one"]
+    # The anchor carries an accessible name, so only the picture rule keeps this
+    # from arriving a second time — and the name survives as the image's alt.
+    assert not [e for e in section["content"] if e["role"] == "primary_action"]
+    assert images[0]["attributes"]["alt"] == "A finished project"
+
+
+def test_an_action_named_only_by_its_accessible_name_keeps_that_name() -> None:
+    """A social icon says what it is in `aria-label`. Emitting it with an empty
+    value made a call to action nobody could read and nothing could bind."""
+
+    section = _enriched(
+        "<section><h2>Follow along</h2><p>Copy that runs on a while.</p>"
+        "<a href='https://example.invalid/x' aria-label='Twitter'><i class='icon'></i></a>"
+        "</section>",
+        "rich_text",
+    )
+
+    assert [
+        e["value"] for e in section["content"] if e["role"] == "primary_action"
+    ] == ["Twitter"]
+
+
+def test_an_anchor_with_nothing_to_read_anywhere_is_not_an_action() -> None:
+    """`mm-next` and `mm-close` are a mobile menu's own controls: no text, no
+    accessible name, no picture, and a destination that means nothing to a
+    reader."""
+
+    section = _enriched(
+        "<section><h2>Studio</h2><p>Copy that runs on a while.</p>"
+        "<a class='mm-next' href='#mm-1'></a><a class='mm-close' href='#Form'></a>"
+        "</section>",
+        "rich_text",
+    )
+
+    assert not [e for e in section["content"] if e["role"] == "primary_action"]
+
+
+def test_an_ordinary_labelled_action_is_untouched() -> None:
+    """The guard must not swallow the calls that matter."""
+
+    section = _enriched(
+        "<section><h2>Ready?</h2><p>Copy that runs on a while.</p>"
+        "<a class='btn' href='/contact'>Get Started!</a></section>",
+        "call_to_action",
+    )
+
+    actions = [e for e in section["content"] if e["role"] == "primary_action"]
+    assert [e["value"] for e in actions] == ["Get Started!"]
+    assert actions[0]["attributes"]["href"] == "/contact"
+
+
 def test_a_quotes_attribution_survives_outside_a_testimonials_section() -> None:
     """Only the testimonials branch read a `<cite>`, so the moment a section
     holding a pull-quote stopped being testimonials its attribution left the
