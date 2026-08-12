@@ -198,6 +198,40 @@ site three sections.
 
 ## Backlog
 
+### STRUCK — The form placeholder on contact-page
+
+**Measured and closed without a change.** `#dnn_ContentPane` holds **no form**:
+zero `<form>` elements, zero inputs, selects or textareas. Its entire content is
+the two words `CONTACT FORM`, which is the DNN module's title. The page's only
+`<form>` is `#Form`, the ASP.NET body wrapper, and `has_form_fields` correctly
+returns False for it — its visible inputs are DNN search boxes, which evidence
+2/7 already established.
+
+There is no form to placeholder; the real one is loaded by a module that the
+saved capture does not contain. Since TC-125 the pane arrives as its own
+`rich_text` section carrying its title, and the dropped-boundary alarm no longer
+names it.
+
+### STRUCK — `querySelector` and an id beginning with a digit
+
+**Measured and closed without a change.** The premise was that rendered pairing
+never worked for a section whose id starts with a digit. **One section of 64
+across the ten projects carries such an id** — kts-fidelity's `#1f670a38` — and
+it **has rendered provenance**, so pairing worked.
+
+The reason is that the observation script never selects by that string. It
+enumerates elements (`querySelectorAll('section, article')` and the builder
+rules) and *builds* a label from each one's id:
+
+```js
+if (el.id && el.id.trim()) return `#${el.id.trim()}`;
+```
+
+Pairing then compares those labels to the static side's `_static_selector` by
+string equality — no CSS grammar is involved. The only place the malformed
+selector genuinely bit was `select_one` in the within-boundary alarm, which
+already looks ids up directly.
+
 ### TC-127 — A testimonial quote is emitted twice
 
 **Dependencies:** none. **Filed with a measurement, not fixed — it is the last
@@ -936,6 +970,95 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-12 — CLOSING SUMMARY of the boundary loop
+
+The last two items both closed on measurement without a change, which is the
+right ending for a loop that spent its length learning to measure before acting.
+
+**The form placeholder.** `#dnn_ContentPane` holds no form — zero `<form>`
+elements, zero inputs. Its whole content is the module title `CONTACT FORM`, and
+the page's only `<form>` is the ASP.NET body wrapper that `has_form_fields`
+already rejects. Nothing to placeholder.
+
+**The digit-leading id.** One section of 64 carries one, and it has rendered
+provenance — pairing worked. The observation script never selects by that
+string; it enumerates elements and *builds* a label from each id, then compares
+labels by string equality. No CSS grammar is involved anywhere in pairing.
+
+---
+
+## What the loop did
+
+**Two alarms built, and both driven to zero.** Neither existed when it started.
+
+- **TC-120** reports a page boundary whose content reached no section. It found
+  **18** across nine projects, including a 32-word contact panel on a page
+  reporting `valid: true`. It now reports **0**.
+- **TC-122** reports a section that kept less than its boundary offered — the
+  blindness that TC-120's repairs moved one level down. It found **64 runs lost
+  in 9 sections**. It now reports **0**.
+- A third measure, double-emission, was built mid-loop after the first attempt at
+  one was discredited. It found **10**, and now reports **0**.
+
+**Retention: 398 → 412 → 451 → 470 → 543**, and every fall along the way was
+named element by element before it was accepted: 23 phantom actions, 8 duplicate
+links, 6 duplicate benefits, 4 duplicate contact rows, 6 "Read More" copies whose
+destinations all survived elsewhere.
+
+**Sixteen repairs**, the largest being the last: a `<footer>` was never a
+boundary candidate at all, so nine of ten projects had no footer block and lost
+their tagline, telephone and social links entirely.
+
+**Three findings struck as false after measurement**, two of them filed twice by
+me before anyone read the warning they rested on:
+
+- a blocked section is invisible to the gap queue — it is not; kts `section.5`
+  blocks and is cited by the queue's rank 1
+- nothing in the library holds a lone background band — `Heroes/photo-band`
+  matches at content-field compatibility 1.000; those sections block on an
+  unacquired `file:///` asset, a fixture limitation
+- TC-126's duplicate — real in the raw content, unreachable in the document
+
+**Four defects I introduced and repaired two iterations later.** A list emitter
+added for the contact panel did not inherit TC-119's link rule or the repeat
+group's ownership; extra card paragraphs were emitted outside the field that
+names them, hiding them from the planner. **A new emitter must answer every
+question the emitters beside it already answer** — "a block that says only what
+the thing inside it says defers to that thing" now has three instances (links,
+repeat items, form controls).
+
+**The metric that was corrected mid-loop, and the change it had wrongly
+rejected.** "Surplus copies" counted any repeated value as a fault, which made
+four identical placeholder cards look like a defect. It killed TC-125 for a full
+iteration. Replaced by "does the document hold more copies of a value than the
+source contains occurrences of it", the same change shipped — **the code that
+shipped is the code the bad metric rejected**, plus one rule the corrected metric
+pointed straight at.
+
+**Instance count of the loop's oldest mistake: 32.** A tag, a class, an ancestor,
+a position, a shape, a first item, a first paragraph, a field name, a heading
+level, and finally column headings — none of them is a kind of thing.
+
+## What remains
+
+- **The capability queue holds 27 gaps**, and rank 1 is
+  `Cards/feature-cards-4up` / `item.body`: `insufficient_capacity`, owns 1,
+  demands 2, across **two projects and two sections**. That is the two-source
+  evidence bar a governed pack release requires — **and a release is Josh's
+  call, not the loop's.**
+- Eight projects remain `valid: false`, every one for a named reason: unacquired
+  `file:///` assets in saved captures, and capacity overflows the queue now
+  ranks.
+- `_extract_post_meta` carries a comment that TC-125 made false, and a latent
+  duplicate that only an unclaimed blog-post section would surface. Recorded,
+  not repaired.
+
+**Final state.** Retention **543**; dropped boundaries **0**; thin sections
+**0**; double-emitted **0**; suite **2,275** passing with 16 deselected; corpus
+identical on all ten metrics throughout — `visitor_content_retention` 127/127 and
+`semantic_role_accuracy` 25/25 never moved. Every global block plan is
+`ready: true` with zero issues.
 
 ### 2026-08-12 — TC-121 answers 2 and 3: the footer was never a boundary at all
 
