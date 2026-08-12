@@ -667,6 +667,13 @@ def enrich_section_from_static_dom(
         # been misread as a stats band — and correcting that classification
         # took the list with it. A list is content whatever the section is.
         for item in root.find_all("li"):
+            # A list item that *holds* a repeat item has already been emitted
+            # through the group. `repeated_nodes` names the items and what is
+            # inside them, so an `<li>` wrapping one is an ancestor and passes
+            # that test — which put each of a carousel's six testimonials in
+            # the document twice, once as a quote and once as a benefit.
+            if any(id(node) in repeated_nodes for node in item.find_all(True)):
+                continue
             if id(item) in repeated_nodes or _is_only_a_link(item):
                 # `<li><a href="mailto:…">info@…</a></li>` is a link, and a
                 # footer contact list is several of them. The action keeps it,

@@ -3223,6 +3223,25 @@ def test_a_list_no_repeat_group_claimed_still_arrives() -> None:
     ]
 
 
+def test_a_list_item_holding_a_repeat_item_is_not_emitted_beside_it() -> None:
+    """A carousel writes each testimonial as `<li><blockquote>…</blockquote></li>`.
+    `repeated_nodes` names the repeat items and what is inside them, so the `<li>`
+    wrapping one is an ANCESTOR and passes that test — which put each of six
+    quotes in the document twice, once as a quote and once as a benefit."""
+
+    section = _enriched(
+        "<section><h2>Testimonials</h2><ul>"
+        "<li><blockquote>After working with other developers, Josh was a "
+        "relief.</blockquote></li>"
+        "<li><blockquote>When my firm was ready for a website, we called "
+        "him.</blockquote></li></ul></section>",
+        "testimonials",
+    )
+
+    assert _roles(section, "benefit") == []
+    assert len(_roles(section, "testimonial_quote")) == 2
+
+
 def test_a_list_item_that_is_only_a_link_arrives_once() -> None:
     """`<li><a href="mailto:…">info@…</a></li>` is a link, and a footer contact
     list is several of them. The action keeps it, because the action carries
