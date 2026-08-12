@@ -915,6 +915,65 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-12 — TC-127: double-emission reaches zero, and both halves were mine
+
+Took TC-127. **The filing was wrong about the mechanism and the fix was mine to
+make** — the second iteration running where the defect I was chasing turned out
+to be one I introduced two iterations earlier.
+
+**What the filing said:** six `<blockquote>`s produce twelve `testimonial_quote`
+elements, so something reads the repeat group twice. **Measured:** enrichment on
+that pane emits exactly six quotes, and the rendered analysis holds six, stable
+across three runs. The document never had twelve of anything.
+
+**What it actually is:** each quote arrives as a `testimonial_quote` *and* as a
+`benefit`. The carousel writes `<li><blockquote>…</blockquote></li>`, and the
+list emission I added with the contact panel skips an item when
+`id(item) in repeated_nodes` — which names the repeat items and everything
+*inside* them. **An `<li>` wrapping a repeat item is an ancestor, so it passes
+that test.** A list item whose content the group already emitted is now skipped.
+
+**Retention 457 → 451, and every removed element is named:** the six `benefit`
+copies of the six testimonials, each still present as its `testimonial_quote`.
+**Double-emission 6 → 0.** Nothing else moved on any project; queue holds at 23;
+corpus identical on all ten metrics.
+
+**Two rules in two iterations, both repairing the same addition.** The list
+emission was right — a list is content whatever the section is, and it recovered
+contact-page's telephone list — but it was written beside two existing rules
+without inheriting either: TC-119's (a block that is only a link defers to the
+action) and the repeat-group's (content a group already owns is not loose
+content). A new emitter has to answer every question the emitters beside it
+already answer.
+
+**And a note on the instrument, which is now three corrections deep.** The probe
+compares document copies against source-subtree occurrences; it reported these
+six correctly, but only because it counts *by value across roles*. Had the
+duplicate carried a different string it would have been invisible. The measure is
+good enough to have driven two real repairs and it is not a proof of absence.
+
+**Four mutations, four distinct failures** — the ancestor guard removed, widened
+to every list item, reversed to check parents, and the link-only rule dropped.
+
+**Evidence.** Suite 2,264 → 2,265 passing, 16 deselected.
+
+| site | elements | Δ | dropped | thin | double | coverage | blocking | valid |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 61 | 0 | 2 | 1 | 0 | 0.0 | 2 | false |
+| `contact-page` | 20 | 0 | 3 | 0 | 0 | 0.5455 | 1 | false |
+| `oasis-probe` | 32 | 0 | 0 | 0 | 0 | 0.087 | 4 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 0 | 0 | 0.0 | 1 | false |
+| `wwo` | 40 | 0 | 1 | 0 | 0 | 0.0968 | 4 | false |
+| `post-security` | 27 | 0 | 2 | 1 | 0 | 0.0 | 2 | false |
+| `rendered-home` | 91 | **−6** | 1 | 0 | 0 | 0.0976 | 6 | false |
+| `edca-pilot` | 24 | 0 | 0 | 0 | 0 | 0.6923 | 0 | true |
+| `kts-fidelity` | 107 | 0 | 0 | 0 | 0 | 0.4691 | 3 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0 | 0 | 0.8182 | 0 | true |
+
+**Next is TC-125 re-measured.** It was reverted on the discredited metric, and
+with double-emission now at zero its +25 can be judged on whether any of it
+double-emits.
+
 ### 2026-08-12 — the duplication metric was wrong, and the real number is ten
 
 Took TC-126. Measuring it first corrected the instrument that produced it, and
