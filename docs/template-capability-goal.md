@@ -809,6 +809,99 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-11 — TC-122: the alarm follows the loss one level down
+
+Took TC-122 over the remaining TC-121 answers. Answers 2 and 3 are chrome
+policy; this is the instrument that makes their cost visible, and answer 4 had
+just demonstrated that repairing a boundary moves the blindness rather than
+removing it. Same order TC-118 established.
+
+**The premise, measured before anything was built: within-boundary retention is
+204/267 (0.764) across the nine local sources.** Sixty-three text runs are lost
+inside boundaries that *were* claimed — seven times the nine boundaries the
+TC-120 alarm reports. The biggest single case was invisible to every check:
+wwo's `#dnn_BottomPane` keeps **5 of 20**, losing an entire pricing table
+(`OUR PRICES`, `$`, `99.95`, `/month`, `Unlimited Web Pages`, `1 Add-On`,
+`30 mins of Content Updates each month`…).
+
+**The hold-back that would have destroyed the alarm.** A form is migrated as a
+placeholder by policy, so form text is absent by design and must not read as
+loss. The obvious test — "is this run inside a `<form>`?" — is **wrong on every
+DNN page**: ASP.NET wraps the entire body in one `<form runat="server">`, so it
+is true of `OUR PRICES` and `PORTFOLIO` as much as of a submit button. Measured
+before implementing: **61 of the 63 losses would have been suppressed**. The rule
+is ownership by a control *tag* (`label`, `button`, `option`, `select`,
+`textarea`, `legend`), which holds back exactly the two runs that deserve it —
+edca-pilot's `Security` label and `Send Now` button. Instance 28 of "an ancestor
+tag is not a kind of thing".
+
+**A second hold-back the first draft got wrong.** Chrome reported a loss on
+contact-page: the header "kept 8 of 10", missing `Login`. A header is *rebuilt*
+from its links by `_chrome_section`, not extracted from its markup, so a DNN
+login control is absent by design. Held back by role, the same way
+`unclaimed_boundaries` holds back chrome.
+
+**A crash I caused and had to fix before the sweep would finish.** kts-fidelity
+failed the analyze stage outright: `Malformed id selector at position 0:
+#1f670a38`. `css_selector_for` emits `#<id>` verbatim and a real Vanjaro page
+carries section ids beginning with a digit, which is not a valid CSS identifier —
+`select_one` *raises* rather than returning nothing, and `SelectorSyntaxError`
+was not among the exceptions caught. An id lookup needs no CSS grammar, so it no
+longer uses one. **Worth its own note: the rendered observation script pairs by
+`querySelector`, which cannot read that id either, so rendered pairing for those
+sections has never worked.**
+
+**What it now reports: nine sections across six projects, 64 runs lost, 125 of
+189 kept on the sections that report.**
+
+| project | section | kept | lost |
+|---|---|---|---|
+| `cmw-blog` | `#dnn_ContentPane` | 42/70 | **28** |
+| `wwo` | `#dnn_BottomPane` | 5/20 | **15** |
+| `rendered-home` | `#dnn_Full_Screen_PaneD` | 16/24 | 8 |
+| `contact-page` | `#dnn_Full_Screen_PaneB` | 7/12 | 5 |
+| `rendered-home` | `#dnn_TopOutPane` | 4/7 | 3 |
+| `post-security` | `#dnn_ContentPane` | 17/19 | 2 |
+| `rendered-home` | `#dnn_BottomPane` | 17/18 | 1 |
+| `kts-fidelity` | `#tpl-cpc-s1` | 11/12 | 1 |
+| `kts-fidelity` | `#tpl-bpc4-s1` | 6/7 | 1 |
+
+**Ten mutations, ten distinct failures** — alarm unwired, reporting when nothing
+is missing, form controls counted, a form ancestor holding back the page, chrome
+reported, every section held back as chrome, runs not de-duplicated, arrival
+checked by equality instead of containment, the skip hook ignored, comments
+counted as offered text. Three needed fixtures built to isolate them: a repeated
+line (a marquee is one loss, not twelve), copy split by an inline `<strong>`
+(equality would report every emphasised sentence on the page as missing), and a
+header carrying text chrome genuinely drops — the first chrome fixture asserted
+"nothing reported" on a header that lost nothing, so it could not tell the rule
+from its absence.
+
+**Evidence.** Suite 2,236 → 2,244 passing, 16 deselected. Corpus identical on all
+ten metrics (`visitor_content_retention` 127/127, `semantic_role_accuracy`
+25/25). **Retention unchanged at 417 on every project**, coverage, blocking,
+losses, dropped boundaries (9) and `valid` all unchanged — correct for a report
+that adds a reader and touches no extraction.
+
+| site | elements | dropped | thin sections | coverage | blocking | losses | valid |
+|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 51 | 2 | 1 | 0.0 | 2 | 1 | false |
+| `contact-page` | 19 | 3 | 1 | 0.5 | 2 | 2 | false |
+| `oasis-probe` | 32 | 0 | 0 | 0.087 | 4 | 1 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 0.0 | 1 | 1 | false |
+| `wwo` | 33 | 1 | 1 | 0.1667 | 3 | 5 | false |
+| `post-security` | 27 | 2 | 1 | 0.0 | 2 | 2 | false |
+| `rendered-home` | 87 | 1 | 3 | 0.1538 | 6 | 7 | false |
+| `edca-pilot` | 24 | 0 | 0 | 0.6923 | 0 | 1 | true |
+| `kts-fidelity` | 95 | 0 | 2 | 0.9565 | 1 | 2 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0.8182 | 0 | 0 | true |
+
+**Remaining:** TC-121 answers 2 and 3 (the footer strips and taglines — one
+question in two shapes), the form placeholder, and the two findings this loop
+turned up that belong to the capability goal rather than to extraction: a blocked
+section is invisible to the gap queue, and nothing in the library holds a lone
+background band.
+
 ### 2026-08-11 — TC-121 answer 4 of 4: a pane is a section even with no heading
 
 Took the most valuable item left rather than the next one down: contact-page's
