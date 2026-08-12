@@ -198,6 +198,33 @@ site three sections.
 
 ## Backlog
 
+### TC-122 — Content lost inside a claimed boundary is invisible again
+
+**Dependencies:** none. **Filed with a measurement, not fixed.**
+
+TC-120's alarm is boundary-level: it reports a boundary that reached no section.
+Once a boundary IS claimed, whatever the section fails to extract from it is
+invisible once more. contact-page proves it — its contact panel now arrives, and
+**5 of the panel's 12 distinct text runs are still missing** while the panel is
+no longer reported at all:
+
+| missing run | where it lives |
+|---|---|
+| `Clicks & Mortar Websites` | inside `<address>` |
+| `PO Box 773` | inside `<address>` |
+| `Troy, MI 48099` | inside `<address>` |
+| `info(at)clicksandmortarwebsites(dot)com` | `<li>` text after a `<strong>` label |
+| `@clicksmortarweb` | `<li>` text after a `<strong>` label |
+
+Two mechanisms, both narrow: `<address>` is not read by `_extract_content` at
+all, and a list item yields its `<strong>` label while the value beside it is
+dropped — which is also why the section classified as `stats` with
+`Phone :`/`Email :`/`Twitter :` as its stat *values*.
+
+The alarm to build first is the same shape as TC-118's: compare a claimed
+boundary's text runs against what its section kept. That is a per-section
+retention denominator, and it is the piece TC-120 deliberately did not build.
+
 ### TC-121 — A reported boundary is still a dropped boundary
 
 **Dependencies:** TC-120 supplies the inventory. **Filed with a measurement, not
@@ -781,6 +808,81 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-11 — TC-121 answer 4 of 4: a pane is a section even with no heading
+
+Took the most valuable item left rather than the next one down: contact-page's
+contact panel, three real elements by TC-120's count and the only entry in the
+inventory that is unambiguously page content.
+
+**Where it actually died.** `_top_level_sections` expands a dominant content
+container only when two of its children look like sections, and
+`_section_like_child_count` defined that as *a sectioning tag or a heading
+somewhere inside*. `section#dnn_content` holds three children — the TopPane
+wrapper, the contact panel, and the form wrapper — and **only one of them carries
+an `<h#>` at all**, so the count was 1, the wrapper never expanded, and the whole
+page arrived as one raw section holding all 66 words. That section then claimed
+`#dnn_TopPane`, enrichment rebuilt its content from that pane alone, and the rest
+was extracted and thrown away. `_is_multi_module_pane` fails for the same reason:
+it requires every child to own a heading.
+
+**A heading is not what makes something a section** — instance 27 of this goal's
+oldest recurring mistake. What is actually true of those children is that they
+are, or contain, a **builder-declared pane**: the editor put modules there
+deliberately, and `static_boundary_candidates` has always treated that shape as
+authoritative. So `is_builder_pane` now says it once, in `migration/sections.py`,
+and both readings of a page import it — the third copy of a page's boundary rules
+is exactly how the readings drift.
+
+**Retention 412 → 417, no project down**, all five on contact-page (14 → 19). The
+panel arrives as `#dnn_Full_Screen_PaneB` with its joined title, three labels and
+the call button. Dropped boundaries **10 → 9**; contact-page 4 → 3, and the
+boundary that stopped being reported is `#dnn_Full_Screen_PaneB` itself.
+
+**A mistake I made and caught by measuring.** The first version wrote the
+predicate with `casefold()`, which is broader than the browser's
+`[id^='dnn_'][class*='Pane']` — a CSS attribute match is **case-sensitive**. The
+two readings selected different panes and paired against each other's
+boundaries: **oasis-lighting lost 6 elements and oasis-probe 4**, and the dropped
+boundary count rose 10 → 17 rather than falling. The drift-guard test passed
+throughout, because every class in its fixture was spelled `Pane`. Fixed to match
+the selector exactly, and the fixture now carries a lowercase `pane` that fails
+the loose reading.
+
+**Seven mutations, seven distinct failures** — pane rule removed from the count,
+only direct panes counted, case-insensitive match, id prefix ignored, every
+element with an id treated as a pane, heading rule removed, candidates no longer
+using the shared predicate.
+
+**Filed TC-122, and it matters more than this repair.** The panel arrives and
+**5 of its 12 text runs are still missing** — the whole `<address>` block and the
+values beside the `Phone :`/`Email :`/`Twitter :` labels — while the boundary is
+no longer reported at all. TC-120's alarm is boundary-level, so content lost
+*inside* a claimed boundary is invisible again, and the section classified as
+`stats` with the labels as its stat values. Repairing a boundary moves the
+blindness one level down.
+
+**Evidence.** Suite 2,233 → 2,236 passing, 16 deselected. Corpus identical on all
+ten metrics. All ten projects re-analysed with `--refresh --render`
+(`execution.action == "execute"`) and re-planned with `--refresh`.
+
+| site | elements | Δ | dropped | provenance | styles | coverage | blocking | losses | valid |
+|---|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 51 | 0 | 2 | 51 rendered | 93 | 0.0 | 2 | 1 | false |
+| `contact-page` | 19 | +5 | 3 | 19 rendered | 124 | 0.5 | 2 | 2 | false |
+| `oasis-probe` | 32 | 0 | 0 | 32 rendered | 186 | 0.087 | 4 | 1 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 22 rendered | 62 | 0.0 | 1 | 1 | false |
+| `wwo` | 33 | 0 | 1 | 30 rendered, 3 static | 155 | 0.1667 | 3 | 5 | false |
+| `post-security` | 27 | 0 | 2 | 27 rendered | 93 | 0.0 | 2 | 2 | false |
+| `rendered-home` | 87 | 0 | 1 | 84 rendered, 3 static | 218 | 0.1538 | 6 | 7 | false |
+| `edca-pilot` | 24 | 0 | 0 | 24 rendered | 155 | 0.6923 | 0 | 1 | true |
+| `kts-fidelity` | 95 | 0 | 0 | 95 rendered | 384 | 0.9565 | 1 | 2 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 27 rendered | 155 | 0.8182 | 0 | 0 | true |
+
+**Remaining in TC-121:** the footer strips (answer 2), the footer taglines
+(answer 3), and the form placeholder. Answers 2 and 3 are the same question in
+two shapes — what a page does with the chrome `_trailing_footer` declines to
+take — and are worth doing together rather than one per iteration.
 
 ### 2026-08-11 — TC-121 answer 1 of 4: the banner image, and the header was stealing it
 
