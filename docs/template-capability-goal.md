@@ -198,6 +198,29 @@ site three sections.
 
 ## Backlog
 
+### TC-123 — A card keeps its picture, its title and its date, and drops the rest
+
+**Dependencies:** none. **Filed with a measurement, not fixed — it is a different
+mechanism from the container defect and deserves its own iteration.**
+
+`cmw-blog`'s `#dnn_ContentPane` is the largest single loss the within-boundary
+alarm reports: **42 of 70 runs kept, 28 lost**, and the container rule did not
+touch it. Each `article.list-post` in the blog listing offers more than the card
+grid takes:
+
+| kept | dropped |
+|---|---|
+| `card_media` (the post image) | the excerpt paragraph, `div.list-description > p` |
+| `card_title` (the post title) | the author and tag links, `div.list-info > a` (`CMW Team`, `Website Design`, `Business Website`, `Website Security`, `Tips`…) |
+| `card_body` — **the date**, `Nov 13, 2017` | `Share`, and `Read More >` |
+
+Two questions, and the second is the interesting one. The narrow question is
+which fields a card emits. The wider one is that `card_body` received the
+**date** while the excerpt — the card's actual body copy — was dropped, so the
+grid reads as nine dated cards with no prose. `dated_card_kind` was added in
+evidence 1/7 to recognise a blog listing *by* its dates; this is that signal
+being taken as the body.
+
 ### TC-122 — Content lost inside a claimed boundary is invisible again
 
 **Dependencies:** none. **Filed with a measurement, not fixed.**
@@ -808,6 +831,79 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-11 — a boundary holding two sections is neither section's DOM
+
+Took the biggest measured loss, which TC-122 had just made visible: wwo's
+`#dnn_BottomPane` keeping 5 runs of 20, and cmw-blog's `#dnn_ContentPane`
+keeping 42 of 70.
+
+**The mechanism, measured rather than assumed.** wwo's pane is a pricing table —
+two cards, each a heading, a price and a feature list. The **raw extractor reads
+both correctly**: two sections carrying `Website Only – $99.95/month` with five
+features and `Branding Package – $249.95/month` with eleven. The loss is entirely
+downstream. There is one pane candidate and two sections, so the first card
+claimed the pane that holds *both* and the second, with nothing left that
+matched, claimed **`#dnn_FooterBottomPaneB`** — the footer. Enrichment then
+rebuilds a claimed section's content from its subtree, so card one came back as a
+flattening of both cards (two headings, one paragraph, no prices, no features)
+and card two came back holding the footer's tagline, email and telephone.
+
+Proved by experiment before designing: strip `_static_html` from those two
+sections and they arrive intact — 6 and 12 elements, prices in the title, every
+feature present.
+
+**The rule.** A candidate whose text contains the words of two or more sections
+is a container, not either section's DOM, and is withheld from claiming
+altogether. This is the same contribution test `_without_wrappers` applies to
+nested candidates and `_claims_the_chrome` applies to headers — the third member
+of a family, not a new idea. Sections with no words are excluded from the count,
+because an empty set is a subset of every boundary on the page and two image-only
+panes would otherwise turn the whole document into containers.
+
+**Retention 417 → 419.** wwo **+7** and its thin section is gone: the pricing
+table arrives whole. `rendered-home` **−5, named and justified**: its
+`#dnn_BottomPane` stopped being a flat `testimonials` list and became a proper
+six-card blog grid (`card_media`/`card_title`/`card_body` per post), which
+**gained** the real section heading `RECENT POSTS` — a run TC-122 had reported as
+missing — and **dropped six `primary_action` "Read More" elements**. Every
+destination survives: all six `/blog/post/…` URLs are carried as `href` on the
+matching `card_media`, exactly the rule TC-116 established and TC-119 relied on.
+Six duplicates out, one real heading in.
+
+**Thin sections 9 → 6; runs lost 64 → 40.** Dropped boundaries unchanged at 9.
+Coverage fell on wwo (0.1667 → 0.0968) as a whole pricing table arrived that no
+template can hold, and rose on rendered-home (0.1538 → 0.2329) as a flat list
+became a bindable card grid. Both directions in one change, and retention decided
+it.
+
+**Six mutations, six distinct failures** — container rule removed, one section
+making a container, three sections required, wordless sections counted, subset
+loosened to any overlap, containers withheld from claiming but not from the pool.
+
+**Evidence.** Suite 2,244 → 2,247 passing, 16 deselected. Corpus identical on all
+ten metrics. All ten projects re-analysed with `--refresh --render`
+(`execution.action == "execute"`) and re-planned with `--refresh`.
+
+| site | elements | Δ | dropped | thin | coverage | blocking | losses | valid |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 51 | 0 | 2 | 1 | 0.0 | 2 | 1 | false |
+| `contact-page` | 19 | 0 | 3 | 1 | 0.5 | 2 | 2 | false |
+| `oasis-probe` | 32 | 0 | 0 | 0 | 0.087 | 4 | 1 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 0 | 0.0 | 1 | 1 | false |
+| `wwo` | 40 | **+7** | 1 | 0 | 0.0968 | 4 | 4 | false |
+| `post-security` | 27 | 0 | 2 | 1 | 0.0 | 2 | 2 | false |
+| `rendered-home` | 82 | **−5** | 1 | 1 | 0.2329 | 6 | 10 | false |
+| `edca-pilot` | 24 | 0 | 0 | 0 | 0.6923 | 0 | 1 | true |
+| `kts-fidelity` | 95 | 0 | 0 | 2 | 0.9565 | 1 | 2 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0 | 0.8182 | 0 | 0 | true |
+
+**Filed TC-123 for the loss this did not touch.** cmw-blog's 28 runs are a
+different mechanism: each `article.list-post` keeps its picture, its title and
+its **date** while dropping the excerpt paragraph, the author and tag links,
+`Share` and `Read More >`. `card_body` received the date and the card's actual
+prose was discarded — `dated_card_kind`, added to recognise a blog listing *by*
+its dates, being taken as the body.
 
 ### 2026-08-11 — TC-122: the alarm follows the loss one level down
 
