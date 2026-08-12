@@ -832,6 +832,83 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-12 — an address and a list, whatever the section turns out to be
+
+Took contact-page's five remaining runs. **The filing was half wrong, and the
+half that was right was in the wrong layer** — which is the third time in this
+goal a filed diagnosis has needed re-measuring before it could be designed
+around.
+
+**What the filing got wrong.** It said a list item "yields its `<strong>` label
+but drops the value beside it". The raw extractor reads the whole thing:
+`'Phone : (248) 690-6559'`. The value is lost later, by `_stat_parts`, because
+the section is enriched as a **stats band** — and the reason it is a stats band
+is this, in `static_role`:
+
+```python
+if "stats" in hints or len(element.select("li strong")) >= 2:
+```
+
+**Two `<li><strong>` make a stats band.** A contact block writes
+`<li><strong>Phone :</strong> (248) 690-6559</li>`, which has exactly that shape.
+Instance 30, and `is_stat_value` — which already knows that a stat is a short
+token carrying no letters — says `Phone :` is not one. The rule now asks it.
+
+**What the filing got right, in the wrong place.** `<address>` genuinely is not
+read. I fixed it in `_extract_content` first, measured, and found it changed
+nothing: **enrichment rebuilds a claimed section's content from its subtree**, so
+the raw extractor's paragraphs never reach a claimed section at all. It needed
+fixing in `html_ownership` — and in `_extract_content` too, because the container
+rule now deliberately leaves sections unclaimed and those keep raw content.
+
+**And a third cause the measurement exposed, which nearly cost me the whole
+change.** Correcting the classification made contact-page **worse** — 19 → 16 —
+while coverage *rose* 0.5 → 0.71. Exactly TC-113's trap, caught by the same rule.
+Testing every candidate role against the panel's markup showed why: **only the
+`stats` and `split_feature` branches ever read an `<li>` at all.** The contact
+list had survived solely because the section was misread, and correcting the
+misreading took the list with it. A list is content whatever the section is, so
+one is now emitted whenever no repeat group claims it.
+
+**Retention 429 → 440, no project down.** contact-page +1 and its thin section is
+gone: the panel now holds the joined address and all three list items **with
+their values**. wwo +2 and rendered-home +8 from lists those sections had been
+dropping for the same reason. **Thin sections 6 → 5, runs lost 29 → 24.**
+
+**Nine mutations, nine distinct failures** — address unread by the enricher,
+loose list items not emitted, claimed list items emitted twice, the stats rule
+back to the bare shape, the class hint no longer believed, one stat item enough,
+address dropped from extraction, and `_find_all_with_self` ignoring its list.
+
+**Four fixtures had to be rewritten, and that is the lesson.** TC-122's tests
+used `<address>` as their example of lost content. Fixing the loss invalidated
+them — they began asserting that something arrives is missing. They now use a
+bare text node beside an element child, which is still genuinely dropped. **A
+fixture built from a defect expires when the defect is fixed**, and four failing
+tests were the correct signal, not a regression.
+
+**Evidence.** Suite 2,250 → 2,258 passing, 16 deselected. Corpus identical on all
+ten metrics. All ten projects re-analysed with `--refresh --render`
+(`execution.action == "execute"`) and re-planned with `--refresh`.
+
+| site | elements | Δ | dropped | thin | coverage | blocking | losses | valid |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 61 | 0 | 2 | 1 | 0.0 | 2 | 1 | false |
+| `contact-page` | 20 | +1 | 3 | **0** | 0.5455 | 1 | 2 | false |
+| `oasis-probe` | 32 | 0 | 0 | 0 | 0.087 | 4 | 1 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 0 | 0.0 | 1 | 1 | false |
+| `wwo` | 42 | +2 | 1 | 0 | 0.0909 | 4 | 5 | false |
+| `post-security` | 27 | 0 | 2 | 1 | 0.0 | 2 | 2 | false |
+| `rendered-home` | 90 | +8 | 1 | 1 | 0.2099 | 6 | 12 | false |
+| `edca-pilot` | 24 | 0 | 0 | 0 | 0.6923 | 0 | 1 | true |
+| `kts-fidelity` | 95 | 0 | 0 | 2 | 0.9565 | 1 | 2 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0 | 0.8182 | 0 | 0 | true |
+
+**Remaining:** kts-fidelity's two thin sections (11/12 and 6/7), cmw-blog's 17
+(the author and category links, held because `item.tag` owns one slot per item,
+and `Read More >`, which TC-119 deliberately removed), post-security's 2,
+rendered-home's 3, TC-121 answers 2 and 3, and the form placeholder.
+
 ### 2026-08-12 — TC-123: a card's date is its date, not its body copy
 
 **The mechanism, measured first.** A card grid read its item's body as
