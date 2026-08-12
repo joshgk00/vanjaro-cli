@@ -3223,6 +3223,53 @@ def test_a_list_no_repeat_group_claimed_still_arrives() -> None:
     ]
 
 
+def test_a_button_repeating_a_destination_the_page_kept_is_not_reported() -> None:
+    """A blog card's picture carries the post's href, so its `Read More >` button
+    repeats a destination the page kept and adds only boilerplate the pipeline
+    drops on purpose. Reporting it asks for a repair that was declined."""
+
+    document = design_document_from_html(
+        "<html><body>"
+        "<header class='site-header'><nav><a href='/'>Home</a><a href='/x'>Work</a></nav></header>"
+        "<section id='dnn_content'><div id='dnn_ListPane' class='Pane'>"
+        "<article class='post'><a href='/blog/one'><img src='/one.jpg' alt='One'></a>"
+        "<h3>Platform options</h3><p>Getting started can be daunting.</p>"
+        "<a class='list-btn' href='/blog/one'>Read More &gt;</a></article>"
+        "<article class='post'><a href='/blog/two'><img src='/two.jpg' alt='Two'></a>"
+        "<h3>Serious about security</h3><p>Chrome changed the rules.</p>"
+        "<a class='list-btn' href='/blog/two'>Read More &gt;</a></article>"
+        "</div></section>"
+        "<footer class='site-footer'><p>Copyright 2026.</p></footer>"
+        "</body></html>",
+        "https://example.invalid/blog",
+    )
+
+    assert _section_losses(document) == {}
+
+
+def test_a_link_whose_destination_never_arrived_is_still_reported() -> None:
+    """The hold-back is about a destination the page kept, not about links. A
+    button pointing somewhere nothing else reaches is a real loss."""
+
+    document = design_document_from_html(
+        "<html><body>"
+        "<header class='site-header'><nav><a href='/'>Home</a><a href='/x'>Work</a></nav></header>"
+        "<section id='dnn_content'><div id='dnn_ListPane' class='Pane'>"
+        "<article class='post'><a href='/blog/one'><img src='/one.jpg' alt='One'></a>"
+        "<h3>Platform options</h3><p>Getting started can be daunting.</p>"
+        "<a class='list-btn' href='/elsewhere'>Read More &gt;</a></article>"
+        "<article class='post'><a href='/blog/two'><img src='/two.jpg' alt='Two'></a>"
+        "<h3>Serious about security</h3><p>Chrome changed the rules.</p>"
+        "<a class='list-btn' href='/elsewhere'>Read More &gt;</a></article>"
+        "</div></section>"
+        "<footer class='site-footer'><p>Copyright 2026.</p></footer>"
+        "</body></html>",
+        "https://example.invalid/blog",
+    )
+
+    assert list(_section_losses(document)) == ["#dnn_ListPane"]
+
+
 def test_a_form_label_wrapped_in_a_div_is_not_body_copy() -> None:
     """A form is migrated as a placeholder listing its detected fields, so `Name`
     and `Email` already arrive as `form_field`. A builder wrapping each `<label>`

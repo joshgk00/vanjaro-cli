@@ -798,13 +798,13 @@ def _with_dropped_boundary_warnings(
     assets = {asset.id: asset.source_url or asset.id for asset in document.assets}
     warnings = list(document.warnings)
     for page, (html, raw_sections) in zip(document.pages, per_page):
-        text, media = _arrived_content(page, assets)
+        text, media, destinations = _arrived_content(page, assets)
         warnings.extend(
             _dropped_boundary_warnings(
                 html, raw_sections, page.source_reference, text, media
             )
         )
-        warnings.extend(_section_content_warnings(html, page, text))
+        warnings.extend(_section_content_warnings(html, page, text, destinations))
     return document.model_copy(update={"warnings": warnings})
 
 
@@ -850,7 +850,7 @@ def _element_for_selector(soup: BeautifulSoup, selector: str) -> Tag | None:
 
 
 def _section_content_warnings(
-    html: str, page: Page, arrived_text: Sequence[str]
+    html: str, page: Page, arrived_text: Sequence[str], arrived_destinations: Container[str]
 ) -> list[DesignWarning]:
     """Name every section that kept less than its own boundary offered.
 
@@ -878,7 +878,21 @@ def _section_content_warnings(
         if element is None:
             continue
         runs = list(dict.fromkeys(_boundary_text_runs(element, skip=_owned_by_a_form_control)))
-        missing = [run for run in runs if not any(run in value for value in arrived_text)]
+        # A link whose destination already arrived says nothing the document
+        # lacks. A blog card's picture carries the post's href (TC-116), so its
+        # `Read More >` button repeats a destination the page kept and adds only
+        # boilerplate the pipeline drops on purpose. Reporting it asks for a
+        # repair that was deliberately declined.
+        spoken_for = {
+            anchor.get_text(" ", strip=True)
+            for anchor in element.find_all("a", href=True)
+            if str(anchor.get("href")) in arrived_destinations
+        }
+        missing = [
+            run
+            for run in runs
+            if run not in spoken_for and not any(run in value for value in arrived_text)
+        ]
         if not missing:
             continue
         warnings.append(
@@ -962,7 +976,9 @@ def _dropped_boundary_warnings(
     return warnings
 
 
-def _arrived_content(page: Page, assets: Mapping[str, str]) -> tuple[list[str], set[str]]:
+def _arrived_content(
+    page: Page, assets: Mapping[str, str]
+) -> tuple[list[str], set[str], set[str]]:
     """What a built page ends up carrying, as the boundary check must read it.
 
     Media is compared by resolved URL, taken from the asset registry: every one
@@ -978,13 +994,17 @@ def _arrived_content(page: Page, assets: Mapping[str, str]) -> tuple[list[str], 
 
     text: list[str] = []
     media: set[str] = set()
+    destinations: set[str] = set()
     for section in page.sections:
         for element in section.content:
+            href = element.attributes.get("href")
+            if isinstance(href, str) and href:
+                destinations.add(href)
             if element.asset_id:
                 media.add(assets.get(element.asset_id, element.asset_id))
             elif isinstance(element.value, str) and element.value.strip():
                 text.append(re.sub(r"\s+", " ", element.value.strip()))
-    return text, media
+    return text, media, destinations
 
 
 def _slug_from_url(url: str) -> str:
