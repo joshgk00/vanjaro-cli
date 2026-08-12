@@ -168,7 +168,7 @@ def implied_title(root: Tag) -> Tag | None:
 
 
 def _is_only_a_link(paragraph: Tag) -> bool:
-    """Report whether a paragraph's whole content is one link.
+    """Report whether a block's whole content is one link.
 
     `<p><a href="/post">Read More</a></p>` is a link, and a page of blog cards
     has six of them. Reading the paragraph as body copy and the anchor as a call
@@ -667,7 +667,12 @@ def enrich_section_from_static_dom(
         # been misread as a stats band — and correcting that classification
         # took the list with it. A list is content whatever the section is.
         for item in root.find_all("li"):
-            if id(item) in repeated_nodes:
+            if id(item) in repeated_nodes or _is_only_a_link(item):
+                # `<li><a href="mailto:…">info@…</a></li>` is a link, and a
+                # footer contact list is several of them. The action keeps it,
+                # because the action carries where it goes — the same rule the
+                # paragraph sweep applies, which this list emission was added
+                # beside without inheriting.
                 continue
             listed = item.get_text(" ", strip=True)
             if listed:

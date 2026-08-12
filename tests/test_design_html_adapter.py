@@ -3223,6 +3223,44 @@ def test_a_list_no_repeat_group_claimed_still_arrives() -> None:
     ]
 
 
+def test_a_list_item_that_is_only_a_link_arrives_once() -> None:
+    """`<li><a href="mailto:…">info@…</a></li>` is a link, and a footer contact
+    list is several of them. The action keeps it, because the action carries
+    where it goes — the same rule the paragraph sweep has applied since a page of
+    blog cards put six "Read More"s in the document twice."""
+
+    section = _enriched(
+        "<section><h2>Get in touch</h2>"
+        "<p>We make easy and affordable websites.</p><ul>"
+        "<li><a href='mailto:info@example.invalid'>info@example.invalid</a></li>"
+        "<li><a href='tel:2486906559'>(248) 690-6559</a></li></ul></section>",
+        "contact",
+    )
+
+    values = [(element["role"], element["value"]) for element in section["content"]]
+    assert values == [
+        ("section_title", "Get in touch"),
+        ("body", "We make easy and affordable websites."),
+        ("primary_action", "info@example.invalid"),
+        ("primary_action", "(248) 690-6559"),
+    ]
+
+
+def test_a_list_item_with_a_link_inside_its_text_is_still_a_list_item() -> None:
+    """A list item that says more than its link says keeps its own text, or a
+    benefit mentioning a product would leave the document."""
+
+    section = _enriched(
+        "<section><h2>Each website includes</h2><ul>"
+        "<li>Hosting on <a href='/hosting'>our servers</a> for a year</li>"
+        "<li>Professional design</li></ul></section>",
+        "contact",
+    )
+
+    listed = [element["value"] for element in section["content"] if element["role"] == "benefit"]
+    assert listed == ["Hosting on our servers for a year", "Professional design"]
+
+
 def test_a_list_a_repeat_group_owns_is_not_emitted_twice() -> None:
     """`split_feature` takes every `<li>` as a repeat item. Emitting them again
     as loose content would put each benefit in the document twice."""
