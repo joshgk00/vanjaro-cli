@@ -497,3 +497,61 @@ def test_a_section_that_calls_itself_stats_is_believed() -> None:
     )
 
     assert role == "stats"
+
+
+_FOOTER_PAGE = (
+    "<header id='header'><nav><a href='/'>Home</a><a href='/work'>Work</a></nav></header>"
+    "<section id='dnn_content'><div id='dnn_TopPane' class='Pane'><h1>Welcome</h1>"
+    "<p>We build websites.</p></div></section>"
+    "<footer class='footer_box'>"
+    "<div id='dnn_FooterBottomPaneB' class='Pane'><p>We make easy websites.</p></div>"
+    "<div id='dnn_FooterBottomPaneC' class='Pane'><img src='/one.png'><img src='/two.png'></div>"
+    "<p>Copyright 2026</p></footer>"
+)
+
+
+def test_a_footer_element_is_a_boundary_and_is_believed_by_its_tag() -> None:
+    """Nothing matched a `<footer>`: the rules cover header/nav, sectioning
+    elements, builder containers and panes. And `_is_footer` demanded two column
+    headings, which the real footer on all five pages of the CMW family does not
+    have — a tagline, a telephone and 13 links. Having columns to label is not
+    what makes something a footer."""
+
+    from vanjaro_cli.design.html_boundaries import _is_footer
+
+    candidates = static_boundary_candidates(_FOOTER_PAGE)
+    footers = [tag for tag in candidates if tag.name == "footer"]
+
+    assert len(footers) == 1
+    assert _is_footer(footers[0])
+
+
+def test_a_pane_inside_the_footer_is_not_its_own_boundary() -> None:
+    """Chrome is one boundary, not several. Reading the panes as candidates too
+    would hand `split_global_sections` several footer variants to reconcile —
+    the conflict `_trailing_footer` returns a single element to avoid."""
+
+    identifiers = [tag.get("id") for tag in static_boundary_candidates(_FOOTER_PAGE)]
+
+    assert "dnn_FooterBottomPaneB" not in identifiers
+    assert "dnn_FooterBottomPaneC" not in identifiers
+
+
+def test_a_footer_shaped_div_still_has_to_look_like_one() -> None:
+    """The tag is believed; a div is not. The heading and link evidence is what
+    recognises a footer that does not say so, and dropping it would let any
+    trailing block become the page's footer."""
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.design.html_boundaries import _is_footer
+
+    bare = BeautifulSoup("<div><p>Copyright 2026</p></div>", "html.parser").find("div")
+    columned = BeautifulSoup(
+        "<div><h5>Company</h5><h5>Legal</h5><a href='/a'>A</a><a href='/b'>B</a>"
+        "<a href='/c'>C</a></div>",
+        "html.parser",
+    ).find("div")
+
+    assert _is_footer(bare) is False
+    assert _is_footer(columned) is True

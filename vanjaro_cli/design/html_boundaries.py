@@ -112,12 +112,28 @@ def static_boundary_candidates(html: str) -> list[Tag]:
         if any(other is not element and other in element.parents for other in sectioning):
             continue
         add(element)
+    # A `<footer>` says what it is, exactly as `<header>` does above, and nothing
+    # else here matches one: the rules cover header/nav, sectioning elements,
+    # builder containers and panes. Every page of the CMW family carries a real
+    # footer holding a tagline, a telephone and 13 links, and none of it reached
+    # any section.
+    for element in soup.find_all("footer"):
+        add(element)
     for element in soup.select("[data-elementor-type] > [data-id][data-element_type='container']"):
         add(element)
     for element in soup.select("#Body > [id^='dnn_']"):
         add(element)
     for element in soup.find_all(is_builder_pane):
         add(element)
+
+    # Chrome is one boundary, not several. A DNN page puts its footer panes
+    # inside the `<footer>`, and reading them as their own candidates would give
+    # `split_global_sections` several footer variants to reconcile — the very
+    # conflict `_trailing_footer` returns a single element to avoid.
+    chrome = [tag for tag in candidates if tag.name in {"header", "footer"}]
+    candidates = [
+        tag for tag in candidates if not any(owner in tag.parents for owner in chrome)
+    ]
 
     positions = {id(tag): index for index, tag in enumerate(soup.find_all(True))}
     return sorted(_without_wrappers(candidates), key=lambda tag: positions.get(id(tag), 0))
@@ -473,6 +489,13 @@ def _is_footer(element: Tag) -> bool:
 
     if element.name in {"header", "nav"}:
         return False
+    if element.name == "footer":
+        # The tag says what it is. The tests below exist to recognise a footer
+        # SHAPED div; a literal `<footer>` needs no inference, and demanding
+        # column headings of one rejected the real footer on all five pages of
+        # the CMW family — a tagline, a telephone, 13 links and no headings at
+        # all. Having columns to label is not what makes something a footer.
+        return True
     if element.find(["h1", "h2", "h3"]) is not None:
         # A section heading means the block is part of the page's argument. A
         # footer labels its columns, and labels are small.

@@ -275,9 +275,14 @@ def test_static_html_produces_relationship_aware_document_and_excludes_chrome() 
         html, "https://example.com/", captured_at=CAPTURE_TIME
     )
 
+    # The `<footer>` arrives with a chrome role, which is what
+    # `split_global_sections` later lifts into a shared block; the nav does not,
+    # because one link is below the stable-navigation minimum. A `<dialog>` is
+    # not page content at any stage, which is the exclusion this test is about.
     assert [section.semantic_role for section in document.pages[0].sections] == [
         "hero",
         "feature_cards",
+        "footer",
     ]
     cards = document.pages[0].sections[1]
     assert len(cards.groups[0].items) == 3
