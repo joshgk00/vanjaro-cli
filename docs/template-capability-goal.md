@@ -832,6 +832,75 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-12 — TC-123: a card's date is its date, not its body copy
+
+**The mechanism, measured first.** A card grid read its item's body as
+`item.find("p")` — the first paragraph in the card. `normalize_text_blocks`
+rewrites a text-bearing leaf div into a `<p>`, and a cmw-blog card leads with
+`<div class="list-date">Nov 13, 2017</div>`. So the date badge *was* the first
+paragraph, and every one of the nine cards arrived carrying its date as body copy
+while the excerpt in `div.list-description` was never read. Instance 29 of the
+recurring mistake, in its oldest form: **the first paragraph is not the body.**
+
+**The template already had the home.** `Cards/blog-post-cards-3up` declares
+`item.media`, `item.tag`, `item.title`, `item.body` and `item.action`, and
+`_ITEM_CAPABILITY_ALIASES` already routes a `tag` role to `item.tag`. Nothing
+needed widening — the date has a slot, and the extractor simply was not filling
+it. So: the date is emitted as the card's `tag`, and the body is taken from the
+first paragraph that is *not* that date.
+
+`is_publication_date` is now shared with `dated_card_kind`, which already had to
+make the same judgement for a different purpose — recognising a blog listing *by*
+its dates. Two spellings of "is this a date" would drift, the same reason
+`is_builder_pane` was shared last iteration.
+
+**Retention 419 → 429, +10 on cmw-blog and no project down.** Nine cards gained
+their excerpt; the tenth element is the grid's own paragraph. **Thin sections
+hold at 6 but cmw-blog's loss falls 28 → 17, and the total across all projects
+falls 40 → 29.**
+
+**What is deliberately still dropped, and why.** The remaining 17 runs on
+cmw-blog are the author link (`CMW Team`), the category links (`Website Design`,
+`Business Website`, `Tips`…), `Share`, and `Read More >`. Two separate reasons,
+both measured rather than assumed:
+
+- `item.tag` declares `slots_per_owner: 1` and a card carries up to four
+  categories, so emitting them would overflow the slot the date now fills. Which
+  of a date and a category list belongs in one tag slot is a real question and
+  not this task's.
+- `Read More >` is a **duplicate destination**. The card's picture, its title and
+  that button are three anchors to one URL, and TC-116 already records the href
+  on the picture. Emitting it would put back exactly what TC-119 removed.
+
+**Five mutations, five distinct failures** — body taken as the first paragraph
+again, the date never emitted, date detection removed, every paragraph read as a
+date, the date predicate always false. A sixth (`match` → `search`) **passed and
+correctly so**: every alternative in `_DATED_CARD` is anchored `^…$`, so the two
+cannot differ. That is an equivalent mutant, not an untested rule, and building a
+fixture for it would have meant inventing a difference that does not exist.
+
+**Evidence.** Suite 2,247 → 2,250 passing, 16 deselected. Corpus identical on all
+ten metrics. All ten projects re-analysed with `--refresh --render`
+(`execution.action == "execute"`) and re-planned with `--refresh`.
+
+| site | elements | Δ | dropped | thin | coverage | blocking | losses | valid |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 61 | **+10** | 2 | 1 | 0.0 | 2 | 1 | false |
+| `contact-page` | 19 | 0 | 3 | 1 | 0.5 | 2 | 2 | false |
+| `oasis-probe` | 32 | 0 | 0 | 0 | 0.087 | 4 | 1 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 0 | 0.0 | 1 | 1 | false |
+| `wwo` | 40 | 0 | 1 | 0 | 0.0968 | 4 | 4 | false |
+| `post-security` | 27 | 0 | 2 | 1 | 0.0 | 2 | 2 | false |
+| `rendered-home` | 82 | 0 | 1 | 1 | 0.2329 | 6 | 10 | false |
+| `edca-pilot` | 24 | 0 | 0 | 0 | 0.6923 | 0 | 1 | true |
+| `kts-fidelity` | 95 | 0 | 0 | 2 | 0.9565 | 1 | 2 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0 | 0.8182 | 0 | 0 | true |
+
+**Remaining:** contact-page's five runs (`<address>` unread, and a list item
+yielding its `<strong>` label without the value beside it), kts-fidelity's two
+thin sections, TC-121 answers 2 and 3 (the footer strips and taglines), and the
+form placeholder.
+
 ### 2026-08-11 — a boundary holding two sections is neither section's DOM
 
 Took the biggest measured loss, which TC-122 had just made visible: wwo's
