@@ -853,6 +853,81 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-12 — two findings I had filed twice were false, and a card title at h5
+
+Took "a blocked section is invisible to the gap queue". **It is not, and neither
+is the finding standing beside it.** Both had been carried in the queue for four
+iterations on an inference I never measured.
+
+**A blocked section has a plan entry, a template and warnings, and the queue
+reads all of it.** kts-fidelity's `section.5` blocks *and* carries
+`field 'item.body' has 2 values but owns 1 physical slots` four times over — and
+that section is one of the two cited by the queue's current rank 1. The entries a
+blocking section produces are not skipped anywhere. What actually has no entry on
+kts is `section.1` and `section.12`: the navigation and the footer, which are
+global blocks rather than blocked sections.
+
+**And nothing was missing from the library either.** The seven photo-band
+sections do not block because no template holds a lone background band.
+`Heroes/photo-band` matches them at **content field compatibility 1.000**. They
+block on this:
+
+```
+required field 'background_media' has 1 value(s) whose asset was never acquired,
+so nothing loadable can be bound
+```
+
+The banner is a `file:///Portals/0/adam/Content/…` reference in a saved capture
+that resolves to nothing. **That is a fixture limitation, not a capability gap** —
+and the queue entry it was going to justify would have been a governed pack
+release for a template that already does the job. Both findings are struck.
+
+The original observation was true and the conclusion drawn from it was not:
+"seven sections block and the queue shows none of them" is a fact about *which*
+sections, not about blocking. Reading one warning would have settled it four
+iterations ago.
+
+**With the measurement done, took the next item: rendered-home's three runs.**
+`#dnn_TopOutPane` writes its feature cards with `<h5>`, and the card branch reads
+`item.find(["h2", "h3", "h4"])`. The section-level search has covered h1 through
+h6 since h5/h6 extraction was fixed for sections; the card branch was never
+widened with it, so three card titles reached nothing.
+
+**Retention 458 → 461, no project down.** rendered-home **+3**, its thin section
+gone, blocking 7 → 6 and coverage 0.0460 → 0.0889 as the titles now bind.
+**Thin sections 3 → 2, runs lost 22 → 19.** Capability queue holds at 24.
+
+**Scope creep I caught and reverted.** I widened `process_steps`' heading search
+in the same edit. No fixture covers it, no project exercises it, and it was not
+the task — the mutation sweep found it by passing, and it is back as it was.
+
+**Three mutations, two distinct failures and one equivalent mutant.** Narrowing
+the card heading back to h2–h4 fails; adding `h1` to the list passes, and is
+equivalent on all available evidence — no card in any fixture or project carries
+an `<h1>`, and a page-level h1 never sits inside a card. Said rather than
+papered over with a contrived fixture, as with TC-123's `match`/`search`.
+
+**Evidence.** Suite 2,261 → 2,262 passing, 16 deselected. Corpus identical on all
+ten metrics.
+
+| site | elements | Δ | dropped | thin | coverage | blocking | losses | valid |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 61 | 0 | 2 | 1 | 0.0 | 2 | 1 | false |
+| `contact-page` | 20 | 0 | 3 | 0 | 0.5455 | 1 | 2 | false |
+| `oasis-probe` | 32 | 0 | 0 | 0 | 0.087 | 4 | 1 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 0 | 0.0 | 1 | 1 | false |
+| `wwo` | 42 | 0 | 1 | 0 | 0.0909 | 4 | 5 | false |
+| `post-security` | 27 | 0 | 2 | 1 | 0.0 | 2 | 2 | false |
+| `rendered-home` | 99 | **+3** | 1 | **0** | 0.0889 | 6 | 11 | false |
+| `edca-pilot` | 24 | 0 | 0 | 0 | 0.6923 | 0 | 1 | true |
+| `kts-fidelity` | 107 | 0 | 0 | 0 | 0.4691 | 3 | 2 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0 | 0.8182 | 0 | 0 | true |
+
+**Remaining:** post-security's 2 (a date badge split into `21` and `Sep` across a
+`div.detail-date` and a `<span class="month">` — a different mechanism from
+TC-123's, which reads a whole date from one line), cmw-blog's 17, TC-121 answers
+2 and 3, and the form placeholder.
+
 ### 2026-08-12 — TC-124: the overflow was already reportable, and I had orphaned it
 
 **The filing was wrong about the mechanism.** It said an item-field overflow "is
