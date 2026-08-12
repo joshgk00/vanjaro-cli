@@ -2886,14 +2886,14 @@ def test_a_section_that_keeps_less_than_its_boundary_offered_says_so() -> None:
     document = design_document_from_html(
         "<html><body><section id='dnn_content'>"
         "<div id='dnn_TopPane' class='Pane'><h2>Give us a call</h2>"
-        "<div class='meta'><span>|</span>PO Box 773</div></div>"
+        "<table><tr><td>PO Box 773</td></tr></table>""</div>"
         "</section></body></html>",
         "https://example.invalid/contact",
     )
 
     losses = _section_losses(document)
     assert list(losses) == ["#dnn_TopPane"]
-    assert "kept 1 of 3" in losses["#dnn_TopPane"]
+    assert "kept 1 of 2" in losses["#dnn_TopPane"]
 
 
 def test_a_section_that_kept_everything_is_not_reported() -> None:
@@ -2932,14 +2932,14 @@ def test_a_form_ancestor_does_not_hold_back_the_page_around_it() -> None:
     document = design_document_from_html(
         "<html><body><form id='Form'><section id='dnn_content'>"
         "<div id='dnn_TopPane' class='Pane'><h2>Our prices</h2>"
-        "<div class='meta'><span>|</span>PO Box 773</div></div>"
+        "<table><tr><td>PO Box 773</td></tr></table>""</div>"
         "</section></form></body></html>",
         "https://example.invalid/prices",
     )
 
     losses = _section_losses(document)
     assert list(losses) == ["#dnn_TopPane"]
-    assert "kept 1 of 3" in losses["#dnn_TopPane"]
+    assert "kept 1 of 2" in losses["#dnn_TopPane"]
 
 
 def test_rebuilt_chrome_is_not_reported_as_losing_its_markup() -> None:
@@ -2967,13 +2967,13 @@ def test_one_line_repeated_is_one_missing_run() -> None:
     document = design_document_from_html(
         "<html><body><section id='dnn_content'>"
         "<div id='dnn_TopPane' class='Pane'><h2>Give us a call</h2>"
-        + "<div class='meta'><span>|</span>PO Box 773</div>" * 3
+        + "<table><tr><td>PO Box 773</td></tr></table>" * 3
         + "</div>"
         "</section></body></html>",
         "https://example.invalid/contact",
     )
 
-    assert "kept 1 of 3" in _section_losses(document)["#dnn_TopPane"]
+    assert "kept 1 of 2" in _section_losses(document)["#dnn_TopPane"]
 
 
 def test_copy_split_by_an_inline_tag_is_not_reported_as_lost() -> None:
@@ -3005,13 +3005,13 @@ def test_an_id_beginning_with_a_digit_does_not_take_down_the_analysis() -> None:
         "<section id='kts-hero'><h1>Music for everyone</h1>"
         "<p>Lessons for every age in Detroit.</p></section>"
         "<section id='1f670a38'><h2>Give us a call</h2>"
-        "<div class='meta'><span>|</span>PO Box 773</div></section>"
+        "<table><tr><td>PO Box 773</td></tr></table>""</section>"
         "<footer class='site-footer'><p>Copyright 2026.</p></footer>"
         "</body></html>",
         "https://example.invalid/contact",
     )
 
-    assert "kept 1 of 3" in _section_losses(document)["#1f670a38"]
+    assert "kept 1 of 2" in _section_losses(document)["#1f670a38"]
 
 
 _BLOG_CARD_GRID = (

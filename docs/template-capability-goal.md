@@ -198,6 +198,54 @@ site three sections.
 
 ## Backlog
 
+### TC-126 — `extract_sections` emits a normalized paragraph twice
+
+**Dependencies:** none, and it **blocks TC-125**. **Pre-existing — found by
+measuring TC-125's effect, and reproduced without TC-125's change.**
+
+```python
+extract_sections("<section id='dnn_content'><div id='dnn_TopPane' class='Pane'>"
+                 "<h2>Serious</h2><div class='detail-date'>21 Sep</div></div></section>", …)
+# -> {'headings': ['Serious'], 'paragraphs': ['21 Sep', '21 Sep']}
+```
+
+`_extract_content` called directly on the same pane returns **one** paragraph, so
+the second copy is added by `extract_sections` — the split/merge path around
+lines 1846 and 1900 runs the extractor over an element and over something that
+contains it. A plain leaf div reproduces it, so this predates any recent change.
+
+**Measured cost across the ten projects: 61 surplus copies today**, of 461
+elements. Every one inflates retention, which is the number this loop steers by.
+
+### TC-125 — A text block carrying inline markup is not read as a paragraph
+
+**Dependencies:** **TC-126 must land first.** **Measured, implemented, and
+REVERTED — the gain was half duplication.**
+
+`normalize_text_blocks` rewrites a text-bearing div into a `<p>`, and disqualifies
+any div with an element child:
+
+```python
+if element.find(True) is not None:
+    continue
+```
+
+"Has a child" is standing in for "is a wrapper", and a paragraph routinely
+carries inline markup. A blog post's date badge is
+`<div class="detail-date">21 <span class="month">Sep</span></div>`, and it reaches
+no element on any page that writes one. Instance 31.
+
+The rule should be that a div qualifies when everything inside it is phrasing —
+`html_ownership._PHRASING_TAGS` already names exactly that set, and the two want
+sharing rather than a second spelling.
+
+**Why it is not shipped.** Measured: **70 divs across the ten sources newly
+qualify**, retention rises 461 → 486, no project drops, post-security's thin
+section resolves and the capability queue grows 24 → 30. But surplus copies rise
+**61 → 74**: thirteen of the twenty-five new elements are duplicates emitted by
+TC-126, not content the page gained. A retention rise that is half duplication is
+exactly the false gain the arbiter exists to catch, so it waits for TC-126.
+
 ### TC-124 — An item-field overflow is reported by nothing
 
 **Dependencies:** none. **Filed with a measurement, not fixed.**
@@ -852,6 +900,62 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-12 — a repair measured, built, and reverted: half the gain was duplication
+
+Took post-security's two runs. The mechanism was clean, the fix was small, it
+raised retention on six projects — and it does not ship, because measuring what
+the rise was *made of* showed half of it was duplicate elements.
+
+**The defect is real.** `normalize_text_blocks` rewrites a text-bearing div into
+a `<p>` and disqualifies any div with an element child. "Has a child" stands in
+for "is a wrapper", and a paragraph routinely carries inline markup: post-security
+writes its date badge as
+`<div class="detail-date">21 <span class="month">Sep</span></div>`, so the badge
+reached no element. Instance 31 of the oldest recurring mistake, and the fix is
+one the codebase already has a name for — `_PHRASING_TAGS` in `html_ownership`
+means exactly "sits inside a line of text".
+
+**Implemented and measured.** 70 divs across the ten sources newly qualify.
+Retention **461 → 486, no project down**; post-security's thin section resolves;
+the capability queue grows **24 → 30**, with `Content/rich-text`/`body` reaching
+two projects as `insufficient_capacity`. Corpus identical on all ten metrics. By
+every number this loop normally reads, it passed.
+
+**Then I counted what arrived.** Surplus copies of a value across the ten
+projects: **61 → 74**. Thirteen of the twenty-five new elements are the *same
+text twice*, and reproducing it without my change proved why:
+
+```python
+extract_sections("… <div id='dnn_TopPane' class='Pane'><h2>Serious</h2>"
+                 "<div class='detail-date'>21 Sep</div></div> …")
+# -> paragraphs: ['21 Sep', '21 Sep']
+```
+
+`_extract_content` on the same pane returns **one** paragraph. `extract_sections`
+adds the second — a pre-existing double-count that a plain leaf div triggers just
+as well. My change did not create it; it routed seventy more divs through it.
+
+**So the change is reverted and both halves are filed** — TC-126 for the
+double-count, TC-125 for the phrasing rule, with TC-126 blocking it. Shipping
+TC-125 first would have raised the number the whole loop steers by using content
+that is not there.
+
+**What this says about the instrument.** Retention has been the arbiter for
+fourteen iterations and it has been right every time — but it counts elements,
+not distinct content, and nothing has ever checked the difference. **61 surplus
+copies exist today, in the baseline**, and no alarm mentions them. The
+within-boundary alarm cannot see it either: it asks whether a source run reached
+*any* element, so a run that reached two looks perfect.
+
+**Kept from the iteration:** the four TC-122 fixtures now use a table cell rather
+than a `<div class='meta'>`. They expired for the second time — the phrasing fix
+made their "lost" content arrive — and a table cell is dropped whether or not
+TC-125 ever lands, so they will not expire again for this reason.
+
+**Baseline confirmed restored:** retention 461 on every project, edca-pilot
+`valid` again, kts blocking back to 3, queue back to 24. Suite 2,262 passing,
+corpus identical.
 
 ### 2026-08-12 — two findings I had filed twice were false, and a card title at h5
 
