@@ -198,6 +198,27 @@ site three sections.
 
 ## Backlog
 
+### TC-124 — An item-field overflow is reported by nothing
+
+**Dependencies:** none. **Filed with a measurement, not fixed.**
+
+A section field that needs more slots than its template owns produces the
+warning `X needs N slots, template owns M`, and the capability report reads it —
+that is how TC-102 widened `split-media` from one body slot to three. **The same
+overflow one level down produces nothing at all.**
+
+Measured on `kts-fidelity` after cards began keeping every paragraph they carry:
+`item.body` declares `slots_per_owner: 1`, its cards now offer two and three
+paragraphs each, and the plan holds **no warning, no loss entry and no issue**
+about it. `content_losses` lists only the two pre-existing entries
+(`decorative_media`, `eyebrow`). The overflow is visible solely as a coverage
+fall — 0.9565 → 0.8148 — with nothing naming the cause.
+
+This is the same shape as the finding TC-121 answer 1 turned up (a blocked
+section is invisible to the gap queue): the capability report can only rank what
+some part of the pipeline names. Content that arrives and binds to nothing must
+be named, or widening the right template stays a matter of noticing.
+
 ### TC-123 — A card keeps its picture, its title and its date, and drops the rest
 
 **Dependencies:** none. **Filed with a measurement, not fixed — it is a different
@@ -831,6 +852,66 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-12 — a card is allowed more than one paragraph
+
+Took kts-fidelity's two thin sections. They looked like two small, separate
+losses — one run each — and measuring showed **one mechanism**.
+
+- `#tpl-cpc-s1`, a class card: two paragraphs, `Age 0-5 yrs` and
+  `Canta y Baila Conmigo is a unique program…`. The description was dropped.
+- `#tpl-bpc4-s1`, a blog card: three paragraphs, `Music`, a `Lorem ipsum` body
+  and `By Richard Clarkson | April 2, 2024`. The byline was dropped.
+
+The card branch reads `body = next(paragraph for paragraph in paragraphs if
+paragraph is not published)` — **exactly one**. Everything after the first is
+discarded. The blog card's byline is not a bare date, so TC-123's rule does not
+catch it; and neither is a duplicate of anything, so the alarm was right to
+report both.
+
+`item.body` owns one slot per card, so the first non-date paragraph keeps the
+binding and the rest arrive as content grouped with the card that carried them.
+Group membership matters and is asserted: it is what says which repeated thing a
+value came from, and the corpus scores the pipeline on getting it right.
+
+**Retention 440 → 458, no project down.** kts-fidelity **+12** and rendered-home
+**+6** — the same mechanism on both. **Thin sections 5 → 3, runs lost 24 → 22,
+and kts-fidelity now reports none at all.**
+
+**The cost, and it is worth stating precisely.** kts's coverage falls 0.9565 →
+0.8148, because cards now offer two and three paragraphs into a one-slot field.
+That is the TC-115 shape and expected — but the plan holds **no warning, no loss
+entry and no issue** about it. A *section*-field overflow says `X needs N slots,
+template owns M`; the same overflow one level down says nothing, so the only
+trace is the coverage number itself. Filed as **TC-124**: it is the same finding
+as "a blocked section is invisible to the gap queue", and it means the capability
+queue cannot rank the one gap this change just produced evidence for.
+
+**Five mutations, five distinct failures** — extras not emitted, the bound body
+emitted twice, the date emitted twice, extras taking the body binding, extras
+losing their group. The last needed an assertion added: nothing had pinned that
+an extra paragraph belongs to its card rather than to the section.
+
+**Evidence.** Suite 2,258 → 2,260 passing, 16 deselected. Corpus identical on all
+ten metrics, `group_field_association_accuracy` included at 79/79 — which is the
+metric a wrong group would move.
+
+| site | elements | Δ | dropped | thin | coverage | blocking | losses | valid |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 61 | 0 | 2 | 1 | 0.0 | 2 | 1 | false |
+| `contact-page` | 20 | 0 | 3 | 0 | 0.5455 | 1 | 2 | false |
+| `oasis-probe` | 32 | 0 | 0 | 0 | 0.087 | 4 | 1 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 0 | 0.0 | 1 | 1 | false |
+| `wwo` | 42 | 0 | 1 | 0 | 0.0909 | 4 | 5 | false |
+| `post-security` | 27 | 0 | 2 | 1 | 0.0 | 2 | 2 | false |
+| `rendered-home` | 96 | **+6** | 1 | 1 | 0.1954 | 6 | 12 | false |
+| `edca-pilot` | 24 | 0 | 0 | 0 | 0.6923 | 0 | 1 | true |
+| `kts-fidelity` | 107 | **+12** | 0 | **0** | 0.8148 | 1 | 2 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0 | 0.8182 | 0 | 0 | true |
+
+**Remaining:** cmw-blog's 17 (author and category links, held on the one-slot
+question; `Read More >`, which TC-119 deliberately removed), post-security's 2,
+rendered-home's 3, TC-121 answers 2 and 3, and the form placeholder.
 
 ### 2026-08-12 — an address and a list, whatever the section turns out to be
 
