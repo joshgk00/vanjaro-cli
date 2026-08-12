@@ -19,6 +19,7 @@ __all__ = [
     "extract_page_title",
     "dated_card_kind",
     "is_publication_date",
+    "PHRASING_TAGS",
     "extract_global_element",
     "collect_image_urls",
     "TEMPLATE_MAP",
@@ -1256,6 +1257,18 @@ def _named_card_kind(element: Tag, cards: list[Tag]) -> str | None:
     return None
 
 
+# Elements that sit inside a line of text rather than breaking it. Shared with
+# the ownership extractor, which needs the same judgement to decide which block
+# holds a section's copy — two spellings of "inline" would drift.
+PHRASING_TAGS = frozenset(
+    {
+        "a", "abbr", "b", "br", "button", "cite", "code", "em", "i", "img",
+        "input", "label", "picture", "path", "small", "source", "span",
+        "strong", "svg", "time",
+    }
+)
+
+
 _MONTHS = (
     "january february march april may june july august september october "
     "november december jan feb mar apr jun jul aug sep sept oct nov dec"
@@ -1847,14 +1860,19 @@ def normalize_text_blocks(soup: BeautifulSoup) -> None:
     and every template match blocked on a missing `body` or `item.body`.
 
     Rewriting the tag once is safer than teaching six call sites a second
-    spelling. Only a `div` with text and no element children qualifies, which is
-    what a paragraph is; a wrapper around other elements is left alone.
+    spelling. A `div` qualifies when it carries text and everything inside it is
+    phrasing — which is what a paragraph is.
+
+    Requiring *no* element children read "has a child" as "is a wrapper", and a
+    paragraph routinely carries inline markup: a blog post's date badge is
+    `<div class="detail-date">21 <span class="month">Sep</span></div>`, and it
+    reached no element on any page that writes one.
     """
 
     for element in soup.find_all("div"):
-        if element.find(True) is not None:
-            continue
         if not element.get_text(strip=True):
+            continue
+        if any(child.name not in PHRASING_TAGS for child in element.find_all(True)):
             continue
         element.name = "p"
 

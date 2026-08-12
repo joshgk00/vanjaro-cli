@@ -2896,6 +2896,61 @@ def test_a_builder_pane_is_recognised_exactly_as_the_browser_selects_it() -> Non
     assert soup.find_all(is_builder_pane) == soup.select("[id^='dnn_'][class*='Pane']")
 
 
+def test_a_text_block_carrying_inline_markup_is_still_a_paragraph() -> None:
+    """Requiring no element children read "has a child" as "is a wrapper", and a
+    paragraph routinely carries inline markup: a blog post's date badge is
+    `<div class='detail-date'>21 <span class='month'>Sep</span></div>` and it
+    reached no element on any page that writes one."""
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.migration.sections import normalize_text_blocks
+
+    soup = BeautifulSoup(
+        "<div class='detail-date'>21 <span class='month'>Sep</span></div>", "html.parser"
+    )
+    normalize_text_blocks(soup)
+
+    assert [tag.get_text(" ", strip=True) for tag in soup.find_all("p")] == ["21 Sep"]
+
+
+def test_a_block_nested_inside_a_link_still_makes_its_wrapper_a_wrapper() -> None:
+    """Card markup routinely puts a block inside a link. Checking only the direct
+    children reads the outer div as phrasing-only, and the same text ends up in a
+    paragraph nested inside another paragraph."""
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.migration.sections import normalize_text_blocks
+
+    soup = BeautifulSoup(
+        "<div class='outer'><a href='/x'><div class='inner'>Deep text</div></a></div>",
+        "html.parser",
+    )
+    normalize_text_blocks(soup)
+
+    assert [tag.name for tag in soup.find_all(True)] == ["div", "a", "p"]
+
+
+def test_a_wrapper_around_blocks_is_not_turned_into_a_paragraph() -> None:
+    """The guard still has to hold: a div wrapping other blocks is layout, and
+    rewriting it would make one paragraph out of a whole column."""
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.migration.sections import normalize_text_blocks
+
+    soup = BeautifulSoup(
+        "<div class='column'><div class='a'>First block</div>"
+        "<div class='b'>Second block</div></div>",
+        "html.parser",
+    )
+    normalize_text_blocks(soup)
+
+    assert soup.find("div", class_="column") is not None
+    assert [tag.get_text() for tag in soup.find_all("p")] == ["First block", "Second block"]
+
+
 def test_a_postal_address_is_extracted_as_a_paragraph() -> None:
     """A section the boundary rules leave unclaimed keeps the raw extractor's
     content rather than a rebuild from its subtree, so the address has to be

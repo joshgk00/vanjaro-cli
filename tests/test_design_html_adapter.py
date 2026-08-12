@@ -3223,6 +3223,39 @@ def test_a_list_no_repeat_group_claimed_still_arrives() -> None:
     ]
 
 
+def test_a_form_label_wrapped_in_a_div_is_not_body_copy() -> None:
+    """A form is migrated as a placeholder listing its detected fields, so `Name`
+    and `Email` already arrive as `form_field`. A builder wrapping each `<label>`
+    in a div makes that div a text block, and the same words arrive again as body
+    copy — the same shape as a paragraph that is only a link."""
+
+    section = _enriched(
+        "<section><h2>Contact us</h2>"
+        "<form><div class='label-top'><label class='control-label'>Name</label></div>"
+        "<input name='name'>"
+        "<div class='label-top'><label class='control-label'>Email</label></div>"
+        "<input name='email'></form></section>",
+        "contact",
+    )
+
+    values = [element["value"] for element in section["content"]]
+    assert values == ["Contact us"]
+
+
+def test_a_block_saying_more_than_its_label_keeps_its_own_text() -> None:
+    """The rule claims a block only when the control accounts for all of it, or a
+    sentence mentioning a field would leave the document."""
+
+    section = _enriched(
+        "<section><h2>Contact us</h2>"
+        "<div class='note'>Tell us your <label>Name</label> and we will call "
+        "back.</div></section>",
+        "contact",
+    )
+
+    assert _roles(section, "body") == ["Tell us your Name and we will call back."]
+
+
 def test_a_list_item_holding_a_repeat_item_is_not_emitted_beside_it() -> None:
     """A carousel writes each testimonial as `<li><blockquote>…</blockquote></li>`.
     `repeated_nodes` names the repeat items and what is inside them, so the `<li>`

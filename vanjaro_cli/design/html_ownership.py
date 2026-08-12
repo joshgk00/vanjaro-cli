@@ -22,6 +22,7 @@ from vanjaro_cli.migration.sections import (
     is_publication_date,
     is_stat_value,
     normalize_text_blocks,
+    PHRASING_TAGS,
 )
 
 
@@ -121,13 +122,7 @@ _HEADING_LEVELS = ["h2", "h3", "h4", "h5", "h6"]
 
 # Narrower than _INLINE_TAGS, which exists to keep card discovery off leaf
 # nodes. A paragraph is a text block even though it is never a card.
-_PHRASING_TAGS = frozenset(
-    {
-        "a", "abbr", "b", "br", "button", "cite", "code", "em", "i", "img",
-        "input", "label", "picture", "path", "small", "source", "span",
-        "strong", "svg", "time",
-    }
-)
+_PHRASING_TAGS = PHRASING_TAGS
 
 
 def _text_blocks(root: Tag) -> list[Tag]:
@@ -183,6 +178,28 @@ def _is_only_a_link(paragraph: Tag) -> bool:
         return False
     text = paragraph.get_text(" ", strip=True)
     return bool(text) and text == link.get_text(" ", strip=True)
+
+
+_FORM_CONTROL_TAGS = ["label", "button", "legend"]
+
+
+def _is_only_a_form_control(block: Tag) -> bool:
+    """Report whether a block says only what a form control inside it says.
+
+    A form is migrated as a placeholder listing its detected fields, never as
+    markup, so `Name` and `Email` already arrive as `form_field`. A builder
+    wrapping each `<label>` in a div makes that div a text block, and the same
+    four words then arrive again as body copy.
+
+    The same shape as `_is_only_a_link`: the block adds nothing to what the thing
+    inside it already carries.
+    """
+
+    control = block.find(_FORM_CONTROL_TAGS)
+    if control is None:
+        return False
+    text = block.get_text(" ", strip=True)
+    return bool(text) and text == control.get_text(" ", strip=True)
 
 
 def _text_leaves(item: Tag) -> list[Tag]:
@@ -489,6 +506,7 @@ def enrich_section_from_static_dom(
             if id(paragraph) not in repeated_nodes
             and paragraph is not inferred_title
             and not _is_only_a_link(paragraph)
+            and not _is_only_a_form_control(paragraph)
         ]
         paragraph_eyebrow = _eyebrow_paragraph(title, body_paragraphs) if eyebrow is None else None
         if isinstance(title, Tag):
