@@ -212,7 +212,29 @@ elements. Something reads the group twice, and that is what to measure first.
 
 Worth 6 of the 6 double-emitted elements remaining across the ten projects.
 
-### TC-126 — `extract_sections` emits a normalized paragraph twice
+### TC-126 — STRUCK: measurable effect is nil, mechanism is latent
+
+**Re-measured after TC-125 landed and closed without a change.**
+
+`_extract_post_meta` prepends a meta line built from `div.detail-date`, with a
+comment claiming paragraph extraction "never sees" it. TC-125 made that false,
+and the raw content now states the date twice —
+`'21 Sep — Website Security, Website Updates'` beside `'21 Sep'`. Two different
+strings, so no duplicate value; and post-security's section is **claimed**, so
+enrichment rebuilds from the subtree and neither string reaches the document.
+
+Measured across the ten projects: **three unclaimed sections exist** (wwo.6,
+rendered-home.8, kts-fidelity.11) and none is a blog post page, so nothing
+carries the redundancy today. **Double-emission reads 0.** There is no
+measurable defect to repair, and changing it would be a change with no
+demonstrable benefit.
+
+What remains true and is recorded rather than fixed: the comment is now wrong,
+and any *unclaimed* blog-post section would carry the date twice — invisibly,
+because the within-boundary alarm matches by containment and `21 Sep` is
+contained in the meta line.
+
+### TC-126 (original filing) — `extract_sections` emits a normalized paragraph twice
 
 **Dependencies:** none, and it **blocks TC-125**. **Pre-existing — found by
 measuring TC-125's effect, and reproduced without TC-125's change.**
@@ -914,6 +936,49 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-12 — TC-126 struck on measurement, and the last named run held back
+
+Two items, because the first dissolved when measured.
+
+**TC-126 is struck.** `_extract_post_meta`'s comment says paragraph extraction
+"never sees" the date badge, which TC-125 made false — the raw content now
+states the date twice, as `'21 Sep — Website Security, Website Updates'` beside
+`'21 Sep'`. Two different strings, so no duplicate value, and post-security's
+section is **claimed**, so enrichment rebuilds from the subtree and neither
+reaches the document. Three unclaimed sections exist across the ten projects and
+none is a blog post page. **Double-emission reads 0; there is no measurable
+defect.** The stale comment and the latent redundancy are recorded rather than
+repaired — a change with no demonstrable benefit is a change this loop does not
+make.
+
+**Then the last run the within-boundary alarm named.** cmw-blog's thin section
+was 69/70, and the missing run is **`Read More >`** — the boilerplate TC-119
+removed and TC-123 declined to re-emit. Measured: the anchor's href
+(`…/blog/post/platform-options-for-building-your-website`) **is** in the document,
+carried by the card's picture under TC-116's rule. So the destination arrived and
+only the label did not.
+
+That makes it a hold-back, and hold-backs get measured like fixes. The rule is
+narrow: **a run that is the text of an anchor whose href already arrived.** A
+link pointing somewhere nothing else reaches is still reported, and proving that
+needed a fixture built around the actual mechanism — an anchor *inside a repeat
+item*, since anywhere else a labelled anchor becomes an action and its text
+arrives anyway. My first negative fixture put the link in a table cell, where it
+arrived as an action and tested nothing.
+
+**Retention 470 on every project, unchanged** — correct for an alarm-only change.
+**Thin sections 1 → 0.** Double-emission 0, dropped boundaries 8, queue 28,
+corpus identical on all ten metrics.
+
+**Both alarms are now silent on everything except the eight dropped boundaries**,
+which are the footer strips, the footer taglines and the form — the three items
+left in the queue, each a decision rather than a defect.
+
+**Three mutations, three distinct failures** — the hold-back removed, every
+anchor held back regardless of its href, and destinations never collected.
+
+**Evidence.** Suite 2,270 → 2,272 passing, 16 deselected.
 
 ### 2026-08-12 — TC-125 ships on the second attempt, and the metric was the difference
 
