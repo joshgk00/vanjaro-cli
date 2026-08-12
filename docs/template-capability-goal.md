@@ -915,6 +915,66 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-12 — TC-125 ships on the second attempt, and the metric was the difference
+
+Re-took TC-125. It was implemented, measured and reverted three iterations ago on
+"surplus copies", a metric that counted four identical placeholder cards as a
+fault. With double-emission at zero and a measure that means something, the same
+change was re-measured — and it needed one more rule before it was true.
+
+**First measurement, unchanged from last time: +25 elements, no project down,
+corpus identical.** And **double-emission 0 → 4**: edca-pilot's `Name`, `Email`,
+`Phone` and `Message` arriving twice. The old metric could never have told me
+which four; this one named them on the first run.
+
+**The mechanism.** `label` is a phrasing tag, so a builder that writes
+`<div class="label-top"><label>Name</label></div>` now has a text block where it
+had a wrapper — and the form already arrives as a placeholder listing its
+detected fields. The same words twice. `_is_only_a_form_control` is the third
+instance of one shape: **a block that says only what the thing inside it says
+defers to that thing.** TC-119 wrote it for links, TC-127's sibling for repeat
+items, and this for form controls.
+
+**Second measurement: retention 451 → 470, +19 and no project down, double-
+emission back to 0, and edca-pilot keeps `valid`.** The +25 was +19 of content
+and +6 of form labels, four of which duplicated and two of which were a submit
+button and a captcha label that the placeholder covers.
+
+- `cmw-blog` **+11**, and its thin section falls from 53/70 to **69/70** — one
+  run left of the seventeen filed as TC-123's remainder
+- `kts-fidelity` **+5**, `post-security` **+2** with its thin section resolved,
+  `contact-page` **+1**
+- **Dropped boundaries 9 → 8, thin sections 2 → 1, capability queue 23 → 28**
+
+**Eight mutations, eight distinct failures** — back to no element children, every
+div a paragraph, only direct children checked, empty divs rewritten, the
+form-control rule removed, any block holding a control skipped, ownership no
+longer sharing the phrasing set, and the recursive check made shallow. The last
+needed its own fixture: card markup puts a block inside a link, and checking only
+direct children reads the outer div as phrasing-only and nests a paragraph inside
+a paragraph.
+
+**What made the difference was the instrument, not the change.** The code that
+shipped is the code that was reverted, plus one rule that the corrected metric
+pointed straight at. A measure that cannot tell repetition from duplication
+rejected a correct change and hid a real one for three iterations.
+
+| site | elements | Δ | dropped | thin | double | coverage | blocking | valid |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 72 | **+11** | 2 | 1 | 0 | 0.0 | 2 | false |
+| `contact-page` | 21 | **+1** | 2 | 0 | 0 | 0.5833 | 1 | false |
+| `oasis-probe` | 32 | 0 | 0 | 0 | 0 | 0.087 | 4 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 0 | 0 | 0.0 | 1 | false |
+| `wwo` | 40 | 0 | 1 | 0 | 0 | 0.0968 | 4 | false |
+| `post-security` | 29 | **+2** | 2 | **0** | 0 | 0.0 | 2 | false |
+| `rendered-home` | 91 | 0 | 1 | 0 | 0 | 0.0976 | 6 | false |
+| `edca-pilot` | 24 | 0 | 0 | 0 | 0 | 0.6923 | 0 | **true** |
+| `kts-fidelity` | 112 | **+5** | 0 | 0 | 0 | 0.3837 | 5 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0 | 0 | 0.8182 | 0 | true |
+
+**Evidence.** Suite 2,265 → 2,270 passing, 16 deselected. Corpus identical on all
+ten metrics.
+
 ### 2026-08-12 — TC-127: double-emission reaches zero, and both halves were mine
 
 Took TC-127. **The filing was wrong about the mechanism and the fix was mine to
