@@ -2407,11 +2407,36 @@ def test_both_discoveries_use_the_same_builder_rules() -> None:
 
     builder_selectors = [
         "[data-elementor-type] > [data-id][data-element_type='container']",
-        "#Body > [id^='dnn_'], [id^='dnn_'][class*='Pane']",
+        "#Body > [id^='dnn_']",
     ]
     for selector in builder_selectors:
         assert selector in static_source, f"static side lost {selector!r}"
         assert selector in script, f"rendered side lost {selector!r}"
+
+    # The pane rule is a shared predicate on the Python side, because the
+    # section extractor needs it too and a third copy of the shape is how the
+    # readings drift. The browser cannot call it, so the selector it runs must
+    # still select exactly what the predicate accepts.
+    pane_selector = "[id^='dnn_'][class*='Pane']"
+    assert pane_selector in script, "rendered side lost the pane selector"
+    assert "is_builder_pane" in static_source, "static side stopped sharing the predicate"
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.migration.sections import is_builder_pane
+
+    soup = BeautifulSoup(
+        "<div id='dnn_TopPane' class='Pane'>a</div>"
+        "<div id='dnn_ContentPane' class='DnnModule Pane wide'>b</div>"
+        "<div id='dnn_content'>c</div>"
+        "<div id='other_Pane' class='Pane'>d</div>"
+        "<div class='Pane'>e</div>"
+        # Case matters: a CSS attribute match is case-sensitive, and a looser
+        # Python reading selects panes the browser does not.
+        "<div id='dnn_lower' class='pane'>f</div>",
+        "html.parser",
+    )
+    assert soup.select(pane_selector) == soup.find_all(is_builder_pane)
 
 
 def test_the_rendered_script_drops_wrapper_panes_too() -> None:

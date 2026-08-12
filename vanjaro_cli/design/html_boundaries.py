@@ -9,7 +9,11 @@ from urllib.parse import urljoin, urlsplit
 from bs4 import BeautifulSoup, Tag
 from pydantic import JsonValue
 
-from vanjaro_cli.migration.sections import dated_card_kind, has_form_fields
+from vanjaro_cli.migration.sections import (
+    dated_card_kind,
+    has_form_fields,
+    is_builder_pane,
+)
 
 
 STABLE_NAV_MIN_LINKS = 2
@@ -109,7 +113,9 @@ def static_boundary_candidates(html: str) -> list[Tag]:
         add(element)
     for element in soup.select("[data-elementor-type] > [data-id][data-element_type='container']"):
         add(element)
-    for element in soup.select("#Body > [id^='dnn_'], [id^='dnn_'][class*='Pane']"):
+    for element in soup.select("#Body > [id^='dnn_']"):
+        add(element)
+    for element in soup.find_all(is_builder_pane):
         add(element)
 
     positions = {id(tag): index for index, tag in enumerate(soup.find_all(True))}

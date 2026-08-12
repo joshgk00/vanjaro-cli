@@ -13,6 +13,7 @@ from vanjaro_cli.migration.sections import (
     collect_image_urls,
     extract_global_element,
     extract_sections,
+    is_builder_pane,
 )
 
 BASE_URL = "https://example.com/"
@@ -2821,3 +2822,75 @@ def test_list_items_duplicating_paragraphs_are_dropped():
     assert "Great service" not in joined_items
     assert "Hosting for your website" in content["list_items"]
     assert "Mobile-friendly design" in content["list_items"]
+
+
+_PANE_PAGE = (
+    "<html><body>"
+    "<header class='site-header'><nav><a href='/'>Home</a><a href='/x'>Work</a></nav></header>"
+    "<section id='dnn_content'>"
+    "<div class='dnn_layout'><div id='dnn_TopPane' class='Pane'>"
+    "<p>Contact us about your next project today.</p></div></div>"
+    "<div id='dnn_SidePane' class='Pane'>"
+    "<address>PO Box 773</address><a class='btn' href='tel:+12486906559'>Call now</a></div>"
+    "</section>"
+    "<footer class='site-footer'><p>Copyright 2026.</p></footer>"
+    "</body></html>"
+)
+
+
+def test_a_pane_without_a_heading_is_still_a_section() -> None:
+    """A DNN pane holding a paragraph, a postal address and a telephone button
+    carries no `<h#>` at all. Requiring a heading kept a whole contact block
+    inside a wrapper that was then narrowed to a different pane."""
+
+    sections = extract_sections(_PANE_PAGE, BASE_URL)
+
+    texts = [" ".join(str(v) for values in s["content"].values()
+                      if isinstance(values, list) for v in values) for s in sections]
+    assert any("Contact us about your next project" in text for text in texts)
+    assert any("PO Box 773" in text or "Call now" in text for text in texts)
+    assert len(sections) >= 2
+
+
+def test_a_card_grid_is_not_split_into_its_cards() -> None:
+    """The heading rule protected leaf sections from being shredded; the pane
+    rule must not undo that."""
+
+    grid = (
+        "<html><body>"
+        "<header class='site-header'><nav><a href='/'>Home</a><a href='/x'>Work</a></nav></header>"
+        "<section id='dnn_content'><div id='dnn_ContentPane' class='Pane'>"
+        "<div class='card'><h3>Design</h3><p>We design things.</p></div>"
+        "<div class='card'><h3>Build</h3><p>We build things.</p></div>"
+        "<div class='card'><h3>Host</h3><p>We host things.</p></div>"
+        "</div></section>"
+        "<footer class='site-footer'><p>Copyright 2026.</p></footer>"
+        "</body></html>"
+    )
+
+    sections = extract_sections(grid, BASE_URL)
+
+    headings = [h for s in sections for h in s["content"].get("headings", [])]
+    assert {"Design", "Build", "Host"} <= set(headings)
+    assert len([s for s in sections if s["content"].get("headings")]) == 1
+
+
+def test_a_builder_pane_is_recognised_exactly_as_the_browser_selects_it() -> None:
+    """The rendered script runs `[id^='dnn_'][class*='Pane']`, and a CSS
+    attribute match is case-sensitive. A looser Python reading selects panes the
+    browser does not, and the two sides then pair against different boundaries —
+    which cost oasis-lighting six elements and oasis-probe four."""
+
+    from bs4 import BeautifulSoup
+
+    soup = BeautifulSoup(
+        "<div id='dnn_TopPane' class='Pane'>a</div>"
+        "<div id='dnn_Wide' class='DnnModule ContentPane'>b</div>"
+        "<div id='dnn_Lower' class='pane'>c</div>"
+        "<div id='dnn_content'>d</div>"
+        "<div id='other_Pane' class='Pane'>e</div>",
+        "html.parser",
+    )
+
+    assert [tag["id"] for tag in soup.find_all(is_builder_pane)] == ["dnn_TopPane", "dnn_Wide"]
+    assert soup.find_all(is_builder_pane) == soup.select("[id^='dnn_'][class*='Pane']")

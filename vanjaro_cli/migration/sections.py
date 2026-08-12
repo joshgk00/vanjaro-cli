@@ -329,15 +329,46 @@ def _visible_children(element: Tag) -> list[Tag]:
     return [c for c in _structural_children(element) if _has_visible_content(c)]
 
 
+def is_builder_pane(element: Tag) -> bool:
+    """Whether the builder declared this element as a content slot of its own.
+
+    A DNN pane is an authored boundary: the page's editor placed modules into
+    it deliberately. `static_boundary_candidates` has always treated the shape
+    as authoritative, and this is the same shape expressed once so the two
+    readings of a page cannot drift apart.
+
+    The browser runs this as `[id^='dnn_'][class*='Pane']`, and a CSS attribute
+    match is case-sensitive — so this is too, or the two sides select different
+    elements and pair against each other's boundaries.
+    """
+
+    identifier = element.get("id")
+    if not isinstance(identifier, str) or not identifier.startswith("dnn_"):
+        return False
+    classes = element.get("class") or []
+    return any("Pane" in str(name) for name in classes)
+
+
 def _section_like_child_count(element: Tag) -> int:
-    """Count children that look like sections of their own (carry a heading
-    somewhere inside, or are sectioning tags). A leaf section whose direct
-    children are a bare heading plus content scores 0 here, which protects
-    it from being split apart."""
+    """Count children that look like sections of their own.
+
+    A sectioning tag, a heading somewhere inside, or a declared builder pane.
+    A leaf section whose direct children are a bare heading plus content scores
+    0 here, which protects it from being split apart.
+
+    Panes count because a heading is not what makes something a section: a DNN
+    pane holding a paragraph, a postal address and a telephone button carries
+    no `<h#>` at all, and requiring one kept contact-page's whole contact block
+    inside a wrapper that was then narrowed to a different pane — extracted,
+    then discarded.
+    """
     count = 0
     for child in _visible_children(element):
-        if child.name in ("section", "article") or child.find(
-            ("h1", "h2", "h3", "h4", "h5", "h6")
+        if (
+            child.name in ("section", "article")
+            or child.find(("h1", "h2", "h3", "h4", "h5", "h6"))
+            or is_builder_pane(child)
+            or child.find(is_builder_pane)
         ):
             count += 1
     return count
