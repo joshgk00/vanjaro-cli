@@ -198,6 +198,36 @@ site three sections.
 
 ## Backlog
 
+### TC-121 — A reported boundary is still a dropped boundary
+
+**Dependencies:** TC-120 supplies the inventory. **Filed with a measurement, not
+fixed — the alarm is one task and the repair is another, the same way TC-118 came
+before the five repairs it made possible.**
+
+TC-120 reports eighteen boundaries across nine projects whose content reaches no
+section. Reporting them does not keep them. The inventory, by kind:
+
+| kind | count | example |
+|---|---|---|
+| banner image above the content | 5 | `#dnn_BannerPane`, 1 image, on cmw-blog, contact-page, wwo, post-security, rendered-home |
+| footer social/copyright strip | 5 | `#dnn_FooterBottomPaneC`, 3 images; `#1f670a38`, "All rights reserved" |
+| footer tagline | 3 | `#dnn_FooterBottomPaneB`, 19 words, three sources |
+| **real page content** | 3 | contact-page `#dnn_Full_Screen_PaneB` — two headings, an address, a phone list and a call button |
+| a form | 1 | contact-page `#dnn_ContentPane`, "CONTACT FORM" |
+| decorative pane | 1 | oasis-probe `#dnn_Full_Screen_PaneH`, 1 image |
+
+Four different answers are needed and they are not the same task. The contact
+panel should become a section. The footer strips are chrome that `_trailing_footer`
+declines to take, because it deliberately returns **one** footer — two make
+`split_global_sections` report conflicting variants and block. The form gets a
+dashed placeholder listing its detected fields; it must never be migrated as
+HTML. The banner image is the one to measure first: `_is_banner_image_section`
+already promotes a leading image-only pane to a section background, and it is not
+firing here.
+
+Expect retention to RISE, and expect coverage to fall as content arrives that no
+template can hold — the TC-115 shape, not the TC-113 trap.
+
 ### TC-101 — The capability gap report (supersedes nothing; blocks the ranking)
 
 **Dependencies:** none
@@ -751,6 +781,100 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-11 — TC-120: a page boundary nothing claimed, and nothing said so
+
+The repair loop closed with the queue held on evidence, so this iteration took
+the instrument that loop kept building by hand rather than an item that needs
+sources only Josh can authorise.
+
+**The premise was checked before anything was designed.** The corpus computes
+`visitor_content_retention` against annotations — an answer key a project does
+not have. TC-118 gave a project an element count, which catches a section that
+shrinks but not content that was never a section at all. So: count what the
+source holds and compare. The first probe said contact-page loses 126 of 138
+text runs, which was wrong in an instructive way — `find_all(string=True)`
+returns HTML comments, and a DNN page carries dozens of `CDF(Css|…)` cache
+directives. Excluding comments and matching by containment rather than equality
+(inline tags fragment a paragraph) left a much smaller, much more interesting
+list.
+
+**What it found on contact-page:** `Login` sits under `.header-bottom` and is
+correctly excluded as chrome, but two `<h2>`s, an `<address>`, a phone list and
+a call button live in `div.col-sm-6.bg_right` inside the page body — genuine
+content, absent from a document that reports 13 elements, coverage 0.75 and
+`valid: true`.
+
+**The mechanism, measured rather than guessed.** The page has exactly one
+`<section>` (`#dnn_content`) wrapping every pane. `static_boundary_candidates`
+finds seven boundaries including the contact panel; `_top_level_sections` — a
+third boundary opinion, inside the legacy extractor — returns `#dnn_content` as
+ONE section holding all 66 words. `prepare_static_sections` then walks the raw
+sections and uses the candidates only to annotate them, so the page emits as
+many sections as the legacy extractor found. The single raw section claims one
+pane, `_static_html` is set to that pane's subtree, and enrichment rebuilds the
+section's content from it. **The other panes' words were extracted and then
+thrown away** — worse than never extracted, and invisible to every check.
+
+**Eighteen boundaries across nine of the ten projects**, including two on
+`kts-fidelity`, which scores 0.9559 and looked clean. Filed as TC-121 with the
+inventory; this iteration reports rather than repairs, the same order TC-118
+established.
+
+**The alarm was made to check what arrived, because the first version lied.**
+kts-fidelity's `#tpl-marq-s1` is a marquee repeating "MUSIC IS MAGIC!" twelve
+times, and that phrase reaches the document through a real section — so
+"the content is absent" was false for it. Going unclaimed is not by itself a
+loss. The warning now compares each boundary's distinct text runs and image URLs
+against what its own page ended up carrying, and reports only what is genuinely
+missing. kts-fidelity fell 2 → 1; the survivor is "All rights reserved".
+An alarm that cries wolf is how the last queue filled with noise.
+
+**Two things were removed for being unprovable rather than kept for being
+plausible.** Section backgrounds and decorative layers were read as arrival
+routes; measured across the nine local projects, **no image inside a dropped
+boundary arrived by either route** and no constructed case exercised them, so
+they went. Likewise the element-value media route: all **73** image elements
+across the ten projects carry an `asset_id`, so reading the value as well was a
+second route to the same answer that neither test could isolate.
+
+**Fourteen mutations, fourteen distinct failures** — suppression removed, text
+always arrived, media never arrived, media compared unresolved, asset ids not
+recorded, comments counted, scripts counted, duplicate runs counted, single-page
+unwired, multi-page unwired, pages pooled, chrome filter removed, every
+candidate reported, nothing reported. Four needed a fixture built specifically to
+isolate them, and one fixture had to be rewritten after it turned out a
+comment-only pane never becomes a candidate at all, so it never reached the rule
+it claimed to test.
+
+**Per page, not pooled.** A crawl repeats its layout, so checking a dropped block
+against every page's content would let a page that kept it silence the page that
+lost it.
+
+**Evidence.** Suite 2,213 → 2,223 passing, 16 deselected. Corpus identical on all
+ten metrics. All ten projects re-analysed with `--refresh --render`
+(`execution.action == "execute"`) and re-planned with `--refresh`: retention 404
+unchanged on every project, coverage unchanged, blocking unchanged, losses
+unchanged — correct for a report that adds a reader and touches no extraction.
+
+| site | elements | dropped boundaries | provenance | styles | coverage | blocking | losses |
+|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 50 | 3 | 50 rendered | 62 | 0.0 | 1 | 1 |
+| `contact-page` | 13 | 5 | 13 rendered | 62 | 0.75 | 0 | 1 |
+| `oasis-probe` | 31 | 1 | 31 rendered | 155 | 0.0909 | 3 | 1 |
+| `oasis-lighting` | 22 | 0 | 22 rendered | 62 | 0.0 | 1 | 1 |
+| `wwo` | 32 | 2 | 29 rendered, 3 static | 124 | 0.1739 | 2 | 5 |
+| `post-security` | 26 | 3 | 26 rendered | 62 | 0.0 | 1 | 2 |
+| `rendered-home` | 86 | 2 | 83 rendered, 3 static | 187 | 0.1558 | 5 | 7 |
+| `edca-pilot` | 23 | 1 | 23 rendered | 124 | 0.6667 | 0 | 1 |
+| `kts-fidelity` | 94 | 1 | 94 rendered | 352 | 0.9559 | 0 | 2 |
+| `northstar-recheck` | 27 | 0 | 27 rendered | 155 | 0.8182 | 0 | 0 |
+
+**Three boundary opinions now exist in this pipeline** —
+`static_boundary_candidates`, `_top_level_sections` inside the legacy extractor,
+and the rendered observation script. The loop has already been bitten twice by
+two of them disagreeing silently. This is the first check that reports a
+disagreement instead of letting the quieter one win.
 
 ### 2026-08-10 — CLOSING SUMMARY of the extraction repair loop
 
