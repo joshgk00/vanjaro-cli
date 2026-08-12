@@ -10,6 +10,7 @@ from vanjaro_cli.design.html_boundaries import (
     prepare_static_sections,
     static_boundary_candidates,
     static_role,
+    unclaimed_boundaries,
 )
 
 
@@ -142,3 +143,55 @@ def test_a_section_that_calls_itself_a_testimonial_is_believed() -> None:
     )
 
     assert role == "testimonials"
+
+
+_TWO_PANES = (
+    "<header id='header'><nav><a href='/'>Home</a><a href='/work'>Work</a></nav></header>"
+    "<div id='dnn_wrapper'>"
+    "  <div id='dnn_TopPane' class='Pane'><h1>Contact Us</h1><p>Ask us anything.</p></div>"
+    "  <div id='dnn_SidePane' class='Pane'><h2>Give us a call</h2>"
+    "    <address>PO Box 773</address><a href='tel:+1'>Call now</a></div>"
+    "</div>"
+)
+_ONLY_THE_FIRST_PANE = [
+    {"type": "rich_text", "content": {"headings": ["Contact Us"], "paragraphs": ["Ask us anything."]}},
+]
+
+
+def test_a_boundary_no_section_claimed_is_reported() -> None:
+    dropped = unclaimed_boundaries(_TWO_PANES, _ONLY_THE_FIRST_PANE)
+
+    assert [tag.get("id") for tag in dropped] == ["dnn_SidePane"]
+
+
+def test_a_claimed_boundary_is_not_reported() -> None:
+    claimed = [
+        *_ONLY_THE_FIRST_PANE,
+        {
+            "type": "rich_text",
+            "content": {"headings": ["Give us a call"], "list_items": ["PO Box 773"]},
+        },
+    ]
+
+    assert unclaimed_boundaries(_TWO_PANES, claimed) == []
+
+
+def test_unclaimed_chrome_is_not_reported_because_it_is_appended_anyway() -> None:
+    """The header matches no raw section here, and `prepare_static_sections`
+    appends it regardless — so reporting it would name content that arrives."""
+
+    dropped = unclaimed_boundaries(_TWO_PANES, _ONLY_THE_FIRST_PANE)
+    prepared = prepare_static_sections(_TWO_PANES, _ONLY_THE_FIRST_PANE)
+
+    assert "header" not in {tag.name for tag in dropped}
+    assert "navigation" in {section.get("_static_role") for section in prepared}
+
+
+def test_an_empty_boundary_is_not_reported_as_dropped_content() -> None:
+    html = _TWO_PANES.replace(
+        "<h2>Give us a call</h2>"
+        "    <address>PO Box 773</address><a href='tel:+1'>Call now</a>",
+        "",
+    )
+
+    assert unclaimed_boundaries(html, _ONLY_THE_FIRST_PANE) == []

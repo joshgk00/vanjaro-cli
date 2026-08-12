@@ -2684,3 +2684,161 @@ def test_a_body_sample_still_takes_the_first_of_its_kind() -> None:
     ]
 
     assert _sampled_element(elements, "text")["role"] == "body"
+
+
+def test_a_page_whose_second_pane_never_became_a_section_says_so() -> None:
+    """The raw extractor takes the wrapper as ONE section, so its content dict
+    holds both panes; matching then narrows that section to the first pane and
+    enrichment rebuilds its content from that pane's DOM alone. The second
+    pane's words were extracted and then discarded, and nothing said so."""
+
+    document = design_document_from_html(
+        "<html><body><section id='dnn_content'>"
+        "<div id='dnn_TopPane' class='Pane'><h1>Contact Us</h1>"
+        "<p>Have a project in mind?</p></div>"
+        "<div id='dnn_SidePane' class='Pane'><h2>Give us a call</h2>"
+        "<p>Reach the team on PO Box 773.</p></div>"
+        "</section></body></html>",
+        "https://example.invalid/contact",
+    )
+
+    values = {
+        element.value
+        for page in document.pages
+        for section in page.sections
+        for element in section.content
+    }
+    dropped = [w for w in document.warnings if w.code == "boundary_content_dropped"]
+
+    kept, lost = ("Contact Us", "Give us a call")
+    if "Contact Us" not in values:
+        kept, lost = lost, kept
+    assert kept in values and lost not in values
+    assert len(dropped) == 1
+    assert "2 text run(s)" in dropped[0].message
+
+
+def test_a_multi_page_crawl_reports_the_boundary_each_page_dropped() -> None:
+    """The multi-page entry has its own wiring, and a crawl is where an unnoticed
+    drop repeats across every page that shares the layout."""
+
+    def page(slug: str, aside: str) -> HtmlPageInput:
+        return HtmlPageInput(
+            url=f"https://example.invalid/{slug}",
+            html=(
+                "<html><body><section id='dnn_content'>"
+                "<div id='dnn_TopPane' class='Pane'><h1>Contact Us</h1>"
+                "<p>Have a project in mind?</p></div>"
+                f"<div id='dnn_SidePane' class='Pane'><h2>{aside}</h2>"
+                "<p>Reach the team on PO Box 773.</p></div>"
+                "</section></body></html>"
+            ),
+            slug=slug,
+        )
+
+    document = analyze_html_pages([page("contact", "Give us a call"), page("about", "Find us")])
+
+    dropped = [w for w in document.warnings if w.code == "boundary_content_dropped"]
+    assert [w.path for w in dropped] == ["#dnn_TopPane", "#dnn_TopPane"]
+
+
+def test_a_boundary_repeating_copy_another_section_carries_is_not_reported() -> None:
+    """A decorative marquee repeating a phrase a real section also carries went
+    unclaimed on the best-scoring project measured. Nothing was lost, so naming
+    it would send the next iteration after a boundary that costs the page
+    nothing — which is how a queue fills with noise."""
+
+    document = design_document_from_html(
+        "<html><body><section id='dnn_content'>"
+        "<div id='dnn_TopPane' class='Pane'><h1>Music is magic!</h1>"
+        "<p>Lessons for every age.</p></div>"
+        "<div id='dnn_MarqueePane' class='Pane'><span>Music is magic!</span>"
+        "<span>Music is magic!</span></div>"
+        "</section></body></html>",
+        "https://example.invalid/home",
+    )
+
+    dropped = [w for w in document.warnings if w.code == "boundary_content_dropped"]
+    assert [w.path for w in dropped] == []
+
+
+def _pane_page(slug: str, first: str, second: str) -> HtmlPageInput:
+    return HtmlPageInput(
+        url=f"https://example.invalid/{slug}",
+        html=(
+            "<html><body><section id='dnn_content'>"
+            f"<div id='dnn_TopPane' class='Pane'>{first}</div>"
+            f"<div id='dnn_SidePane' class='Pane'>{second}</div>"
+            "</section></body></html>"
+        ),
+        slug=slug,
+    )
+
+
+def test_a_picture_that_arrives_by_another_route_is_not_reported_as_dropped() -> None:
+    """A page keeps a picture as a content element, a section background or a
+    decorative layer. Only the first is an element, so comparing elements alone
+    would report every promoted banner image as lost."""
+
+    document = design_document_from_html(
+        "<html><body><section id='dnn_content'>"
+        "<div id='dnn_TopPane' class='Pane'><h1>Keys to Success</h1>"
+        "<p>Lessons for every age in Detroit.</p><img src='/badge.png' alt='Badge'></div>"
+        "<div id='dnn_SidePane' class='Pane'><img src='/badge.png' alt='Badge'></div>"
+        "</section></body></html>",
+        "https://example.invalid/home",
+    )
+
+    dropped = [w for w in document.warnings if w.code == "boundary_content_dropped"]
+    assert [w.path for w in dropped] == []
+
+
+def test_one_page_keeping_a_block_does_not_vouch_for_another_that_dropped_it() -> None:
+    """A crawl repeats its layout, so pooling every page's content would let a
+    page that kept a shared block silence the page that lost it."""
+
+    dropping = _pane_page(
+        "contact",
+        "<h1>Contact the studio today</h1><p>Have a project in mind? Ask us anything at all.</p>",
+        "<h2>Shared block</h2><p>Shared block copy.</p>",
+    )
+    keeping = HtmlPageInput(
+        url="https://example.invalid/about",
+        html=(
+            "<html><body><section id='dnn_content'>"
+            "<div id='dnn_TopPane' class='Pane'><h2>Shared block</h2>"
+            "<p>Shared block copy.</p></div>"
+            "</section></body></html>"
+        ),
+        slug="about",
+    )
+
+    document = analyze_html_pages([dropping, keeping])
+
+    dropped = [w for w in document.warnings if w.code == "boundary_content_dropped"]
+    assert [w.path for w in dropped] == ["#dnn_SidePane"]
+
+
+def test_markup_comments_and_scripts_are_not_counted_as_lost_content() -> None:
+    """DNN pages carry cache directives as HTML comments — dozens per page —
+    and inline scripts alongside the copy. Counting either would inflate every
+    report with text no visitor ever saw — as would counting one repeated line
+    once per repetition, which is what a marquee is."""
+
+    document = design_document_from_html(
+        "<html><body><section id='dnn_content'>"
+        "<div id='dnn_TopPane' class='Pane'><h1>Keys to Success</h1>"
+        "<p>Lessons for every age in Detroit.</p></div>"
+        "<div id='dnn_SidePane' class='Pane'>"
+        "<!-- CDF(Css|/Portals/_default/container.css|DnnPageHeaderProvider|10) -->"
+        "<p>Reach the studio on PO Box 773.</p>"
+        "<!-- Container Title -->"
+        "<p>Reach the studio on PO Box 773.</p>"
+        "<script>var dnnLoader = 1;</script></div>"
+        "</section></body></html>",
+        "https://example.invalid/home",
+    )
+
+    dropped = [w for w in document.warnings if w.code == "boundary_content_dropped"]
+    assert [w.path for w in dropped] == ["#dnn_SidePane"]
+    assert "1 text run(s)" in dropped[0].message

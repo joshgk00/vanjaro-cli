@@ -413,6 +413,58 @@ def _trailing_footer(candidates: Sequence[Tag]) -> Tag | None:
     return None
 
 
+def _claim_candidates(
+    candidates: Sequence[Tag], sections: Sequence[Mapping[str, JsonValue]]
+) -> tuple[list[Tag | None], list[Tag]]:
+    """Pair each raw section with the boundary whose words it shares most.
+
+    Returned as one function so that anything asking which boundaries went
+    unclaimed reads the same pairing the sections were built from. Two copies
+    of this loop would answer the question the pipeline is not actually using.
+    """
+
+    remaining = list(candidates)
+    matches: list[Tag | None] = []
+    for raw in sections:
+        raw_words = _raw_section_words(raw)
+        scored = [
+            (len(raw_words & _normalized_words(tag.get_text(" ", strip=True))), -index, tag)
+            for index, tag in enumerate(remaining)
+        ]
+        match = max(scored, default=(0, 0, None), key=lambda item: (item[0], item[1]))[2]
+        if isinstance(match, Tag):
+            remaining.remove(match)
+            matches.append(match)
+        else:
+            matches.append(None)
+    return matches, remaining
+
+
+def unclaimed_boundaries(
+    html: str, sections: Sequence[Mapping[str, JsonValue]]
+) -> list[Tag]:
+    """Report page boundaries holding content that no extracted section claimed.
+
+    `prepare_static_sections` walks the raw extractor's sections and uses the
+    candidates only to annotate them, so the page emits as many sections as
+    that extractor found. A boundary the candidate rule discovered and the
+    extractor did not is dropped — and because the content never reaches the
+    design document, no loss is recorded, coverage cannot count it, and the
+    per-section element counts have nothing to compare it against.
+
+    Chrome is excluded: `prepare_static_sections` appends the header and footer
+    itself, so an unclaimed one is not lost.
+    """
+
+    candidates = static_boundary_candidates(html)
+    roles = {id(tag): static_role(tag, index) for index, tag in enumerate(candidates)}
+    footer = _trailing_footer(candidates)
+    if footer is not None:
+        roles[id(footer)] = "footer"
+    _, remaining = _claim_candidates(candidates, sections)
+    return [tag for tag in remaining if roles[id(tag)] not in _CHROME_ROLES]
+
+
 def prepare_static_sections(
     html: str, sections: Sequence[Mapping[str, JsonValue]]
 ) -> list[dict[str, JsonValue]]:
@@ -426,19 +478,12 @@ def prepare_static_sections(
     footer = _trailing_footer(candidates)
     if footer is not None:
         roles[id(footer)] = "footer"
-    remaining = list(candidates)
+    matches, _ = _claim_candidates(candidates, sections)
     prepared: list[dict[str, JsonValue]] = []
     claimed_chrome: set[int] = set()
-    for raw in sections:
-        raw_words = _raw_section_words(raw)
-        scored = [
-            (len(raw_words & _normalized_words(tag.get_text(" ", strip=True))), -index, tag)
-            for index, tag in enumerate(remaining)
-        ]
-        match = max(scored, default=(0, 0, None), key=lambda item: (item[0], item[1]))[2]
+    for raw, match in zip(sections, matches):
         copy = dict(raw)
         if isinstance(match, Tag):
-            remaining.remove(match)
             role = roles[id(match)]
             if role in _CHROME_ROLES:
                 # The extractor emitted this chrome as an ordinary section.
@@ -666,4 +711,5 @@ __all__ = [
     "prepare_static_sections",
     "static_boundary_candidates",
     "static_role",
+    "unclaimed_boundaries",
 ]
