@@ -198,6 +198,20 @@ site three sections.
 
 ## Backlog
 
+### TC-127 — A testimonial quote is emitted twice
+
+**Dependencies:** none. **Filed with a measurement, not fixed — it is the last
+double-emission the corrected instrument can see.**
+
+`rendered-home`'s `#dnn_ContentPane` holds **six** `<blockquote>` elements and no
+`<figure>`, and the document carries **twelve** `testimonial_quote` elements —
+each quote twice, both copies in the same repeat group. The testimonials branch
+takes `root.find_all("figure") or root.find_all("blockquote")` as its repeat
+items and emits one quote per item, so six items cannot account for twelve
+elements. Something reads the group twice, and that is what to measure first.
+
+Worth 6 of the 6 double-emitted elements remaining across the ten projects.
+
 ### TC-126 — `extract_sections` emits a normalized paragraph twice
 
 **Dependencies:** none, and it **blocks TC-125**. **Pre-existing — found by
@@ -900,6 +914,72 @@ corpus and all three real sites, and the symmetry test makes the next accidental
 asymmetry a failing check rather than a discovery.
 
 ## Progress log
+
+### 2026-08-12 — the duplication metric was wrong, and the real number is ten
+
+Took TC-126. Measuring it first corrected the instrument that produced it, and
+the correction matters more than the repair.
+
+**"Surplus copies" was not a defect metric.** I introduced it last iteration as
+"elements whose value duplicates another element's", counted 61 in the baseline,
+and killed a change for raising it to 74. Reading what those 61 actually are:
+kts-fidelity's blog grid holds four cards with **identical placeholder copy**
+("Blog titles comes over here" ×4, "Music" ×4), and rendered-home's six blog
+cards each carry a "Read More". **A page is allowed to say the same thing twice.**
+The metric could not tell repetition from double-emission, which is the only
+thing worth counting.
+
+**The right test is whether the document holds more copies of a value than the
+source subtree contains occurrences of it.** By that measure the baseline has
+**10 double-emitted elements, not 61** — and the change I reverted last
+iteration would have to be re-measured against this before anything is concluded
+about it.
+
+**Of the 10, four were mine.** A footer contact list writes
+`<li><a href="mailto:…">info@…</a></li>`, and the list emission I added two
+iterations ago (a list survives whatever the section is) never inherited
+TC-119's rule, so the address and the telephone arrived as a `benefit` *and* as
+the `primary_action` that carries the destination. The same rule, one level down.
+
+**Retention 461 → 457, and the fall is the point.** All four are named:
+`[email protected]` and `(248) 690-6559` on wwo, `info@clicksandmortarwebsites.com`
+and `(248) 690-6559` on rendered-home — each still present as a `primary_action`
+carrying its `mailto:` or `tel:` href. **Double-emission 10 → 6.** Capability
+queue 24 → 23, losses fall on both projects.
+
+**TC-126 as filed is not the mechanism, and TC-125's revert needs revisiting.**
+The filing said `extract_sections` emits a normalized paragraph twice, and it
+does — `_extract_post_meta` prepends a meta line built from `div.detail-date`,
+carrying a comment that says paragraph extraction "never sees" it, which stopped
+being true when `normalize_text_blocks` began rewriting that div. But that
+duplicate reaches the **raw content only**: post-security's section is claimed,
+enrichment rebuilds from the subtree, and the meta line never reaches the
+document. It is a real staleness to fix, not a blocker for TC-125 — and the
+reason TC-125 was reverted was a metric that counted four identical cards as a
+fault.
+
+**Filed TC-127** for the remaining 6: `rendered-home`'s testimonials section
+holds six `<blockquote>`s and emits twelve `testimonial_quote` elements, both
+copies in the same group.
+
+**Three mutations, three distinct failures** — link-only items emitted again,
+every item holding a link skipped, repeat-owned items emitted again.
+
+**Evidence.** Suite 2,262 → 2,264 passing, 16 deselected. Corpus identical on all
+ten metrics.
+
+| site | elements | Δ | dropped | thin | double | coverage | blocking | valid |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 61 | 0 | 2 | 1 | 0 | 0.0 | 2 | false |
+| `contact-page` | 20 | 0 | 3 | 0 | 0 | 0.5455 | 1 | false |
+| `oasis-probe` | 32 | 0 | 0 | 0 | 0 | 0.087 | 4 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 0 | 0 | 0.0 | 1 | false |
+| `wwo` | 40 | **−2** | 1 | 0 | 0 | 0.0968 | 4 | false |
+| `post-security` | 27 | 0 | 2 | 1 | 0 | 0.0 | 2 | false |
+| `rendered-home` | 97 | **−2** | 1 | 0 | 6 | 0.0909 | 6 | false |
+| `edca-pilot` | 24 | 0 | 0 | 0 | 0 | 0.6923 | 0 | true |
+| `kts-fidelity` | 107 | 0 | 0 | 0 | 0 | 0.4691 | 3 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0 | 0 | 0.8182 | 0 | true |
 
 ### 2026-08-12 — a repair measured, built, and reverted: half the gain was duplication
 
