@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
 import re
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlsplit
 
 from bs4 import BeautifulSoup, Tag
 from pydantic import JsonValue
@@ -153,6 +153,62 @@ def _without_wrappers(candidates: list[Tag]) -> list[Tag]:
 
 def _normalized_words(value: str) -> set[str]:
     return set(re.findall(r"[a-z0-9%]+", value.casefold()))
+
+
+def _media_path(url: str) -> str:
+    """Reduce an asset reference to the part both sides agree on.
+
+    A raw section carries the URL resolved against the page while the DOM
+    carries it as authored, so the strings never match. Compared as paths, and
+    never tokenized into words — that is what `_raw_section_words` excludes
+    asset keys to prevent.
+    """
+
+    return urlsplit(url).path.casefold() or url.casefold()
+
+
+def _media_matches(left: str, right: str) -> bool:
+    if left == right:
+        return True
+    shorter, longer = sorted((left, right), key=len)
+    return bool(shorter) and longer.endswith("/" + shorter.lstrip("/"))
+
+
+def _media_overlap(left: set[str], right: set[str]) -> int:
+    return sum(1 for one in left if any(_media_matches(one, other) for other in right))
+
+
+def _tag_media(tag: Tag) -> set[str]:
+    return {
+        _media_path(str(node.get("src")))
+        for node in tag.find_all(["img", "video"])
+        if node.get("src")
+    }
+
+
+def _raw_section_media(raw_section: Mapping[str, JsonValue]) -> set[str]:
+    """Collect the asset references a raw section claims, background included.
+
+    The background matters most: promoting a leading image-only pane to a hero
+    background is exactly what leaves a section with no words to match on.
+    """
+
+    content = raw_section.get("content")
+    if not isinstance(content, dict):
+        return set()
+    urls: list[str] = []
+    for key in ("images", "videos"):
+        values = content.get(key)
+        if not isinstance(values, list):
+            continue
+        for item in values:
+            source = item.get("src") if isinstance(item, dict) else item
+            if isinstance(source, str):
+                urls.append(source)
+    background = content.get("background_image")
+    if isinstance(background, str):
+        urls.append(background)
+    return {_media_path(url) for url in urls if url}
 
 
 # Content keys holding visitor-facing text. Asset keys are excluded on purpose:
@@ -413,26 +469,64 @@ def _trailing_footer(candidates: Sequence[Tag]) -> Tag | None:
     return None
 
 
+def _claims_the_chrome(raw_words: set[str], chrome_words: set[str]) -> bool:
+    """Whether a raw section is the chrome itself rather than a page section.
+
+    Claiming a header is deliberate — a raw section that IS the header must take
+    it, or it goes looking for another subtree and a header ends up wearing the
+    footer's DOM. But a page section that merely shares a word or two with the
+    nav is not the nav, and taking it replaces that section's content with
+    chrome. A real header shares a phone number with the footer of the same
+    site, which is exactly the overlap that moved wwo's tagline, email and
+    telephone out of the document.
+
+    So the test is contribution, the same one `_without_wrappers` applies: the
+    section may say nothing the chrome does not already say.
+    """
+
+    return bool(raw_words) and raw_words <= chrome_words
+
+
 def _claim_candidates(
-    candidates: Sequence[Tag], sections: Sequence[Mapping[str, JsonValue]]
+    candidates: Sequence[Tag],
+    sections: Sequence[Mapping[str, JsonValue]],
+    roles: Mapping[int, str],
 ) -> tuple[list[Tag | None], list[Tag]]:
-    """Pair each raw section with the boundary whose words it shares most.
+    """Pair each raw section with the boundary it shares the most content with.
 
     Returned as one function so that anything asking which boundaries went
     unclaimed reads the same pairing the sections were built from. Two copies
     of this loop would answer the question the pipeline is not actually using.
+
+    Words decide first and pictures break the tie, because a section can be
+    entirely imagery: a promoted banner holds one background image and no copy
+    at all, so every candidate scored zero and the pairing fell to document
+    order — which handed the page's banner to the header on seven of the nine
+    measured sources, and `prepare_static_sections` then replaced the whole
+    section with chrome. Sharing nothing claims nothing; a section keeping its
+    own extracted content is better than a section wearing a stranger's DOM.
     """
 
     remaining = list(candidates)
     matches: list[Tag | None] = []
     for raw in sections:
         raw_words = _raw_section_words(raw)
+        raw_media = _raw_section_media(raw)
         scored = [
-            (len(raw_words & _normalized_words(tag.get_text(" ", strip=True))), -index, tag)
+            (
+                len(raw_words & _normalized_words(tag.get_text(" ", strip=True))),
+                _media_overlap(raw_media, _tag_media(tag)),
+                -index,
+                tag,
+            )
             for index, tag in enumerate(remaining)
+            if roles.get(id(tag)) not in _CHROME_ROLES
+            or _claims_the_chrome(raw_words, _normalized_words(tag.get_text(" ", strip=True)))
         ]
-        match = max(scored, default=(0, 0, None), key=lambda item: (item[0], item[1]))[2]
-        if isinstance(match, Tag):
+        words, media, _, match = max(
+            scored, default=(0, 0, 0, None), key=lambda item: item[:3]
+        )
+        if isinstance(match, Tag) and (words or media):
             remaining.remove(match)
             matches.append(match)
         else:
@@ -461,7 +555,7 @@ def unclaimed_boundaries(
     footer = _trailing_footer(candidates)
     if footer is not None:
         roles[id(footer)] = "footer"
-    _, remaining = _claim_candidates(candidates, sections)
+    _, remaining = _claim_candidates(candidates, sections, roles)
     return [tag for tag in remaining if roles[id(tag)] not in _CHROME_ROLES]
 
 
@@ -478,7 +572,7 @@ def prepare_static_sections(
     footer = _trailing_footer(candidates)
     if footer is not None:
         roles[id(footer)] = "footer"
-    matches, _ = _claim_candidates(candidates, sections)
+    matches, _ = _claim_candidates(candidates, sections, roles)
     prepared: list[dict[str, JsonValue]] = []
     claimed_chrome: set[int] = set()
     for raw, match in zip(sections, matches):
