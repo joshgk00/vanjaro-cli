@@ -396,3 +396,63 @@ def test_a_video_pairs_the_same_way_a_picture_does() -> None:
     prepared = prepare_static_sections(page, [section])
 
     assert prepared[0]["_static_selector"] == "#dnn_MediaPane"
+
+
+_TWO_CARDS_IN_ONE_PANE = (
+    "<div id='dnn_BottomPane' class='Pane'>"
+    "<div class='card'><h3>Website Only</h3><ul><li>Unlimited Web Pages</li>"
+    "<li>One Add On</li></ul></div>"
+    "<div class='card'><h3>Branding Package</h3><ul><li>Logo Design</li>"
+    "<li>Business Card Design</li></ul></div>"
+    "</div>"
+)
+_CARD_SECTIONS = [
+    {"type": "content", "content": {"headings": ["Website Only"],
+                                    "list_items": ["Unlimited Web Pages", "One Add On"]}},
+    {"type": "content", "content": {"headings": ["Branding Package"],
+                                    "list_items": ["Logo Design", "Business Card Design"]}},
+]
+
+
+def test_a_pane_holding_two_sections_is_claimed_by_neither() -> None:
+    """Enrichment rebuilds a claimed section's content from its subtree, so
+    pairing a section to the pane that also holds its sibling replaces what the
+    extractor read correctly with a flattening of both — wwo's two pricing cards
+    became one section with two headings, one paragraph and no prices."""
+
+    prepared = prepare_static_sections(_TWO_CARDS_IN_ONE_PANE, _CARD_SECTIONS)
+
+    assert [section.get("_static_selector") for section in prepared] == [None, None]
+    assert prepared[0]["content"]["list_items"] == ["Unlimited Web Pages", "One Add On"]
+    assert prepared[1]["content"]["list_items"] == ["Logo Design", "Business Card Design"]
+
+
+def test_a_pane_holding_one_section_is_still_claimed() -> None:
+    """The rule withholds containers, not panes. Withholding every pane would
+    cost every section its role, its selector and its rendered pairing."""
+
+    prepared = prepare_static_sections(_TWO_CARDS_IN_ONE_PANE, _CARD_SECTIONS[:1])
+
+    assert prepared[0]["_static_selector"] == "#dnn_BottomPane"
+
+
+def test_sections_with_no_words_do_not_make_every_pane_a_container() -> None:
+    """An empty set is a subset of everything. Counting wordless sections would
+    make two image-only panes turn every boundary on the page into a container
+    and unclaim the entire document."""
+
+    wordless = [
+        {"type": "hero", "content": {"background_image": "https://x.invalid/a.jpg"}},
+        {"type": "content", "content": {"images": [{"src": "https://x.invalid/b.jpg"}]}},
+    ]
+    page = (
+        "<div id='dnn_BannerPane' class='Pane'><img src='/a.jpg'></div>"
+        "<div id='dnn_PhotoPane' class='Pane'><img src='/b.jpg'></div>"
+    )
+
+    prepared = prepare_static_sections(page, wordless)
+
+    assert [section.get("_static_selector") for section in prepared] == [
+        "#dnn_BannerPane",
+        "#dnn_PhotoPane",
+    ]

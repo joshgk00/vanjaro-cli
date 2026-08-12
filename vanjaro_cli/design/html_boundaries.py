@@ -504,6 +504,14 @@ def _claim_candidates(
     unclaimed reads the same pairing the sections were built from. Two copies
     of this loop would answer the question the pipeline is not actually using.
 
+    A candidate holding the words of two or more sections is a container, not
+    either section's DOM, and is withheld from claiming altogether. Enrichment
+    rebuilds a claimed section's content from its subtree, so pairing a section
+    to the pane that also holds its sibling replaces what the extractor read
+    correctly with a flattening of both — which is how wwo's two pricing cards
+    (a price and five features, a price and eleven) became one section carrying
+    two headings, one paragraph and no prices at all.
+
     Words decide first and pictures break the tie, because a section can be
     entirely imagery: a promoted banner holds one background image and no copy
     at all, so every candidate scored zero and the pairing fell to document
@@ -513,10 +521,20 @@ def _claim_candidates(
     own extracted content is better than a section wearing a stranger's DOM.
     """
 
-    remaining = list(candidates)
+    section_words = [_raw_section_words(raw) for raw in sections]
+    containers = {
+        id(tag)
+        for tag in candidates
+        if sum(
+            1
+            for words in section_words
+            if words and words <= _normalized_words(tag.get_text(" ", strip=True))
+        )
+        >= 2
+    }
+    remaining = [tag for tag in candidates if id(tag) not in containers]
     matches: list[Tag | None] = []
-    for raw in sections:
-        raw_words = _raw_section_words(raw)
+    for raw, raw_words in zip(sections, section_words):
         raw_media = _raw_section_media(raw)
         scored = [
             (
