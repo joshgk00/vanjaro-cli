@@ -3013,3 +3013,71 @@ def test_an_id_beginning_with_a_digit_does_not_take_down_the_analysis() -> None:
     )
 
     assert "kept 1 of 2" in _section_losses(document)["#1f670a38"]
+
+
+_BLOG_CARD_GRID = (
+    "<section><article class='list-post'><div class='list-date'>Nov 13, 2017</div>"
+    "<img src='/one.jpg'><h2>Platform Options for Building Your Website</h2>"
+    "<div class='list-description'><p>When it comes to building a website, getting "
+    "started can be daunting.</p></div></article>"
+    "<article class='list-post'><div class='list-date'>Sep 21, 2017</div>"
+    "<img src='/two.jpg'><h2>It's Time to Get Serious About Security</h2>"
+    "<div class='list-description'><p>The latest changes to Chrome security matter "
+    "to you.</p></div></article>"
+    "<article class='list-post'><div class='list-date'>Jun 27, 2017</div>"
+    "<img src='/three.jpg'><h2>5 Signs Your Website Is Boring</h2>"
+    "<div class='list-description'><p>Everything moves at warp speed online.</p>"
+    "</div></article></section>"
+)
+
+
+def _roles(section: dict, role: str) -> list[str]:
+    return [element["value"] for element in section["content"] if element["role"] == role]
+
+
+def test_a_card_keeps_its_prose_and_its_date_separately() -> None:
+    """`normalize_text_blocks` rewrites a text-bearing leaf div into a `<p>`, so a
+    blog card's date badge becomes its first paragraph — and every card in
+    cmw-blog's listing arrived carrying `Nov 13, 2017` as its body while the
+    excerpt beneath it was discarded."""
+
+    section = _enriched(_BLOG_CARD_GRID, "blog_cards")
+
+    assert _roles(section, "tag") == ["Nov 13, 2017", "Sep 21, 2017", "Jun 27, 2017"]
+    bodies = _roles(section, "card_body")
+    assert len(bodies) == 3
+    assert bodies[0].startswith("When it comes to building a website")
+
+
+def test_a_card_with_no_date_still_reads_its_first_paragraph_as_body() -> None:
+    """Most card grids carry no date at all; the rule must not cost them their
+    body copy."""
+
+    grid = _BLOG_CARD_GRID.replace("<div class='list-date'>Nov 13, 2017</div>", "")
+    grid = grid.replace("<div class='list-date'>Sep 21, 2017</div>", "")
+    grid = grid.replace("<div class='list-date'>Jun 27, 2017</div>", "")
+
+    section = _enriched(grid, "feature_cards")
+
+    assert _roles(section, "tag") == []
+    assert len(_roles(section, "card_body")) == 3
+
+
+def test_a_card_whose_only_paragraph_is_a_date_has_no_body() -> None:
+    """The date is the tag, not the body, even when it is the only text the card
+    offers besides its title — otherwise it is simply relabelled back."""
+
+    grid = _BLOG_CARD_GRID
+    for excerpt in (
+        "<div class='list-description'><p>When it comes to building a website, getting "
+        "started can be daunting.</p></div>",
+        "<div class='list-description'><p>The latest changes to Chrome security matter "
+        "to you.</p></div>",
+        "<div class='list-description'><p>Everything moves at warp speed online.</p></div>",
+    ):
+        grid = grid.replace(excerpt, "")
+
+    section = _enriched(grid, "blog_cards")
+
+    assert _roles(section, "tag") == ["Nov 13, 2017", "Sep 21, 2017", "Jun 27, 2017"]
+    assert _roles(section, "card_body") == []

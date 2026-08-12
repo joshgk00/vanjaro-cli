@@ -19,6 +19,7 @@ from vanjaro_cli.design.models import BreakpointName, Viewport
 from vanjaro_cli.migration.sections import (
     extract_form_fields,
     has_form_fields,
+    is_publication_date,
     is_stat_value,
     normalize_text_blocks,
 )
@@ -558,13 +559,31 @@ def enrich_section_from_static_dom(
             elif role in _CARD_GRID_REPEAT_KIND:
                 media = item.find("img")
                 heading = item.find(["h2", "h3", "h4"])
-                body = item.find("p")
+                # The first paragraph is not the body. `normalize_text_blocks`
+                # rewrites a text-bearing leaf div into a `<p>`, so a blog
+                # card's date badge becomes its first paragraph — and every
+                # card in cmw-blog's listing arrived carrying `Nov 13, 2017`
+                # as its body while the excerpt beneath was discarded.
+                paragraphs = item.find_all("p")
+                published = next(
+                    (
+                        paragraph
+                        for paragraph in paragraphs
+                        if is_publication_date(paragraph.get_text(" ", strip=True))
+                    ),
+                    None,
+                )
+                body = next(
+                    (paragraph for paragraph in paragraphs if paragraph is not published), None
+                )
                 if isinstance(media, Tag):
                     media_id = image(media, "card_media", group_id)
                     if media_id:
                         fields["media"] = media_id
                 if isinstance(heading, Tag):
                     fields["title"] = add("heading", "card_title", heading.get_text(" ", strip=True), group_id=group_id)
+                if isinstance(published, Tag):
+                    fields["tag"] = add("text", "tag", published.get_text(" ", strip=True), group_id=group_id)
                 if isinstance(body, Tag):
                     field = "type" if role == "project_gallery" else "body"
                     element_role = "eyebrow" if field == "type" else "card_body"

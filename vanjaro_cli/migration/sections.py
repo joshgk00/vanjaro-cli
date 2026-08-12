@@ -18,6 +18,7 @@ __all__ = [
     "visible_form_fields",
     "extract_page_title",
     "dated_card_kind",
+    "is_publication_date",
     "extract_global_element",
     "collect_image_urls",
     "TEMPLATE_MAP",
@@ -1263,6 +1264,18 @@ _DATED_CARD = re.compile(
 )
 
 
+def is_publication_date(text: str) -> bool:
+    """Whether a line is a card's publication date rather than its prose.
+
+    Shared with the ownership extractor, which needs the same judgement for a
+    different purpose: `normalize_text_blocks` rewrites a text-bearing leaf div
+    into a `<p>`, so a date badge becomes a paragraph and reads as the card's
+    first one. Two spellings of "is this a date" would drift.
+    """
+
+    return bool(_DATED_CARD.match(text.strip()))
+
+
 def dated_card_kind(cards: list[Tag]) -> str | None:
     """Read a headless card grid's kind off a date on its cards.
 
@@ -1285,7 +1298,7 @@ def dated_card_kind(cards: list[Tag]) -> str | None:
             for leaf in card.find_all(True)
             if leaf.find(True) is None
         )
-        if any(_DATED_CARD.match(text) for text in texts):
+        if any(is_publication_date(text) for text in texts):
             dated += 1
     return "blog_cards" if dated * 2 >= len(cards) else None
 
