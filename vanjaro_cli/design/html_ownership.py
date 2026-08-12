@@ -587,19 +587,26 @@ def enrich_section_from_static_dom(
                     fields["title"] = add("heading", "card_title", heading.get_text(" ", strip=True), group_id=group_id)
                 if isinstance(published, Tag):
                     fields["tag"] = add("text", "tag", published.get_text(" ", strip=True), group_id=group_id)
-                if isinstance(body, Tag):
-                    field = "type" if role == "project_gallery" else "body"
-                    element_role = "eyebrow" if field == "type" else "card_body"
-                    fields[field] = add("text", element_role, body.get_text(" ", strip=True), group_id=group_id)
                 # A card is allowed more than one paragraph. Keeping only the
                 # first dropped a class card's whole description and a blog
-                # card's byline; the template owns one body slot, so the rest
-                # arrive as content the planner reports rather than as content
-                # nothing knows was there.
-                for extra in paragraphs:
-                    if extra is published or extra is body:
-                        continue
-                    add("text", "card_body", extra.get_text(" ", strip=True), group_id=group_id)
+                # card's byline.
+                #
+                # Every one of them is named in the item's field, which already
+                # accepts a list: the planner binds as many as the template owns
+                # slots for and reports the rest as `field 'X' has N values but
+                # owns M physical slots`, the same string the capability report
+                # ranks a section-level overflow by. Left out of the field they
+                # arrived in the document and were invisible to the plan — no
+                # warning, no loss, nothing for the queue to rank.
+                field = "type" if role == "project_gallery" else "body"
+                element_role = "eyebrow" if field == "type" else "card_body"
+                body_ids = [
+                    add("text", element_role, paragraph.get_text(" ", strip=True), group_id=group_id)
+                    for paragraph in ([body] if isinstance(body, Tag) else [])
+                    + [extra for extra in paragraphs if extra is not published and extra is not body]
+                ]
+                if body_ids:
+                    fields[field] = body_ids[0] if len(body_ids) == 1 else body_ids
             else:
                 fields["text"] = add("list_item", "benefit", item.get_text(" ", strip=True), group_id=group_id)
             if fields:

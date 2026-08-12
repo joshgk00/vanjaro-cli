@@ -3080,9 +3080,15 @@ def test_a_card_keeps_every_paragraph_it_carries() -> None:
     } == {group_id}
 
 
-def test_the_first_paragraph_is_still_the_one_the_template_binds() -> None:
-    """The extra paragraphs are content, not a rebinding: `item.body` owns one
-    slot per card and the first non-date paragraph keeps it."""
+def test_an_item_field_names_every_paragraph_it_was_given() -> None:
+    """`item.fields` accepts a list, and the planner binds as many as the
+    template owns slots for and reports the rest as `field 'X' has N values but
+    owns M physical slots` — the same string the capability report ranks a
+    section-level overflow by.
+
+    Left out of the field, the extra paragraphs arrived in the document and were
+    invisible to the plan: no warning, no loss entry, nothing to rank, and the
+    only trace was a coverage number falling."""
 
     section = _enriched(
         "<section><h2>Classes</h2>"
@@ -3095,13 +3101,36 @@ def test_the_first_paragraph_is_still_the_one_the_template_binds() -> None:
         "blog_cards",
     )
 
+    by_id = {element["id"]: element["value"] for element in section["content"]}
     group = section["groups"][0]
-    assert [item["fields"]["body"] for item in group["items"]] == [
-        element["id"]
-        for element in section["content"]
-        if element["value"] in {"Age 0-5 yrs", "Lessons for adults"}
+    assert [
+        [by_id[element_id] for element_id in item["fields"]["body"]]
+        for item in group["items"]
+    ] == [
+        ["Age 0-5 yrs", "A longer description follows."],
+        ["Lessons for adults", "Another description."],
     ]
     assert _roles(section, "tag") == ["Nov 13, 2017", "Sep 21, 2017"]
+
+
+def test_a_gallery_card_calls_its_line_of_text_a_type_not_a_body() -> None:
+    """A project gallery's line under the title is what kind of work it was, and
+    it binds to `item.tag` through the `eyebrow` role. The field name is now
+    chosen outside the guard that emits the paragraph, so it has to keep saying
+    `type` for a gallery and `body` for everything else."""
+
+    section = _enriched(
+        "<section><h2>Our work</h2>"
+        "<div class='card'><img src='/a.jpg'><h3>Harbour</h3><p>Branding</p></div>"
+        "<div class='card'><img src='/b.jpg'><h3>Riverkind</h3><p>Website</p></div></section>",
+        "project_gallery",
+    )
+
+    assert _roles(section, "eyebrow") == ["Branding", "Website"]
+    assert [set(item["fields"]) for item in section["groups"][0]["items"]] == [
+        {"media", "title", "type"},
+        {"media", "title", "type"},
+    ]
 
 
 def test_a_card_with_no_date_still_reads_its_first_paragraph_as_body() -> None:
