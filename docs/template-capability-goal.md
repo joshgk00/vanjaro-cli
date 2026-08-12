@@ -937,6 +937,76 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-12 — TC-121 answers 2 and 3: the footer was never a boundary at all
+
+Took the footer question, and reading `_trailing_footer` before changing it —
+as instructed — showed the filed premise was the wrong end of the problem.
+
+**The filing asked what a page does with the chrome `_trailing_footer` declines.
+It declines nothing: it never finds a footer.** Two independent reasons, both
+measured:
+
+1. **`<footer>` is not a boundary candidate.** The rules cover header/nav,
+   sectioning elements, Elementor containers and DNN panes. Nothing matches a
+   `<footer>` element, so on cmw-blog the candidate list is five entries and the
+   page's real footer is not among them.
+2. **`_is_footer` demands two `<h4>/<h5>/<h6>` headings**, on the reasoning that
+   "a footer labels its columns, and labels are small". The real footer on all
+   five pages of the CMW family has **none** — a tagline, a telephone, 13 links
+   and no headings at all. **Instance 32: having columns to label is not what
+   makes something a footer.**
+
+So no footer was recognised anywhere, its content reached no section, and
+`#dnn_FooterBottomPaneB` and `#dnn_FooterBottomPaneC` — both **inside** that
+`<footer>` — were reported as dropped boundaries. The single-footer rule was not
+declining a second footer; there was never a first.
+
+**The answer, in two parts.** A `<footer>` is a candidate and its tag is
+believed, exactly as `<header>`'s is — the heading and link tests exist to
+recognise a footer-*shaped* div, and a literal `<footer>` needs no inference. And
+a candidate nested inside chrome is not its own boundary, so the footer stays one
+block rather than several variants for `split_global_sections` to reconcile,
+which is the conflict `_trailing_footer` returns a single element to avoid.
+
+**Retention 470 → 543, +73 and no project down.** Nine of the ten gained a
+footer: wwo +15, rendered-home +13, cmw-blog +12, contact-page +12,
+post-security +12, oasis-probe +3, oasis-lighting +3, edca-pilot +3.
+northstar-recheck has no `<footer>` element and is unchanged.
+
+**Dropped boundaries 8 → 0.** With thin sections and double-emission already at
+zero, **all three alarms now read zero on all ten projects.**
+
+**And the guard it was supposed to threaten holds.** Every project's global block
+plan is `ready: true` with **zero issues**, and nine now carry a footer entry
+beside the header. The conflicting-variants failure the one-footer rule protects
+against did not occur, because the nesting filter keeps the footer a single
+boundary.
+
+**Five mutations, four distinct failures and one deletion.** Footer no longer a
+candidate, its tag no longer believed, every tag believed as a footer, and the
+nesting filter removed all fail. The fifth — dropping `tag in chrome` from the
+keep-condition — passed, and measuring showed why: **chrome nested inside chrome
+does not occur in any of the ten sources**. Rather than keep a guard for a case
+that never happens, the clause is gone and the filter is simpler.
+
+**Evidence.** Suite 2,272 → 2,275 passing, 16 deselected. Corpus identical on all
+ten metrics. Capability queue 28 → 27.
+
+| site | elements | Δ | dropped | thin | double | coverage | blocking | valid |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 84 | **+12** | 0 | 0 | 0 | 0.0 | 2 | false |
+| `contact-page` | 33 | **+12** | 0 | 0 | 0 | 0.5833 | 1 | false |
+| `oasis-probe` | 35 | **+3** | 0 | 0 | 0 | 0.087 | 4 | false |
+| `oasis-lighting` | 25 | **+3** | 0 | 0 | 0 | 0.0 | 1 | false |
+| `wwo` | 55 | **+15** | 0 | 0 | 0 | 0.0882 | 5 | false |
+| `post-security` | 41 | **+12** | 0 | 0 | 0 | 0.0 | 2 | false |
+| `rendered-home` | 104 | **+13** | 0 | 0 | 0 | 0.1084 | 6 | false |
+| `edca-pilot` | 27 | **+3** | 0 | 0 | 0 | 0.6923 | 0 | true |
+| `kts-fidelity` | 112 | 0 | 0 | 0 | 0 | 0.3837 | 5 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0 | 0 | 0.8182 | 0 | true |
+
+**Remaining:** the form placeholder, and the `querySelector` digit-id question.
+
 ### 2026-08-12 — TC-126 struck on measurement, and the last named run held back
 
 Two items, because the first dissolved when measured.
