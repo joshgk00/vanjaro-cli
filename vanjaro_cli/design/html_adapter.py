@@ -19,10 +19,12 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from threading import Thread
 from datetime import datetime, timezone
 from pathlib import Path
+from collections.abc import Callable
 from typing import Container, Protocol
 from urllib.parse import urldefrag, urljoin, urlsplit, urlunsplit
 
-from bs4 import BeautifulSoup, Comment, Tag
+from bs4 import BeautifulSoup, Comment, NavigableString, Tag
+from soupsieve import SelectorSyntaxError
 from pydantic import JsonValue
 
 from vanjaro_cli.design.html_boundaries import (
@@ -802,13 +804,104 @@ def _with_dropped_boundary_warnings(
                 html, raw_sections, page.source_reference, text, media
             )
         )
+        warnings.extend(_section_content_warnings(html, page, text))
     return document.model_copy(update={"warnings": warnings})
 
 
-def _boundary_text_runs(boundary: Tag) -> list[str]:
+_FORM_CONTROL_TAGS = frozenset({"label", "button", "option", "select", "textarea", "legend"})
+
+# The roles `prepare_static_sections` builds with `_chrome_section`, which
+# replaces the section's content wholesale rather than extracting it.
+_REBUILT_CHROME_ROLES = frozenset({"navigation", "footer"})
+
+
+def _owned_by_a_form_control(node: NavigableString) -> bool:
+    """Whether a text run belongs to a form control rather than to the page.
+
+    A form is migrated as a placeholder listing its detected fields, never as
+    markup, so a control's own label or button text is deliberately absent and
+    must not be reported as loss.
+
+    Ownership is the control tag itself, NEVER a `<form>` ancestor: an ASP.NET
+    page wraps its entire body in one `<form runat="server">`, so on every DNN
+    source measured here a form ancestor is true of the whole page. Holding back
+    on it would have suppressed 61 of the 63 genuine losses, including a pricing
+    table and eight portfolio links.
+    """
+
+    return any(parent.name in _FORM_CONTROL_TAGS for parent in node.parents)
+
+
+def _element_for_selector(soup: BeautifulSoup, selector: str) -> Tag | None:
+    """Find the element a provenance selector names, without parsing CSS for ids.
+
+    `css_selector_for` emits `#<id>` verbatim, and a real page carries ids like
+    `1f670a38` that begin with a digit — which is not a valid CSS identifier.
+    Selecting it raises rather than returning nothing, and that took down the
+    whole analyze stage on kts-fidelity. An id lookup needs no CSS grammar.
+    """
+
+    if selector.startswith("#"):
+        return soup.find(id=selector[1:])
+    try:
+        return soup.select_one(selector)
+    except SelectorSyntaxError:
+        return None
+
+
+def _section_content_warnings(
+    html: str, page: Page, arrived_text: Sequence[str]
+) -> list[DesignWarning]:
+    """Name every section that kept less than its own boundary offered.
+
+    `boundary_content_dropped` reports a boundary no section claimed. Repairing
+    one moves the blindness a level down: once a boundary IS claimed, whatever
+    the section fails to extract from it is invisible again. contact-page proved
+    it — its contact panel arrived and stopped being reported while five of its
+    twelve text runs were still missing.
+    """
+
+    soup = BeautifulSoup(html, "html.parser")
+    warnings: list[DesignWarning] = []
+    for section in page.sections:
+        if section.semantic_role in _REBUILT_CHROME_ROLES:
+            # Chrome is rebuilt from its links, not extracted from its markup,
+            # so the rest of a header's text is absent by design — a DNN login
+            # control is not page content the visitor lost.
+            continue
+        selector = next(
+            (record.css_selector for record in section.provenance if record.css_selector), None
+        )
+        if not selector:
+            continue
+        element = _element_for_selector(soup, selector)
+        if element is None:
+            continue
+        runs = list(dict.fromkeys(_boundary_text_runs(element, skip=_owned_by_a_form_control)))
+        missing = [run for run in runs if not any(run in value for value in arrived_text)]
+        if not missing:
+            continue
+        warnings.append(
+            DesignWarning(
+                code="section_content_dropped",
+                message=(
+                    f"Section kept {len(runs) - len(missing)} of {len(runs)} visitor text "
+                    f"run(s) offered by its boundary; {len(missing)} reached no element."
+                ),
+                path=selector,
+            )
+        )
+    return warnings
+
+
+def _boundary_text_runs(
+    boundary: Tag, skip: Callable[[NavigableString], bool] | None = None
+) -> list[str]:
     runs = []
     for node in boundary.find_all(string=True):
         if isinstance(node, Comment) or node.parent.name in {"script", "style", "noscript"}:
+            continue
+        if skip is not None and skip(node):
             continue
         text = re.sub(r"\s+", " ", str(node)).strip()
         if text:

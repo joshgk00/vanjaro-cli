@@ -2867,3 +2867,149 @@ def test_markup_comments_and_scripts_are_not_counted_as_lost_content() -> None:
     dropped = [w for w in document.warnings if w.code == "boundary_content_dropped"]
     assert [w.path for w in dropped] == ["#dnn_SidePane"]
     assert "1 text run(s)" in dropped[0].message
+
+
+def _section_losses(document):
+    return {
+        w.path: w.message
+        for w in document.warnings
+        if w.code == "section_content_dropped"
+    }
+
+
+def test_a_section_that_keeps_less_than_its_boundary_offered_says_so() -> None:
+    """Once a boundary IS claimed, whatever the section fails to extract from it
+    is invisible: no loss entry, no dropped-boundary warning, and the element
+    count has nothing to compare against. contact-page's contact panel arrived
+    and stopped being reported while five of its twelve runs were still gone."""
+
+    document = design_document_from_html(
+        "<html><body><section id='dnn_content'>"
+        "<div id='dnn_TopPane' class='Pane'><h2>Give us a call</h2>"
+        "<address>Clicks and Mortar</address>"
+        "<address>PO Box 773</address></div>"
+        "</section></body></html>",
+        "https://example.invalid/contact",
+    )
+
+    losses = _section_losses(document)
+    assert list(losses) == ["#dnn_TopPane"]
+    assert "kept 1 of 3" in losses["#dnn_TopPane"]
+
+
+def test_a_section_that_kept_everything_is_not_reported() -> None:
+    document = design_document_from_html(
+        "<html><body><section id='dnn_content'>"
+        "<div id='dnn_TopPane' class='Pane'><h2>Give us a call</h2>"
+        "<p>We answer the phone every weekday morning.</p></div>"
+        "</section></body></html>",
+        "https://example.invalid/contact",
+    )
+
+    assert _section_losses(document) == {}
+
+
+def test_a_form_controls_own_text_is_not_counted_as_lost() -> None:
+    """A form is migrated as a placeholder listing its detected fields, never as
+    markup, so a label and a submit button are absent by design."""
+
+    document = design_document_from_html(
+        "<html><body><section id='dnn_content'>"
+        "<div id='dnn_TopPane' class='Pane'><h2>Get in touch</h2>"
+        "<p>We answer the phone every weekday morning.</p>"
+        "<label>Security</label><button>Send Now</button></div>"
+        "</section></body></html>",
+        "https://example.invalid/contact",
+    )
+
+    assert _section_losses(document) == {}
+
+
+def test_a_form_ancestor_does_not_hold_back_the_page_around_it() -> None:
+    """An ASP.NET page wraps its whole body in one `<form runat=server>`. Reading
+    a form ancestor as ownership suppressed 61 of the 63 measured losses,
+    including a pricing table and eight portfolio links."""
+
+    document = design_document_from_html(
+        "<html><body><form id='Form'><section id='dnn_content'>"
+        "<div id='dnn_TopPane' class='Pane'><h2>Our prices</h2>"
+        "<address>PO Box 773</address></div>"
+        "</section></form></body></html>",
+        "https://example.invalid/prices",
+    )
+
+    losses = _section_losses(document)
+    assert list(losses) == ["#dnn_TopPane"]
+    assert "kept 1 of 2" in losses["#dnn_TopPane"]
+
+
+def test_rebuilt_chrome_is_not_reported_as_losing_its_markup() -> None:
+    """A header is rebuilt from its links rather than extracted, so a DNN login
+    control is absent by design and is not content the visitor lost."""
+
+    document = design_document_from_html(
+        "<html><body>"
+        "<header id='header'><span>Freephone 0800 111 222</span>"
+        "<nav><a href='/'>Home</a><a href='/work'>Work</a>"
+        "<a href='/login'>Login</a></nav></header>"
+        "<section id='dnn_content'><div id='dnn_TopPane' class='Pane'>"
+        "<h2>Give us a call</h2><p>We answer every weekday morning.</p></div>"
+        "</section></body></html>",
+        "https://example.invalid/contact",
+    )
+
+    assert _section_losses(document) == {}
+
+
+def test_one_line_repeated_is_one_missing_run() -> None:
+    """A marquee repeats its phrase a dozen times. Counting each repetition
+    separately makes a one-line loss read as a catastrophe."""
+
+    document = design_document_from_html(
+        "<html><body><section id='dnn_content'>"
+        "<div id='dnn_TopPane' class='Pane'><h2>Give us a call</h2>"
+        "<address>PO Box 773</address><address>PO Box 773</address>"
+        "<address>PO Box 773</address></div>"
+        "</section></body></html>",
+        "https://example.invalid/contact",
+    )
+
+    assert "kept 1 of 2" in _section_losses(document)["#dnn_TopPane"]
+
+
+def test_copy_split_by_an_inline_tag_is_not_reported_as_lost() -> None:
+    """A paragraph carrying `<strong>` reaches the document as one joined value
+    while the source offers it as separate runs. Comparing for equality reports
+    every emphasised sentence on the page as missing."""
+
+    document = design_document_from_html(
+        "<html><body><section id='dnn_content'>"
+        "<div id='dnn_TopPane' class='Pane'><h2>Give us a call</h2>"
+        "<p>We answer <strong>every weekday</strong> morning without fail.</p></div>"
+        "</section></body></html>",
+        "https://example.invalid/contact",
+    )
+
+    assert _section_losses(document) == {}
+
+
+def test_an_id_beginning_with_a_digit_does_not_take_down_the_analysis() -> None:
+    """`css_selector_for` emits `#<id>` verbatim and a real page carries section
+    ids like `1f670a38`, which is not a valid CSS identifier. Selecting it
+    RAISES rather than returning nothing, and that failed the whole analyze
+    stage on kts-fidelity — the browser's `querySelector` cannot read it
+    either."""
+
+    document = design_document_from_html(
+        "<html><body>"
+        "<header class='site-header'><nav><a href='/'>Home</a><a href='/x'>Work</a></nav></header>"
+        "<section id='kts-hero'><h1>Music for everyone</h1>"
+        "<p>Lessons for every age in Detroit.</p></section>"
+        "<section id='1f670a38'><h2>Give us a call</h2>"
+        "<address>PO Box 773</address></section>"
+        "<footer class='site-footer'><p>Copyright 2026.</p></footer>"
+        "</body></html>",
+        "https://example.invalid/contact",
+    )
+
+    assert "kept 1 of 2" in _section_losses(document)["#1f670a38"]
