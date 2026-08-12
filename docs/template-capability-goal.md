@@ -782,6 +782,99 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-11 — TC-121 answer 1 of 4: the banner image, and the header was stealing it
+
+**The filed diagnosis was wrong about the cause, for the second time in this
+goal.** `_is_banner_image_section` fires perfectly: on contact-page it promotes
+`#dnn_BannerPane` to a hero section carrying `background_image` and nothing else.
+The loss is one step later. `_claim_candidates` scores boundaries by **word**
+overlap, a promoted banner has **no words**, so every candidate scored zero and
+the pairing fell to the `-index` tie-break — which is the header. Its role is
+chrome, so `prepare_static_sections` replaced the whole hero section with
+`_chrome_section(header, "navigation")`. **The banner image was discarded and the
+header took a slot it never earned**, which is precisely the failure the
+function's own comment warns about ("how a header came to wear the footer's
+DOM"). Measured: **nine zero-score claims across the nine local sources, seven of
+them this exact case.**
+
+**Three rules, each measured into existence:**
+
+1. **Pictures score after words.** A section can be entirely imagery, so the
+   comparison had to include assets — but as resolved *paths*, never tokenized
+   into words, which is exactly what `_raw_section_words` excludes asset keys to
+   prevent. Words still decide first; pictures only break the tie the old rule
+   was losing.
+2. **Sharing nothing claims nothing.** A section keeping its own extracted
+   content beats a section wearing a stranger's DOM, because enrichment rebuilds
+   content from the claimed subtree.
+3. **A section may claim the chrome only when it says nothing the chrome does not
+   already say.** This one was not planned — it was forced. Rules 1 and 2 alone
+   cost **wwo two elements**, and naming them found the reason: the wordless hero
+   had been grabbing the header *by accident*, shielding a later section that
+   shares the site's phone number with the nav. Freed of that accident, wwo's
+   footer block claimed the header and was replaced by chrome, losing its
+   tagline, "[email protected]" and "(248) 690-6559" — and putting the nav at
+   the END of the page. The contribution test is the same one `_without_wrappers`
+   already applies one function above.
+
+**RETENTION 404 → 412, no project down**, +1 on eight projects (cmw-blog,
+contact-page, oasis-probe, wwo, post-security, rendered-home, edca-pilot,
+kts-fidelity). **Dropped boundaries 18 → 10.**
+
+**The cost, stated plainly: blocking rose on seven projects, and `contact-page`
+and `kts-fidelity` go from `valid: true` to false.** The new sections are real —
+contact-page's is a `photo_band` holding the banner image — and nothing in the
+library can hold a lone background band, the same gap the Quality HC benchmark
+recorded. This is the TC-115 shape: coverage fell on five projects and rose on
+two because content that could never bind is now arriving instead of vanishing.
+Retention is the arbiter and it rose with no drops.
+
+**A finding worth more than the repair: a blocked section is invisible to the
+capability queue.** The gap report reads *matched* entries, so a section that
+blocks produces no entry at all — the queue still shows 17 gaps and not one of
+them is the background band that now blocks seven sections. Silent drops became
+blocking sections, and both are invisible to the report that is supposed to rank
+library gaps. Filed as part of TC-121's remaining work.
+
+**A measurement error I made and caught.** The pairing diff run against the
+*fetched* HTML showed no change on kts-fidelity, so I first concluded kts's move
+was run-to-run variance. It reproduced three times, and with the change stashed
+kts measured 94/0 blocking. Analysis with `--render` extracts from the **rendered
+DOM**, not the fetched HTML — the probe was reading a different input than the
+pipeline. Compare what each side is sampling before concluding anything.
+
+**Twelve mutations, twelve distinct failures** — media scoring removed, media
+outranking words, zero score still claiming, chrome guard removed, chrome guard
+loosened to any overlap, chrome never claimable, chrome emptiness test dropped,
+background ignored, media compared as an exact string, media suffix matched
+without a path boundary, videos ignored on the raw side, videos ignored on the
+DOM side. Three needed fixtures built to isolate them from a neighbour that
+covered the same case, including a header and a banner sharing one logo — the
+only way the emptiness test in `_claims_the_chrome` can be reached.
+
+**Evidence.** Suite 2,223 → 2,233 passing, 16 deselected. Corpus identical on all
+ten metrics. All ten projects re-analysed with `--refresh --render`
+(`execution.action == "execute"`) and re-planned with `--refresh`.
+
+| site | elements | Δ | dropped | provenance | styles | coverage | blocking | losses | valid |
+|---|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 51 | +1 | 2 | 51 rendered | 93 | 0.0 | 2 | 1 | false |
+| `contact-page` | 14 | +1 | 4 | 14 rendered | 93 | 0.6 | 1 | 1 | false |
+| `oasis-probe` | 32 | +1 | 0 | 32 rendered | 186 | 0.087 | 4 | 1 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 22 rendered | 62 | 0.0 | 1 | 1 | false |
+| `wwo` | 33 | +1 | 1 | 30 rendered, 3 static | 155 | 0.1667 | 3 | 5 | false |
+| `post-security` | 27 | +1 | 2 | 27 rendered | 93 | 0.0 | 2 | 2 | false |
+| `rendered-home` | 87 | +1 | 1 | 84 rendered, 3 static | 218 | 0.1538 | 6 | 7 | false |
+| `edca-pilot` | 24 | +1 | 0 | 24 rendered | 155 | 0.6923 | 0 | 1 | true |
+| `kts-fidelity` | 95 | +1 | 0 | 95 rendered | 384 | 0.9565 | 1 | 2 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 27 rendered | 155 | 0.8182 | 0 | 0 | true |
+
+**Remaining in TC-121:** the footer strips (5), the footer taglines (3), the
+contact panel (3 real elements on contact-page), and the form placeholder. Note
+that kts's copyright line `#1f670a38` now arrives as a one-element `biography`
+section that blocks — the footer-strip answer got more urgent, not less, because
+the loss is now loud instead of silent.
+
 ### 2026-08-11 — TC-120: a page boundary nothing claimed, and nothing said so
 
 The repair loop closed with the queue held on evidence, so this iteration took
