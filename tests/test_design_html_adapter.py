@@ -3113,6 +3113,27 @@ def test_an_item_field_names_every_paragraph_it_was_given() -> None:
     assert _roles(section, "tag") == ["Nov 13, 2017", "Sep 21, 2017"]
 
 
+def test_a_card_titled_with_an_h5_still_has_a_title() -> None:
+    """A card's title is whatever heading the builder gave it. The section-level
+    search has read h1 through h6 since h5/h6 extraction was fixed for sections;
+    the card branch was never widened with it, so rendered-home's three feature
+    card titles reached nothing."""
+
+    section = _enriched(
+        "<section><h2>What we do</h2>"
+        "<div class='card'><img src='/a.jpg'><h5>Always Current Design</h5>"
+        "<p>We keep it fresh.</p></div>"
+        "<div class='card'><img src='/b.jpg'><h6>Mobile Friendly Websites</h6>"
+        "<p>They work anywhere.</p></div></section>",
+        "feature_cards",
+    )
+
+    assert _roles(section, "card_title") == [
+        "Always Current Design",
+        "Mobile Friendly Websites",
+    ]
+
+
 def test_a_gallery_card_calls_its_line_of_text_a_type_not_a_body() -> None:
     """A project gallery's line under the title is what kind of work it was, and
     it binds to `item.tag` through the `eyebrow` role. The field name is now

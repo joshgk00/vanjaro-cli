@@ -116,6 +116,9 @@ _IMAGE_ROLE_BY_SECTION = {"hero": "hero_media", "photo_band": "background_media"
 
 _TITLE_MAXIMUM_CHARACTERS = 80
 
+# A repeated item's title is whatever heading the builder used for it.
+_HEADING_LEVELS = ["h2", "h3", "h4", "h5", "h6"]
+
 # Narrower than _INLINE_TAGS, which exists to keep card discovery off leaf
 # nodes. A paragraph is a text block even though it is never a card.
 _PHRASING_TAGS = frozenset(
@@ -561,7 +564,13 @@ def enrich_section_from_static_dom(
                     fields["title"] = add("heading", "step_title", heading.get_text(" ", strip=True), group_id=group_id)
             elif role in _CARD_GRID_REPEAT_KIND:
                 media = item.find("img")
-                heading = item.find(["h2", "h3", "h4"])
+                # h5 and h6 included: a card's title is whatever heading the
+                # builder gave it, and rendered-home writes its feature cards
+                # with `<h5>`. The section-level search has read h1 through h6
+                # since h5/h6 extraction was fixed for sections; the card branch
+                # was never widened with it, so three card titles reached
+                # nothing.
+                heading = item.find(_HEADING_LEVELS)
                 # The first paragraph is not the body. `normalize_text_blocks`
                 # rewrites a text-bearing leaf div into a `<p>`, so a blog
                 # card's date badge becomes its first paragraph — and every
