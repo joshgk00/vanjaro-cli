@@ -3048,6 +3048,62 @@ def test_a_card_keeps_its_prose_and_its_date_separately() -> None:
     assert bodies[0].startswith("When it comes to building a website")
 
 
+def test_a_card_keeps_every_paragraph_it_carries() -> None:
+    """A card is allowed more than one paragraph. Keeping only the first cost a
+    class card its whole description and a blog card its byline — the template
+    owns one body slot, so the rest arrive as content the planner reports rather
+    than as content nothing knows was there."""
+
+    section = _enriched(
+        "<section><h2>Most popular classes</h2>"
+        "<div class='card'><img src='/one.jpg'><h3>Prelude</h3>"
+        "<p>Age 0-5 yrs</p><p>Canta y Baila Conmigo is a unique programme.</p></div>"
+        "<div class='card'><img src='/two.jpg'><h3>Finale</h3>"
+        "<p>Lessons for adults</p><p>By Richard Clarkson</p></div></section>",
+        "feature_cards",
+    )
+
+    assert _roles(section, "card_body") == [
+        "Age 0-5 yrs",
+        "Canta y Baila Conmigo is a unique programme.",
+        "Lessons for adults",
+        "By Richard Clarkson",
+    ]
+    # The extra paragraph belongs to the card that carried it, not to the
+    # section — group membership is what says which repeated thing a value
+    # came from, and the corpus scores the pipeline on getting that right.
+    group_id = section["groups"][0]["id"]
+    assert {
+        element["group_id"]
+        for element in section["content"]
+        if element["role"] == "card_body"
+    } == {group_id}
+
+
+def test_the_first_paragraph_is_still_the_one_the_template_binds() -> None:
+    """The extra paragraphs are content, not a rebinding: `item.body` owns one
+    slot per card and the first non-date paragraph keeps it."""
+
+    section = _enriched(
+        "<section><h2>Classes</h2>"
+        "<div class='card'><img src='/one.jpg'><h3>Prelude</h3>"
+        "<div class='list-date'>Nov 13, 2017</div>"
+        "<p>Age 0-5 yrs</p><p>A longer description follows.</p></div>"
+        "<div class='card'><img src='/two.jpg'><h3>Finale</h3>"
+        "<div class='list-date'>Sep 21, 2017</div>"
+        "<p>Lessons for adults</p><p>Another description.</p></div></section>",
+        "blog_cards",
+    )
+
+    group = section["groups"][0]
+    assert [item["fields"]["body"] for item in group["items"]] == [
+        element["id"]
+        for element in section["content"]
+        if element["value"] in {"Age 0-5 yrs", "Lessons for adults"}
+    ]
+    assert _roles(section, "tag") == ["Nov 13, 2017", "Sep 21, 2017"]
+
+
 def test_a_card_with_no_date_still_reads_its_first_paragraph_as_body() -> None:
     """Most card grids carry no date at all; the rule must not cost them their
     body copy."""

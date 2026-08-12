@@ -591,6 +591,15 @@ def enrich_section_from_static_dom(
                     field = "type" if role == "project_gallery" else "body"
                     element_role = "eyebrow" if field == "type" else "card_body"
                     fields[field] = add("text", element_role, body.get_text(" ", strip=True), group_id=group_id)
+                # A card is allowed more than one paragraph. Keeping only the
+                # first dropped a class card's whole description and a blog
+                # card's byline; the template owns one body slot, so the rest
+                # arrive as content the planner reports rather than as content
+                # nothing knows was there.
+                for extra in paragraphs:
+                    if extra is published or extra is body:
+                        continue
+                    add("text", "card_body", extra.get_text(" ", strip=True), group_id=group_id)
             else:
                 fields["text"] = add("list_item", "benefit", item.get_text(" ", strip=True), group_id=group_id)
             if fields:
