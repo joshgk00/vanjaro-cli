@@ -853,6 +853,83 @@ asymmetry a failing check rather than a discovery.
 
 ## Progress log
 
+### 2026-08-12 — TC-124: the overflow was already reportable, and I had orphaned it
+
+**The filing was wrong about the mechanism.** It said an item-field overflow "is
+reported by nothing". The planner has reported it all along:
+
+```python
+if len(candidates) > contract.slots_per_owner:
+    issues.append(f"{section.id}/{item.id}: field '{semantic_field}' has "
+                  f"{len(candidates)} values but owns {contract.slots_per_owner} physical slots")
+```
+
+It never fired because `candidates = _item_elements(item, elements, field)` reads
+the elements the **item's field names**, and last iteration I emitted the extra
+card paragraphs with a `group_id` but left them out of `fields`. They reached the
+document and were invisible to the plan — orphans inside their own group.
+
+**And the home already existed, again.** `RepeatGroupItem.fields` is typed
+`dict[str, str | list[str]]` and `_item_elements` already does
+`ids = [identifiers] if isinstance(identifiers, str) else identifiers`. Nothing
+needed inventing — the field just had to name every paragraph it was given. Third
+iteration running where the fix was to use a contract that was already there.
+
+**The queue gained exactly the entry this loop produced the evidence for.**
+22 → 24 gaps, and **rank 1 is now `Cards/feature-cards-4up` / `item.body`**:
+`kind: insufficient_capacity`, `owned_slots: 1`, `demanded_slots: 2`, across
+**two projects and two sections** (kts-fidelity and rendered-home) — which is the
+two-source bar a governed release needs. `Cards/blog-post-cards-4up` / `item.body`
+joins it.
+
+**Retention unchanged at 458 on every project**, which is correct: this names
+content that already arrived. Dropped boundaries hold at 9 and thin sections at
+3.
+
+**The cost is real and is the established regime.** An overflow blocks its
+section, so kts-fidelity goes 1 → 3 blocking (coverage 0.8148 → 0.4691) and
+rendered-home 6 → 7 (0.1954 → 0.0460). That is exactly what a *section*-level
+overflow has always done — edca-pilot blocked on `split-media` until pack 1.8.0
+widened it from one body slot to three, and then went valid. The difference now
+is that the queue says which template to widen instead of the loss being a
+coverage number nobody can attribute.
+
+**A mutation that unit tests could not catch, and the corpus could.** Making the
+field *always* a list passed all 323 unit tests. The corpus compares
+`actual_reference == corresponding.id` against a single id string, so every
+annotated card's binding broke: `group_field_association_accuracy` **79/79 →
+70/79** and the benchmark failed its threshold. The right fixture for a
+serialisation contract the annotations encode is the corpus, not a unit test —
+and a mutation sweep that only runs `pytest` will call that rule unproven.
+
+**Six further mutations, six distinct failures** — extras left out of the field,
+the field never set, the bound paragraph no longer first, the date joining the
+body field, the gallery using the body field name, and the gallery emitting
+`card_body` instead of `eyebrow`. The last two needed a new fixture: the field
+name is now chosen outside the guard that emits the paragraph, so `project_gallery`
+keeping `type`/`eyebrow` had to be pinned.
+
+**Still unaddressed and now clearly the same shape:** a **blocked** section
+produces no gap entry, because the report reads matched entries. Every section
+this change blocks is one the queue can no longer see for any *other* field it
+loses. The two findings want one answer.
+
+| site | elements | Δ | dropped | thin | coverage | blocking | losses | valid |
+|---|---|---|---|---|---|---|---|---|
+| `cmw-blog` | 61 | 0 | 2 | 1 | 0.0 | 2 | 1 | false |
+| `contact-page` | 20 | 0 | 3 | 0 | 0.5455 | 1 | 2 | false |
+| `oasis-probe` | 32 | 0 | 0 | 0 | 0.087 | 4 | 1 | false |
+| `oasis-lighting` | 22 | 0 | 0 | 0 | 0.0 | 1 | 1 | false |
+| `wwo` | 42 | 0 | 1 | 0 | 0.0909 | 4 | 5 | false |
+| `post-security` | 27 | 0 | 2 | 1 | 0.0 | 2 | 2 | false |
+| `rendered-home` | 96 | 0 | 1 | 1 | 0.0460 | 7 | 12 | false |
+| `edca-pilot` | 24 | 0 | 0 | 0 | 0.6923 | 0 | 1 | true |
+| `kts-fidelity` | 107 | 0 | 0 | 0 | 0.4691 | 3 | 2 | false |
+| `northstar-recheck` | 27 | 0 | 0 | 0 | 0.8182 | 0 | 0 | true |
+
+**Evidence.** Suite 2,260 → 2,261 passing, 16 deselected. Corpus identical on all
+ten metrics.
+
 ### 2026-08-12 — a card is allowed more than one paragraph
 
 Took kts-fidelity's two thin sections. They looked like two small, separate
