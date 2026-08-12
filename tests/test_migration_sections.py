@@ -2894,3 +2894,38 @@ def test_a_builder_pane_is_recognised_exactly_as_the_browser_selects_it() -> Non
 
     assert [tag["id"] for tag in soup.find_all(is_builder_pane)] == ["dnn_TopPane", "dnn_Wide"]
     assert soup.find_all(is_builder_pane) == soup.select("[id^='dnn_'][class*='Pane']")
+
+
+def test_a_postal_address_is_extracted_as_a_paragraph() -> None:
+    """A section the boundary rules leave unclaimed keeps the raw extractor's
+    content rather than a rebuild from its subtree, so the address has to be
+    read here too — `<address>` was the one block of prose nothing looked at."""
+
+    sections = extract_sections(
+        "<html><body>"
+        "<header class='site-header'><nav><a href='/'>Home</a><a href='/x'>Work</a></nav></header>"
+        "<section id='dnn_content'><div id='dnn_TopPane' class='Pane'>"
+        "<h2>Give us a call</h2>"
+        "<address><strong>Clicks and Mortar</strong><br>PO Box 773</address>"
+        "</div></section>"
+        "<footer class='site-footer'><p>Copyright 2026.</p></footer>"
+        "</body></html>",
+        BASE_URL,
+    )
+
+    paragraphs = [p for section in sections for p in section["content"].get("paragraphs", [])]
+    assert "Clicks and Mortar PO Box 773" in paragraphs
+
+
+def test_a_section_that_is_itself_an_address_extracts_its_own_text() -> None:
+    """`_find_all_with_self` exists because wrapper descent can promote a bare
+    block to a section; it now takes a list of names, and the element-itself
+    case must still work for each of them."""
+
+    from bs4 import BeautifulSoup
+
+    from vanjaro_cli.migration.sections import _extract_content
+
+    element = BeautifulSoup("<address>PO Box 773</address>", "html.parser").find("address")
+
+    assert _extract_content(element, BASE_URL)["paragraphs"] == ["PO Box 773"]

@@ -729,13 +729,14 @@ def _image_src(img: Tag) -> str:
     return src
 
 
-def _find_all_with_self(element: Tag, name: str) -> list[Tag]:
+def _find_all_with_self(element: Tag, name: str | list[str]) -> list[Tag]:
     """``find_all`` excludes the element itself; a bare <h1>/<p>/<img>
     promoted to a top-level section by wrapper descent must still extract
     its own content (Duda pages float the page heading as a direct child
     of the body wrapper)."""
     matches = element.find_all(name)
-    if element.name == name:
+    names = [name] if isinstance(name, str) else name
+    if element.name in names:
         return [element, *matches]
     return matches
 
@@ -757,7 +758,11 @@ def _extract_content(element: Tag, base_url: str) -> dict:
                 headings.append(f"{text} — {price}" if price else text)
 
     paragraphs = []
-    for tag in _find_all_with_self(element, "p"):
+    # `<address>` alongside `<p>`: a postal address is prose a visitor reads,
+    # and nothing else in the extractor looks at the tag, so contact-page's
+    # `Clicks & Mortar Websites / PO Box 773 / Troy, MI 48099` reached no
+    # section at all.
+    for tag in _find_all_with_self(element, ["p", "address"]):
         text = tag.get_text(separator=" ", strip=True)
         if not text:
             continue

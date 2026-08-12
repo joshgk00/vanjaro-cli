@@ -2886,8 +2886,7 @@ def test_a_section_that_keeps_less_than_its_boundary_offered_says_so() -> None:
     document = design_document_from_html(
         "<html><body><section id='dnn_content'>"
         "<div id='dnn_TopPane' class='Pane'><h2>Give us a call</h2>"
-        "<address>Clicks and Mortar</address>"
-        "<address>PO Box 773</address></div>"
+        "<div class='meta'><span>|</span>PO Box 773</div></div>"
         "</section></body></html>",
         "https://example.invalid/contact",
     )
@@ -2933,14 +2932,14 @@ def test_a_form_ancestor_does_not_hold_back_the_page_around_it() -> None:
     document = design_document_from_html(
         "<html><body><form id='Form'><section id='dnn_content'>"
         "<div id='dnn_TopPane' class='Pane'><h2>Our prices</h2>"
-        "<address>PO Box 773</address></div>"
+        "<div class='meta'><span>|</span>PO Box 773</div></div>"
         "</section></form></body></html>",
         "https://example.invalid/prices",
     )
 
     losses = _section_losses(document)
     assert list(losses) == ["#dnn_TopPane"]
-    assert "kept 1 of 2" in losses["#dnn_TopPane"]
+    assert "kept 1 of 3" in losses["#dnn_TopPane"]
 
 
 def test_rebuilt_chrome_is_not_reported_as_losing_its_markup() -> None:
@@ -2968,13 +2967,13 @@ def test_one_line_repeated_is_one_missing_run() -> None:
     document = design_document_from_html(
         "<html><body><section id='dnn_content'>"
         "<div id='dnn_TopPane' class='Pane'><h2>Give us a call</h2>"
-        "<address>PO Box 773</address><address>PO Box 773</address>"
-        "<address>PO Box 773</address></div>"
+        + "<div class='meta'><span>|</span>PO Box 773</div>" * 3
+        + "</div>"
         "</section></body></html>",
         "https://example.invalid/contact",
     )
 
-    assert "kept 1 of 2" in _section_losses(document)["#dnn_TopPane"]
+    assert "kept 1 of 3" in _section_losses(document)["#dnn_TopPane"]
 
 
 def test_copy_split_by_an_inline_tag_is_not_reported_as_lost() -> None:
@@ -3006,13 +3005,13 @@ def test_an_id_beginning_with_a_digit_does_not_take_down_the_analysis() -> None:
         "<section id='kts-hero'><h1>Music for everyone</h1>"
         "<p>Lessons for every age in Detroit.</p></section>"
         "<section id='1f670a38'><h2>Give us a call</h2>"
-        "<address>PO Box 773</address></section>"
+        "<div class='meta'><span>|</span>PO Box 773</div></section>"
         "<footer class='site-footer'><p>Copyright 2026.</p></footer>"
         "</body></html>",
         "https://example.invalid/contact",
     )
 
-    assert "kept 1 of 2" in _section_losses(document)["#1f670a38"]
+    assert "kept 1 of 3" in _section_losses(document)["#1f670a38"]
 
 
 _BLOG_CARD_GRID = (
@@ -3081,3 +3080,53 @@ def test_a_card_whose_only_paragraph_is_a_date_has_no_body() -> None:
 
     assert _roles(section, "tag") == ["Nov 13, 2017", "Sep 21, 2017", "Jun 27, 2017"]
     assert _roles(section, "card_body") == []
+
+
+def test_a_postal_address_arrives_as_body_copy() -> None:
+    """An `<address>` is prose a visitor reads, and nothing in the extractor
+    looked at the tag — contact-page's `Clicks & Mortar Websites / PO Box 773 /
+    Troy, MI 48099` reached no element at all."""
+
+    section = _enriched(
+        "<section><h2>Give us a call</h2>"
+        "<address><strong>Clicks and Mortar</strong><br>PO Box 773<br>"
+        "Troy, MI 48099</address></section>",
+        "call_to_action",
+    )
+
+    bodies = [e["value"] for e in section["content"] if e["role"] in {"body", "subtitle"}]
+    assert bodies == ["Clicks and Mortar PO Box 773 Troy, MI 48099"]
+
+
+def test_a_list_no_repeat_group_claimed_still_arrives() -> None:
+    """Only the `stats` and `split_feature` branches ever read an `<li>`, so a
+    contact block's telephone, email and handle survived solely because the
+    section had been misread as a stats band."""
+
+    section = _enriched(
+        "<section><h2>Give us a call</h2><ul>"
+        "<li><strong>Phone :</strong> (248) 690-6559</li>"
+        "<li><strong>Email :</strong> info(at)example(dot)com</li></ul></section>",
+        "call_to_action",
+    )
+
+    listed = [e["value"] for e in section["content"] if e["role"] == "benefit"]
+    assert listed == [
+        "Phone : (248) 690-6559",
+        "Email : info(at)example(dot)com",
+    ]
+
+
+def test_a_list_a_repeat_group_owns_is_not_emitted_twice() -> None:
+    """`split_feature` takes every `<li>` as a repeat item. Emitting them again
+    as loose content would put each benefit in the document twice."""
+
+    section = _enriched(
+        "<section><h2>Each website includes</h2><ul>"
+        "<li>Hosting for your website</li>"
+        "<li>Professional design</li></ul></section>",
+        "split_feature",
+    )
+
+    listed = [e["value"] for e in section["content"] if e["role"] == "benefit"]
+    assert listed == ["Hosting for your website", "Professional design"]

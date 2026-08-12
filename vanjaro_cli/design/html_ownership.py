@@ -477,9 +477,12 @@ def enrich_section_from_static_dom(
             title = inferred_title
         else:
             inferred_title = None
+        # `<address>` reads as body copy: it is prose a visitor reads, and
+        # nothing else here looks at the tag, so contact-page's postal address
+        # reached no element at all.
         body_paragraphs = [
             paragraph
-            for paragraph in root.find_all("p")
+            for paragraph in root.find_all(["p", "address"])
             if id(paragraph) not in repeated_nodes
             and paragraph is not inferred_title
             and not _is_only_a_link(paragraph)
@@ -633,6 +636,17 @@ def enrich_section_from_static_dom(
                 continue
             element_role = "subtitle" if paragraph is deck else "body"
             add("text", element_role, paragraph.get_text(" ", strip=True))
+        # A list item no repeat group claimed. Only the `stats` and
+        # `split_feature` branches ever read an `<li>`, so a contact block's
+        # telephone, email and handle survived solely because the section had
+        # been misread as a stats band — and correcting that classification
+        # took the list with it. A list is content whatever the section is.
+        for item in root.find_all("li"):
+            if id(item) in repeated_nodes:
+                continue
+            listed = item.get_text(" ", strip=True)
+            if listed:
+                add("list_item", "benefit", listed)
         # Who a quote is credited to. Only the testimonials branch read a `<cite>`,
         # so the moment a section holding a pull-quote stopped being testimonials
         # its attribution left the document — "Walt Whitman" under a line of

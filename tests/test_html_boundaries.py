@@ -456,3 +456,44 @@ def test_sections_with_no_words_do_not_make_every_pane_a_container() -> None:
         "#dnn_BannerPane",
         "#dnn_PhotoPane",
     ]
+
+
+def test_a_labelled_contact_list_is_not_a_stats_band() -> None:
+    """A bold run inside a list item is a shape, not a kind of thing. A contact
+    block writes `<li><strong>Phone :</strong> (248) 690-6559</li>`, and reading
+    it as a stats band sent each item through `_stat_parts`, which took the label
+    as the value and dropped the number beside it."""
+
+    role = _role(
+        "<section><h2>Need to talk to someone?</h2><ul>"
+        "<li><strong>Phone :</strong> (248) 690-6559</li>"
+        "<li><strong>Email :</strong> info(at)example(dot)com</li>"
+        "<li><strong>Twitter :</strong> @example</li></ul></section>"
+    )
+
+    assert role != "stats"
+
+
+def test_a_band_of_real_numbers_is_still_a_stats_band() -> None:
+    """The guard must not swallow the real thing."""
+
+    role = _role(
+        "<section><h2>By the numbers</h2><ul>"
+        "<li><strong>10</strong><span>Professional Instructors</span></li>"
+        "<li><strong>250</strong><span>Students</span></li></ul></section>"
+    )
+
+    assert role == "stats"
+
+
+def test_a_section_that_calls_itself_stats_is_believed() -> None:
+    """The author's own word outranks the inference, as it does for
+    testimonials."""
+
+    role = _role(
+        "<section class='stats-band'><h2>Numbers</h2><ul>"
+        "<li><strong>Phone :</strong> 555</li>"
+        "<li><strong>Email :</strong> hi</li></ul></section>"
+    )
+
+    assert role == "stats"

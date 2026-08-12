@@ -13,6 +13,7 @@ from vanjaro_cli.migration.sections import (
     dated_card_kind,
     has_form_fields,
     is_builder_pane,
+    is_stat_value,
 )
 
 
@@ -155,6 +156,21 @@ def _without_wrappers(candidates: list[Tag]) -> list[Tag]:
             continue
         kept.append(element)
     return kept
+
+
+def _stat_labelled_items(element: Tag) -> int:
+    """Count list items whose bold run reads as a stat's value.
+
+    `is_stat_value` already knows what makes a stat a stat — a short token
+    carrying no letters — and is what the ownership layer uses to split one.
+    Asking it here keeps the classifier and the extractor to one answer.
+    """
+
+    return sum(
+        1
+        for strong in element.select("li strong")
+        if is_stat_value(strong.get_text(" ", strip=True))
+    )
 
 
 def _normalized_words(value: str) -> set[str]:
@@ -376,7 +392,12 @@ def static_role(element: Tag, section_index: int) -> str:
     quotes = element.find_all("blockquote")
     if "testimonial" in hints or len(quotes) >= 2 or (quotes and element.find("img") is None):
         return "testimonials"
-    if "stats" in hints or len(element.select("li strong")) >= 2:
+    # A bold run inside a list item is a shape, not a kind of thing. A contact
+    # block writes `<li><strong>Phone :</strong> (248) 690-6559</li>`, which has
+    # exactly that shape and is not a stats band — and reading it as one sent
+    # each item through `_stat_parts`, which took the label as the value and
+    # dropped the telephone number, the email and the handle beside it.
+    if "stats" in hints or _stat_labelled_items(element) >= 2:
         return "stats"
     if "process" in hints or ("process" in text[:80] and len(element.select(".elementor-column")) >= 2):
         return "process_steps"
