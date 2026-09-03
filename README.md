@@ -137,6 +137,13 @@ vanjaro project pack upgrade artifacts/projects/example \
 This transaction is offline: it snapshots the project, replans against the
 attested target catalog, invalidates stale approvals, and never calls a portal.
 
+Score every committed offline design translation corpus (HTML/Figma and
+assisted-image) in one run and combine the result into a single table:
+
+```bash
+vanjaro migrate benchmark-all --output artifacts/benchmarks/<name>
+```
+
 ### Release readiness
 
 The aggregate audit consumes hash-bound local evidence and never contacts or

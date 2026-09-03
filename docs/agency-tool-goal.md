@@ -710,6 +710,39 @@ Verification: 2,638 non-integration tests pass with 16 live integrations
 deselected; both benchmarks pass under `artifacts/benchmarks/retention-gate`
 and `retention-gate-image` with no threshold or regression failures.
 
+### 2026-09-03 — One benchmark command across every source kind
+
+- The offline benchmark scored one manifest per invocation, so every prior
+  progress entry reported two separate runs and no single number existed
+  across the three source kinds. Added `vanjaro migrate benchmark-all
+  --output DIR [--manifest PATH ...] [--json]` and the pure
+  `vanjaro_cli/design/benchmark_combined.py`, which lays the per-corpus
+  `BenchmarkReport` objects out as one metric-by-corpus table. It writes each
+  corpus's own `benchmark.json`/`benchmark.md` under its manifest directory
+  name plus `combined.json` and `combined.md`, and exits nonzero if any corpus
+  fails.
+- First combined run (`artifacts/benchmarks/combined`), both corpora passing:
+
+  | Metric | design-benchmarks | design-image-benchmarks |
+  |---|---:|---:|
+  | section_boundary_precision | 1.0000 (25/25) | 1.0000 (3/3) |
+  | section_boundary_recall | 1.0000 (25/25) | 1.0000 (3/3) |
+  | semantic_role_accuracy | 1.0000 (25/25) | 1.0000 (3/3) |
+  | visitor_content_retention | 1.0000 (127/127) | 1.0000 (11/11) |
+  | group_field_association_accuracy | 1.0000 (79/79) | 1.0000 (3/3) |
+  | asset_association_accuracy | 1.0000 (15/15) | not_measurable |
+  | responsive_observation_coverage | 0.8864 (39/44) | 1.0000 (6/6) |
+  | template_top1_accuracy | 0.9200 (23/25) | 1.0000 (2/2) |
+  | template_top3_accuracy | 1.0000 (25/25) | 1.0000 (2/2) |
+  | high_confidence_precision | 0.9474 (18/19) | 1.0000 (2/2) |
+
+- The image column's small denominators are the honest shape of that corpus:
+  one case, three sections. Widening it stays gated on provider credentials.
+
+Verification: 2,648 non-integration tests pass with 16 live integrations
+deselected; `benchmark-all` exits 0 with no threshold or regression failures
+on either corpus.
+
 ## Completion rule
 
 Passing unit tests or finishing one migration does not complete this goal. The

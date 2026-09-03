@@ -23,6 +23,7 @@ from vanjaro_cli.commands.migrate_gap_report_cmd import gap_report
 from vanjaro_cli.commands.migrate_verify_cmd import verify, verify_all
 from vanjaro_cli.commands.migrate_visual_cmd import visual_capture
 from vanjaro_cli.commands.migrate_analyze_cmd import analyze
+from vanjaro_cli.commands.migrate_benchmark_all_cmd import benchmark_all
 from vanjaro_cli.commands.migrate_benchmark_cmd import benchmark
 from vanjaro_cli.design.html_adapter import HtmlAdapterError, convert_legacy_crawl
 from vanjaro_cli.design.serialization import write_design_document
@@ -63,6 +64,7 @@ migrate.add_command(verify_all)
 migrate.add_command(visual_capture)
 migrate.add_command(analyze)
 migrate.add_command(benchmark)
+migrate.add_command(benchmark_all)
 
 
 def _write_json(path: Path, data: object) -> None:
