@@ -1,0 +1,16 @@
+{
+  "backup_path": "history/contract-migrations/project-v1.0.json",
+  "changes": [
+    "schema_version:1.0->1.1",
+    "stages.launch:added-pending"
+  ],
+  "input_sha256": "be6ec1d28d892e0fb5a27eb760e7d619208e2c1354035ebbdf79e2a304e8f052",
+  "manifest_path": "project.json",
+  "migration_id": "project-1.0-to-1.1",
+  "output_sha256": "b474cb8bae695d85f7855f110e1a24976514cbb187f3c30f5f3a1cb16ddb2f9f",
+  "receipt_path": "history/contract-migrations/project-1.0-to-1.1.json",
+  "schema_version": "project-migration-report-v1",
+  "source_version": "1.0",
+  "status": "applied",
+  "target_version": "1.1"
+}
