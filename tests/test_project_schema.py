@@ -26,7 +26,7 @@ def test_project_schema_is_strict_versioned_and_requires_isolation_fields() -> N
     assert schema["$schema"] == "https://json-schema.org/draft/2020-12/schema"
     assert schema["$id"].endswith("agency-project-v1.schema.json")
     assert schema["additionalProperties"] is False
-    assert schema["properties"]["schema_version"]["const"] == "1.0"
+    assert schema["properties"]["schema_version"]["const"] == "1.1"
     assert {"target", "agency_pack", "sources", "stages", "approvals", "audit"} <= set(
         schema["required"]
     )

@@ -23,6 +23,7 @@ from vanjaro_cli.project import (
     ApprovalRecord,
     ApprovalStatus,
     load_manifest,
+    migrate_project_manifest,
     write_manifest,
 )
 
@@ -45,6 +46,7 @@ MUTABLE = (
 def _copy_project(source: Path, destination: Path) -> Path:
     assert source.is_dir(), f"missing representative project: {source}"
     shutil.copytree(source, destination)
+    migrate_project_manifest(destination, apply=True)
     return destination
 
 

@@ -66,6 +66,12 @@ Every command supports `--json` for structured output — ideal for scripting an
 
 ### Agency projects
 
+For a new client, start with the
+[isolated migration portal runbook](docs/isolated-migration-portal-runbook.md).
+It previews and fingerprints a blank child portal before any mutation, verifies
+the saved profile and portal identity, and then connects that target to the
+guarded HTML, Figma, or image project workflow.
+
 ```bash
 # Initialize a project from a live site, Figma file, or reference images.
 vanjaro project init artifacts/projects/example \
@@ -73,11 +79,26 @@ vanjaro project init artifacts/projects/example \
   --target-profile example-client \
   --source live_html=https://example.com/
 
-# Inspect, analyze, plan, and preview the resumable workflow.
+# Inspect, analyze, plan, and preview exactly the next build stage.
 vanjaro project status artifacts/projects/example
 vanjaro project analyze artifacts/projects/example
 vanjaro project plan artifacts/projects/example
-vanjaro project build artifacts/projects/example --through verify --dry-run
+vanjaro project build artifacts/projects/example --through verify \
+  --dry-run --by "Agency Operator" --json
+```
+
+Save the returned `receipt` object as strict UTF-8 JSON. Apply that one stage
+only with the same modes and ceiling plus `--review-receipt`,
+`--confirm-build <receipt fingerprint>`, and the same `--by` identity. Then
+preview again for the next stage. See the runbook for a PowerShell example that
+saves the detached receipt safely.
+
+Project schema migrations are explicit and review-first. A v1.0 workspace is
+never silently enriched while loading:
+
+```bash
+vanjaro project migrate-contract artifacts/projects/example
+vanjaro project migrate-contract artifacts/projects/example --apply
 ```
 
 Image projects declare page, breakpoint, and viewport ownership. Automatic
@@ -115,6 +136,86 @@ vanjaro project pack upgrade artifacts/projects/example \
 
 This transaction is offline: it snapshots the project, replans against the
 attested target catalog, invalidates stale approvals, and never calls a portal.
+
+### Release readiness
+
+The aggregate audit consumes hash-bound local evidence and never contacts or
+mutates a portal:
+
+```bash
+vanjaro release verify release/agency-release-contract.json \
+  --repository-root . \
+  --output artifacts/releases/agency-release-audit.json \
+  --json
+```
+
+It exits nonzero for failed, missing, stale, unsupported, or incomplete gates.
+By default it validates declared test evidence without executing repository
+code, so test and dependent control gates remain incomplete. Add
+`--execute-tests` only after reviewing the repository to explicitly authorize
+the governed pytest rerun. That option executes repository-controlled Python
+with the caller's local filesystem and process authority. Its sanitized
+subprocess environment excludes application credentials and configuration,
+but it is not a network sandbox.
+
+Locally authored live receipts also remain incomplete unless the embedding
+caller supplies a trusted live verifier. The production CLI does not yet
+supply one, so it cannot independently close live gates.
+
+Preview the governed test capture before authorizing repository code:
+
+```bash
+vanjaro release capture-tests release/test-policy.json \
+  --repository-root . \
+  --output artifacts/releases/test-evidence.json
+
+vanjaro release capture-tests release/test-policy.json \
+  --repository-root . \
+  --output artifacts/releases/test-evidence.json \
+  --execute-tests --json
+```
+
+The preview validates the strict policy, hashes the complete governed source
+inventory, and prints the exact command, destination, and contract-ready
+fragment without running pytest or writing files. `--execute-tests` is explicit
+local-process authority: it runs only `python -m pytest -m not integration -q`
+in a minimal environment, requires a clean result and the policy's exact
+deselection count, then atomically writes the canonical receipt. Neither mode
+edits the release contract or contacts a portal; the operator must review and
+copy the printed hash-bound fragment.
+
+Create operator worksheets for one representative project with a write-free
+preview first:
+
+```bash
+vanjaro release scaffold-project-evidence \
+  --candidate-id rc-2026.08 \
+  --project-id representative-image \
+  --source-kind image \
+  --workspace artifacts/projects/representative-image \
+  --output-dir artifacts/releases/representative-image
+
+vanjaro release scaffold-project-evidence \
+  --candidate-id rc-2026.08 \
+  --project-id representative-image \
+  --source-kind image \
+  --workspace artifacts/projects/representative-image \
+  --output-dir artifacts/releases/representative-image \
+  --write --json
+```
+
+The `.template.json` files deliberately contain null or empty observations and
+cannot validate as strict evidence. They do not invent operator identities,
+versions, results, timings, dates, captures, or digests. Existing worksheets
+are refused unless `--overwrite` accompanies `--write`. All five files are
+staged and committed as one rollback-protected set; an ordinary write, backup,
+or replacement failure restores the prior set. If temporary recovery cleanup
+fails after a successful commit, the result contains an explicit warning and
+the residual repository-local directory so it can be reviewed and removed.
+The command never contacts a portal and never updates the release contract.
+See `docs/agency-release-checklist.md` and
+`docs/agency-development-architecture.md` for the evidence and contribution
+contracts.
 
 ## Configuration
 

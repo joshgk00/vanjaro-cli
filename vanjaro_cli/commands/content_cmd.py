@@ -178,13 +178,20 @@ def update_content(page_id: int, input_file: str | None, locale: str, expected_v
 @content.command("publish")
 @click.argument("page_id", type=int)
 @click.option("--locale", "-l", default="en-US", show_default=True)
+@click.option("--version", type=click.IntRange(min=1), default=None)
 @click.option("--json", "as_json", is_flag=True)
-def publish_content(page_id: int, locale: str, as_json: bool) -> None:
+def publish_content(
+    page_id: int, locale: str, version: int | None, as_json: bool
+) -> None:
     """Publish the latest draft version of a page."""
     client, _ = get_client()
 
+    payload: dict[str, object] = {"pageId": page_id, "locale": locale}
+    if version is not None:
+        payload["version"] = version
+
     try:
-        response = client.post(PUBLISH_PAGE, json={"pageId": page_id, "locale": locale})
+        response = client.post(PUBLISH_PAGE, json=payload)
     except (ApiError, ConfigError) as exc:
         exit_error(str(exc), as_json)
 

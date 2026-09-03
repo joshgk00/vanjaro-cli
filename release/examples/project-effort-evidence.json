@@ -1,0 +1,28 @@
+{
+  "baseline_sessions": [
+    {
+      "minutes": 1.0,
+      "operator_id": "example-only-operator",
+      "session_id": "example-only-baseline"
+    }
+  ],
+  "candidate_id": "example-only-candidate",
+  "current_sessions": [
+    {
+      "minutes": 1.0,
+      "operator_id": "example-only-operator",
+      "session_id": "example-only-current"
+    }
+  ],
+  "measurement_protocol": {
+    "path": "release/example-only-measurement-protocol.json",
+    "sha256": "5555555555555555555555555555555555555555555555555555555555555555"
+  },
+  "project_id": "example-only-project",
+  "quality_policy": {
+    "path": "release/example-only-quality-policy.json",
+    "sha256": "6666666666666666666666666666666666666666666666666666666666666666"
+  },
+  "schema_version": "project-effort-evidence-v1",
+  "source_kind": "image"
+}

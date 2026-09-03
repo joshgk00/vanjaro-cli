@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import json
 from pathlib import Path
 from typing import Any
 
@@ -11,6 +10,7 @@ from vanjaro_cli.design.theme_plan import build_project_theme_plan
 from vanjaro_cli.orchestration.portal_identity import verify_project_portal
 from vanjaro_cli.project.models import ProjectManifest
 from vanjaro_cli.project.stage_engine import StageContext, StageResult
+from vanjaro_cli.reliability import atomic_write_json
 
 
 GET_THEME_SETTINGS = "/API/VanjaroAI/AIDesign/GetSettings"
@@ -84,14 +84,7 @@ def _read_settings(client: Any) -> dict[str, Any]:
 
 
 def _write_json(path: Path, value: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.tmp")
-    temporary.write_text(
-        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    temporary.replace(path)
+    atomic_write_json(path, value)
 
 
 __all__ = [

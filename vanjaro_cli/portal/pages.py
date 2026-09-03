@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import hashlib
 from pathlib import Path
 from typing import Any
 
@@ -28,10 +29,19 @@ def preview_project_pages(
     *,
     desired: list[dict[str, Any]],
     manifest_path: Path,
+    snapshot_root: str = "build/page-snapshots",
+    manifest_write_path: str = "build/page-manifest.json",
 ) -> dict[str, Any]:
     manifest = _load_manifest(manifest_path)
     live = _list_pages(client)
-    actions = _preflight(client, desired, live, manifest)
+    actions = _preflight(
+        client,
+        desired,
+        live,
+        manifest,
+        snapshot_root=snapshot_root,
+        manifest_write_path=manifest_write_path,
+    )
     return {
         "schema_version": "1.0",
         "total": len(actions),
@@ -71,6 +81,7 @@ def reconcile_project_pages(
             raise ProjectPageError(f"parent page is unresolved for {item['name']!r}")
         if action["action"] in {"reuse", "adopt"}:
             detail = _get_page(client, action["page_id"])
+            _require_page_draft(detail, item["name"])
             record = _record(item, detail, action["action"], parent_id)
         elif action["action"] == "create":
             payload = _create_payload(item, parent_id)
@@ -82,6 +93,7 @@ def reconcile_project_pages(
             detail = _get_page(client, page_id)
             if _server_content_hash(detail) != item["content_hash"]:
                 raise ProjectPageError(f"created draft verification failed for {item['name']!r}")
+            _require_page_draft(detail, item["name"])
             record = _record(item, detail, "created", parent_id)
         else:
             detail = _get_page(client, action["page_id"])
@@ -91,18 +103,16 @@ def reconcile_project_pages(
                 / f"before-v{detail.get('version', 0)}.json"
             )
             _write_json(snapshot_path, detail)
-            payload = {
-                "pageId": action["page_id"],
-                "contentJSON": json.dumps(item["components"], ensure_ascii=False),
-                "styleJSON": json.dumps(item["styles"], ensure_ascii=False),
-                "contentHtml": item["content_html"],
-                "locale": "en-US",
-                "expectedVersion": detail.get("version", 0),
-            }
+            payload = _update_payload(
+                item,
+                page_id=action["page_id"],
+                expected_version=detail.get("version", 0),
+            )
             client.post(UPDATE_PAGE, json=payload)  # type: ignore[attr-defined]
             refreshed = _get_page(client, action["page_id"])
             if _server_content_hash(refreshed) != item["content_hash"]:
                 raise ProjectPageError(f"updated draft verification failed for {item['name']!r}")
+            _require_page_draft(refreshed, item["name"])
             record = _record(item, refreshed, "updated", parent_id)
         records[item["key"]] = record
         _persist_manifest(manifest_path, desired, records, prior)
@@ -115,6 +125,9 @@ def _preflight(
     desired: list[dict[str, Any]],
     live: list[dict[str, Any]],
     manifest: dict[str, Any],
+    *,
+    snapshot_root: str = "build/page-snapshots",
+    manifest_write_path: str = "build/page-manifest.json",
 ) -> list[dict[str, Any]]:
     prior = {
         item.get("key"): item
@@ -124,6 +137,9 @@ def _preflight(
     actions: list[dict[str, Any]] = []
     errors: list[str] = []
     for item in desired:
+        if bool(item.get("is_visible", False)):
+            errors.append(f"desired page {item['name']!r} must be hidden")
+            continue
         previous = prior.get(item["key"])
         matches = [
             row for row in live
@@ -138,24 +154,64 @@ def _preflight(
                 errors.append(f"managed page {item['name']!r} has no page ID")
                 continue
             detail = _get_page(client, page_id)
+            if _page_is_visible_or_published(detail):
+                errors.append(f"managed page {item['name']!r} is visible or published")
+                continue
             if not _owned_by(detail, item["key"]):
                 errors.append(f"ownership marker drift for managed page {item['name']!r}")
                 continue
             current_hash = _server_content_hash(detail)
             if current_hash == item["content_hash"]:
-                actions.append({"key": item["key"], "name": item["name"], "action": "reuse", "page_id": page_id})
+                actions.append(
+                    _planned_page_action(
+                        item,
+                        "reuse",
+                        page_id=page_id,
+                        detail=detail,
+                        snapshot_root=snapshot_root,
+                        manifest_write_path=manifest_write_path,
+                    )
+                )
             elif detail.get("version") != previous.get("observed_version"):
                 errors.append(f"external draft edit detected for {item['name']!r}")
             else:
-                actions.append({"key": item["key"], "name": item["name"], "action": "update", "page_id": page_id})
+                actions.append(
+                    _planned_page_action(
+                        item,
+                        "update",
+                        page_id=page_id,
+                        detail=detail,
+                        snapshot_root=snapshot_root,
+                        manifest_write_path=manifest_write_path,
+                    )
+                )
             continue
         if not matches:
-            actions.append({"key": item["key"], "name": item["name"], "action": "create"})
+            actions.append(
+                _planned_page_action(
+                    item,
+                    "create",
+                    snapshot_root=snapshot_root,
+                    manifest_write_path=manifest_write_path,
+                )
+            )
             continue
         page_id = matches[0].get("tabId", matches[0].get("id"))
         detail = _get_page(client, page_id)
+        if _page_is_visible_or_published(detail):
+            errors.append(f"adoptable page {item['name']!r} is visible or published")
+            continue
         if _owned_by(detail, item["key"]) and _server_content_hash(detail) == item["content_hash"]:
-            actions.append({"key": item["key"], "name": item["name"], "action": "adopt", "page_id": page_id})
+            actions.append(
+                _planned_page_action(
+                    item,
+                    "adopt",
+                    page_id=page_id,
+                    detail=detail,
+                    snapshot_root=snapshot_root,
+                    manifest_write_path=manifest_write_path,
+                )
+            )
         else:
             errors.append(f"unmanaged page collision for {item['name']!r}")
     if errors:
@@ -169,7 +225,8 @@ def _create_payload(item: dict[str, Any], parent_id: int | None) -> dict[str, An
         "title": item["title"],
         "description": item["description"],
         "keywords": item["keywords"],
-        "isVisible": item["is_visible"],
+        "isVisible": False,
+        "isPublished": False,
         "contentJSON": json.dumps(item["components"], ensure_ascii=False),
         "styleJSON": json.dumps(item["styles"], ensure_ascii=False),
         "contentHtml": item["content_html"],
@@ -178,6 +235,169 @@ def _create_payload(item: dict[str, Any], parent_id: int | None) -> dict[str, An
     if parent_id is not None:
         payload["parentId"] = parent_id
     return payload
+
+
+def _update_payload(
+    item: dict[str, Any], *, page_id: int, expected_version: object
+) -> dict[str, Any]:
+    return {
+        "pageId": page_id,
+        "contentJSON": json.dumps(item["components"], ensure_ascii=False),
+        "styleJSON": json.dumps(item["styles"], ensure_ascii=False),
+        "contentHtml": item["content_html"],
+        "locale": "en-US",
+        "expectedVersion": expected_version,
+        "isVisible": False,
+        "isPublished": False,
+    }
+
+
+def _planned_page_action(
+    item: dict[str, Any],
+    action: str,
+    *,
+    page_id: int | None = None,
+    detail: dict[str, Any] | None = None,
+    snapshot_root: str = "build/page-snapshots",
+    manifest_write_path: str = "build/page-manifest.json",
+) -> dict[str, Any]:
+    result: dict[str, Any] = {
+        "key": item["key"],
+        "name": item["name"],
+        "action": action,
+        "desired_hash": item["content_hash"],
+        "desired_state_fingerprint": _canonical_hash(item),
+        "method": "POST" if action in {"create", "update"} else None,
+        "endpoint": CREATE_PAGE if action == "create" else UPDATE_PAGE if action == "update" else None,
+    }
+    if page_id is not None:
+        result["page_id"] = page_id
+    if detail is not None:
+        result.update(
+            {
+                "observed_version": detail.get("version", 0),
+                "observed_hash": _server_content_hash(detail),
+                "observed_visible": bool(detail.get("isVisible", False)),
+                "observed_published": bool(detail.get("isPublished", False)),
+            }
+        )
+    if action == "create":
+        binding = (
+            f"page-id://{item['parent_key']}" if item.get("parent_key") else None
+        )
+        payload_template = _create_payload(item, None)
+        if binding is not None:
+            payload_template["parentId"] = {"$binding": binding}
+        template_fingerprint = _canonical_hash(payload_template)
+        result.update(
+            {
+                "payload_template_fingerprint": template_fingerprint,
+                "payload_fingerprint": template_fingerprint
+                if binding is None
+                else None,
+                "parent_id_binding": binding,
+                "response_binding": f"page-id://{item['key']}",
+                "operations": [
+                    {
+                        "sequence": 1,
+                        "kind": "portal_request",
+                        "method": "POST",
+                        "endpoint": CREATE_PAGE,
+                        "payload_template_fingerprint": template_fingerprint,
+                        "bindings": [binding] if binding else [],
+                        "produces": f"page-id://{item['key']}",
+                    },
+                    {
+                        "sequence": 2,
+                        "kind": "portal_readback",
+                        "method": "GET",
+                        "endpoint": GET_PAGE,
+                        "page_id_binding": f"page-id://{item['key']}",
+                    },
+                    {
+                        "sequence": 3,
+                        "kind": "local_checkpoint",
+                        "path": manifest_write_path,
+                    },
+                ],
+            }
+        )
+    elif action == "update":
+        assert page_id is not None and detail is not None
+        payload = _update_payload(
+            item,
+            page_id=page_id,
+            expected_version=detail.get("version", 0),
+        )
+        result.update(
+            {
+                "payload_fingerprint": _canonical_hash(payload),
+                "operations": [
+                    {
+                        "sequence": 1,
+                        "kind": "portal_readback",
+                        "method": "GET",
+                        "endpoint": GET_PAGE,
+                        "page_id": page_id,
+                    },
+                    {
+                        "sequence": 2,
+                        "kind": "local_snapshot",
+                        "path": (
+                            f"{snapshot_root}/{page_slug(item['key'])}/"
+                            f"before-v{detail.get('version', 0)}.json"
+                        ),
+                    },
+                    {
+                        "sequence": 3,
+                        "kind": "portal_request",
+                        "method": "POST",
+                        "endpoint": UPDATE_PAGE,
+                        "payload_fingerprint": _canonical_hash(payload),
+                        "expected_version": detail.get("version", 0),
+                    },
+                    {
+                        "sequence": 4,
+                        "kind": "portal_readback",
+                        "method": "GET",
+                        "endpoint": GET_PAGE,
+                        "page_id": page_id,
+                    },
+                    {
+                        "sequence": 5,
+                        "kind": "local_checkpoint",
+                        "path": manifest_write_path,
+                    },
+                ],
+            }
+        )
+    else:
+        result["operations"] = [
+            {
+                "sequence": 1,
+                "kind": "portal_readback",
+                "method": "GET",
+                "endpoint": GET_PAGE,
+                "page_id": page_id,
+            },
+            {
+                "sequence": 2,
+                "kind": "local_checkpoint",
+                "path": manifest_write_path,
+            },
+        ]
+    return result
+
+
+def _canonical_hash(value: object) -> str:
+    raw = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def _list_pages(client: object) -> list[dict[str, Any]]:
@@ -206,6 +426,19 @@ def _server_content_hash(detail: dict[str, Any]) -> str:
     styles = _json_value(detail.get("styleJSON"), "styleJSON")
     html = detail.get("contentHtml", "")
     return page_content_hash(components, styles, html)
+
+
+def _page_is_visible_or_published(detail: dict[str, Any]) -> bool:
+    return bool(detail.get("isVisible", False)) or bool(
+        detail.get("isPublished", False)
+    )
+
+
+def _require_page_draft(detail: dict[str, Any], name: str) -> None:
+    if _page_is_visible_or_published(detail):
+        raise ProjectPageError(
+            f"page {name!r} unexpectedly remained visible or published"
+        )
 
 
 def _json_value(value: object, label: str) -> object:
@@ -252,6 +485,7 @@ def _record(
         "observed_version": detail.get("version", 0),
         "status": status,
         "published": bool(detail.get("isPublished", False)),
+        "visible": bool(detail.get("isVisible", False)),
     }
 
 

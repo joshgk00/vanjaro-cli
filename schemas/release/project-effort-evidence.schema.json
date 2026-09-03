@@ -1,0 +1,101 @@
+{
+  "$defs": {
+    "ArtifactReference": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "ArtifactReference",
+      "type": "object"
+    },
+    "EffortSession": {
+      "additionalProperties": false,
+      "properties": {
+        "minutes": {
+          "exclusiveMinimum": 0,
+          "type": "number"
+        },
+        "operator_id": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "session_id": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "session_id",
+        "operator_id",
+        "minutes"
+      ],
+      "title": "EffortSession",
+      "type": "object"
+    }
+  },
+  "$id": "project-effort-evidence.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "baseline_sessions": {
+      "items": {
+        "$ref": "#/$defs/EffortSession"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "candidate_id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "type": "string"
+    },
+    "current_sessions": {
+      "items": {
+        "$ref": "#/$defs/EffortSession"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "measurement_protocol": {
+      "$ref": "#/$defs/ArtifactReference"
+    },
+    "project_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "quality_policy": {
+      "$ref": "#/$defs/ArtifactReference"
+    },
+    "schema_version": {
+      "const": "project-effort-evidence-v1",
+      "default": "project-effort-evidence-v1"
+    },
+    "source_kind": {
+      "enum": [
+        "live_html",
+        "figma",
+        "image"
+      ]
+    }
+  },
+  "required": [
+    "candidate_id",
+    "project_id",
+    "source_kind",
+    "measurement_protocol",
+    "quality_policy",
+    "baseline_sessions",
+    "current_sessions"
+  ],
+  "title": "ProjectEffortEvidence",
+  "type": "object"
+}

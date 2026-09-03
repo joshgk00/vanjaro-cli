@@ -1,0 +1,237 @@
+{
+  "$defs": {
+    "ArtifactReference": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "ArtifactReference",
+      "type": "object"
+    },
+    "BenchmarkEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "baseline": {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        "case_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "inputs": {
+          "items": {
+            "$ref": "#/$defs/ArtifactReference"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "manifest": {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        "measurement_mode": {
+          "enum": [
+            "autonomous",
+            "assisted"
+          ]
+        },
+        "report": {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        "source_kind": {
+          "enum": [
+            "live_html",
+            "figma",
+            "image"
+          ]
+        }
+      },
+      "required": [
+        "source_kind",
+        "measurement_mode",
+        "manifest",
+        "baseline",
+        "report",
+        "inputs",
+        "case_ids"
+      ],
+      "title": "BenchmarkEvidence",
+      "type": "object"
+    },
+    "ControlEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "receipt": {
+          "$ref": "#/$defs/ArtifactReference"
+        }
+      },
+      "required": [
+        "receipt"
+      ],
+      "title": "ControlEvidence",
+      "type": "object"
+    },
+    "ProjectEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "effort_evidence": {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        "live_receipt": {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        "quality_evidence": {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        "receipt": {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        "source_kind": {
+          "enum": [
+            "live_html",
+            "figma",
+            "image"
+          ]
+        },
+        "workspace": {
+          "type": "string"
+        }
+      },
+      "required": [
+        "source_kind",
+        "workspace",
+        "receipt",
+        "quality_evidence",
+        "effort_evidence",
+        "live_receipt"
+      ],
+      "title": "ProjectEvidence",
+      "type": "object"
+    },
+    "TestEvidence": {
+      "additionalProperties": false,
+      "properties": {
+        "policy": {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        "receipt": {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        "source_files": {
+          "items": {
+            "$ref": "#/$defs/ArtifactReference"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "policy",
+        "receipt",
+        "source_files"
+      ],
+      "title": "TestEvidence",
+      "type": "object"
+    }
+  },
+  "$id": "release-contract.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "benchmarks": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/BenchmarkEvidence"
+      },
+      "type": "array"
+    },
+    "candidate_id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "type": "string"
+    },
+    "compatibility_policy": {
+      "$ref": "#/$defs/ArtifactReference"
+    },
+    "control_evidence": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ControlEvidence"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "deterministic_json_files": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ArtifactReference"
+      },
+      "type": "array"
+    },
+    "evaluation_date": {
+      "format": "date",
+      "type": "string"
+    },
+    "performance_evidence": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    },
+    "projects": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/ProjectEvidence"
+      },
+      "type": "array"
+    },
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0"
+    },
+    "secret_scan_files": {
+      "default": [],
+      "items": {
+        "type": "string"
+      },
+      "type": "array"
+    },
+    "test_evidence": {
+      "anyOf": [
+        {
+          "$ref": "#/$defs/TestEvidence"
+        },
+        {
+          "type": "null"
+        }
+      ],
+      "default": null
+    }
+  },
+  "required": [
+    "candidate_id",
+    "evaluation_date",
+    "compatibility_policy"
+  ],
+  "title": "ReleaseContract",
+  "type": "object"
+}

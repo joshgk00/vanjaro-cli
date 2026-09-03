@@ -416,6 +416,29 @@ def test_global_blocks_publish_json(runner, mock_config):
 
 
 @responses.activate
+def test_global_blocks_publish_sends_exact_version_when_requested(runner, mock_config):
+    mock_homepage()
+    responses.add(responses.POST, PUBLISH_URL, json={"status": "ok"}, status=200)
+
+    result = runner.invoke(
+        cli,
+        [
+            "global-blocks",
+            "publish",
+            "20020077-89f8-468f-a488-017421ce5a0b",
+            "--version",
+            "4",
+        ],
+    )
+
+    assert result.exit_code == 0
+    assert json.loads(responses.calls[-1].request.body) == {
+        "guid": "20020077-89f8-468f-a488-017421ce5a0b",
+        "version": 4,
+    }
+
+
+@responses.activate
 def test_global_blocks_delete_with_force(runner, mock_config):
     mock_homepage()
     responses.add(responses.POST, DELETE_URL, json={"status": "ok"}, status=200)

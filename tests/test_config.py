@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from concurrent.futures import ThreadPoolExecutor
 import json
 import os
 from pathlib import Path
+import subprocess
+import sys
 from unittest.mock import patch
 
 import pytest
@@ -81,6 +84,91 @@ def test_save_config_sets_active_on_login(config_dir):
 
     raw = json.loads(config_dir.read_text())
     assert raw["active_profile"] == "site2"
+
+
+def test_save_config_can_preserve_active_profile_in_one_write(config_dir):
+    save_config(Config(base_url="https://host", cookies={"auth": "one"}), "host")
+    from vanjaro_cli import config as config_module
+
+    with patch(
+        "vanjaro_cli.config._write_raw_config",
+        wraps=config_module._write_raw_config,
+    ) as write:
+        save_config(
+            Config(base_url="https://host/child", cookies={"auth": "one"}, portal_id=4),
+            "child",
+            preserve_active_profile=True,
+        )
+    assert write.call_count == 1
+    raw = json.loads(config_dir.read_text())
+    assert raw["active_profile"] == "host"
+    assert raw["profiles"]["child"]["portal_id"] == 4
+
+
+def test_save_config_conditionally_refuses_a_new_collision(config_dir):
+    save_config(Config(base_url="https://host/child"), "child")
+
+    with pytest.raises(ConfigError, match="created after preview"):
+        save_config(
+            Config(base_url="https://other/child"),
+            "child",
+            replace_existing=False,
+        )
+
+    assert load_config("child").base_url == "https://host/child"
+
+
+def test_concurrent_profile_saves_merge_under_lock(config_dir):
+    def save(index: int) -> None:
+        save_config(Config(base_url=f"https://site-{index}.example"), f"site-{index}")
+
+    with ThreadPoolExecutor(max_workers=8) as pool:
+        list(pool.map(save, range(20)))
+
+    raw = json.loads(config_dir.read_text())
+    assert set(raw["profiles"]) == {f"site-{index}" for index in range(20)}
+
+
+def test_independent_process_profile_saves_merge_under_lock(config_dir):
+    script = """
+import sys
+from pathlib import Path
+import vanjaro_cli.config as module
+
+module.CONFIG_FILE = Path(sys.argv[1])
+module.CONFIG_DIR = module.CONFIG_FILE.parent
+module.save_config(
+    module.Config(base_url=f\"https://process-{sys.argv[2]}.example\"),
+    f\"process-{sys.argv[2]}\",
+)
+"""
+    processes = [
+        subprocess.Popen(
+            [sys.executable, "-c", script, str(config_dir), str(index)],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+        )
+        for index in range(8)
+    ]
+    failures = []
+    for process in processes:
+        stdout, stderr = process.communicate(timeout=15)
+        if process.returncode:
+            failures.append((process.returncode, stdout, stderr))
+
+    assert failures == []
+    raw = json.loads(config_dir.read_text())
+    assert set(raw["profiles"]) == {f"process-{index}" for index in range(8)}
+
+
+def test_atomic_write_cleans_temporary_file_on_replace_failure(config_dir):
+    from vanjaro_cli.config import _write_raw_config
+
+    with patch("vanjaro_cli.config.os.replace", side_effect=OSError("replace failed")):
+        with pytest.raises(OSError, match="replace failed"):
+            _write_raw_config({"profiles": {}})
+    assert list(config_dir.parent.glob(f".{config_dir.name}.*.tmp")) == []
 
 
 def test_load_config_nonexistent_profile(config_dir):

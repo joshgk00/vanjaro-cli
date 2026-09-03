@@ -139,16 +139,11 @@ def preview_project_library(
         "total": len(desired),
         "reused": len(states),
         "to_create": len(missing),
-        "blocks": states
-        + [
-            {
-                "key": item["key"],
-                "name": item["name"],
-                "status": "create",
-                "desired_hash": item["desired_hash"],
-            }
-            for item in missing
-        ],
+        "blocks": [
+            {**state, "action": state["status"]}
+            for state in states
+        ]
+        + [_planned_registration(item) for item in missing],
     }
 
 
@@ -174,15 +169,7 @@ def register_project_library(
 
     for item in missing:
         portal_name = item.get("portal_name", item["name"])
-        form = {
-            "Name": portal_name,
-            "Category": item["category"],
-            "Html": "",
-            "Css": render_styles(item["style_json"]),
-            "IsGlobal": "false",
-            "ContentJSON": json.dumps(item["content_json"], ensure_ascii=False),
-            "StyleJSON": json.dumps(item["style_json"], ensure_ascii=False),
-        }
+        form = _registration_form(item, portal_name)
         response = client.post_form(ADD_BLOCK, form)  # type: ignore[attr-defined]
         payload = response.json()
         if payload.get("Status") not in {"Success", "Exist"}:
@@ -304,6 +291,61 @@ def _preflight(
 
 def _matching_rows(rows: list[dict[str, Any]], name: str) -> list[dict[str, Any]]:
     return [row for row in rows if str(row.get("Name", "")).casefold() == name.casefold()]
+
+
+def _registration_form(item: dict[str, Any], portal_name: str) -> dict[str, str]:
+    return {
+        "Name": portal_name,
+        "Category": item["category"],
+        "Html": "",
+        "Css": render_styles(item["style_json"]),
+        "IsGlobal": "false",
+        "ContentJSON": json.dumps(item["content_json"], ensure_ascii=False),
+        "StyleJSON": json.dumps(item["style_json"], ensure_ascii=False),
+    }
+
+
+def _planned_registration(item: dict[str, Any]) -> dict[str, Any]:
+    portal_name = str(item.get("portal_name", item["name"]))
+    form = _registration_form(item, portal_name)
+    return {
+        "key": item["key"],
+        "name": item["name"],
+        "portal_name": portal_name,
+        "action": "create",
+        "status": "create",
+        "desired_hash": item["desired_hash"],
+        "method": "POST_FORM",
+        "endpoint": ADD_BLOCK,
+        "payload_fingerprint": _state_hash(form),
+        "response_binding": f"custom-block-guid://{item['key']}",
+        "operations": [
+            {
+                "sequence": 1,
+                "kind": "local_checkpoint",
+                "path": "build/block-manifest.json",
+            },
+            {
+                "sequence": 2,
+                "kind": "portal_request",
+                "method": "POST_FORM",
+                "endpoint": ADD_BLOCK,
+                "payload_fingerprint": _state_hash(form),
+                "produces": f"custom-block-guid://{item['key']}",
+            },
+            {
+                "sequence": 3,
+                "kind": "portal_readback",
+                "method": "GET",
+                "endpoint": LIST_BLOCKS,
+            },
+            {
+                "sequence": 4,
+                "kind": "local_checkpoint",
+                "path": "build/block-manifest.json",
+            },
+        ],
+    }
 
 
 def _list_custom_blocks(client: object) -> list[dict[str, Any]]:

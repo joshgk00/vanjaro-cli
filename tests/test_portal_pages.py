@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from copy import deepcopy
 import json
 from datetime import datetime, timezone
 from pathlib import Path
@@ -22,6 +23,7 @@ from vanjaro_cli.design.models import (
     StyleSet,
 )
 from vanjaro_cli.portal.pages import (
+    CREATE_PAGE,
     ProjectPageError,
     attach_global_wrappers,
     compose_project_pages,
@@ -42,6 +44,8 @@ class FakeClient:
     def __init__(self) -> None:
         self.pages: dict[int, dict] = {}
         self.posts: list[tuple[str, dict]] = []
+        self.force_visible_after_post = False
+        self.force_published_after_post = False
 
     def get(self, path: str, *, params: dict) -> Response:
         if path.endswith("/List"):
@@ -66,10 +70,11 @@ class FakeClient:
                 "title": json["title"],
                 "path": f"/{json['name']}",
                 "version": 1,
-                "isPublished": False,
                 "contentJSON": json["contentJSON"],
                 "styleJSON": json["styleJSON"],
                 "contentHtml": json["contentHtml"],
+                "isVisible": self.force_visible_after_post,
+                "isPublished": self.force_published_after_post,
             }
             return Response({"pageId": page_id, "version": 1})
         page = self.pages[json["pageId"]]
@@ -79,6 +84,8 @@ class FakeClient:
                 "contentJSON": json["contentJSON"],
                 "styleJSON": json["styleJSON"],
                 "contentHtml": json["contentHtml"],
+                "isVisible": self.force_visible_after_post,
+                "isPublished": self.force_published_after_post,
             }
         )
         return Response({"pageId": json["pageId"], "version": page["version"]})
@@ -186,6 +193,15 @@ def test_create_draft_and_retry_without_post(tmp_path: Path) -> None:
     preview = preview_project_pages(client, desired=desired, manifest_path=manifest)
     assert preview["to_create"] == 1
     assert client.posts == []
+    planned = preview["pages"][0]
+    assert planned["endpoint"] == CREATE_PAGE
+    assert planned["payload_template_fingerprint"]
+    assert planned["response_binding"] == "page-id://home"
+    assert [operation["kind"] for operation in planned["operations"]] == [
+        "portal_request",
+        "portal_readback",
+        "local_checkpoint",
+    ]
 
     records = reconcile_project_pages(
         client,
@@ -234,6 +250,114 @@ def test_unmanaged_page_collision_fails_before_post(tmp_path: Path) -> None:
             snapshots_dir=tmp_path / "snapshots",
         )
     assert client.posts == []
+
+
+@pytest.mark.parametrize("state", ["isVisible", "isPublished"])
+def test_managed_page_live_state_fails_before_update(
+    tmp_path: Path, state: str
+) -> None:
+    client = FakeClient()
+    manifest = tmp_path / "page-manifest.json"
+    desired = compose_project_pages(
+        _document(), _blocks(1), {"entries": []}, project_id="project", isolated=True
+    )
+    reconcile_project_pages(
+        client, desired=desired, manifest_path=manifest, snapshots_dir=tmp_path / "snapshots"
+    )
+    client.pages[100][state] = True
+    changed = deepcopy(desired)
+    changed[0]["components"][0]["attributes"]["data-change"] = "yes"
+    from vanjaro_cli.portal.page_composition import page_content_hash
+    from vanjaro_cli.utils.grapesjs import render_components
+    changed[0]["content_html"] = render_components(changed[0]["components"])
+    changed[0]["content_hash"] = page_content_hash(
+        changed[0]["components"], changed[0]["styles"], changed[0]["content_html"]
+    )
+    client.posts.clear()
+
+    with pytest.raises(ProjectPageError, match="visible or published"):
+        reconcile_project_pages(
+            client, desired=changed, manifest_path=manifest, snapshots_dir=tmp_path / "snapshots"
+        )
+    assert client.posts == []
+
+
+def test_visible_exact_page_is_not_adopted(tmp_path: Path) -> None:
+    client = FakeClient()
+    desired = compose_project_pages(
+        _document(), _blocks(1), {"entries": []}, project_id="project", isolated=True
+    )
+    client.force_visible_after_post = True
+    with pytest.raises(ProjectPageError, match="remained visible or published"):
+        reconcile_project_pages(
+            client, desired=desired, manifest_path=tmp_path / "first.json", snapshots_dir=tmp_path / "snapshots"
+        )
+    client.posts.clear()
+    with pytest.raises(ProjectPageError, match="adoptable page.*visible or published"):
+        reconcile_project_pages(
+            client, desired=desired, manifest_path=tmp_path / "empty.json", snapshots_dir=tmp_path / "snapshots"
+        )
+    assert client.posts == []
+
+
+def test_published_managed_exact_page_is_not_reused(tmp_path: Path) -> None:
+    client = FakeClient()
+    manifest = tmp_path / "manifest.json"
+    desired = compose_project_pages(
+        _document(), _blocks(1), {"entries": []}, project_id="project", isolated=True
+    )
+    reconcile_project_pages(client, desired=desired, manifest_path=manifest, snapshots_dir=tmp_path / "snapshots")
+    client.pages[100]["isPublished"] = True
+    client.posts.clear()
+    with pytest.raises(ProjectPageError, match="managed page.*visible or published"):
+        reconcile_project_pages(client, desired=desired, manifest_path=manifest, snapshots_dir=tmp_path / "snapshots")
+    assert client.posts == []
+
+
+@pytest.mark.parametrize("state", ["visible", "published"])
+def test_page_create_postcondition_fails_closed(tmp_path: Path, state: str) -> None:
+    client = FakeClient()
+    setattr(client, f"force_{state}_after_post", True)
+    desired = compose_project_pages(
+        _document(), _blocks(1), {"entries": []}, project_id="project", isolated=True
+    )
+    with pytest.raises(ProjectPageError, match="remained visible or published"):
+        reconcile_project_pages(
+            client, desired=desired, manifest_path=tmp_path / "manifest.json", snapshots_dir=tmp_path / "snapshots"
+        )
+
+
+def test_page_update_forces_hidden_unpublished_payload(tmp_path: Path) -> None:
+    client = FakeClient()
+    manifest = tmp_path / "manifest.json"
+    desired = compose_project_pages(
+        _document(), _blocks(1), {"entries": []}, project_id="project", isolated=True
+    )
+    reconcile_project_pages(client, desired=desired, manifest_path=manifest, snapshots_dir=tmp_path / "snapshots")
+    changed = deepcopy(desired)
+    changed[0]["content_html"] += " changed"
+    from vanjaro_cli.portal.page_composition import page_content_hash
+    changed[0]["content_hash"] = page_content_hash(changed[0]["components"], changed[0]["styles"], changed[0]["content_html"])
+    client.posts.clear()
+    reconcile_project_pages(client, desired=changed, manifest_path=manifest, snapshots_dir=tmp_path / "snapshots")
+    assert client.posts[0][1]["isVisible"] is False
+    assert client.posts[0][1]["isPublished"] is False
+
+
+def test_page_update_postcondition_fails_closed(tmp_path: Path) -> None:
+    client = FakeClient()
+    manifest = tmp_path / "manifest.json"
+    desired = compose_project_pages(
+        _document(), _blocks(1), {"entries": []}, project_id="project", isolated=True
+    )
+    reconcile_project_pages(client, desired=desired, manifest_path=manifest, snapshots_dir=tmp_path / "snapshots")
+    changed = deepcopy(desired)
+    changed[0]["content_html"] += " changed"
+    from vanjaro_cli.portal.page_composition import page_content_hash
+    changed[0]["content_hash"] = page_content_hash(changed[0]["components"], changed[0]["styles"], changed[0]["content_html"])
+    client.force_visible_after_post = True
+    with pytest.raises(ProjectPageError, match="remained visible or published"):
+        reconcile_project_pages(client, desired=changed, manifest_path=manifest, snapshots_dir=tmp_path / "snapshots")
 
 
 def test_page_assembly_wraps_uploaded_image_variants() -> None:

@@ -140,6 +140,29 @@ def test_dry_run_never_calls_operation_or_changes_manifest(tmp_path: Path) -> No
     assert (root / "project.json").read_bytes() == before
 
 
+def test_pre_operation_guard_fails_before_running_state_or_operation(
+    tmp_path: Path,
+) -> None:
+    root = _workspace(tmp_path)
+    before = (root / "project.json").read_bytes()
+    calls: list[int] = []
+
+    def reject(_manifest) -> None:
+        raise ProjectStageError("reviewed preview changed")
+
+    with pytest.raises(ProjectStageError, match="reviewed preview changed"):
+        StageEngine(root).execute(
+            ProjectStage.ANALYZE,
+            StageInputs(data={"source": "cached"}),
+            _write_operation("analysis/design-document.json", "analysis", calls),
+            pre_operation=reject,
+        )
+
+    assert calls == []
+    assert not (root / "analysis" / "design-document.json").exists()
+    assert (root / "project.json").read_bytes() == before
+
+
 def test_completed_stage_resumes_only_when_inputs_and_outputs_match(tmp_path: Path) -> None:
     root = _workspace(tmp_path)
     calls: list[int] = []

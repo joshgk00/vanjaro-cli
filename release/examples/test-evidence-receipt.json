@@ -1,0 +1,15 @@
+{
+  "allowed_deselected": 0,
+  "collected": 1,
+  "command": "python -m pytest example-only-test.py",
+  "deselected": 0,
+  "errors": 0,
+  "failed": 1,
+  "node_ids": [
+    "example-only-test.py::test_shape_demonstration"
+  ],
+  "node_ids_sha256": "2222222222222222222222222222222222222222222222222222222222222222",
+  "passed": 0,
+  "schema_version": "test-evidence-v1",
+  "source_tree_sha256": "3333333333333333333333333333333333333333333333333333333333333333"
+}

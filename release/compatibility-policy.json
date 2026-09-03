@@ -1,0 +1,226 @@
+{
+  "cli": {
+    "version": "0.1.0"
+  },
+  "contracts": {
+    "agency_pack": {
+      "accepted": [
+        "1.0"
+      ],
+      "current": "1.0"
+    },
+    "compatibility_policy": {
+      "accepted": [
+        "agency-compatibility-policy-v1"
+      ],
+      "current": "agency-compatibility-policy-v1"
+    },
+    "compatibility_report": {
+      "accepted": [
+        "compatibility-report-v1"
+      ],
+      "current": "compatibility-report-v1"
+    },
+    "composition_plan": {
+      "accepted": [
+        "2.0"
+      ],
+      "current": "2.0"
+    },
+    "control_evidence": {
+      "accepted": [
+        "reliability-control-evidence-v1"
+      ],
+      "current": "reliability-control-evidence-v1"
+    },
+    "design_document": {
+      "accepted": [
+        "1.0"
+      ],
+      "current": "1.0"
+    },
+    "diagnostic": {
+      "accepted": [
+        "diagnostic-v1"
+      ],
+      "current": "diagnostic-v1"
+    },
+    "launch_plan": {
+      "accepted": [
+        "agency-launch-plan-v1"
+      ],
+      "current": "agency-launch-plan-v1"
+    },
+    "launch_result": {
+      "accepted": [
+        "agency-launch-result-v1"
+      ],
+      "current": "agency-launch-result-v1"
+    },
+    "launch_review": {
+      "accepted": [
+        "agency-launch-review-v1"
+      ],
+      "current": "agency-launch-review-v1"
+    },
+    "launch_transaction": {
+      "accepted": [
+        "agency-launch-transaction-v1"
+      ],
+      "current": "agency-launch-transaction-v1"
+    },
+    "live_attestation": {
+      "accepted": [
+        "agency-live-attestation-v1"
+      ],
+      "current": "agency-live-attestation-v1"
+    },
+    "live_evidence": {
+      "accepted": [
+        "agency-live-evidence-v1"
+      ],
+      "current": "agency-live-evidence-v1"
+    },
+    "performance_evidence": {
+      "accepted": [
+        "performance-evidence-v1"
+      ],
+      "current": "performance-evidence-v1"
+    },
+    "performance_report": {
+      "accepted": [
+        "performance-report-v1"
+      ],
+      "current": "performance-report-v1"
+    },
+    "project": {
+      "accepted": [
+        "1.0",
+        "1.1"
+      ],
+      "current": "1.1"
+    },
+    "project_effort_evidence": {
+      "accepted": [
+        "project-effort-evidence-v1"
+      ],
+      "current": "project-effort-evidence-v1"
+    },
+    "project_migration_report": {
+      "accepted": [
+        "project-migration-report-v1"
+      ],
+      "current": "project-migration-report-v1"
+    },
+    "project_migration_transaction": {
+      "accepted": [
+        "project-migration-transaction-v1"
+      ],
+      "current": "project-migration-transaction-v1"
+    },
+    "project_quality_evidence": {
+      "accepted": [
+        "project-quality-evidence-v1"
+      ],
+      "current": "project-quality-evidence-v1"
+    },
+    "project_release_evidence": {
+      "accepted": [
+        "project-release-evidence-v1"
+      ],
+      "current": "project-release-evidence-v1"
+    },
+    "publish_journal": {
+      "accepted": [
+        "agency-publish-journal-v1"
+      ],
+      "current": "agency-publish-journal-v1"
+    },
+    "publish_lock": {
+      "accepted": [
+        "agency-publish-lock-v1"
+      ],
+      "current": "agency-publish-lock-v1"
+    },
+    "publish_result": {
+      "accepted": [
+        "agency-publish-result-v1"
+      ],
+      "current": "agency-publish-result-v1"
+    },
+    "publish_review": {
+      "accepted": [
+        "agency-publish-review-v1"
+      ],
+      "current": "agency-publish-review-v1"
+    },
+    "release_audit": {
+      "accepted": [
+        "agency-release-audit-v1"
+      ],
+      "current": "agency-release-audit-v1"
+    },
+    "release_contract": {
+      "accepted": [
+        "1.0"
+      ],
+      "current": "1.0"
+    },
+    "scan_artifacts": {
+      "accepted": [
+        "secret-scan-v1"
+      ],
+      "current": "secret-scan-v1"
+    },
+    "template_capability": {
+      "accepted": [
+        "1.0",
+        "1.1"
+      ],
+      "current": "1.1"
+    },
+    "test_evidence": {
+      "accepted": [
+        "test-evidence-v1"
+      ],
+      "current": "test-evidence-v1"
+    },
+    "test_policy": {
+      "accepted": [
+        "agency-test-policy-v1"
+      ],
+      "current": "agency-test-policy-v1"
+    }
+  },
+  "migrations": [
+    {
+      "contract": "project",
+      "migration_id": "project-1.0-to-1.1",
+      "source": "1.0",
+      "target": "1.1"
+    }
+  ],
+  "portal_versions": {
+    "enforcement": "capability-negotiation",
+    "required_observations": [
+      "dnn_version",
+      "vanjaro_version",
+      "vanjaro_ai_version"
+    ]
+  },
+  "python": {
+    "minimum_major": 3,
+    "minimum_minor": 10,
+    "requires_python": ">=3.10"
+  },
+  "schema_version": "agency-compatibility-policy-v1",
+  "vanjaro_ai": {
+    "atomic_launch_capability": "supportsExactLaunch",
+    "global_publish_capability": "supportsExactVersionPublish",
+    "launch_apply_schema": "agency-launch-apply-v1",
+    "launch_preview_schema": "agency-launch-preview-v1",
+    "launch_result_schema": "agency-launch-result-v1",
+    "launch_state_schema": "agency-launch-state-v1",
+    "page_publish_capability": "supportsExactVersionPublish"
+  }
+}

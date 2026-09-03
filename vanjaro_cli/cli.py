@@ -7,7 +7,7 @@ from dotenv import load_dotenv
 
 from vanjaro_cli import __version__
 from vanjaro_cli.config import set_profile_override
-from vanjaro_cli.commands import api_key, assets, auth, blocks, branding, build, content, custom_blocks, fidelity, figma, global_blocks, migrate, modules, pages, portal, profile, project, site, templates, theme
+from vanjaro_cli.commands import api_key, assets, auth, blocks, branding, build, content, custom_blocks, fidelity, figma, global_blocks, migrate, modules, pages, portal, profile, project, release, site, templates, theme
 
 load_dotenv()
 
@@ -40,6 +40,7 @@ cli.add_command(figma)
 cli.add_command(blocks)
 cli.add_command(profile)
 cli.add_command(project)
+cli.add_command(release)
 cli.add_command(api_key)
 cli.add_command(global_blocks)
 cli.add_command(migrate)

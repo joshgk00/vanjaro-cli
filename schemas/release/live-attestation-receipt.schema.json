@@ -1,0 +1,129 @@
+{
+  "$defs": {
+    "PortalObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {
+          "type": "string"
+        },
+        "dnn_version": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "portal_id": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "vanjaro_ai_version": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "vanjaro_version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "portal_id",
+        "base_url",
+        "dnn_version",
+        "vanjaro_version",
+        "vanjaro_ai_version"
+      ],
+      "title": "PortalObservation",
+      "type": "object"
+    }
+  },
+  "$id": "live-attestation-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "type": "string"
+    },
+    "capture_routes": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "enum": [
+          "desktop",
+          "tablet",
+          "mobile"
+        ]
+      },
+      "type": "object"
+    },
+    "capture_sha256": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "enum": [
+          "desktop",
+          "tablet",
+          "mobile"
+        ]
+      },
+      "type": "object"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "operator_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "portal": {
+      "$ref": "#/$defs/PortalObservation"
+    },
+    "project_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "agency-live-attestation-v1",
+      "default": "agency-live-attestation-v1"
+    },
+    "smoke_routes": {
+      "additionalProperties": {
+        "type": "string"
+      },
+      "propertyNames": {
+        "enum": [
+          "editor",
+          "navigation",
+          "public-route",
+          "search"
+        ]
+      },
+      "type": "object"
+    },
+    "source_kind": {
+      "enum": [
+        "live_html",
+        "figma",
+        "image"
+      ]
+    },
+    "statement": {
+      "const": "I observed this candidate on the stated Vanjaro portal and recorded the linked captures and smoke checks."
+    }
+  },
+  "required": [
+    "candidate_id",
+    "project_id",
+    "source_kind",
+    "operator_id",
+    "observed_at",
+    "portal",
+    "capture_sha256",
+    "capture_routes",
+    "smoke_routes",
+    "statement"
+  ],
+  "title": "LiveAttestationReceipt",
+  "type": "object"
+}

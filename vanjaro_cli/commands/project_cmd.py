@@ -14,6 +14,7 @@ from vanjaro_cli.commands.helpers import exit_error, output_result
 from vanjaro_cli.commands.project_inputs import parse_sources, parse_template_overrides
 from vanjaro_cli.project import (
     ApprovalGate,
+    ProjectMigrationError,
     ProjectApprovalError,
     ProjectStage,
     ProjectStageError,
@@ -24,6 +25,7 @@ from vanjaro_cli.project import (
     create_manifest,
     initialize_workspace,
     load_manifest,
+    migrate_project_manifest,
     request_approval,
     resolve_approval,
     workspace_status,
@@ -208,6 +210,42 @@ def project_status(directory: Path, as_json: bool) -> None:
         click.echo(f"Pending approvals: {status.pending_approvals}")
     if status.missing_directories:
         click.echo(f"Missing workspace directories: {', '.join(status.missing_directories)}")
+
+
+@project.command("migrate-contract")
+@click.argument("directory", type=click.Path(path_type=Path), default=Path("."))
+@click.option(
+    "--apply",
+    is_flag=True,
+    help="Apply the reviewed migration and preserve the exact v1.0 manifest as a backup.",
+)
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def migrate_project_contract(directory: Path, apply: bool, as_json: bool) -> None:
+    """Review or explicitly apply a persisted project contract migration."""
+
+    try:
+        report = migrate_project_manifest(directory, apply=apply)
+    except ProjectMigrationError as exc:
+        exit_error(str(exc), as_json)
+    payload = report.model_dump(mode="json")
+    if as_json:
+        click.echo(json.dumps(payload, sort_keys=True))
+        return
+    click.echo(
+        f"Project contract: {report.source_version} -> {report.target_version}; "
+        f"status={report.status}."
+    )
+    for change in report.changes:
+        click.echo(f"- {change}")
+    if report.status == "review_required":
+        click.echo("No files changed. Rerun with --apply after reviewing this migration.")
+    elif report.status == "recovery_required":
+        click.echo(
+            "An interrupted migration is recoverable. Rerun with --apply to complete its receipt."
+        )
+    elif report.status == "applied":
+        click.echo(f"Backup: {report.backup_path}")
+        click.echo(f"Receipt: {report.receipt_path}")
 
 
 @project.command("analyze")
@@ -499,14 +537,20 @@ def _read_optional_json(path: Path) -> dict | None:
 from vanjaro_cli.commands.project_build_cmd import build_project
 from vanjaro_cli.commands.project_evidence_cmd import evidence
 from vanjaro_cli.commands.project_gaps_cmd import capability_gaps
+from vanjaro_cli.commands.project_handoff_cmd import handoff_project
+from vanjaro_cli.commands.project_launch_cmd import launch_project
 from vanjaro_cli.commands.project_pack_cmd import pack
+from vanjaro_cli.commands.project_publish_cmd import publish_project
 from vanjaro_cli.commands.project_overlay_cmd import overlay
 from vanjaro_cli.commands.project_target_cmd import target
 
 project.add_command(build_project)
 project.add_command(capability_gaps)
 project.add_command(evidence)
+project.add_command(handoff_project)
+project.add_command(launch_project)
 project.add_command(pack)
+project.add_command(publish_project)
 project.add_command(overlay)
 project.add_command(target)
 

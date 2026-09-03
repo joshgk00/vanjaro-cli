@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -9,6 +10,19 @@ from typing import Any
 
 class ProjectGlobalBlockError(ValueError):
     """Raised when shared chrome cannot be reconciled without ambiguity."""
+
+
+def global_block_content_hash(components: object, styles: object) -> str:
+    """Return the canonical desired/live hash used across global-block stages."""
+
+    raw = json.dumps(
+        {"content_json": components, "style_json": styles},
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 def load_global_block_manifest(path: Path) -> dict[str, Any]:
@@ -58,6 +72,7 @@ def write_json(path: Path, value: object) -> None:
 
 __all__ = [
     "ProjectGlobalBlockError",
+    "global_block_content_hash",
     "load_global_block_manifest",
     "persist_global_block_manifest",
     "write_json",

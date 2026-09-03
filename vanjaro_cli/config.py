@@ -6,9 +6,13 @@ Backward-compatible with the old flat config format (auto-migrates to a "default
 
 from __future__ import annotations
 
+from contextlib import contextmanager
 import json
 import os
 from pathlib import Path
+import tempfile
+import time
+from typing import Iterator
 
 from pydantic import BaseModel, field_validator
 
@@ -34,7 +38,7 @@ _profile_override: str | None = None
 
 
 def derive_profile_name(base_url: str) -> str:
-    """Derive a profile name from a URL's hostname (e.g., 'http://vanjarocli.local' -> 'vanjarocli-local')."""
+    """Derive a profile name from a URL hostname."""
     from urllib.parse import urlparse
 
     parsed = urlparse(base_url)
@@ -125,58 +129,72 @@ def get_profile_data(profile_name: str) -> dict:
     return raw.get("profiles", {}).get(profile_name, {})
 
 
-def save_config(config: Config, profile_name: str | None = None) -> None:
-    """Save config under the given profile name."""
+def save_config(
+    config: Config,
+    profile_name: str | None = None,
+    *,
+    preserve_active_profile: bool = False,
+    replace_existing: bool = True,
+) -> None:
+    """Save a profile through a locked read-modify-replace operation."""
     resolved_name = profile_name or _profile_override or "default"
-    raw = _read_raw_config()
+    with _config_lock():
+        raw = _read_raw_config()
 
-    # Migrate old flat format to profiles format
-    if "profiles" not in raw:
-        if "base_url" in raw:
-            raw = {
-                "active_profile": "default",
-                "profiles": {"default": {k: v for k, v in raw.items()}},
-            }
-        else:
-            raw = {"active_profile": resolved_name, "profiles": {}}
+        # Migrate old flat format to profiles format.
+        if "profiles" not in raw:
+            if "base_url" in raw:
+                raw = {
+                    "active_profile": "default",
+                    "profiles": {"default": {k: v for k, v in raw.items()}},
+                }
+            else:
+                raw = {"active_profile": resolved_name, "profiles": {}}
 
-    raw.setdefault("profiles", {})
-    raw["profiles"][resolved_name] = config.model_dump()
+        raw.setdefault("profiles", {})
+        if resolved_name in raw["profiles"] and not replace_existing:
+            raise ConfigError(
+                f"Profile '{resolved_name}' was created after preview; "
+                "it was not replaced."
+            )
+        raw["profiles"][resolved_name] = config.model_dump()
 
-    # Set as active if it's the first profile or if no active profile is set
-    if "active_profile" not in raw or not raw["active_profile"]:
-        raw["active_profile"] = resolved_name
+        # Set as active if it's the first profile or if no active profile is set.
+        if "active_profile" not in raw or not raw["active_profile"]:
+            raw["active_profile"] = resolved_name
 
-    # When saving from login (cookies present), switch to this profile
-    if config.cookies:
-        raw["active_profile"] = resolved_name
+        # When saving from login (cookies present), switch to this profile.
+        if config.cookies and not preserve_active_profile:
+            raw["active_profile"] = resolved_name
 
-    _write_raw_config(raw)
+        _write_raw_config(raw)
 
 
 def set_active_profile(name: str) -> None:
     """Set the active profile in the config file."""
-    raw = _read_raw_config()
-    profiles = raw.get("profiles", {})
-    if name not in profiles:
-        raise ConfigError(f"Profile '{name}' does not exist.")
-    raw["active_profile"] = name
-    _write_raw_config(raw)
+    with _config_lock():
+        raw = _read_raw_config()
+        profiles = raw.get("profiles", {})
+        if name not in profiles:
+            raise ConfigError(f"Profile '{name}' does not exist.")
+        raw["active_profile"] = name
+        _write_raw_config(raw)
 
 
 def delete_profile(name: str) -> None:
     """Remove a profile from the config file."""
-    raw = _read_raw_config()
-    profiles = raw.get("profiles", {})
-    if name not in profiles:
-        raise ConfigError(f"Profile '{name}' does not exist.")
-    del profiles[name]
+    with _config_lock():
+        raw = _read_raw_config()
+        profiles = raw.get("profiles", {})
+        if name not in profiles:
+            raise ConfigError(f"Profile '{name}' does not exist.")
+        del profiles[name]
 
-    # If we deleted the active profile, switch to another or clear
-    if raw.get("active_profile") == name:
-        raw["active_profile"] = next(iter(profiles), "")
+        # If we deleted the active profile, switch to another or clear.
+        if raw.get("active_profile") == name:
+            raw["active_profile"] = next(iter(profiles), "")
 
-    _write_raw_config(raw)
+        _write_raw_config(raw)
 
 
 def list_profiles() -> list[dict[str, str]]:
@@ -202,20 +220,21 @@ def list_profiles() -> list[dict[str, str]]:
 def clear_session(profile_name: str | None = None) -> None:
     """Remove auth cookies while preserving other profile settings."""
     resolved_name = profile_name or _profile_override or "default"
-    raw = _read_raw_config()
+    with _config_lock():
+        raw = _read_raw_config()
 
-    # Handle old flat format
-    if "profiles" not in raw and "base_url" in raw:
-        raw.pop("cookies", None)
-        raw.pop("token", None)
-        raw.pop("refresh_token", None)
-        _write_raw_config(raw)
-        return
+        # Handle old flat format.
+        if "profiles" not in raw and "base_url" in raw:
+            raw.pop("cookies", None)
+            raw.pop("token", None)
+            raw.pop("refresh_token", None)
+            _write_raw_config(raw)
+            return
 
-    profiles = raw.get("profiles", {})
-    if resolved_name in profiles:
-        profiles[resolved_name].pop("cookies", None)
-        _write_raw_config(raw)
+        profiles = raw.get("profiles", {})
+        if resolved_name in profiles:
+            profiles[resolved_name].pop("cookies", None)
+            _write_raw_config(raw)
 
 
 def save_api_key(api_key: str, profile_name: str | None = None) -> None:
@@ -239,6 +258,53 @@ def remove_api_key(profile_name: str | None = None) -> None:
 # ---------------------------------------------------------------------------
 
 
+@contextmanager
+def _config_lock(timeout: float = 5.0) -> Iterator[None]:
+    """Serialize config mutations across CLI processes without a dependency."""
+    lock_file = CONFIG_FILE.with_name(f"{CONFIG_FILE.name}.lock")
+    lock_file.parent.mkdir(parents=True, exist_ok=True)
+    stream = lock_file.open("a+b")
+    try:
+        stream.seek(0, os.SEEK_END)
+        if stream.tell() == 0:
+            stream.write(b"\0")
+            stream.flush()
+        deadline = time.monotonic() + timeout
+        while True:
+            try:
+                stream.seek(0)
+                if os.name == "nt":
+                    import msvcrt
+
+                    msvcrt.locking(stream.fileno(), msvcrt.LK_NBLCK, 1)
+                else:
+                    import fcntl
+
+                    fcntl.flock(stream.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
+                break
+            except OSError as exc:
+                if time.monotonic() >= deadline:
+                    raise ConfigError(
+                        "Timed out waiting for another CLI process to finish "
+                        "updating the config."
+                    ) from exc
+                time.sleep(0.05)
+        try:
+            yield
+        finally:
+            stream.seek(0)
+            if os.name == "nt":
+                import msvcrt
+
+                msvcrt.locking(stream.fileno(), msvcrt.LK_UNLCK, 1)
+            else:
+                import fcntl
+
+                fcntl.flock(stream.fileno(), fcntl.LOCK_UN)
+    finally:
+        stream.close()
+
+
 def _read_raw_config() -> dict:
     """Read the raw config file as a dict."""
     if not CONFIG_FILE.exists():
@@ -250,13 +316,39 @@ def _read_raw_config() -> dict:
 
 
 def _write_raw_config(data: dict) -> None:
-    """Write the raw config dict to disk."""
+    """Atomically write the raw config dict using a same-directory temp file."""
     CONFIG_DIR.mkdir(parents=True, exist_ok=True)
-    CONFIG_FILE.write_text(json.dumps(data, indent=2))
+    temp_name: str | None = None
     try:
-        CONFIG_FILE.chmod(0o600)
-    except OSError:
-        pass  # chmod may fail on Windows
+        fd, temp_name = tempfile.mkstemp(
+            prefix=f".{CONFIG_FILE.name}.",
+            suffix=".tmp",
+            dir=CONFIG_DIR,
+        )
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(data, stream, indent=2)
+            stream.flush()
+            os.fsync(stream.fileno())
+        try:
+            os.chmod(temp_name, 0o600)
+        except OSError:
+            pass
+        os.replace(temp_name, CONFIG_FILE)
+        temp_name = None
+        try:
+            directory_fd = os.open(CONFIG_DIR, os.O_RDONLY)
+            try:
+                os.fsync(directory_fd)
+            finally:
+                os.close(directory_fd)
+        except OSError:
+            pass
+    finally:
+        if temp_name is not None:
+            try:
+                os.unlink(temp_name)
+            except OSError:
+                pass
 
 
 class ConfigError(Exception):

@@ -28,6 +28,14 @@ from vanjaro_cli.project.workspace import (
     load_manifest,
     write_manifest,
 )
+from vanjaro_cli.project.publish_receipt import (
+    PublishReceiptError,
+    current_publish_review_fingerprint,
+)
+from vanjaro_cli.project.launch_receipt import (
+    LaunchReceiptError,
+    current_launch_review_fingerprint,
+)
 
 
 class ProjectStageError(ProjectWorkspaceError):
@@ -113,6 +121,12 @@ STAGE_DEFINITIONS: dict[ProjectStage, StageDefinition] = {
         ApprovalGate.PUBLISH,
         True,
     ),
+    ProjectStage.LAUNCH: StageDefinition(
+        ProjectStage.LAUNCH,
+        (ProjectStage.PUBLISH,),
+        ApprovalGate.LAUNCH,
+        True,
+    ),
 }
 
 
@@ -185,6 +199,9 @@ class StageEngine:
         operation: Callable[[StageContext], StageResult],
         *,
         dry_run: bool = False,
+        expected_manifest_fingerprint: str | None = None,
+        expected_input_fingerprint: str | None = None,
+        pre_operation: Callable[[ProjectManifest], None] | None = None,
     ) -> StageExecution:
         """Execute, preview, or resume a stage without repeating valid work."""
 
@@ -198,6 +215,14 @@ class StageEngine:
         if stage == ProjectStage.INTAKE:
             raise ProjectStageError("intake is completed only by project initialization")
         manifest = load_manifest(self.root)
+        if (
+            expected_manifest_fingerprint is not None
+            and fingerprint_data(manifest.model_dump(mode="json"))
+            != expected_manifest_fingerprint
+        ):
+            raise ProjectStageError(
+                "project manifest changed after build review validation"
+            )
         definition = STAGE_DEFINITIONS[stage]
         self._require_dependencies(manifest, definition)
         approval_fingerprint = self._approval_fingerprint(
@@ -207,6 +232,13 @@ class StageEngine:
         input_fingerprint = self._input_fingerprint(
             manifest, definition, inputs, approval_fingerprint
         )
+        if (
+            expected_input_fingerprint is not None
+            and input_fingerprint != expected_input_fingerprint
+        ):
+            raise ProjectStageError(
+                "stage inputs changed after build review validation"
+            )
         current = manifest.stages[stage]
         if self._can_resume(current, input_fingerprint):
             return StageExecution(
@@ -234,6 +266,9 @@ class StageEngine:
                 approval_gate=definition.approval_gate,
                 approval_fingerprint=approval_fingerprint,
             )
+
+        if pre_operation is not None:
+            pre_operation(manifest.model_copy(deep=True))
 
         now = self.clock()
         working = manifest.model_copy(deep=True)
@@ -356,6 +391,16 @@ class StageEngine:
             return None
         if explicit:
             return explicit
+        if definition.approval_gate == ApprovalGate.PUBLISH:
+            try:
+                return current_publish_review_fingerprint(self.root, manifest)
+            except PublishReceiptError as exc:
+                raise StageApprovalError(str(exc)) from exc
+        if definition.approval_gate == ApprovalGate.LAUNCH:
+            try:
+                return current_launch_review_fingerprint(self.root, manifest)
+            except LaunchReceiptError as exc:
+                raise StageApprovalError(str(exc)) from exc
         owner = (
             ProjectStage.PLAN
             if definition.approval_gate == ApprovalGate.PORTAL_MUTATION
@@ -376,25 +421,47 @@ class StageEngine:
             raise StageApprovalError(
                 f"{definition.stage.value} requires {gate.value} approval, but the approval artifact has no fingerprint"
             )
-        owner = (
-            ProjectStage.PLAN
-            if gate == ApprovalGate.PORTAL_MUTATION
-            else ProjectStage.VERIFY
-        )
+        if gate == ApprovalGate.PUBLISH:
+            try:
+                observed_receipt = current_publish_review_fingerprint(
+                    self.root, manifest
+                )
+            except PublishReceiptError as exc:
+                raise StageApprovalError(str(exc)) from exc
+            if observed_receipt != fingerprint:
+                raise StageApprovalError(
+                    f"{definition.stage.value} approval receipt changed; prepare a new review"
+                )
+            owner = ProjectStage.PUBLISH
+        elif gate == ApprovalGate.LAUNCH:
+            try:
+                observed_receipt = current_launch_review_fingerprint(
+                    self.root, manifest
+                )
+            except LaunchReceiptError as exc:
+                raise StageApprovalError(str(exc)) from exc
+            if observed_receipt != fingerprint:
+                raise StageApprovalError(
+                    "launch approval receipt changed; prepare a new review"
+                )
+            owner = ProjectStage.LAUNCH
+        else:
+            owner = ProjectStage.PLAN
         owner_record = manifest.stages[owner]
-        try:
-            observed = self._output_fingerprint(
-                tuple(owner_record.artifacts),
-                owner_record.message or "Stage completed.",
-            )
-        except ProjectWorkspaceError as exc:
-            raise StageApprovalError(
-                f"{definition.stage.value} approval owner artifacts are missing; rerun {owner.value}"
-            ) from exc
-        if observed != fingerprint:
-            raise StageApprovalError(
-                f"{definition.stage.value} approval owner artifacts changed; rerun {owner.value}"
-            )
+        if gate not in {ApprovalGate.PUBLISH, ApprovalGate.LAUNCH}:
+            try:
+                observed = self._output_fingerprint(
+                    tuple(owner_record.artifacts),
+                    owner_record.message or "Stage completed.",
+                )
+            except ProjectWorkspaceError as exc:
+                raise StageApprovalError(
+                    f"{definition.stage.value} approval owner artifacts are missing; rerun {owner.value}"
+                ) from exc
+            if observed != fingerprint:
+                raise StageApprovalError(
+                    f"{definition.stage.value} approval owner artifacts changed; rerun {owner.value}"
+                )
         approved = any(
             approval.gate == gate
             and approval.status == ApprovalStatus.APPROVED
@@ -547,10 +614,13 @@ def invalidate_stage_state(
                 ApprovalGate.PLAN,
                 ApprovalGate.PORTAL_MUTATION,
                 ApprovalGate.PUBLISH,
+                ApprovalGate.LAUNCH,
             }
         )
     elif start <= PROJECT_STAGE_ORDER.index(ProjectStage.VERIFY.value):
-        gates.add(ApprovalGate.PUBLISH)
+        gates.update({ApprovalGate.PUBLISH, ApprovalGate.LAUNCH})
+    elif start <= PROJECT_STAGE_ORDER.index(ProjectStage.PUBLISH.value):
+        gates.add(ApprovalGate.LAUNCH)
     for index, approval in enumerate(manifest.approvals):
         if approval.gate in gates and approval.status in {
             ApprovalStatus.PENDING,

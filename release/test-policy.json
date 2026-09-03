@@ -1,0 +1,31 @@
+{
+  "allowed_deselected": 16,
+  "command": "python -m pytest -m not integration -q",
+  "required_controls": {
+    "contract_migrations": [
+      "tests/test_project_migrations.py::test_apply_preserves_exact_backup_writes_receipt_and_is_idempotent",
+      "tests/test_reliability_compatibility.py::test_tracked_compatibility_policy_matches_runtime_and_package_contracts"
+    ],
+    "import_boundaries": [
+      "tests/test_design_architecture.py::test_project_domain_does_not_import_cli_config_or_portal_layers",
+      "tests/test_design_architecture.py::test_evidence_contracts_are_separate_from_cli_project_and_portal_layers"
+    ],
+    "recovery_tests": [
+      "tests/test_project_launch.py::test_unknown_batch_outcome_is_adopted_without_duplicate_post",
+      "tests/test_project_migrations.py::test_receipt_write_failure_leaves_recoverable_journal_and_retry_completes",
+      "tests/test_project_publish_hardening.py::test_unknown_post_outcome_is_adopted_without_duplicate_post"
+    ],
+    "structured_diagnostics": [
+      "tests/test_reliability_artifacts.py::test_diagnostic_redacts_authority_urls_queries_and_machine_paths",
+      "tests/test_reliability_artifacts.py::test_malformed_url_port_is_redacted_without_raising"
+    ]
+  },
+  "schema_version": "agency-test-policy-v1",
+  "source_globs": [
+    "pyproject.toml",
+    "release/*.json",
+    "schemas/*.json",
+    "tests/**/*.py",
+    "vanjaro_cli/**/*.py"
+  ]
+}

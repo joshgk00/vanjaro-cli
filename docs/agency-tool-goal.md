@@ -505,6 +505,167 @@ approvals; and two fully planned projects must complete that apply workflow.
 Current usage and remaining work are documented in
 `docs/agency-library-governance.md`.
 
+### 2026-08-30 — M5 agency handoff and maintenance scorecard foundation
+
+- **AG-502 foundation complete:** `vanjaro project handoff DIRECTORY` now
+  produces an editor-facing `qa/agency-handoff.md` and a versioned,
+  machine-readable `qa/maintenance-scorecard.json` from a verified project
+  workspace. The command is local, non-networked, and does not mutate the
+  project manifest, approve a gate, contact a portal, or publish.
+- Eight weighted checks make publish-readiness explainable: valid plan, zero
+  content loss, editable coverage, native/agency-standard component use,
+  source-text retention, action destinations, blocker-free verification, and
+  visual fidelity. Missing or invalid values fail closed as unavailable rather
+  than earning points.
+- Every plan/build/verify input is declared by and fingerprint-checked against
+  its completed owning stage. The verification target must match the pinned
+  profile, portal ID, and base URL. Stale, missing, malformed, non-finite, or
+  out-of-domain evidence cannot produce a publish-ready scorecard.
+- Output is deterministic and secret-safe: the verification completion time is
+  used instead of the wall clock, JSON is strict and stably ordered, all
+  evidence strings are recursively redacted, and unchanged reruns are
+  byte-identical. The Markdown/JSON pair is staged and installed as one logical
+  transaction; pre-commit failures restore the previous pair, while a
+  post-commit cleanup failure explicitly reports that the complete new pair was
+  installed and identifies the retained recovery backup.
+- A three-lane Ringer goal audit identified the remaining source, workflow, and
+  release evidence gaps. An adversarial handoff review found four initial
+  defects and a bounded re-review found two residual defects; all six were
+  confirmed and corrected with executable regression tests.
+
+Verification: 23 focused handoff tests and 66 wider project-workflow tests pass.
+The full non-integration suite passes 2,298 tests with 16 live integrations
+deselected. The five-case HTML/Figma benchmark and assisted-image benchmark both
+pass with no threshold or regression failures.
+
+### 2026-08-30 — M5 exact-authority publication foundation
+
+- **AG-501 publication foundation implemented:** `vanjaro project publish
+  prepare` performs a GET-only live preflight and produces a deterministic
+  review receipt. Adoption persists that receipt locally without publishing,
+  and a changed receipt supersedes stale publish authority.
+- `vanjaro project publish apply` requires the exact adopted receipt
+  fingerprint, a publish approval bound to that fingerprint, and an identical
+  action-time confirmation. The transaction publishes owned hidden global
+  blocks before owned hidden pages, with a whole-set preflight, durable action
+  journal, final whole-set readback, and GET-only reconciliation on resume.
+- Live ownership is structural rather than name-based: globals must carry the
+  project marker, while pages must carry both project and page markers. Object
+  IDs, versions, content hashes, publication flags, portal identity, verify
+  evidence, and handoff evidence are all bound into the receipt.
+- Publication locking records the owner token, host, PID, and process-start
+  identity. Publish receipt adoption, publish approval changes, and apply share
+  the same cross-process authority lock. The guarded `recover-lock` command
+  clears only a proven-dead owner using an exact double confirmation and never
+  contacts the portal.
+- The Vanjaro.AI page and global-block endpoints now advertise exact-version
+  capability, read draft details from authoritative storage, and use one
+  conditional database update to publish only the requested latest revision.
+  Older server modules fail closed at preparation instead of silently
+  publishing a different version.
+- The current boundary is deliberate: this transaction publishes managed
+  hidden content only. It does not rename draft pages, expose navigation, set a
+  home page, replace a live route, or change site settings; those launch
+  mutations require a separate collision-aware promotion transaction.
+
+Verification: the Vanjaro.AI module builds successfully and emits
+`website/bin/Vanjaro.AI.dll` (with existing DNN obsolete-API warnings). The 123
+focused publication/recovery/locking tests and 22 architecture/orchestration
+tests pass. The full non-integration suite passes 2,333 tests with 16 live
+integrations deselected. The five-case HTML/Figma benchmark under
+`artifacts/benchmarks/agency-m5-publish-foundation` and the assisted-image
+benchmark under `artifacts/benchmarks/agency-m5-publish-foundation-image` both
+pass with no threshold or regression failures. An adversarial Ringer review
+identified recovery, ownership, authority, journal, and server concurrency
+gaps; each confirmed issue was corrected and covered by executable checks.
+
+**M5 remains active:** publication has not yet been exercised against an
+authorized live portal with the newly built server module. Three representative
+HTML, Figma, and image projects must still reach a current publish-ready state,
+complete live smoke validation, and demonstrate the required 60% reduction in
+hands-on build/tweak time. Collision-aware launch/navigation/home-page
+promotion, reusable-fix promotion reporting, and the remaining M6
+reliability/release controls are also outstanding.
+
+### 2026-08-30 — M5 collision-aware launch promotion foundation
+
+- Added `vanjaro project launch plan` as the sole deterministic authority for
+  editor-facing page names/titles, explicit navigation visibility, semantic
+  sibling order, parent ownership, and either an explicit managed home page or
+  an explicit decision to preserve the current home page. Unknown navigation
+  evidence and hidden home pages fail closed.
+- Added read-only launch preview and adopted `qa/launch-review.json` receipts
+  that bind the launch plan, exact hidden-publication receipt/result, current
+  project and target, verified portal identity, complete namespace fingerprint,
+  exact page metadata before/after states, and home transition. A changed input
+  supersedes launch approval.
+- Added a narrow Vanjaro.AI launch API. It inventories live pages and DNN
+  `TabUrl` aliases, detects route collisions and protected/system pages, and
+  performs page metadata plus optional `HomeTabId` changes in one serializable
+  database transaction. Conditional predicates cover the DNN metadata token and
+  every receipted name, title, path, visibility, parent, raw order, and culture
+  value before commit.
+- Added `vanjaro project launch apply` with exact receipt, approval, full
+  action-time fingerprint confirmation, and separate home-page confirmation.
+  Publish and launch share one cross-process authority lock. A durable launch
+  journal supports unknown-outcome adoption without a duplicate POST and exact
+  GET-only completed reentry; any mixed or third state fails closed.
+- DNN raw `TabOrder` values are preserved rather than confused with the design
+  document's semantic sibling indexes. Managed relative order is verified before
+  adoption. DNN `TabName` remains the route authority; the tool does not claim
+  an independently writable slug contract.
+- Recovery reconciles the atomic batch only as all-before or all-after. A mixed
+  state is an integrity failure and triggers no continuation POST. Automatic
+  rollback is not attempted, and temporary agency-draft routes are not retained
+  as redirects. Those are visible review warnings rather than hidden behavior.
+- The exact transaction intentionally bypasses `TabController.UpdateTab`; it
+  rebuilds paths and clears caches but does not create DNN redirect history,
+  raise tab-update extension events, or synchronously reindex search/content.
+  Public-route, navigation, editor, and search smoke checks remain required for
+  authorized production acceptance.
+
+Verification: 35 focused launch/plan/authority-lock tests pass. The full
+non-integration suite passes 2,363 tests with 16 live integrations deselected,
+and the Vanjaro.AI module builds successfully to
+`website/bin/Vanjaro.AI.dll`. The five-case HTML/Figma benchmark under
+`artifacts/benchmarks/agency-m5-launch-foundation` and assisted-image benchmark
+under `artifacts/benchmarks/agency-m5-launch-foundation-image` both pass with no
+threshold or regression failures. A three-lane Ringer re-review confirmed the
+home, friendly-URL, apply-result, atomic-recovery, and CLI fixes; its Windows
+gate follow-ups found bounded retry, errno-classification, cleanup, and coverage
+gaps, all of which were corrected and exercised by Windows-specific tests.
+
+The foundation has not been deployed to or applied on an authorized live
+portal. M5 therefore remains active pending live route/navigation/editor/search
+smoke evidence, representative HTML/Figma/image project runs against isolated
+portals, and measured hands-on time reduction.
+
+### 2026-08-30 — M6 release-readiness foundation
+
+- Added a dependency-free reliability layer for strict canonical JSON,
+  atomic writes, non-finite and duplicate-key rejection, redacted
+  `diagnostic-v1` errors, manifest-scoped secret scanning, and deterministic
+  performance-budget evaluation.
+- Added one tracked compatibility policy covering Python/CLI, project, Design
+  Document, Composition Plan, agency-pack, template-capability, publish, and
+  launch contracts. DNN/Vanjaro versions remain recorded live observations;
+  exact capability negotiation is the enforcement boundary.
+- Replaced the silent project shape upgrade with explicit schema 1.0 to 1.1
+  preview/apply migration. Apply preserves the exact prior manifest and emits a
+  deterministic receipt; missing, drifted, and future shapes fail closed.
+- Added read-only `vanjaro release verify`. It authenticates declared artifacts
+  by SHA-256, recomputes benchmark metrics and performance budgets, validates
+  current project artifacts and handoff fingerprints, checks effort reduction,
+  binds live captures and smoke receipts, and always reports the complete closed
+  gate set as `passed`, `failed`, or `incomplete`.
+- Documented dependency direction, contract-change rules, contribution test
+  boundaries, and the repeatable local/live release checklist.
+
+The tracked release contract currently passes compatibility, scoped secret
+scan, and deterministic-policy checks while reporting all missing benchmark,
+project, test, performance, control, and live evidence explicitly. M6 and the
+overall goal remain active; an incomplete gate cannot be waived into a release.
+
 ## Completion rule
 
 Passing unit tests or finishing one migration does not complete this goal. The

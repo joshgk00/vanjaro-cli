@@ -1,0 +1,53 @@
+{
+  "$id": "project-release-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "type": "string"
+    },
+    "effort_evidence_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "maintenance_scorecard_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "project_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "project_manifest_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "quality_evidence_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "project-release-evidence-v1",
+      "default": "project-release-evidence-v1"
+    },
+    "source_kind": {
+      "enum": [
+        "live_html",
+        "figma",
+        "image"
+      ]
+    }
+  },
+  "required": [
+    "candidate_id",
+    "project_id",
+    "source_kind",
+    "project_manifest_sha256",
+    "maintenance_scorecard_sha256",
+    "quality_evidence_sha256",
+    "effort_evidence_sha256"
+  ],
+  "title": "ProjectReleaseReceipt",
+  "type": "object"
+}

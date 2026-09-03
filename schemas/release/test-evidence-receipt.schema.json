@@ -1,0 +1,68 @@
+{
+  "$id": "test-evidence-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "allowed_deselected": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "collected": {
+      "exclusiveMinimum": 0,
+      "type": "integer"
+    },
+    "command": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "deselected": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "errors": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "failed": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "node_ids": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    },
+    "node_ids_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "passed": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "schema_version": {
+      "const": "test-evidence-v1",
+      "default": "test-evidence-v1"
+    },
+    "source_tree_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "command",
+    "collected",
+    "passed",
+    "failed",
+    "errors",
+    "deselected",
+    "allowed_deselected",
+    "node_ids",
+    "node_ids_sha256",
+    "source_tree_sha256"
+  ],
+  "title": "TestEvidenceReceipt",
+  "type": "object"
+}

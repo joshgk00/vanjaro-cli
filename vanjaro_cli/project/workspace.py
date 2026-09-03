@@ -6,7 +6,6 @@ from collections.abc import Callable, Iterable, Mapping, Sequence
 from dataclasses import dataclass
 from datetime import datetime, timezone
 import hashlib
-import json
 from pathlib import Path
 import re
 import shutil
@@ -25,6 +24,12 @@ from vanjaro_cli.project.models import (
     StageRecord,
     StageStatus,
     TargetPortal,
+)
+from vanjaro_cli.reliability.artifacts import (
+    ArtifactContractError,
+    atomic_write_json,
+    canonical_json_sha256,
+    load_strict_json,
 )
 
 
@@ -175,16 +180,9 @@ def write_manifest(root: Path, manifest: ProjectManifest) -> Path:
     if not root.is_dir():
         raise ProjectWorkspaceError(f"project directory does not exist: {root}")
     path = root / MANIFEST_FILENAME
-    temporary = root / f".{MANIFEST_FILENAME}.tmp"
-    payload = manifest.model_dump_json(indent=2) + "\n"
     try:
-        temporary.write_text(payload, encoding="utf-8", newline="\n")
-        temporary.replace(path)
-    except OSError as exc:
-        try:
-            temporary.unlink(missing_ok=True)
-        except OSError:
-            pass
+        atomic_write_json(path, manifest)
+    except ArtifactContractError as exc:
         raise ProjectWorkspaceError(f"could not write project manifest: {exc}") from exc
     return path
 
@@ -195,29 +193,21 @@ def load_manifest(root: Path) -> ProjectManifest:
     root = root.expanduser().resolve()
     path = root / MANIFEST_FILENAME
     try:
-        raw = path.read_text(encoding="utf-8")
+        payload = load_strict_json(path)
     except FileNotFoundError as exc:
         raise ProjectWorkspaceError(f"project manifest not found: {path}") from exc
-    except OSError as exc:
+    except (OSError, ArtifactContractError) as exc:
         raise ProjectWorkspaceError(f"could not read project manifest: {exc}") from exc
     try:
-        payload = json.loads(raw)
-        _upgrade_v1_manifest(payload)
+        if isinstance(payload, dict) and payload.get("schema_version") == "1.0":
+            raise ProjectWorkspaceError(
+                "project manifest schema 1.0 requires explicit migration; run "
+                "`vanjaro project migrate-contract <directory>` to review it, then "
+                "rerun with `--apply`"
+            )
         return ProjectManifest.model_validate(payload)
-    except (json.JSONDecodeError, ValidationError) as exc:
+    except ValidationError as exc:
         raise ProjectWorkspaceError(f"invalid project manifest {path}: {exc}") from exc
-
-
-def _upgrade_v1_manifest(payload: object) -> None:
-    """Apply additive v1 defaults needed by newer workflow stages."""
-
-    if not isinstance(payload, dict) or payload.get("schema_version") != "1.0":
-        return
-    stages = payload.get("stages")
-    if isinstance(stages, dict) and ProjectStage.ASSETS.value not in stages:
-        stages[ProjectStage.ASSETS.value] = StageRecord(
-            stage=ProjectStage.ASSETS
-        ).model_dump(mode="json")
 
 
 def workspace_status(root: Path, manifest: ProjectManifest | None = None) -> WorkspaceStatus:
@@ -277,13 +267,10 @@ def workspace_status(root: Path, manifest: ProjectManifest | None = None) -> Wor
 def fingerprint_data(value: object) -> str:
     """Return a stable SHA-256 fingerprint for JSON-compatible input."""
 
-    payload = json.dumps(
-        value,
-        sort_keys=True,
-        separators=(",", ":"),
-        ensure_ascii=False,
-    ).encode("utf-8")
-    return hashlib.sha256(payload).hexdigest()
+    try:
+        return canonical_json_sha256(value)
+    except ArtifactContractError as exc:
+        raise ProjectWorkspaceError(f"could not fingerprint artifact data: {exc}") from exc
 
 
 def fingerprint_files(root: Path, paths: Iterable[Path]) -> str:

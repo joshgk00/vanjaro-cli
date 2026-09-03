@@ -1,0 +1,24 @@
+{
+  "candidate_id": "example-only-candidate",
+  "project_id": "example-only-project",
+  "quality": {
+    "body_without_generic_fallback": {
+      "denominator": 10,
+      "numerator": 0
+    },
+    "desktop_tablet_mobile_evidence": {
+      "denominator": 3,
+      "numerator": 0
+    },
+    "eligible_section_editable_coverage": {
+      "denominator": 10,
+      "numerator": 0
+    },
+    "native_agency_component_ratio": {
+      "denominator": 10,
+      "numerator": 0
+    }
+  },
+  "schema_version": "project-quality-evidence-v1",
+  "source_kind": "image"
+}

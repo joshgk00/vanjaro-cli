@@ -1,0 +1,83 @@
+{
+  "$defs": {
+    "QualityCount": {
+      "additionalProperties": false,
+      "properties": {
+        "denominator": {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        "numerator": {
+          "minimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "numerator",
+        "denominator"
+      ],
+      "title": "QualityCount",
+      "type": "object"
+    },
+    "QualityCounts": {
+      "additionalProperties": false,
+      "properties": {
+        "body_without_generic_fallback": {
+          "$ref": "#/$defs/QualityCount"
+        },
+        "desktop_tablet_mobile_evidence": {
+          "$ref": "#/$defs/QualityCount"
+        },
+        "eligible_section_editable_coverage": {
+          "$ref": "#/$defs/QualityCount"
+        },
+        "native_agency_component_ratio": {
+          "$ref": "#/$defs/QualityCount"
+        }
+      },
+      "required": [
+        "eligible_section_editable_coverage",
+        "native_agency_component_ratio",
+        "body_without_generic_fallback",
+        "desktop_tablet_mobile_evidence"
+      ],
+      "title": "QualityCounts",
+      "type": "object"
+    }
+  },
+  "$id": "project-quality-evidence.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "candidate_id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "type": "string"
+    },
+    "project_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "quality": {
+      "$ref": "#/$defs/QualityCounts"
+    },
+    "schema_version": {
+      "const": "project-quality-evidence-v1",
+      "default": "project-quality-evidence-v1"
+    },
+    "source_kind": {
+      "enum": [
+        "live_html",
+        "figma",
+        "image"
+      ]
+    }
+  },
+  "required": [
+    "candidate_id",
+    "project_id",
+    "source_kind",
+    "quality"
+  ],
+  "title": "ProjectQualityEvidence",
+  "type": "object"
+}

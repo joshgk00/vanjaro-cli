@@ -10,7 +10,7 @@ from vanjaro_cli.design.serialization import (
     serialize_design_document,
 )
 from vanjaro_cli.orchestration.portal_identity import verify_project_portal
-from vanjaro_cli.portal.assets import upload_project_assets
+from vanjaro_cli.portal.assets import preview_project_assets, upload_project_assets
 from vanjaro_cli.portal.block_library import (
     preview_project_library,
     register_project_library,
@@ -28,6 +28,7 @@ from vanjaro_cli.portal.global_blocks import (
 )
 from vanjaro_cli.project.models import ProjectManifest
 from vanjaro_cli.project.stage_engine import StageContext, StageResult
+from vanjaro_cli.reliability import atomic_write_json
 
 
 def preserve_project_theme(context: StageContext) -> StageResult:
@@ -49,6 +50,22 @@ def preserve_project_theme(context: StageContext) -> StageResult:
         artifacts=(relative,),
         message="Verified target identity and preserved the existing portal theme.",
     )
+
+
+def preview_preserve_project_theme(
+    root: Path, manifest: ProjectManifest
+) -> dict[str, object]:
+    """Verify the preserve target without changing either workspace or portal."""
+
+    del root
+    _, verified = verify_project_portal(manifest)
+    return {
+        "schema_version": "1.0",
+        "mode": "preserve",
+        "target": verified.as_dict(),
+        "portal_actions": [],
+        "local_writes": ["build/theme-result.json"],
+    }
 
 
 def upload_project_asset_stage(context: StageContext) -> StageResult:
@@ -106,6 +123,34 @@ def upload_project_asset_stage(context: StageContext) -> StageResult:
     )
 
 
+def preview_project_asset_stage(
+    root: Path, manifest: ProjectManifest
+) -> dict[str, object]:
+    """Plan exact asset reuse/uploads after a GET-only target identity check."""
+
+    _, verified = verify_project_portal(manifest)
+    document = read_design_document(root / "plans/resolved-design-document.json")
+    library_plan = _read_list(root / "plans/library-plan.json", "library plan")
+    if any(not isinstance(item, dict) for item in library_plan):
+        raise ValueError("library plan contains a non-object entry")
+    plan = preview_project_assets(
+        root=root,
+        project_id=manifest.project.id,
+        document=document,
+    )
+    return {
+        **plan,
+        "target": verified.as_dict(),
+        "portal_actions": plan["assets"],
+        "local_writes": [
+            "build/asset-manifest.json",
+            "build/design-document.json",
+            "build/library-plan.json",
+            "build/assets-result.json",
+        ],
+    }
+
+
 def preview_project_library_stage(
     root: Path, manifest: ProjectManifest
 ) -> dict[str, object]:
@@ -118,7 +163,16 @@ def preview_project_library_stage(
         plan=plan,
         manifest_path=root / "build/block-manifest.json",
     )
-    return {**result, "target": verified.as_dict()}
+    return {
+        **result,
+        "target": verified.as_dict(),
+        "portal_actions": result.get("blocks", []),
+        "local_writes": [
+            "build/block-manifest.json",
+            "build/composed-blocks.json",
+            "build/library-result.json",
+        ],
+    }
 
 
 def register_project_library_stage(context: StageContext) -> StageResult:
@@ -171,7 +225,18 @@ def preview_project_page_stage(
         desired=desired,
         manifest_path=_latest_page_manifest_path(root),
     )
-    return {**result, "target": verified.as_dict()}
+    snapshot_writes = _planned_snapshot_paths(result.get("pages", []))
+    return {
+        **result,
+        "target": verified.as_dict(),
+        "portal_actions": result.get("pages", []),
+        "local_writes": [
+            "build/pages-desired.json",
+            "build/page-manifest.json",
+            "build/pages-result.json",
+            *snapshot_writes,
+        ],
+    }
 
 
 def reconcile_project_page_stage(
@@ -222,12 +287,148 @@ def preview_project_global_stage(
 
     client, verified = verify_project_portal(manifest)
     desired = _compose_globals(root, manifest)
-    result = preview_project_global_blocks(
+    global_preview = preview_project_global_blocks(
         client,
         desired=desired,
         manifest_path=root / "build/global-block-manifest.json",
     )
-    return {**result, "target": verified.as_dict()}
+    actions_by_key = {
+        action.get("key"): action
+        for action in global_preview.get("blocks", [])
+        if isinstance(action, dict)
+    }
+    bindings: list[dict[str, object]] = []
+    projected_records: list[dict[str, object]] = []
+    for item in desired:
+        action = actions_by_key.get(item["key"], {})
+        observed_guid = action.get("guid") if isinstance(action, dict) else None
+        guid = (
+            observed_guid
+            if isinstance(observed_guid, str) and observed_guid
+            else f"agency-binding://global/{item['key']}"
+        )
+        bindings.append(
+            {
+                "key": item["key"],
+                "guid": guid,
+                "resolved": not guid.startswith("agency-binding://"),
+            }
+        )
+        projected_records.append(
+            {
+                "key": item["key"],
+                "kind": item["kind"],
+                "guid": guid,
+            }
+        )
+    page_desired = _read_list(root / "build/pages-desired.json", "desired page catalog")
+    if any(not isinstance(item, dict) for item in page_desired):
+        raise ValueError("desired page catalog contains a non-object entry")
+    with_globals, chrome_warnings = attach_global_wrappers(
+        page_desired, projected_records
+    )
+    page_preview = preview_project_pages(
+        client,
+        desired=with_globals,
+        manifest_path=_global_page_preview_manifest_path(root),
+        snapshot_root="build/global-page-snapshots",
+        manifest_write_path="build/global-page-manifest.json",
+    )
+    unresolved_bindings = [
+        entry["guid"]
+        for entry in bindings
+        if not bool(entry["resolved"])
+    ]
+    planned_page_actions = [
+        _parameterize_page_action(action, unresolved_bindings)
+        for action in page_preview.get("pages", [])
+        if isinstance(action, dict)
+    ]
+    page_preview = {**page_preview, "pages": planned_page_actions}
+    global_snapshots = [
+        item["snapshot_write_path"]
+        for item in global_preview.get("blocks", [])
+        if isinstance(item, dict)
+        and item.get("action") in {"replace_create", "replace_finish"}
+    ]
+    page_snapshots = _planned_snapshot_paths(planned_page_actions)
+    return {
+        "schema_version": "1.1",
+        "target": verified.as_dict(),
+        "globals": global_preview,
+        "pages": page_preview,
+        "bindings": bindings,
+        "warnings": list(chrome_warnings),
+        "portal_actions": [
+            *global_preview.get("blocks", []),
+            *planned_page_actions,
+        ],
+        "local_writes": [
+            "build/global-blocks-desired.json",
+            "build/global-block-manifest.json",
+            "build/global-blocks-result.json",
+            "build/pages-with-globals-desired.json",
+            "build/global-page-manifest.json",
+            "build/pages-with-globals-result.json",
+            *global_snapshots,
+            *page_snapshots,
+        ],
+    }
+
+
+def _parameterize_page_action(
+    action: dict[str, object], unresolved_bindings: list[object]
+) -> dict[str, object]:
+    """Label binding-bearing page work as a template, never as a concrete payload."""
+
+    if not unresolved_bindings:
+        return action
+    planned = dict(action)
+    provisional_action = str(planned["action"])
+    planned["action"] = "resolve_bindings_then_reconcile"
+    planned["provisional_action"] = provisional_action
+    planned["binding_mode"] = "parameterized"
+    planned["global_guid_bindings"] = list(unresolved_bindings)
+    planned["resolved_payload_fingerprint"] = None
+    if "desired_hash" in planned:
+        planned["template_preview_hash"] = planned.pop("desired_hash")
+    if "desired_state_fingerprint" in planned:
+        planned["desired_template_fingerprint"] = planned.pop(
+            "desired_state_fingerprint"
+        )
+    if "payload_fingerprint" in planned:
+        value = planned.pop("payload_fingerprint")
+        planned["payload_template_fingerprint"] = value
+    operations = []
+    for raw in planned.get("operations", []):
+        if not isinstance(raw, dict):
+            continue
+        operation = dict(raw)
+        if "payload_fingerprint" in operation:
+            operation["payload_template_fingerprint"] = operation.pop(
+                "payload_fingerprint"
+            )
+        operation["global_guid_bindings"] = list(unresolved_bindings)
+        operations.append(operation)
+    planned["operations"] = operations
+    return planned
+
+
+def _planned_snapshot_paths(actions: object) -> list[str]:
+    result: list[str] = []
+    if not isinstance(actions, list):
+        return result
+    for action in actions:
+        if not isinstance(action, dict):
+            continue
+        for operation in action.get("operations", []):
+            if (
+                isinstance(operation, dict)
+                and operation.get("kind") == "local_snapshot"
+                and isinstance(operation.get("path"), str)
+            ):
+                result.append(operation["path"])
+    return result
 
 
 def reconcile_project_global_stage(context: StageContext) -> StageResult:
@@ -383,6 +584,20 @@ def _latest_page_manifest_path(root: Path) -> Path:
     return primary
 
 
+def _global_page_preview_manifest_path(root: Path) -> Path:
+    """Model the apply-time page-manifest seed decision without writing it."""
+
+    primary = root / "build/page-manifest.json"
+    downstream = root / "build/global-page-manifest.json"
+    if not downstream.is_file() or not primary.is_file():
+        return primary if primary.is_file() else downstream
+    primary_value = json.loads(primary.read_text(encoding="utf-8"))
+    downstream_value = json.loads(downstream.read_text(encoding="utf-8"))
+    if _manifest_version(primary_value) > _manifest_version(downstream_value):
+        return primary
+    return downstream
+
+
 def _manifest_version(value: object) -> int:
     if not isinstance(value, dict) or not isinstance(value.get("pages"), list):
         return 0
@@ -424,10 +639,7 @@ def _read_asset_records(path: Path) -> dict[object, tuple[object, object]]:
 
 
 def _write_json(path: Path, value: object) -> None:
-    _write_text(
-        path,
-        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-    )
+    atomic_write_json(path, value)
 
 
 def _write_text(path: Path, value: str) -> None:
@@ -439,6 +651,8 @@ def _write_text(path: Path, value: str) -> None:
 
 __all__ = [
     "preserve_project_theme",
+    "preview_preserve_project_theme",
+    "preview_project_asset_stage",
     "preview_project_library_stage",
     "preview_project_page_stage",
     "preview_project_global_stage",

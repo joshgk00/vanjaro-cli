@@ -18,7 +18,11 @@ from vanjaro_cli.design.models import (
     DesignTokens,
     SourceKind,
 )
-from vanjaro_cli.portal.assets import upload_project_assets
+from vanjaro_cli.portal.assets import (
+    ProjectAssetError,
+    preview_project_assets,
+    upload_project_assets,
+)
 
 
 class Response:
@@ -160,3 +164,112 @@ def test_upload_project_assets_persists_each_success_for_partial_retry(
     assert len(retry.posts) == 1
     assert retry.posts[0]["json"]["fileName"] == "second.jpg"
     assert [record["asset_id"] for record in records] == ["first", "second"]
+
+
+def test_upload_rejects_asset_bytes_changed_after_plan(tmp_path: Path) -> None:
+    document = _document(tmp_path)
+
+    class MutatingClient(FakeClient):
+        def post(self, path: str, *, json: dict):
+            response = super().post(path, json=json)
+            if len(self.posts) == 1:
+                (tmp_path / "sources/second.jpg").write_bytes(b"changed")
+            return response
+
+    client = MutatingClient()
+    with pytest.raises(ProjectAssetError, match="changed after review"):
+        upload_project_assets(
+            client,
+            root=tmp_path,
+            project_id="project",
+            document=document,
+            library_plan=[],
+        )
+
+    assert len(client.posts) == 1
+
+
+def _workspace_bytes(root: Path) -> dict[str, bytes]:
+    return {
+        path.relative_to(root).as_posix(): path.read_bytes()
+        for path in root.rglob("*")
+        if path.is_file()
+    }
+
+
+def test_preview_project_assets_is_deterministic_and_zero_write(tmp_path: Path) -> None:
+    document = _document(tmp_path)
+    before = _workspace_bytes(tmp_path)
+
+    first = preview_project_assets(
+        root=tmp_path, project_id="project", document=document
+    )
+    second = preview_project_assets(
+        root=tmp_path, project_id="project", document=document
+    )
+
+    assert first == second
+    assert _workspace_bytes(tmp_path) == before
+    encoded = json.dumps(first, sort_keys=True)
+    assert "base64" not in encoded.lower()
+    assert str(tmp_path) not in encoded
+    assert [item["asset_id"] for item in first["assets"]] == ["first", "second"]
+    assert [item["action"] for item in first["assets"]] == ["upload", "upload"]
+    assert all(item["method"] == "POST" for item in first["assets"])
+
+
+def test_preview_and_apply_decisions_match_and_changed_bytes_change_plan(
+    tmp_path: Path,
+) -> None:
+    document = _document(tmp_path)
+    preview = preview_project_assets(
+        root=tmp_path, project_id="project", document=document
+    )
+    client = FakeClient()
+    upload_project_assets(
+        client,
+        root=tmp_path,
+        project_id="project",
+        document=document,
+        library_plan=[],
+    )
+    assert [call["path"] for call in client.posts] == [
+        item["endpoint"] for item in preview["assets"] if item["action"] == "upload"
+    ]
+
+    resumed = preview_project_assets(
+        root=tmp_path, project_id="project", document=document
+    )
+    assert [item["action"] for item in resumed["assets"]] == ["reuse", "reuse"]
+    assert resumed["assets"][0]["observed"]["vanjaro_url"].startswith("/Portals/")
+    assert resumed["assets"][0]["before_state_fingerprint"]
+    resumed_client = FakeClient()
+    upload_project_assets(
+        resumed_client,
+        root=tmp_path,
+        project_id="project",
+        document=document,
+        library_plan=[],
+    )
+    assert resumed_client.posts == []
+
+    old_digest = resumed["assets"][0]["sha256"]
+    (tmp_path / "sources" / "first.png").write_bytes(b"changed")
+    changed = preview_project_assets(
+        root=tmp_path, project_id="project", document=document
+    )
+    assert changed["assets"][0]["action"] == "upload"
+    assert changed["assets"][0]["sha256"] != old_digest
+    assert changed["assets"][0]["payload_fingerprint"]
+    assert changed["assets"][1]["action"] == "reuse"
+
+
+@pytest.mark.parametrize("local_path", ["sources/missing.png", "../escape.png"])
+def test_preview_project_assets_rejects_missing_or_escaping_files(
+    tmp_path: Path, local_path: str
+) -> None:
+    document = _document(tmp_path)
+    document.assets[0].local_path = local_path
+
+    with pytest.raises(ProjectAssetError, match="missing|escapes"):
+        preview_project_assets(root=tmp_path, project_id="project", document=document)

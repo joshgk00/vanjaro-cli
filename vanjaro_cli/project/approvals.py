@@ -21,6 +21,15 @@ from vanjaro_cli.project.workspace import (
     load_manifest,
     write_manifest,
 )
+from vanjaro_cli.project.publish_receipt import (
+    PublishReceiptError,
+    current_publish_review_fingerprint,
+)
+from vanjaro_cli.project.launch_receipt import (
+    LaunchReceiptError,
+    current_launch_review_fingerprint,
+)
+from vanjaro_cli.project.publish_lock import PublishLockError, publish_operation_lock
 
 
 class ProjectApprovalError(ProjectWorkspaceError):
@@ -28,14 +37,25 @@ class ProjectApprovalError(ProjectWorkspaceError):
 
 
 def approval_artifact_fingerprint(
-    manifest: ProjectManifest, gate: ApprovalGate
+    root: Path, manifest: ProjectManifest, gate: ApprovalGate
 ) -> str:
     """Return the exact stage output that owns an approval gate."""
+
+    if gate == ApprovalGate.PUBLISH:
+        try:
+            return current_publish_review_fingerprint(root, manifest)
+        except PublishReceiptError as exc:
+            raise ProjectApprovalError(str(exc)) from exc
+    if gate == ApprovalGate.LAUNCH:
+        try:
+            return current_launch_review_fingerprint(root, manifest)
+        except LaunchReceiptError as exc:
+            raise ProjectApprovalError(str(exc)) from exc
 
     owner = {
         ApprovalGate.PLAN: ProjectStage.PLAN,
         ApprovalGate.PORTAL_MUTATION: ProjectStage.PLAN,
-        ApprovalGate.PUBLISH: ProjectStage.VERIFY,
+        ApprovalGate.LAUNCH: ProjectStage.LAUNCH,
     }[gate]
     fingerprint = manifest.stages[owner].output_fingerprint
     if fingerprint is None:
@@ -45,7 +65,7 @@ def approval_artifact_fingerprint(
     return fingerprint
 
 
-def request_approval(
+def _request_approval_unlocked(
     root: Path,
     *,
     gate: ApprovalGate,
@@ -58,14 +78,15 @@ def request_approval(
 
     now = (clock or _utc_now)()
     manifest = load_manifest(root).model_copy(deep=True)
-    current_fingerprint = approval_artifact_fingerprint(manifest, gate)
+    current_fingerprint = approval_artifact_fingerprint(root, manifest, gate)
     owner = {
         ApprovalGate.PLAN: ProjectStage.PLAN,
         ApprovalGate.PORTAL_MUTATION: ProjectStage.PLAN,
-        ApprovalGate.PUBLISH: ProjectStage.VERIFY,
+        ApprovalGate.PUBLISH: ProjectStage.PUBLISH,
+        ApprovalGate.LAUNCH: ProjectStage.LAUNCH,
     }[gate]
     owner_record = manifest.stages[owner]
-    if owner_record.artifacts:
+    if gate not in {ApprovalGate.PUBLISH, ApprovalGate.LAUNCH} and owner_record.artifacts:
         observed = fingerprint_files(
             root, tuple(Path(value) for value in owner_record.artifacts)
         )
@@ -124,7 +145,41 @@ def request_approval(
     return approval
 
 
-def resolve_approval(
+def request_approval(
+    root: Path,
+    *,
+    gate: ApprovalGate,
+    requested_by: str,
+    fingerprint: str | None = None,
+    note: str | None = None,
+    clock: Callable[[], datetime] | None = None,
+) -> ApprovalRecord:
+    """Create an approval while serializing publish authority transitions."""
+
+    if gate not in {ApprovalGate.PUBLISH, ApprovalGate.LAUNCH}:
+        return _request_approval_unlocked(
+            root,
+            gate=gate,
+            requested_by=requested_by,
+            fingerprint=fingerprint,
+            note=note,
+            clock=clock,
+        )
+    try:
+        with publish_operation_lock(root, operation="approval-request"):
+            return _request_approval_unlocked(
+                root,
+                gate=gate,
+                requested_by=requested_by,
+                fingerprint=fingerprint,
+                note=note,
+                clock=clock,
+            )
+    except PublishLockError as exc:
+        raise ProjectApprovalError(str(exc)) from exc
+
+
+def _resolve_approval_unlocked(
     root: Path,
     approval_id: str,
     *,
@@ -144,6 +199,12 @@ def resolve_approval(
     if index is None:
         raise ProjectApprovalError(f"approval not found: {approval_id}")
     current = manifest.approvals[index]
+    if current.gate in {ApprovalGate.PUBLISH, ApprovalGate.LAUNCH}:
+        expected = approval_artifact_fingerprint(root, manifest, current.gate)
+        if current.fingerprint != expected:
+            raise ProjectApprovalError(
+                f"{current.gate.value} approval receipt changed after the request; prepare a new review"
+            )
     target = ApprovalStatus.APPROVED if approved else ApprovalStatus.REJECTED
     if current.status == target:
         return current
@@ -170,6 +231,45 @@ def resolve_approval(
     _touch(manifest, now)
     write_manifest(root, _validated(manifest))
     return resolved
+
+
+def resolve_approval(
+    root: Path,
+    approval_id: str,
+    *,
+    approved: bool,
+    resolved_by: str,
+    note: str | None = None,
+    clock: Callable[[], datetime] | None = None,
+) -> ApprovalRecord:
+    """Resolve an approval while serializing publish authority transitions."""
+
+    manifest = load_manifest(root)
+    current = next((item for item in manifest.approvals if item.id == approval_id), None)
+    if current is None or current.gate not in {
+        ApprovalGate.PUBLISH,
+        ApprovalGate.LAUNCH,
+    }:
+        return _resolve_approval_unlocked(
+            root,
+            approval_id,
+            approved=approved,
+            resolved_by=resolved_by,
+            note=note,
+            clock=clock,
+        )
+    try:
+        with publish_operation_lock(root, operation="approval-resolve"):
+            return _resolve_approval_unlocked(
+                root,
+                approval_id,
+                approved=approved,
+                resolved_by=resolved_by,
+                note=note,
+                clock=clock,
+            )
+    except PublishLockError as exc:
+        raise ProjectApprovalError(str(exc)) from exc
 
 
 def _append_audit(

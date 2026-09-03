@@ -157,7 +157,7 @@ def test_manifest_rejects_duplicate_source_ids() -> None:
             target_profile="target",
             sources=[_source(), _source()],
             agency_pack_name="agency",
-            agency_pack_version="1",
+            agency_pack_version="1.0.0",
             clock=lambda: NOW,
         )
 

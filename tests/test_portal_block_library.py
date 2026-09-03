@@ -8,6 +8,7 @@ from pathlib import Path
 import pytest
 
 from vanjaro_cli.portal.block_library import (
+    ADD_BLOCK,
     BlockLibraryError,
     compose_project_library,
     preview_project_library,
@@ -321,5 +322,15 @@ def test_preview_is_read_only(
 
     assert result["to_create"] == 1
     assert result["reused"] == 0
+    planned = result["blocks"][0]
+    assert planned["endpoint"] == ADD_BLOCK
+    assert planned["payload_fingerprint"]
+    assert planned["response_binding"].startswith("custom-block-guid://")
+    assert [operation["kind"] for operation in planned["operations"]] == [
+        "local_checkpoint",
+        "portal_request",
+        "portal_readback",
+        "local_checkpoint",
+    ]
     assert client.posts == []
     assert not manifest_path.exists()

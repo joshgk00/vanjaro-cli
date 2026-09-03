@@ -13,7 +13,11 @@ from vanjaro_cli.migration.audit import audit_page
 from vanjaro_cli.migration.text_match import fuzzy_set_match
 from vanjaro_cli.orchestration.portal_identity import verify_project_portal
 from vanjaro_cli.orchestration.project_fidelity import evaluate_project_fidelity
+from vanjaro_cli.portal.global_block_manifest import global_block_content_hash
+from vanjaro_cli.portal.page_composition import page_content_hash
+from vanjaro_cli.project.models import ProjectManifest
 from vanjaro_cli.project.stage_engine import StageContext, StageResult
+from vanjaro_cli.reliability import atomic_write_json
 
 
 GET_PAGE = "/API/VanjaroAI/AIPage/Get"
@@ -27,13 +31,31 @@ class ProjectVerificationError(ValueError):
 def verify_project_drafts(context: StageContext) -> StageResult:
     """Verify page/global drafts and write a publish-approval owner artifact."""
 
-    client, verified = verify_project_portal(context.manifest)
-    document = read_design_document(context.root / "build/design-document.json")
+    report = preview_project_drafts(context.root, context.manifest)
+    report_relative = "verify/draft-verification.json"
+    _write_json(context.root / report_relative, report)
+    return StageResult(
+        artifacts=(report_relative,),
+        message=(
+            f"Verified {report['page_count']} page draft(s) and "
+            f"{report['global_count']} global draft(s); "
+            f"{report['blocker_count']} publish blocker(s)."
+        ),
+    )
+
+
+def preview_project_drafts(
+    root: Path, manifest: ProjectManifest
+) -> dict[str, Any]:
+    """Evaluate the complete draft gate with GETs and local reads only."""
+
+    client, verified = verify_project_portal(manifest)
+    document = read_design_document(root / "build/design-document.json")
     page_manifest = _read_object(
-        context.root / "build/global-page-manifest.json", "global page manifest"
+        root / "build/global-page-manifest.json", "global page manifest"
     )
     global_manifest = _read_object(
-        context.root / "build/global-block-manifest.json", "global block manifest"
+        root / "build/global-block-manifest.json", "global block manifest"
     )
     page_records = page_manifest.get("pages", [])
     global_records = global_manifest.get("blocks", [])
@@ -104,6 +126,12 @@ def verify_project_drafts(context: StageContext) -> StageResult:
             record.get("path", "draft"), f'<div id="vjEditor">{html}</div>'
         )
         page_blockers: list[str] = []
+        live_hash = page_content_hash(components, styles, html)
+        desired_hash = record.get("desired_hash")
+        if not isinstance(desired_hash, str) or live_hash != desired_hash:
+            page_blockers.append("draft content differs from the managed desired hash")
+        if bool(detail.get("isVisible", False)):
+            page_blockers.append("page is visible")
         if bool(detail.get("isPublished", False)):
             page_blockers.append("page is already published")
         if detail.get("version") != record.get("observed_version"):
@@ -125,6 +153,9 @@ def verify_project_drafts(context: StageContext) -> StageResult:
                 "page_id": record["page_id"],
                 "path": record.get("path", ""),
                 "version": detail.get("version"),
+                "desired_hash": desired_hash,
+                "observed_hash": live_hash,
+                "visible": bool(detail.get("isVisible", False)),
                 "published": bool(detail.get("isPublished", False)),
                 "top_level_components": len(components),
                 "global_wrappers": len(wrappers),
@@ -135,7 +166,12 @@ def verify_project_drafts(context: StageContext) -> StageResult:
             }
         )
 
+    global_observed_hashes: dict[str, str] = {}
     for kind, detail in global_details.items():
+        live_hash = global_block_content_hash(
+            _json_value(detail.get("contentJSON"), "global contentJSON"),
+            _json_value(detail.get("styleJSON"), "global styleJSON"),
+        )
         if bool(detail.get("isPublished", False)):
             blockers.append(f"global {kind}: desired version is already published")
         matching = next(
@@ -144,6 +180,12 @@ def verify_project_drafts(context: StageContext) -> StageResult:
         )
         if detail.get("version") != matching.get("observed_version"):
             blockers.append(f"global {kind}: version differs from the managed manifest")
+        desired_hash = matching.get("desired_hash")
+        if not isinstance(desired_hash, str) or live_hash != desired_hash:
+            blockers.append(
+                f"global {kind}: content differs from the managed desired hash"
+            )
+        global_observed_hashes[kind] = live_hash
         warnings.extend(matching.get("warnings", []))
 
     source_text = [
@@ -184,13 +226,10 @@ def verify_project_drafts(context: StageContext) -> StageResult:
             f"{len(missing_action_urls)} source action(s) have no URL mapping"
         )
 
-    visual_fidelity, fidelity_blockers = evaluate_project_fidelity(context.root)
+    visual_fidelity, fidelity_blockers = evaluate_project_fidelity(root)
     blockers.extend(fidelity_blockers)
 
-    report_relative = "verify/draft-verification.json"
-    _write_json(
-        context.root / report_relative,
-        {
+    return {
             "schema_version": "1.1",
             "valid": not blockers,
             "visual_fidelity": visual_fidelity,
@@ -213,19 +252,17 @@ def verify_project_drafts(context: StageContext) -> StageResult:
                     "kind": kind,
                     "guid": detail.get("guid"),
                     "version": detail.get("version"),
+                    "desired_hash": next(
+                        record.get("desired_hash")
+                        for record in global_records
+                        if isinstance(record, dict) and record.get("kind") == kind
+                    ),
+                    "observed_hash": global_observed_hashes[kind],
                     "published": bool(detail.get("isPublished", False)),
                 }
                 for kind, detail in sorted(global_details.items())
             ],
-        },
-    )
-    return StageResult(
-        artifacts=(report_relative,),
-        message=(
-            f"Verified {len(pages)} page draft(s) and {len(global_details)} global draft(s); "
-            f"{len(blockers)} publish blocker(s)."
-        ),
-    )
+        }
 
 
 def _component_text(components: list[dict[str, Any]]) -> list[str]:
@@ -299,14 +336,11 @@ def _read_object(path: Path, label: str) -> dict[str, Any]:
 
 
 def _write_json(path: Path, value: object) -> None:
-    path.parent.mkdir(parents=True, exist_ok=True)
-    temporary = path.with_name(f".{path.name}.tmp")
-    temporary.write_text(
-        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-        newline="\n",
-    )
-    temporary.replace(path)
+    atomic_write_json(path, value)
 
 
-__all__ = ["ProjectVerificationError", "verify_project_drafts"]
+__all__ = [
+    "ProjectVerificationError",
+    "preview_project_drafts",
+    "verify_project_drafts",
+]

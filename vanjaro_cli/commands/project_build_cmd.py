@@ -1,4 +1,4 @@
-"""CLI presentation for approved project build stages."""
+"""CLI presentation for fingerprint-bound, one-stage project builds."""
 
 from __future__ import annotations
 
@@ -8,37 +8,25 @@ from pathlib import Path
 import click
 from click.core import ParameterSource
 
+from vanjaro_cli.client import ApiError
 from vanjaro_cli.commands.helpers import exit_error
-from vanjaro_cli.orchestration.project_fidelity import FIDELITY_EVIDENCE_PATH
-from vanjaro_cli.orchestration import (
-    PortalIdentityError,
-    ProjectVerificationError,
-    plan_project_theme_stage,
-    preserve_project_theme,
-    preview_project_library_stage,
-    preview_project_page_stage,
-    preview_project_global_stage,
-    preview_project_theme_stage,
-    reconcile_project_page_stage,
-    reconcile_project_global_stage,
-    register_project_library_stage,
-    upload_project_asset_stage,
-    verify_project_drafts,
+from vanjaro_cli.orchestration.project_build_review import (
+    ProjectBuildReviewError,
+    apply_build_review,
+    prepare_next_build_review,
 )
 from vanjaro_cli.portal import (
     BlockLibraryError,
     ProjectGlobalBlockError,
     ProjectPageError,
 )
-from vanjaro_cli.project import (
-    ProjectStage,
-    ProjectStageError,
-    ProjectWorkspaceError,
-    StageEngine,
-    StageInputs,
-    StageStatus,
-    load_manifest,
+from vanjaro_cli.project.build_receipt import (
+    BuildReceiptError,
+    load_build_receipt,
 )
+from vanjaro_cli.project.publish_lock import PublishLockError
+from vanjaro_cli.project.stage_engine import ProjectStageError
+from vanjaro_cli.project.workspace import ProjectWorkspaceError
 
 
 @click.command("build")
@@ -58,7 +46,7 @@ from vanjaro_cli.project import (
     type=click.Choice(["theme", "assets", "library", "pages", "globals", "verify"]),
     default="verify",
     show_default=True,
-    help="Last supported build stage to execute.",
+    help="Build ceiling; each invocation reviews or applies only the next stage.",
 )
 @click.option(
     "--page-mode",
@@ -67,7 +55,28 @@ from vanjaro_cli.project import (
     show_default=True,
     help="Create hidden project-prefixed drafts without altering current navigation.",
 )
-@click.option("--dry-run", is_flag=True, help="Preview only the next executable stage without writes or POSTs.")
+@click.option(
+    "--dry-run",
+    is_flag=True,
+    help="Emit a zero-write receipt for exactly the next stage.",
+)
+@click.option(
+    "--review-receipt",
+    type=click.Path(path_type=Path, dir_okay=False),
+    default=None,
+    help="Detached JSON receipt saved from a current --dry-run.",
+)
+@click.option(
+    "--confirm-build",
+    default=None,
+    help="Full SHA-256 fingerprint from the reviewed receipt.",
+)
+@click.option(
+    "--by",
+    "operator",
+    default=None,
+    help="Operator identity bound to the review and action.",
+)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
 @click.pass_context
 def build_project(
@@ -77,9 +86,12 @@ def build_project(
     through: str,
     page_mode: str,
     dry_run: bool,
+    review_receipt: Path | None,
+    confirm_build: str | None,
+    operator: str | None,
     as_json: bool,
 ) -> None:
-    """Run approved build stages with exact target-identity guards."""
+    """Review or apply one approved build stage with exact target guards."""
 
     try:
         if (
@@ -87,199 +99,87 @@ def build_project(
             and click_context.get_parameter_source("through") == ParameterSource.DEFAULT
         ):
             through = "theme"
-        if theme_mode == "plan" and through != "theme" and not dry_run:
-            raise ValueError(
-                "theme-mode plan is artifact-only and can execute only with --through theme; "
-                "review/apply the proposed theme before running portal build stages"
+        if theme_mode == "plan" and through != "theme":
+            raise ProjectBuildReviewError(
+                "theme-mode plan is artifact-only and can run only through theme"
             )
-        engine = StageEngine(directory)
-        executions = []
-        stages = [ProjectStage.THEME]
-        if through in {"assets", "library", "pages", "globals", "verify"}:
-            stages.append(ProjectStage.ASSETS)
-        if through in {"library", "pages", "globals", "verify"}:
-            stages.append(ProjectStage.LIBRARY)
-        if through in {"pages", "globals", "verify"}:
-            stages.append(ProjectStage.PAGES)
-        if through in {"globals", "verify"}:
-            stages.append(ProjectStage.GLOBAL_BLOCKS)
-        if through == "verify":
-            stages.append(ProjectStage.VERIFY)
-        for stage in stages:
-            manifest = load_manifest(engine.root)
-            if dry_run and any(
-                manifest.stages[dependency].status
-                not in {StageStatus.COMPLETED, StageStatus.SKIPPED}
-                for dependency in _dependencies(stage)
-            ):
-                break
-            if stage == ProjectStage.THEME:
-                inputs = StageInputs(
-                    data={"theme_mode": theme_mode},
-                    files=tuple(
-                        Path(value)
-                        for value in manifest.stages[ProjectStage.PLAN].artifacts
-                    ),
+        if not operator or not operator.strip():
+            raise ProjectBuildReviewError("project build requires a non-empty --by operator")
+        if dry_run:
+            if review_receipt is not None or confirm_build is not None:
+                raise ProjectBuildReviewError(
+                    "--dry-run cannot be combined with --review-receipt or --confirm-build"
                 )
-                operation = (
-                    preserve_project_theme
-                    if theme_mode == "preserve"
-                    else plan_project_theme_stage
-                )
-            elif stage == ProjectStage.ASSETS:
-                inputs = StageInputs(
-                    data={
-                        "folder": f"Images/agency/{manifest.project.id}/",
-                    },
-                    files=(
-                        Path("plans/resolved-design-document.json"),
-                        Path("plans/library-plan.json"),
-                    ),
-                )
-                operation = upload_project_asset_stage
-            elif stage == ProjectStage.LIBRARY:
-                inputs = StageInputs(
-                    data={"registration_policy": "reconcile-no-update-v1"},
-                    files=(
-                        Path("build/library-plan.json"),
-                        Path("build/asset-manifest.json"),
-                    ),
-                )
-                operation = register_project_library_stage
-            elif stage == ProjectStage.PAGES:
-                inputs = StageInputs(
-                    data={"page_mode": page_mode},
-                    files=(
-                        Path("build/design-document.json"),
-                        Path("build/composed-blocks.json"),
-                        Path("build/asset-manifest.json"),
-                        Path("plans/global-block-plan.json"),
-                    ),
-                )
-                operation = lambda context: reconcile_project_page_stage(
-                    context, isolated=page_mode == "isolated"
-                )
-            elif stage == ProjectStage.GLOBAL_BLOCKS:
-                inputs = StageInputs(
-                    data={"global_policy": "unpublished-v2-with-draft-wrappers"},
-                    files=(
-                        Path("build/design-document.json"),
-                        Path("plans/global-block-plan.json"),
-                        Path("build/pages-desired.json"),
-                        Path("build/page-manifest.json"),
-                    ),
-                )
-                operation = reconcile_project_global_stage
-            else:
-                inputs = StageInputs(
-                    data={"verification_policy": "draft-publish-gate-v1"},
-                    files=(
-                        Path("build/design-document.json"),
-                        Path("build/global-block-manifest.json"),
-                        Path("build/global-page-manifest.json"),
-                        Path("build/pages-with-globals-desired.json"),
-                        # The gate scores this file. Leaving it out let verify
-                        # resume and report a score the evidence no longer
-                        # supports, which is worse than not scoring at all.
-                        Path(FIDELITY_EVIDENCE_PATH),
-                    ),
-                )
-                operation = verify_project_drafts
-            execution = engine.execute(
-                stage,
-                inputs,
-                operation,
-                dry_run=dry_run,
+            prepared = prepare_next_build_review(
+                directory,
+                theme_mode=theme_mode,
+                through=through,
+                page_mode=page_mode,
+                operator=operator,
             )
-            executions.append(execution.as_dict())
-            if (
-                dry_run
-                and stage == ProjectStage.THEME
-                and theme_mode == "plan"
-                and execution.status == "dry_run"
-                and execution.action == "execute"
-            ):
-                executions[-1]["preview"] = preview_project_theme_stage(
-                    engine.root, load_manifest(engine.root)
+            execution = prepared.execution.as_dict()
+            execution["preview"] = prepared.receipt["preview"]
+            payload = {
+                "status": "preview",
+                "dry_run": True,
+                "through": through,
+                "executions": [execution],
+                "receipt": prepared.receipt,
+                "portal_mutated": False,
+                "workspace_mutated": False,
+            }
+        else:
+            if review_receipt is None or not confirm_build:
+                raise ProjectBuildReviewError(
+                    "real build execution requires --review-receipt, --confirm-build, "
+                    "and --by from a current --dry-run"
                 )
-            if (
-                dry_run
-                and stage == ProjectStage.LIBRARY
-                and execution.status == "dry_run"
-                and execution.action == "execute"
-            ):
-                preview = preview_project_library_stage(
-                    engine.root, load_manifest(engine.root)
-                )
-                executions[-1]["preview"] = preview
-            if (
-                dry_run
-                and stage == ProjectStage.GLOBAL_BLOCKS
-                and execution.status == "dry_run"
-                and execution.action == "execute"
-            ):
-                preview = preview_project_global_stage(
-                    engine.root, load_manifest(engine.root)
-                )
-                executions[-1]["preview"] = preview
-            if (
-                dry_run
-                and stage == ProjectStage.PAGES
-                and execution.status == "dry_run"
-                and execution.action == "execute"
-            ):
-                preview = preview_project_page_stage(
-                    engine.root,
-                    load_manifest(engine.root),
-                    isolated=page_mode == "isolated",
-                )
-                executions[-1]["preview"] = preview
-            if dry_run and execution.status == "dry_run" and execution.action == "execute":
-                break
+            reviewed = load_build_receipt(review_receipt)
+            execution = apply_build_review(
+                directory,
+                reviewed_receipt=reviewed,
+                confirmation=confirm_build,
+                operator=operator,
+                theme_mode=theme_mode,
+                through=through,
+                page_mode=page_mode,
+            )
+            payload = {
+                "status": "ok",
+                "dry_run": False,
+                "through": through,
+                "executions": [execution.as_dict()],
+                "review_fingerprint": reviewed["fingerprint"],
+                "operator": operator.strip(),
+            }
     except (
+        ApiError,
         BlockLibraryError,
+        BuildReceiptError,
+        ProjectBuildReviewError,
         ProjectPageError,
         ProjectGlobalBlockError,
-        ProjectVerificationError,
-        PortalIdentityError,
         ProjectStageError,
         ProjectWorkspaceError,
+        PublishLockError,
         ValueError,
     ) as exc:
         exit_error(str(exc), as_json)
 
-    payload = {
-        "status": "ok",
-        "dry_run": dry_run,
-        "through": through,
-        "executions": executions,
-    }
     if as_json:
-        click.echo(json.dumps(payload))
+        click.echo(json.dumps(payload, ensure_ascii=False, sort_keys=True))
         return
-    if not executions:
-        click.echo("No build stage could be previewed because an upstream dependency is incomplete.")
-        return
-    for execution in executions:
+    execution = payload["executions"][0]
+    click.echo(
+        f"{execution['stage']}: {execution['status']} ({execution['action']})"
+    )
+    if dry_run:
+        fingerprint = payload["receipt"]["fingerprint"]
+        click.echo(f"Build review fingerprint: {fingerprint}")
         click.echo(
-            f"{execution['stage']}: {execution['status']} ({execution['action']})"
+            "Save the receipt JSON, then apply it with --review-receipt PATH "
+            f"--confirm-build {fingerprint} --by {operator.strip()!r}."
         )
-
-
-def _dependencies(stage: ProjectStage) -> tuple[ProjectStage, ...]:
-    if stage == ProjectStage.THEME:
-        return (ProjectStage.PLAN,)
-    if stage == ProjectStage.ASSETS:
-        return (ProjectStage.THEME,)
-    if stage == ProjectStage.LIBRARY:
-        return (ProjectStage.ASSETS,)
-    if stage == ProjectStage.PAGES:
-        return (ProjectStage.LIBRARY,)
-    if stage == ProjectStage.GLOBAL_BLOCKS:
-        return (ProjectStage.PAGES,)
-    if stage == ProjectStage.VERIFY:
-        return (ProjectStage.GLOBAL_BLOCKS,)
-    return ()
 
 
 __all__ = ["build_project"]

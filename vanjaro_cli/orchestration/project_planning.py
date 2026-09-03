@@ -30,6 +30,7 @@ from vanjaro_cli.design.template_catalog import (
 )
 from vanjaro_cli.portal.global_header import HEADER_COMPOSER_CONTRACT_VERSION
 from vanjaro_cli.project.stage_engine import StageContext, StageResult
+from vanjaro_cli.reliability import atomic_write_json
 
 
 def template_catalog_fingerprint() -> str:
@@ -195,10 +196,7 @@ def _content_losses(plan: CompositionPlan) -> dict[str, list[str]]:
 
 
 def _atomic_write_json(path: Path, value: object) -> None:
-    _atomic_write_text(
-        path,
-        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-    )
+    atomic_write_json(path, value)
 
 
 def _atomic_write_text(path: Path, value: str) -> None:

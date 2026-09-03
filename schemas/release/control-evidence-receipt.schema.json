@@ -1,0 +1,55 @@
+{
+  "$defs": {
+    "ControlResult": {
+      "additionalProperties": false,
+      "properties": {
+        "evidence_ids": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "evidence_ids"
+      ],
+      "title": "ControlResult",
+      "type": "object"
+    }
+  },
+  "$id": "control-evidence-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "contract_migrations": {
+      "$ref": "#/$defs/ControlResult"
+    },
+    "import_boundaries": {
+      "$ref": "#/$defs/ControlResult"
+    },
+    "recovery_tests": {
+      "$ref": "#/$defs/ControlResult"
+    },
+    "schema_version": {
+      "const": "reliability-control-evidence-v1",
+      "default": "reliability-control-evidence-v1"
+    },
+    "structured_diagnostics": {
+      "$ref": "#/$defs/ControlResult"
+    },
+    "test_receipt_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    }
+  },
+  "required": [
+    "test_receipt_sha256",
+    "structured_diagnostics",
+    "recovery_tests",
+    "contract_migrations",
+    "import_boundaries"
+  ],
+  "title": "ControlEvidenceReceipt",
+  "type": "object"
+}

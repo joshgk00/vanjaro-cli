@@ -38,6 +38,7 @@ from vanjaro_cli.orchestration.image_acquisition import (
 )
 from vanjaro_cli.project.models import ProjectManifest, ProjectSource
 from vanjaro_cli.project.stage_engine import StageContext, StageResult
+from vanjaro_cli.reliability import atomic_write_json
 
 
 class ProjectAnalysisError(ValueError):
@@ -452,10 +453,7 @@ def _string_metadata(source: ProjectSource, key: str) -> str | None:
 
 
 def _atomic_write_json(path: Path, value: object) -> None:
-    _atomic_write_text(
-        path,
-        json.dumps(value, ensure_ascii=False, indent=2, sort_keys=True) + "\n",
-    )
+    atomic_write_json(path, value)
 
 
 def _atomic_write_text(path: Path, value: str) -> None:

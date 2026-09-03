@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import hashlib
-import json
 from typing import Any
 
 from vanjaro_cli.design.models import ContentKind, DesignDocument, Section
@@ -17,6 +15,7 @@ from vanjaro_cli.portal.global_block_reconciliation import (
     preview_project_global_blocks,
     reconcile_project_global_blocks,
 )
+from vanjaro_cli.portal.global_block_manifest import global_block_content_hash
 from vanjaro_cli.portal.global_header_matching import compose_header_block
 from vanjaro_cli.portal.pages import namespace_component_payload
 from vanjaro_cli.utils.grapesjs import render_components, render_styles
@@ -71,10 +70,6 @@ def compose_project_global_blocks(
         css = render_styles(styles)
         if css:
             html = f"<style>{css}</style>{html}"
-        state = {
-            "content_json": components,
-            "style_json": styles,
-        }
         desired.append(
             {
                 "key": entry["id"],
@@ -85,7 +80,7 @@ def compose_project_global_blocks(
                 "components": components,
                 "styles": styles,
                 "html": html,
-                "desired_hash": _hash(state),
+                "desired_hash": global_block_content_hash(components, styles),
                 "warnings": list(built.get("warnings", [])),
                 "composition_path": built.get("composition_path", "composer"),
                 "template_id": built.get("template_id"),
@@ -159,11 +154,6 @@ def _project_brand_text(
     if containing_page is not None and containing_page.title.strip():
         return containing_page.title.strip()
     return "Site"
-
-
-def _hash(value: object) -> str:
-    raw = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 __all__ = [

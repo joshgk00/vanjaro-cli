@@ -19,9 +19,10 @@ from pydantic import (
 )
 
 from vanjaro_cli.design.models import BreakpointName, SourceKind, Viewport
+from vanjaro_cli.utils.semver import validate_semver
 
 
-PROJECT_SCHEMA_VERSION = "1.0"
+PROJECT_SCHEMA_VERSION = "1.1"
 PROJECT_STAGE_ORDER = (
     "intake",
     "analyze",
@@ -33,6 +34,7 @@ PROJECT_STAGE_ORDER = (
     "global_blocks",
     "verify",
     "publish",
+    "launch",
 )
 
 _SENSITIVE_KEY = re.compile(
@@ -56,6 +58,7 @@ class ProjectStage(str, Enum):
     GLOBAL_BLOCKS = "global_blocks"
     VERIFY = "verify"
     PUBLISH = "publish"
+    LAUNCH = "launch"
 
 
 class StageStatus(str, Enum):
@@ -70,6 +73,7 @@ class ApprovalGate(str, Enum):
     PLAN = "plan"
     PORTAL_MUTATION = "portal_mutation"
     PUBLISH = "publish"
+    LAUNCH = "launch"
 
 
 class ApprovalStatus(str, Enum):
@@ -139,13 +143,18 @@ class AgencyPack(_ProjectModel):
     version: str = Field(min_length=1)
     digest: str | None = Field(default=None, pattern=r"^[a-f0-9]{64}$")
 
-    @field_validator("name", "version")
+    @field_validator("name")
     @classmethod
-    def normalize_value(cls, value: str) -> str:
+    def normalize_name(cls, value: str) -> str:
         normalized = value.strip()
         if not normalized:
-            raise ValueError("agency pack name and version must not be empty")
+            raise ValueError("agency pack name must not be empty")
         return normalized
+
+    @field_validator("version")
+    @classmethod
+    def validate_version(cls, value: str) -> str:
+        return validate_semver(value.strip())
 
 
 class ProjectSource(_ProjectModel):
@@ -305,7 +314,7 @@ class AuditEvent(_ProjectModel):
 
 
 class ProjectManifest(_ProjectModel):
-    schema_version: Literal["1.0"] = PROJECT_SCHEMA_VERSION
+    schema_version: Literal["1.1"] = PROJECT_SCHEMA_VERSION
     project: ProjectIdentity
     target: TargetPortal
     agency_pack: AgencyPack

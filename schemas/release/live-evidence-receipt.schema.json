@@ -1,0 +1,196 @@
+{
+  "$defs": {
+    "ArtifactReference": {
+      "additionalProperties": false,
+      "properties": {
+        "path": {
+          "type": "string"
+        },
+        "sha256": {
+          "pattern": "^[a-f0-9]{64}$",
+          "type": "string"
+        }
+      },
+      "required": [
+        "path",
+        "sha256"
+      ],
+      "title": "ArtifactReference",
+      "type": "object"
+    },
+    "LiveCapture": {
+      "additionalProperties": false,
+      "properties": {
+        "artifact": {
+          "$ref": "#/$defs/ArtifactReference"
+        },
+        "height": {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        },
+        "width": {
+          "exclusiveMinimum": 0,
+          "type": "integer"
+        }
+      },
+      "required": [
+        "width",
+        "height",
+        "artifact"
+      ],
+      "title": "LiveCapture",
+      "type": "object"
+    },
+    "PortalObservation": {
+      "additionalProperties": false,
+      "properties": {
+        "base_url": {
+          "type": "string"
+        },
+        "dnn_version": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "portal_id": {
+          "minimum": 0,
+          "type": "integer"
+        },
+        "vanjaro_ai_version": {
+          "minLength": 1,
+          "type": "string"
+        },
+        "vanjaro_version": {
+          "minLength": 1,
+          "type": "string"
+        }
+      },
+      "required": [
+        "portal_id",
+        "base_url",
+        "dnn_version",
+        "vanjaro_version",
+        "vanjaro_ai_version"
+      ],
+      "title": "PortalObservation",
+      "type": "object"
+    },
+    "SmokeCheck": {
+      "additionalProperties": false,
+      "properties": {
+        "check_id": {
+          "enum": [
+            "editor",
+            "navigation",
+            "public-route",
+            "search"
+          ]
+        },
+        "status": {
+          "enum": [
+            "passed",
+            "failed"
+          ]
+        }
+      },
+      "required": [
+        "check_id",
+        "status"
+      ],
+      "title": "SmokeCheck",
+      "type": "object"
+    }
+  },
+  "$id": "live-evidence-receipt.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "attestation": {
+      "$ref": "#/$defs/ArtifactReference"
+    },
+    "candidate_id": {
+      "pattern": "^[a-z0-9][a-z0-9._-]*$",
+      "type": "string"
+    },
+    "captures": {
+      "additionalProperties": {
+        "$ref": "#/$defs/LiveCapture"
+      },
+      "propertyNames": {
+        "enum": [
+          "desktop",
+          "tablet",
+          "mobile"
+        ]
+      },
+      "type": "object"
+    },
+    "cleanup_restored": {
+      "type": "boolean"
+    },
+    "launch_fingerprint": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "observed_at": {
+      "format": "date-time",
+      "type": "string"
+    },
+    "portal": {
+      "$ref": "#/$defs/PortalObservation"
+    },
+    "project_id": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "project_manifest_sha256": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "provenance": {
+      "const": "real-vanjaro-portal"
+    },
+    "publish_fingerprint": {
+      "pattern": "^[a-f0-9]{64}$",
+      "type": "string"
+    },
+    "schema_version": {
+      "const": "agency-live-evidence-v1",
+      "default": "agency-live-evidence-v1"
+    },
+    "smoke_checks": {
+      "items": {
+        "$ref": "#/$defs/SmokeCheck"
+      },
+      "type": "array"
+    },
+    "source_kind": {
+      "enum": [
+        "live_html",
+        "figma",
+        "image"
+      ]
+    },
+    "valid_through": {
+      "format": "date",
+      "type": "string"
+    }
+  },
+  "required": [
+    "provenance",
+    "candidate_id",
+    "project_id",
+    "source_kind",
+    "portal",
+    "project_manifest_sha256",
+    "publish_fingerprint",
+    "launch_fingerprint",
+    "observed_at",
+    "valid_through",
+    "captures",
+    "smoke_checks",
+    "cleanup_restored",
+    "attestation"
+  ],
+  "title": "LiveEvidenceReceipt",
+  "type": "object"
+}

@@ -111,7 +111,7 @@ def test_project_overlay_invalidates_completed_plan_and_records_decision(
             )
         ],
         agency_pack_name="agency",
-        agency_pack_version="1",
+        agency_pack_version="1.0.0",
         clock=lambda: created,
     )
     initialize_workspace(root, manifest)

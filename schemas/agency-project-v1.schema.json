@@ -38,7 +38,8 @@
       "enum": [
         "plan",
         "portal_mutation",
-        "publish"
+        "publish",
+        "launch"
       ],
       "title": "ApprovalGate",
       "type": "string"
@@ -397,7 +398,8 @@
         "pages",
         "global_blocks",
         "verify",
-        "publish"
+        "publish",
+        "launch"
       ],
       "title": "ProjectStage",
       "type": "string"
@@ -585,8 +587,8 @@
   "additionalProperties": false,
   "properties": {
     "schema_version": {
-      "const": "1.0",
-      "default": "1.0",
+      "const": "1.1",
+      "default": "1.1",
       "title": "Schema Version",
       "type": "string"
     },

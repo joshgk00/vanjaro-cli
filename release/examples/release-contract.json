@@ -1,0 +1,16 @@
+{
+  "benchmarks": [],
+  "candidate_id": "example-only-candidate",
+  "compatibility_policy": {
+    "path": "release/example-only-compatibility-policy.json",
+    "sha256": "1111111111111111111111111111111111111111111111111111111111111111"
+  },
+  "control_evidence": null,
+  "deterministic_json_files": [],
+  "evaluation_date": "2000-01-01",
+  "performance_evidence": null,
+  "projects": [],
+  "schema_version": "1.0",
+  "secret_scan_files": [],
+  "test_evidence": null
+}

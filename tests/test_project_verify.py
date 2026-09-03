@@ -13,6 +13,8 @@ from vanjaro_cli.design.models import SourceKind
 from vanjaro_cli.design.serialization import serialize_design_document
 from vanjaro_cli.design.sources import HtmlSourceRequest, analyze_source
 from vanjaro_cli.orchestration import project_verify
+from vanjaro_cli.portal.global_block_manifest import global_block_content_hash
+from vanjaro_cli.portal.page_composition import page_content_hash
 from vanjaro_cli.project import ProjectSource, create_manifest
 from vanjaro_cli.project.models import ProjectStage
 from vanjaro_cli.project.stage_engine import StageContext
@@ -83,6 +85,7 @@ def _page_detail(
     *,
     version: int = 3,
     published: bool = False,
+    visible: bool = False,
     header_guid: str = HEADER_GUID,
     footer_guid: str = FOOTER_GUID,
     text: tuple[str, ...] = ("Welcome", "Real body copy", "Contact"),
@@ -106,6 +109,7 @@ def _page_detail(
     return {
         "tabId": 41,
         "version": version,
+        "isVisible": visible,
         "isPublished": published,
         "contentJSON": components,
         "styleJSON": [],
@@ -155,6 +159,11 @@ def _context(
     design_path = root / "build/design-document.json"
     design_path.parent.mkdir(parents=True, exist_ok=True)
     design_path.write_text(serialize_design_document(document), encoding="utf-8")
+    page_hash = page_content_hash(
+        client.page["contentJSON"],
+        client.page["styleJSON"],
+        client.page["contentHtml"],
+    )
     _write_json(
         root / "build/global-page-manifest.json",
         {
@@ -165,10 +174,13 @@ def _context(
                     "page_id": 41,
                     "path": "/agency-home",
                     "observed_version": 3,
+                    "desired_hash": page_hash,
                 }
             ],
         },
     )
+    header = client.globals[HEADER_GUID]
+    footer = client.globals[FOOTER_GUID]
     _write_json(
         root / "build/global-block-manifest.json",
         {
@@ -179,6 +191,9 @@ def _context(
                     "kind": "header",
                     "guid": HEADER_GUID,
                     "observed_version": 2,
+                    "desired_hash": global_block_content_hash(
+                        header["contentJSON"], header["styleJSON"]
+                    ),
                     "warnings": [],
                 },
                 {
@@ -186,6 +201,9 @@ def _context(
                     "kind": "footer",
                     "guid": FOOTER_GUID,
                     "observed_version": 2,
+                    "desired_hash": global_block_content_hash(
+                        footer["contentJSON"], footer["styleJSON"]
+                    ),
                     "warnings": [],
                 },
             ],
@@ -204,7 +222,7 @@ def _context(
             )
         ],
         agency_pack_name="agency",
-        agency_pack_version="1",
+        agency_pack_version="1.0.0",
         clock=lambda: datetime(2026, 7, 16, tzinfo=timezone.utc),
     )
     verified = SimpleNamespace(
@@ -338,3 +356,28 @@ def test_verify_project_drafts_blocks_wrapper_version_and_publish_drift(
     assert "page 41: global wrapper GUIDs do not match the managed globals" in blockers
     assert "global header: desired version is already published" in blockers
     assert "global footer: version differs from the managed manifest" in blockers
+
+
+def test_verify_project_drafts_blocks_visible_and_same_version_content_drift(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = _Client(page=_page_detail(visible=True))
+    context = _context(tmp_path, monkeypatch, client)
+    client.page["contentHtml"] = "<section>changed after manifest</section>"
+    client.globals[HEADER_GUID]["contentJSON"] = [
+        {"type": "text", "content": "changed global"}
+    ]
+
+    report = project_verify.preview_project_drafts(context.root, context.manifest)
+
+    assert "page 41: page is visible" in report["blockers"]
+    assert (
+        "page 41: draft content differs from the managed desired hash"
+        in report["blockers"]
+    )
+    assert (
+        "global header: content differs from the managed desired hash"
+        in report["blockers"]
+    )
+    assert report["pages"][0]["visible"] is True
+    assert report["pages"][0]["observed_hash"] != report["pages"][0]["desired_hash"]

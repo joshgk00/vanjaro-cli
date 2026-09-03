@@ -1,0 +1,68 @@
+{
+  "attestation": {
+    "path": "release/examples/live-attestation-receipt.json",
+    "sha256": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb"
+  },
+  "candidate_id": "example-only-candidate",
+  "captures": {
+    "desktop": {
+      "artifact": {
+        "path": "example-only/desktop.png",
+        "sha256": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+      },
+      "height": 900,
+      "width": 1440
+    },
+    "mobile": {
+      "artifact": {
+        "path": "example-only/mobile.png",
+        "sha256": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+      },
+      "height": 844,
+      "width": 390
+    },
+    "tablet": {
+      "artifact": {
+        "path": "example-only/tablet.png",
+        "sha256": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+      },
+      "height": 1024,
+      "width": 768
+    }
+  },
+  "cleanup_restored": false,
+  "launch_fingerprint": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+  "observed_at": "2000-01-01T00:00:00Z",
+  "portal": {
+    "base_url": "https://example.invalid",
+    "dnn_version": "EXAMPLE-NOT-OBSERVED",
+    "portal_id": 0,
+    "vanjaro_ai_version": "EXAMPLE-NOT-OBSERVED",
+    "vanjaro_version": "EXAMPLE-NOT-OBSERVED"
+  },
+  "project_id": "example-only-project",
+  "project_manifest_sha256": "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+  "provenance": "real-vanjaro-portal",
+  "publish_fingerprint": "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789",
+  "schema_version": "agency-live-evidence-v1",
+  "smoke_checks": [
+    {
+      "check_id": "editor",
+      "status": "failed"
+    },
+    {
+      "check_id": "navigation",
+      "status": "failed"
+    },
+    {
+      "check_id": "public-route",
+      "status": "failed"
+    },
+    {
+      "check_id": "search",
+      "status": "failed"
+    }
+  ],
+  "source_kind": "image",
+  "valid_through": "2000-01-01"
+}

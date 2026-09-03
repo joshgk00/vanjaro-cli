@@ -1,0 +1,32 @@
+{
+  "candidate_id": "example-only-candidate",
+  "capture_routes": {
+    "desktop": "/example-only/desktop",
+    "mobile": "/example-only/mobile",
+    "tablet": "/example-only/tablet"
+  },
+  "capture_sha256": {
+    "desktop": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+    "mobile": "dddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd",
+    "tablet": "eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee"
+  },
+  "observed_at": "2000-01-01T00:00:00Z",
+  "operator_id": "example-only-not-an-attestation",
+  "portal": {
+    "base_url": "https://example.invalid",
+    "dnn_version": "EXAMPLE-NOT-OBSERVED",
+    "portal_id": 0,
+    "vanjaro_ai_version": "EXAMPLE-NOT-OBSERVED",
+    "vanjaro_version": "EXAMPLE-NOT-OBSERVED"
+  },
+  "project_id": "example-only-project",
+  "schema_version": "agency-live-attestation-v1",
+  "smoke_routes": {
+    "editor": "/example-only/editor",
+    "navigation": "/example-only/navigation",
+    "public-route": "/example-only/public",
+    "search": "/example-only/search"
+  },
+  "source_kind": "image",
+  "statement": "I observed this candidate on the stated Vanjaro portal and recorded the linked captures and smoke checks."
+}

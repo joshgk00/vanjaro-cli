@@ -289,6 +289,22 @@ def test_content_publish_sends_locale(runner, mock_config):
     assert sent_body["locale"] == "fr-FR"
 
 
+@responses.activate
+def test_content_publish_sends_exact_version_when_requested(runner, mock_config):
+    mock_homepage()
+    responses.add(responses.POST, PUBLISH_PAGE_URL, json={}, status=200)
+
+    result = runner.invoke(cli, ["content", "publish", "10", "--version", "7"])
+
+    assert result.exit_code == 0
+    post_call = [call for call in responses.calls if "AIPage/Publish" in call.request.url][0]
+    assert json.loads(post_call.request.body) == {
+        "pageId": 10,
+        "locale": "en-US",
+        "version": 7,
+    }
+
+
 # --- diff command tests ---
 
 DRAFT_COMPONENTS = [

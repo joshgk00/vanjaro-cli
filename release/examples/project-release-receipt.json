@@ -1,0 +1,10 @@
+{
+  "candidate_id": "example-only-candidate",
+  "effort_evidence_sha256": "7777777777777777777777777777777777777777777777777777777777777777",
+  "maintenance_scorecard_sha256": "8888888888888888888888888888888888888888888888888888888888888888",
+  "project_id": "example-only-project",
+  "project_manifest_sha256": "9999999999999999999999999999999999999999999999999999999999999999",
+  "quality_evidence_sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "schema_version": "project-release-evidence-v1",
+  "source_kind": "image"
+}

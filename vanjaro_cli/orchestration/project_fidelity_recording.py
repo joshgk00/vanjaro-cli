@@ -16,7 +16,6 @@ evidence, and writing it would let the gate score a build against nothing.
 
 from __future__ import annotations
 
-import json
 from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
@@ -33,6 +32,7 @@ from vanjaro_cli.orchestration.project_fidelity import (
     FIDELITY_EVIDENCE_PATH,
     ProjectFidelityError,
 )
+from vanjaro_cli.reliability import atomic_write_json
 
 __all__ = [
     "CAPTURE_DIRECTORY",
@@ -117,11 +117,7 @@ def record_project_fidelity_evidence(
     }
 
     destination = root / FIDELITY_EVIDENCE_PATH
-    destination.parent.mkdir(parents=True, exist_ok=True)
-    destination.write_text(
-        json.dumps(payload, indent=2, sort_keys=True, ensure_ascii=False) + "\n",
-        encoding="utf-8",
-    )
+    atomic_write_json(destination, payload)
     return payload
 
 

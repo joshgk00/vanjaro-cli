@@ -1,0 +1,23 @@
+{
+  "benchmarks": [],
+  "candidate_id": "agency-m6-current",
+  "compatibility_policy": {
+    "path": "release/compatibility-policy.json",
+    "sha256": "0e4af18400244ed21f65b291b3b965729942071768b1effb60b8b57a8cfcd636"
+  },
+  "control_evidence": null,
+  "deterministic_json_files": [
+    {
+      "path": "release/compatibility-policy.json",
+      "sha256": "0e4af18400244ed21f65b291b3b965729942071768b1effb60b8b57a8cfcd636"
+    }
+  ],
+  "evaluation_date": "2026-08-30",
+  "performance_evidence": null,
+  "projects": [],
+  "schema_version": "1.0",
+  "secret_scan_files": [
+    "release/compatibility-policy.json"
+  ],
+  "test_evidence": null
+}

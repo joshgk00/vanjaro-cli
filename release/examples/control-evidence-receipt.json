@@ -1,0 +1,24 @@
+{
+  "contract_migrations": {
+    "evidence_ids": [
+      "example-only::contract-migration"
+    ]
+  },
+  "import_boundaries": {
+    "evidence_ids": [
+      "example-only::import-boundary"
+    ]
+  },
+  "recovery_tests": {
+    "evidence_ids": [
+      "example-only::recovery"
+    ]
+  },
+  "schema_version": "reliability-control-evidence-v1",
+  "structured_diagnostics": {
+    "evidence_ids": [
+      "example-only::diagnostic"
+    ]
+  },
+  "test_receipt_sha256": "4444444444444444444444444444444444444444444444444444444444444444"
+}

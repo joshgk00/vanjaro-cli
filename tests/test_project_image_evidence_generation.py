@@ -69,7 +69,7 @@ def _workspace(tmp_path: Path) -> Path:
         target_profile="image-project",
         sources=sources,
         agency_pack_name="agency",
-        agency_pack_version="1.0",
+        agency_pack_version="1.0.0",
         clock=lambda: NOW,
     )
     initialize_workspace(root, manifest)

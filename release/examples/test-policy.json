@@ -1,0 +1,22 @@
+{
+  "allowed_deselected": 0,
+  "command": "python -m pytest example-only-test.py",
+  "required_controls": {
+    "contract_migrations": [
+      "example-only::contract-migration"
+    ],
+    "import_boundaries": [
+      "example-only::import-boundary"
+    ],
+    "recovery_tests": [
+      "example-only::recovery"
+    ],
+    "structured_diagnostics": [
+      "example-only::diagnostic"
+    ]
+  },
+  "schema_version": "agency-test-policy-v1",
+  "source_globs": [
+    "example-only/**/*.py"
+  ]
+}

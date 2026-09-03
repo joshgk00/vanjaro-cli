@@ -63,3 +63,36 @@ def test_latest_page_manifest_path_uses_downstream_global_version(
 
     _write_json(primary, {"pages": [{"observed_version": 6}]})
     assert project_build._latest_page_manifest_path(tmp_path) == primary
+
+
+def test_unresolved_global_guids_are_receipted_as_parameterized_page_work() -> None:
+    action = {
+        "key": "home",
+        "action": "update",
+        "desired_hash": "a" * 64,
+        "desired_state_fingerprint": "b" * 64,
+        "payload_fingerprint": "c" * 64,
+        "operations": [
+            {
+                "sequence": 1,
+                "kind": "portal_request",
+                "payload_fingerprint": "c" * 64,
+            }
+        ],
+    }
+
+    planned = project_build._parameterize_page_action(
+        action, ["agency-binding://global/header"]
+    )
+
+    assert planned["action"] == "resolve_bindings_then_reconcile"
+    assert planned["provisional_action"] == "update"
+    assert planned["resolved_payload_fingerprint"] is None
+    assert "desired_hash" not in planned
+    assert planned["template_preview_hash"] == "a" * 64
+    assert "payload_fingerprint" not in planned
+    assert planned["payload_template_fingerprint"] == "c" * 64
+    assert (
+        planned["operations"][0]["global_guid_bindings"]
+        == ["agency-binding://global/header"]
+    )

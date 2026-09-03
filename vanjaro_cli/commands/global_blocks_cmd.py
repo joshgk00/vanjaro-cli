@@ -215,13 +215,18 @@ def update_block(guid: str, file_path: str, as_json: bool) -> None:
 
 @global_blocks.command("publish")
 @click.argument("guid")
+@click.option("--version", type=click.IntRange(min=1), default=None)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
-def publish_block(guid: str, as_json: bool) -> None:
+def publish_block(guid: str, version: int | None, as_json: bool) -> None:
     """Publish the latest draft of a global block."""
     client, _ = get_client()
 
+    payload: dict[str, object] = {"guid": guid}
+    if version is not None:
+        payload["version"] = version
+
     try:
-        client.post(PUBLISH_BLOCK, json={"guid": guid})
+        client.post(PUBLISH_BLOCK, json=payload)
     except (ApiError, ConfigError) as exc:
         exit_error(str(exc), as_json)
 

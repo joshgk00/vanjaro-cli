@@ -1,0 +1,80 @@
+{
+  "$defs": {
+    "RequiredControlTests": {
+      "additionalProperties": false,
+      "properties": {
+        "contract_migrations": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "import_boundaries": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "recovery_tests": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        },
+        "structured_diagnostics": {
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "type": "array"
+        }
+      },
+      "required": [
+        "structured_diagnostics",
+        "recovery_tests",
+        "contract_migrations",
+        "import_boundaries"
+      ],
+      "title": "RequiredControlTests",
+      "type": "object"
+    }
+  },
+  "$id": "test-policy.schema.json",
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "allowed_deselected": {
+      "minimum": 0,
+      "type": "integer"
+    },
+    "command": {
+      "minLength": 1,
+      "type": "string"
+    },
+    "required_controls": {
+      "$ref": "#/$defs/RequiredControlTests"
+    },
+    "schema_version": {
+      "const": "agency-test-policy-v1",
+      "default": "agency-test-policy-v1"
+    },
+    "source_globs": {
+      "items": {
+        "type": "string"
+      },
+      "minItems": 1,
+      "type": "array"
+    }
+  },
+  "required": [
+    "command",
+    "allowed_deselected",
+    "source_globs",
+    "required_controls"
+  ],
+  "title": "TestPolicy",
+  "type": "object"
+}

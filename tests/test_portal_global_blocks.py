@@ -13,6 +13,7 @@ from vanjaro_cli.portal.global_blocks import (
     preview_project_global_blocks,
     reconcile_project_global_blocks,
 )
+from vanjaro_cli.portal.global_block_reconciliation import CREATE_BLOCK
 from vanjaro_cli.utils.grapesjs import render_components
 
 
@@ -29,6 +30,7 @@ class FakeClient:
         self.blocks: dict[str, dict] = {}
         self.posts: list[tuple[str, dict]] = []
         self.fail_next_update = False
+        self.publish_after_update = False
 
     def get(self, path: str, *, params: dict | None = None) -> Response:
         if path.endswith("/List"):
@@ -72,7 +74,7 @@ class FakeClient:
         block.update(
             {
                 "version": 2,
-                "isPublished": False,
+                "isPublished": self.publish_after_update,
                 "contentJSON": json["contentJSON"],
                 "styleJSON": json["styleJSON"],
             }
@@ -175,12 +177,31 @@ def test_changed_managed_global_creates_deterministic_immutable_replacement(
     assert preview["to_create"] == 0
     assert preview["to_replace"] == 1
     assert preview["reused"] == 0
-    assert preview["blocks"][0] == {
+    planned = preview["blocks"][0]
+    assert {
+        "key": planned["key"],
+        "name": planned["name"],
+        "replacement_name": planned["replacement_name"],
+        "action": planned["action"],
+    } == {
         "key": "global-header",
         "name": "project / Site Header",
         "replacement_name": replacement_name,
         "action": "replace_create",
     }
+    assert planned["endpoint"] == CREATE_BLOCK
+    assert planned["payload_template_fingerprint"]
+    assert planned["response_binding"] == "global-guid://global-header"
+    assert [operation["kind"] for operation in planned["operations"]] == [
+        "portal_request",
+        "portal_readback",
+        "local_checkpoint",
+        "portal_readback",
+        "local_snapshot",
+        "portal_request",
+        "portal_readback",
+        "local_checkpoint",
+    ]
     assert client.posts == []
 
     replaced = reconcile_project_global_blocks(
@@ -324,4 +345,60 @@ def test_unmanaged_global_collision_fails_without_post(tmp_path: Path) -> None:
             desired=_desired(),
             manifest_path=tmp_path / "global-manifest.json",
         )
+    assert client.posts == []
+
+
+def test_published_exact_global_is_not_adopted(tmp_path: Path) -> None:
+    client = FakeClient()
+    item = _desired()[0]
+    client.blocks["published"] = {
+        "id": 1, "guid": "published", "name": item["name"],
+        "category": item["category"].casefold(), "version": 2,
+        "isPublished": True, "contentJSON": json.dumps(item["components"]),
+        "styleJSON": json.dumps(item["styles"]),
+    }
+    with pytest.raises(ProjectGlobalBlockError, match="adoptable global.*published"):
+        reconcile_project_global_blocks(client, desired=[item], manifest_path=tmp_path / "manifest.json")
+    assert client.posts == []
+
+
+def test_published_managed_global_fails_before_replacement(tmp_path: Path) -> None:
+    client = FakeClient()
+    manifest = tmp_path / "manifest.json"
+    record = reconcile_project_global_blocks(client, desired=_desired(), manifest_path=manifest)[0]
+    client.blocks[record["guid"]]["isPublished"] = True
+    client.posts.clear()
+    with pytest.raises(ProjectGlobalBlockError, match="managed global.*published"):
+        reconcile_project_global_blocks(client, desired=_desired("Changed"), manifest_path=manifest)
+    assert client.posts == []
+
+
+def test_published_managed_exact_global_is_not_reused(tmp_path: Path) -> None:
+    client = FakeClient()
+    manifest = tmp_path / "manifest.json"
+    record = reconcile_project_global_blocks(client, desired=_desired(), manifest_path=manifest)[0]
+    client.blocks[record["guid"]]["isPublished"] = True
+    client.posts.clear()
+    with pytest.raises(ProjectGlobalBlockError, match="managed global.*published"):
+        reconcile_project_global_blocks(client, desired=_desired(), manifest_path=manifest)
+    assert client.posts == []
+
+
+def test_global_update_postcondition_fails_closed(tmp_path: Path) -> None:
+    client = FakeClient()
+    client.publish_after_update = True
+    with pytest.raises(ProjectGlobalBlockError, match="unexpectedly remained published"):
+        reconcile_project_global_blocks(client, desired=_desired(), manifest_path=tmp_path / "manifest.json")
+
+
+def test_placeholder_recovery_requires_recorded_version(tmp_path: Path) -> None:
+    client = FakeClient()
+    manifest = tmp_path / "manifest.json"
+    client.fail_next_update = True
+    with pytest.raises(RuntimeError):
+        reconcile_project_global_blocks(client, desired=_desired(), manifest_path=manifest)
+    client.blocks["global-1"]["version"] += 1
+    client.posts.clear()
+    with pytest.raises(ProjectGlobalBlockError, match="managed global.*published"):
+        reconcile_project_global_blocks(client, desired=_desired(), manifest_path=manifest)
     assert client.posts == []

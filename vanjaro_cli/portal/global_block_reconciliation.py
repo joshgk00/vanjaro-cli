@@ -14,6 +14,7 @@ from typing import Any
 
 from vanjaro_cli.portal.global_block_manifest import (
     ProjectGlobalBlockError,
+    global_block_content_hash,
     load_global_block_manifest,
     persist_global_block_manifest,
     write_json,
@@ -67,6 +68,7 @@ def reconcile_project_global_blocks(
         item = desired_by_key[action["key"]]
         if action["action"] in {"reuse", "adopt"}:
             detail = _get(client, action["guid"])
+            _require_unpublished(detail, item["name"])
             record = _record(item, detail, action["action"])
         elif action["action"] in {"replace_finish", "replace_create"}:
             record = _reconcile_replacement(
@@ -169,18 +171,9 @@ def _create_placeholder(
     item: dict[str, Any],
     portal_name: str,
 ) -> str:
-    placeholder = _placeholder(item)
     response = client.post_form(  # type: ignore[attr-defined]
         CREATE_BLOCK,
-        {
-            "Name": portal_name,
-            "Category": item["category"],
-            "Html": render_components(placeholder),
-            "Css": "",
-            "IsGlobal": "true",
-            "ContentJSON": json.dumps(placeholder, ensure_ascii=False),
-            "StyleJSON": "[]",
-        },
+        _placeholder_form(item, portal_name),
     )
     payload = response.json()
     guid = payload.get("Guid") if isinstance(payload, dict) else None
@@ -199,12 +192,7 @@ def _update_draft(
 ) -> object:
     response = client.post(  # type: ignore[attr-defined]
         UPDATE_BLOCK,
-        json={
-            "guid": guid,
-            "contentJSON": json.dumps(item["components"], ensure_ascii=False),
-            "styleJSON": json.dumps(item["styles"], ensure_ascii=False),
-            "html": item["html"],
-        },
+        json=_update_payload(item, guid),
     )
     return response.json()
 
@@ -266,19 +254,26 @@ def _preflight(
             guid = matches[0].get("guid")
             detail = _get(client, guid)
             if _server_hash(detail) == item["desired_hash"]:
-                actions.append(
-                    {
-                        "key": item["key"],
-                        "name": item["name"],
-                        "guid": guid,
-                        "action": "adopt",
-                    }
-                )
+                if bool(detail.get("isPublished", False)):
+                    errors.append(f"adoptable global {item['name']!r} is published")
+                else:
+                    actions.append(
+                        {
+                            "key": item["key"],
+                            "name": item["name"],
+                            "guid": guid,
+                            "action": "adopt",
+                        }
+                    )
             else:
                 errors.append(f"unmanaged global collision for {item['name']!r}")
     if errors:
         raise ProjectGlobalBlockError("global reconciliation failed:\n- " + "\n- ".join(errors))
-    return actions
+    desired_by_key = {item["key"]: item for item in desired}
+    return [
+        _planned_global_action(client, desired_by_key[action["key"]], action)
+        for action in actions
+    ]
 
 
 def _preflight_managed(
@@ -292,14 +287,9 @@ def _preflight_managed(
 ) -> None:
     guid = previous.get("guid")
     detail = _get(client, guid)
-    if _server_hash(detail) == item["desired_hash"]:
-        actions.append(
-            {"key": item["key"], "name": item["name"], "guid": guid, "action": "reuse"}
-        )
-        return
     if previous.get("status") == "placeholder_created" and _is_placeholder(
         detail, item["key"]
-    ):
+    ) and detail.get("version") == previous.get("observed_version"):
         actions.append(
             {
                 "key": item["key"],
@@ -308,6 +298,14 @@ def _preflight_managed(
                 "replacement_name": detail.get("name", ""),
                 "action": "replace_finish",
             }
+        )
+        return
+    if bool(detail.get("isPublished", False)):
+        errors.append(f"managed global {item['name']!r} is published")
+        return
+    if _server_hash(detail) == item["desired_hash"]:
+        actions.append(
+            {"key": item["key"], "name": item["name"], "guid": guid, "action": "reuse"}
         )
         return
     if detail.get("version") != previous.get("observed_version"):
@@ -325,6 +323,10 @@ def _preflight_managed(
                 "key": item["key"],
                 "name": item["name"],
                 "replacement_name": replacement_name,
+                "replaces_guid": guid,
+                "replaces_version": detail.get("version", 0),
+                "replaces_hash": _server_hash(detail),
+                "replaces_published": bool(detail.get("isPublished", False)),
                 "action": "replace_create",
             }
         )
@@ -334,23 +336,15 @@ def _preflight_managed(
         return
     replacement_guid = replacements[0].get("guid")
     replacement_detail = _get(client, replacement_guid)
-    if _server_hash(replacement_detail) == item["desired_hash"]:
+    if bool(replacement_detail.get("isPublished", False)):
+        errors.append(f"replacement global {replacement_name!r} is published")
+    elif _server_hash(replacement_detail) == item["desired_hash"]:
         actions.append(
             {
                 "key": item["key"],
                 "name": item["name"],
                 "guid": replacement_guid,
                 "action": "adopt",
-            }
-        )
-    elif _is_placeholder(replacement_detail, item["key"]):
-        actions.append(
-            {
-                "key": item["key"],
-                "name": item["name"],
-                "guid": replacement_guid,
-                "replacement_name": replacement_name,
-                "action": "replace_finish",
             }
         )
     else:
@@ -371,6 +365,193 @@ def _placeholder(item: dict[str, Any]) -> list[dict[str, Any]]:
     ]
 
 
+def _placeholder_form(item: dict[str, Any], portal_name: str) -> dict[str, str]:
+    placeholder = _placeholder(item)
+    return {
+        "Name": portal_name,
+        "Category": item["category"],
+        "Html": render_components(placeholder),
+        "Css": "",
+        "IsGlobal": "true",
+        "ContentJSON": json.dumps(placeholder, ensure_ascii=False),
+        "StyleJSON": "[]",
+    }
+
+
+def _update_payload(item: dict[str, Any], guid: object) -> dict[str, Any]:
+    return {
+        "guid": guid,
+        "contentJSON": json.dumps(item["components"], ensure_ascii=False),
+        "styleJSON": json.dumps(item["styles"], ensure_ascii=False),
+        "html": item["html"],
+    }
+
+
+def _planned_global_action(
+    client: object,
+    item: dict[str, Any],
+    action: dict[str, Any],
+) -> dict[str, Any]:
+    result = {
+        **action,
+        "desired_hash": item["desired_hash"],
+        "desired_state_fingerprint": _plan_hash(
+            {
+                "components": item["components"],
+                "styles": item["styles"],
+                "html": item["html"],
+                "category": item["category"],
+            }
+        ),
+    }
+    guid = action.get("guid")
+    detail = _get(client, guid) if isinstance(guid, str) and guid else None
+    if detail is not None:
+        result.update(
+            {
+                "observed_version": detail.get("version", 0),
+                "observed_hash": _server_hash(detail),
+                "observed_published": bool(detail.get("isPublished", False)),
+            }
+        )
+
+    operation = action["action"]
+    if operation in {"reuse", "adopt"}:
+        assert detail is not None
+        _require_unpublished(detail, item["name"])
+        if _server_hash(detail) != item["desired_hash"]:
+            raise ProjectGlobalBlockError(
+                f"global {item['name']!r} changed while its preview was being prepared"
+            )
+        result["operations"] = [
+            {
+                "sequence": 1,
+                "kind": "portal_readback",
+                "method": "GET",
+                "endpoint": GET_BLOCK,
+                "guid": guid,
+            },
+            {
+                "sequence": 2,
+                "kind": "local_checkpoint",
+                "path": "build/global-block-manifest.json",
+            },
+        ]
+        return result
+
+    creates_placeholder = operation in {"create", "replace_create"}
+    portal_name = str(action.get("replacement_name") or item["name"])
+    binding = f"global-guid://{item['key']}"
+    effective_guid: object = {"$binding": binding} if creates_placeholder else guid
+    update_fingerprint = _plan_hash(_update_payload(item, effective_guid))
+    operations: list[dict[str, Any]] = []
+    sequence = 1
+    if creates_placeholder:
+        form = _placeholder_form(item, portal_name)
+        operations.extend(
+            [
+                {
+                    "sequence": sequence,
+                    "kind": "portal_request",
+                    "method": "POST_FORM",
+                    "endpoint": CREATE_BLOCK,
+                    "payload_fingerprint": _plan_hash(form),
+                    "produces": binding,
+                },
+                {
+                    "sequence": sequence + 1,
+                    "kind": "portal_readback",
+                    "method": "GET",
+                    "endpoint": GET_BLOCK,
+                    "guid_binding": binding,
+                },
+                {
+                    "sequence": sequence + 2,
+                    "kind": "local_checkpoint",
+                    "path": "build/global-block-manifest.json",
+                },
+            ]
+        )
+        sequence += 3
+    if operation in {"replace_create", "replace_finish"}:
+        snapshot_version: object = (
+            {"$binding": f"global-version://{item['key']}"}
+            if creates_placeholder
+            else result.get("observed_version", 0)
+        )
+        snapshot_path = (
+            f"build/global-block-snapshots/{item['key']}/"
+            f"before-v{snapshot_version if isinstance(snapshot_version, int) else '{resolved_version}'}.json"
+        )
+        result["snapshot_write_path"] = snapshot_path
+        operations.extend(
+            [
+                {
+                    "sequence": sequence,
+                    "kind": "portal_readback",
+                    "method": "GET",
+                    "endpoint": GET_BLOCK,
+                    "guid_binding": binding if creates_placeholder else None,
+                    "guid": None if creates_placeholder else guid,
+                },
+                {
+                    "sequence": sequence + 1,
+                    "kind": "local_snapshot",
+                    "path": snapshot_path,
+                    "version_binding": snapshot_version,
+                },
+            ]
+        )
+        sequence += 2
+    operations.extend(
+        [
+            {
+                "sequence": sequence,
+                "kind": "portal_request",
+                "method": "POST",
+                "endpoint": UPDATE_BLOCK,
+                "payload_template_fingerprint": update_fingerprint,
+                "guid_binding": binding if creates_placeholder else None,
+                "guid": None if creates_placeholder else guid,
+            },
+            {
+                "sequence": sequence + 1,
+                "kind": "portal_readback",
+                "method": "GET",
+                "endpoint": GET_BLOCK,
+                "guid_binding": binding if creates_placeholder else None,
+                "guid": None if creates_placeholder else guid,
+            },
+            {
+                "sequence": sequence + 2,
+                "kind": "local_checkpoint",
+                "path": "build/global-block-manifest.json",
+            },
+        ]
+    )
+    result.update(
+        {
+            "method": "POST_FORM" if creates_placeholder else "POST",
+            "endpoint": CREATE_BLOCK if creates_placeholder else UPDATE_BLOCK,
+            "payload_template_fingerprint": update_fingerprint,
+            "response_binding": binding if creates_placeholder else None,
+            "operations": operations,
+        }
+    )
+    return result
+
+
+def _plan_hash(value: object) -> str:
+    raw = json.dumps(
+        value,
+        ensure_ascii=False,
+        sort_keys=True,
+        separators=(",", ":"),
+        allow_nan=False,
+    )
+    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
+
+
 def _get(client: object, guid: object) -> dict[str, Any]:
     if not isinstance(guid, str) or not guid:
         raise ProjectGlobalBlockError("global GUID is invalid")
@@ -381,11 +562,9 @@ def _get(client: object, guid: object) -> dict[str, Any]:
 
 
 def _server_hash(detail: dict[str, Any]) -> str:
-    return _hash(
-        {
-            "content_json": _json_value(detail.get("contentJSON"), "contentJSON"),
-            "style_json": _json_value(detail.get("styleJSON"), "styleJSON"),
-        }
+    return global_block_content_hash(
+        _json_value(detail.get("contentJSON"), "contentJSON"),
+        _json_value(detail.get("styleJSON"), "styleJSON"),
     )
 
 
@@ -431,11 +610,6 @@ def _is_placeholder(detail: dict[str, Any], key: str) -> bool:
         and component.get("attributes", {}).get("data-agency-global-placeholder") == key
         for component in content
     )
-
-
-def _hash(value: object) -> str:
-    raw = json.dumps(value, ensure_ascii=False, sort_keys=True, separators=(",", ":"))
-    return hashlib.sha256(raw.encode("utf-8")).hexdigest()
 
 
 __all__ = [

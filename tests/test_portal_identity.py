@@ -57,7 +57,7 @@ def _manifest(base_url: str = "https://Agency.Example/site/", portal_id: int = 7
             )
         ],
         agency_pack_name="agency",
-        agency_pack_version="1",
+        agency_pack_version="1.0.0",
         clock=lambda: datetime(2026, 7, 16, tzinfo=timezone.utc),
     )
 
