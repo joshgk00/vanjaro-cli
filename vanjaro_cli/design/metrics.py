@@ -124,7 +124,7 @@ class BenchmarkThresholds(_MetricModel):
     section_boundary_precision: float | None = Field(default=0.90, ge=0, le=1)
     section_boundary_recall: float | None = Field(default=0.90, ge=0, le=1)
     semantic_role_accuracy: float | None = Field(default=None, ge=0, le=1)
-    visitor_content_retention: float | None = Field(default=None, ge=0, le=1)
+    visitor_content_retention: float | None = Field(default=0.95, ge=0, le=1)
     group_field_association_accuracy: float | None = Field(default=0.95, ge=0, le=1)
     asset_association_accuracy: float | None = Field(default=None, ge=0, le=1)
     responsive_observation_coverage: float | None = Field(default=None, ge=0, le=1)

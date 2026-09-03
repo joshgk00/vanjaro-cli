@@ -349,6 +349,17 @@ def test_regression_must_exceed_tolerance_and_thresholds_fail_safely() -> None:
     assert any(failure.metric == "template_top1_accuracy" for failure in failures)
 
 
+def test_default_thresholds_gate_visitor_content_retention() -> None:
+    failures = evaluate_thresholds(_aggregate_with_precision(0.94), BenchmarkThresholds())
+
+    retention = next(item for item in failures if item.metric == "visitor_content_retention")
+    assert retention.minimum == 0.95
+    assert not any(
+        item.metric == "visitor_content_retention"
+        for item in evaluate_thresholds(_aggregate_with_precision(0.95), BenchmarkThresholds())
+    )
+
+
 def test_new_template_annotations_are_excluded_from_native_match_accuracy() -> None:
     annotations = {
         "expected": {

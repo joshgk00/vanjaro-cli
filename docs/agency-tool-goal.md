@@ -697,6 +697,19 @@ deselected. Five-case HTML/Figma and assisted-image benchmarks under
 `artifacts/benchmarks/quality-counts` and `quality-counts-image` are unchanged
 from the launch-foundation runs.
 
+### 2026-09-03 — Retention becomes a benchmark gate
+
+- `BenchmarkThresholds.visitor_content_retention` defaulted to `None`, so the
+  offline benchmark computed retention but never failed on it, while the
+  release contract already required 0.95. The default is now 0.95, matching
+  `release/gates.py`, and a test pins it. Both corpora sit at 1.0000 (127/127
+  and 11/11), so nothing changes today; a future extraction regression now
+  fails the benchmark instead of only the release audit.
+
+Verification: 2,638 non-integration tests pass with 16 live integrations
+deselected; both benchmarks pass under `artifacts/benchmarks/retention-gate`
+and `retention-gate-image` with no threshold or regression failures.
+
 ## Completion rule
 
 Passing unit tests or finishing one migration does not complete this goal. The
