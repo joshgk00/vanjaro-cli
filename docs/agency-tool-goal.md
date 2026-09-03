@@ -666,6 +666,37 @@ scan, and deterministic-policy checks while reporting all missing benchmark,
 project, test, performance, control, and live evidence explicitly. M6 and the
 overall goal remain active; an incomplete gate cannot be waived into a release.
 
+### 2026-09-03 — Tool-computed project quality ratios
+
+- Three of the release quality gates (`eligible_section_editable_coverage`,
+  `native_agency_component_ratio`, `body_without_generic_fallback`) were fed
+  only by an operator-typed worksheet. Added the pure module
+  `vanjaro_cli/design/quality_counts.py` that derives all four counts from the
+  composition plan and the catalog it was planned against, with the exact
+  rules in its docstring: editable coverage over body entries that bind
+  content; native when the template's `native_component_ratio >= 0.90` and
+  the entry's scoped CSS stays within the plan's own `css_rule_budget`;
+  fallback when the template is `Content/rich-text` or the match is blocking;
+  desktop/tablet/mobile from caller-supplied capture evidence only, never
+  invented.
+- Added `vanjaro project quality DIRECTORY [--json] [--candidate-id ID
+  --output PATH]`, which prints the per-section rows and writes a
+  `project-quality-evidence-v1` document the release verifier accepts. The
+  verify report now carries a `quality_counts` key from the same function.
+- First real numbers, all from plans rather than worksheets: kts-fidelity
+  editable 8/8, native 11/11, body without fallback **5/11**; northstar-recheck
+  and edca-pilot 4/4 on all three. Capture evidence is 0/1 everywhere because no
+  workspace-wide, page-keyed capture reader exists yet; that reader is the
+  follow-up, and the worksheet template remains for that one count.
+- The three real workspaces were migrated from project schema 1.0 to 1.1 with
+  the reviewed `migrate-contract --apply` path (backups under
+  `history/contract-migrations/`).
+
+Verification: 2,637 non-integration tests pass with 16 live integrations
+deselected. Five-case HTML/Figma and assisted-image benchmarks under
+`artifacts/benchmarks/quality-counts` and `quality-counts-image` are unchanged
+from the launch-foundation runs.
+
 ## Completion rule
 
 Passing unit tests or finishing one migration does not complete this goal. The

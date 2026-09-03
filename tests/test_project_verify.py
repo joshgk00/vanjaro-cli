@@ -9,9 +9,19 @@ from types import SimpleNamespace
 
 import pytest
 
+from vanjaro_cli.design.composition import (
+    CompositionPlan,
+    CompositionPlanEntry,
+    PlanBlock,
+    PlanMatch,
+    PlanSummary,
+    SemanticBinding,
+    serialize_composition_plan,
+)
 from vanjaro_cli.design.models import SourceKind
 from vanjaro_cli.design.serialization import serialize_design_document
 from vanjaro_cli.design.sources import HtmlSourceRequest, analyze_source
+from vanjaro_cli.design.template_catalog import load_template_catalog
 from vanjaro_cli.orchestration import project_verify
 from vanjaro_cli.portal.global_block_manifest import global_block_content_hash
 from vanjaro_cli.portal.page_composition import page_content_hash
@@ -290,6 +300,65 @@ def test_verify_project_drafts_accepts_complete_unpublished_drafts(
         project_verify.GET_GLOBAL,
         project_verify.GET_PAGE,
     ]
+    # No composition plan was written in this fixture, so the quality counts
+    # are reported unavailable rather than failing the whole verify stage.
+    assert report["quality_counts"]["status"] == "not_available"
+    assert report["quality_counts"]["warnings"]
+
+
+def test_verify_project_drafts_scores_quality_counts_from_the_composition_plan(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = _Client(page=_page_detail())
+    context = _context(tmp_path, monkeypatch, client)
+
+    catalog_root = Path(__file__).resolve().parents[1] / "artifacts" / "block-templates"
+    catalog = load_template_catalog(catalog_root)
+    hero = next(entry for entry in catalog if Path(entry.relative_path).name == "centered-hero.json")
+    plan = CompositionPlan(
+        source_document_id="verify-quality-doc",
+        entries=(
+            CompositionPlanEntry(
+                id="home.section.1.plan",
+                source_section_id="home.section.1",
+                template_id=hero.template_id,
+                template=hero.name,
+                match=PlanMatch(score=0.95, confidence="high"),
+                block=PlanBlock(name="Home Hero", category=hero.category),
+                bindings=(
+                    SemanticBinding(
+                        semantic_field="heading",
+                        slot="heading",
+                        source_element_ids=("el-1",),
+                        value="Welcome",
+                        editable=True,
+                    ),
+                ),
+            ),
+        ),
+        summary=PlanSummary(
+            section_count=1,
+            blocking_count=0,
+            native_component_ratio=1.0,
+            editable_content_coverage=1.0,
+        ),
+    )
+    plan_path = tmp_path / "plans/composition-plan.json"
+    plan_path.parent.mkdir(parents=True, exist_ok=True)
+    plan_path.write_text(serialize_composition_plan(plan), encoding="utf-8")
+
+    report = project_verify.preview_project_drafts(context.root, context.manifest)
+
+    quality_counts = report["quality_counts"]
+    assert quality_counts["status"] == "scored"
+    assert quality_counts["eligible_section_editable_coverage"] == {
+        "numerator": 1,
+        "denominator": 1,
+    }
+    assert quality_counts["native_agency_component_ratio"] == {
+        "numerator": 1,
+        "denominator": 1,
+    }
 
 
 def test_verify_project_drafts_blocks_source_action_without_url(

@@ -542,6 +542,7 @@ from vanjaro_cli.commands.project_launch_cmd import launch_project
 from vanjaro_cli.commands.project_pack_cmd import pack
 from vanjaro_cli.commands.project_publish_cmd import publish_project
 from vanjaro_cli.commands.project_overlay_cmd import overlay
+from vanjaro_cli.commands.project_quality_cmd import project_quality
 from vanjaro_cli.commands.project_target_cmd import target
 
 project.add_command(build_project)
@@ -552,6 +553,7 @@ project.add_command(launch_project)
 project.add_command(pack)
 project.add_command(publish_project)
 project.add_command(overlay)
+project.add_command(project_quality)
 project.add_command(target)
 
 

@@ -224,6 +224,43 @@ Generation uses the verification stage's recorded completion time and a stable
 input fingerprint instead of the wall clock. Repeating the command with
 unchanged evidence therefore produces byte-identical Markdown and JSON.
 
+## Report release quality counts from the composition plan
+
+`vanjaro_cli/release/gates.py` gates a project's release candidacy on four
+quality measures. Compute them directly from the plan instead of typing them
+into a worksheet by hand:
+
+```powershell
+vanjaro project quality artifacts/projects/example
+vanjaro project quality artifacts/projects/example --json
+vanjaro project quality artifacts/projects/example --candidate-id my-candidate --output artifacts/projects/example/qa/quality-counts.json
+```
+
+The command is local and non-networked. It reads `plans/composition-plan.json`
+and the template catalog the plan was made against -- the same catalog the
+`plan` stage resolves -- and reports four `numerator/denominator` counts:
+
+- `eligible_section_editable_coverage` -- of body entries (non-global) that
+  have at least one binding, how many have every binding editable.
+- `native_agency_component_ratio` -- of every plan entry, how many resolve to
+  a template with `native_component_ratio >= 0.90` and a scoped CSS rule count
+  within the plan's `policy.css_rule_budget`.
+- `body_without_generic_fallback` -- of body entries, how many did not land on
+  the generic rich-text fallback template and are not a blocking match.
+- `desktop_tablet_mobile_evidence` -- of the pages the plan covers, how many
+  have recorded desktop, tablet, and mobile capture evidence. No reusable
+  reader for `qa/` fidelity captures exists yet, so this command always
+  passes an empty capture set and says so in its warnings; the ratio is
+  reported as 0 coverage until that reader is built.
+
+With `--candidate-id` and `--output`, the command writes a
+`project-quality-evidence-v1` document at the given path instead of (or in
+addition to) printing the table. That document is exactly what
+`vanjaro_cli/release/scaffolding.py`'s `quality-counts.template.json`
+worksheet used to require an operator to fill in by hand -- release
+worksheets should now be produced from this command's `--output`, not typed
+by hand.
+
 ## Review and publish managed hidden content
 
 Publication is a separate reviewed transaction. First preview the exact live

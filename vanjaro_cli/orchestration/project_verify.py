@@ -7,8 +7,13 @@ from pathlib import Path
 import re
 from typing import Any
 
+from pydantic import ValidationError
+
+from vanjaro_cli.design.composition import deserialize_composition_plan
 from vanjaro_cli.design.models import ContentKind
+from vanjaro_cli.design.quality_counts import compute_quality_counts
 from vanjaro_cli.design.serialization import read_design_document
+from vanjaro_cli.design.template_catalog import TemplateCatalogError, load_template_catalog
 from vanjaro_cli.migration.audit import audit_page
 from vanjaro_cli.migration.text_match import fuzzy_set_match
 from vanjaro_cli.orchestration.portal_identity import verify_project_portal
@@ -18,6 +23,9 @@ from vanjaro_cli.portal.page_composition import page_content_hash
 from vanjaro_cli.project.models import ProjectManifest
 from vanjaro_cli.project.stage_engine import StageContext, StageResult
 from vanjaro_cli.reliability import atomic_write_json
+
+
+_COMPOSITION_PLAN_PATH = "plans/composition-plan.json"
 
 
 GET_PAGE = "/API/VanjaroAI/AIPage/Get"
@@ -228,11 +236,13 @@ def preview_project_drafts(
 
     visual_fidelity, fidelity_blockers = evaluate_project_fidelity(root)
     blockers.extend(fidelity_blockers)
+    quality_counts = _quality_counts_report(root)
 
     return {
             "schema_version": "1.1",
             "valid": not blockers,
             "visual_fidelity": visual_fidelity,
+            "quality_counts": quality_counts,
             "target": verified.as_dict(),
             "page_count": len(pages),
             "global_count": len(global_details),
@@ -263,6 +273,48 @@ def preview_project_drafts(
                 for kind, detail in sorted(global_details.items())
             ],
         }
+
+
+def _quality_counts_report(root: Path) -> dict[str, Any]:
+    """Compute the release quality ratios from the workspace's plan, or warn.
+
+    Local reads only, and never fails the verify stage: a missing or invalid
+    plan is unusual at verify time (planning runs first), but reporting a
+    warning instead of raising keeps this read-only gate available even when
+    it is.
+    """
+
+    plan_path = root / _COMPOSITION_PLAN_PATH
+    try:
+        plan_text = plan_path.read_text(encoding="utf-8")
+    except OSError as error:
+        return {
+            "status": "not_available",
+            "warnings": [f"cannot read {_COMPOSITION_PLAN_PATH}: {error}"],
+        }
+    try:
+        plan = deserialize_composition_plan(plan_text)
+    except (ValueError, ValidationError) as error:
+        return {
+            "status": "not_available",
+            "warnings": [f"invalid composition plan at {_COMPOSITION_PLAN_PATH}: {error}"],
+        }
+    try:
+        catalog = load_template_catalog()
+    except TemplateCatalogError as error:
+        return {
+            "status": "not_available",
+            "warnings": [f"cannot read the template library: {'; '.join(error.issues)}"],
+        }
+    report = compute_quality_counts(plan, catalog, {})
+    return {
+        "status": "scored",
+        "eligible_section_editable_coverage": report.eligible_section_editable_coverage.model_dump(mode="json"),
+        "native_agency_component_ratio": report.native_agency_component_ratio.model_dump(mode="json"),
+        "body_without_generic_fallback": report.body_without_generic_fallback.model_dump(mode="json"),
+        "desktop_tablet_mobile_evidence": report.desktop_tablet_mobile_evidence.model_dump(mode="json"),
+        "warnings": list(report.warnings),
+    }
 
 
 def _component_text(components: list[dict[str, Any]]) -> list[str]:
