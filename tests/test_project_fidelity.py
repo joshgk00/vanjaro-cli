@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from datetime import datetime, timezone
+import hashlib
 import json
 from pathlib import Path
 from typing import Any
@@ -9,6 +11,7 @@ from typing import Any
 import pytest
 
 from vanjaro_cli.design.fidelity import CURRENT_REGIME_VERSION
+from vanjaro_cli.design.fidelity_capture import RenderFailure
 from vanjaro_cli.design.fidelity_evaluation import (
     PageObservation,
     SectionObservation,
@@ -16,14 +19,47 @@ from vanjaro_cli.design.fidelity_evaluation import (
     score_hook_from_observations,
 )
 from vanjaro_cli.design.fidelity_color import ColorRole, SectionPalette
-from vanjaro_cli.design.fidelity_layout import SectionGeometry
+from vanjaro_cli.design.fidelity_layout import BoundingBox as LayoutBox, SectionGeometry
 from vanjaro_cli.design.fidelity_media import IntegrityObservation
-from vanjaro_cli.design.models import BoundingBox, BreakpointName
+from vanjaro_cli.design.fidelity_observation import RenderedPage, RenderedSection, RenderedText
+from vanjaro_cli.design.models import (
+    BoundingBox,
+    BreakpointName,
+    ContentElement,
+    ContentKind,
+    DesignAnalysis,
+    DesignDocument,
+    DesignSource,
+    DesignTokens,
+    LayoutKind,
+    LayoutObservation,
+    NavigationVisibility,
+    ObservationMethod,
+    Page,
+    Provenance,
+    Section,
+    SourceKind,
+    StyleObservation,
+    StyleProperty,
+    StyleSet,
+)
+from vanjaro_cli.design.serialization import serialize_design_document
+from vanjaro_cli.design.visual_gate import CaptureStability
 from vanjaro_cli.orchestration.project_fidelity import (
     FIDELITY_EVIDENCE_PATH,
     ProjectFidelityError,
     evaluate_project_fidelity,
 )
+from vanjaro_cli.orchestration.project_fidelity_recording import record_project_fidelity_evidence
+from vanjaro_cli.orchestration.project_capture_v2 import (
+    BreakpointCaptureAttempt,
+    CaptureAttemptStatus,
+    record_page_capture_v2,
+)
+from vanjaro_cli.design.visual_gate import CANONICAL_VIEWPORTS
+from vanjaro_cli.project import ProjectSource, create_manifest
+from vanjaro_cli.project.models import ProjectManifest
+from vanjaro_cli.reliability.artifacts import atomic_write_json
 
 BREAKPOINTS = ("desktop", "tablet", "mobile")
 
@@ -358,3 +394,331 @@ class TestDeterminism:
 
         assert json.dumps(first, sort_keys=True) == json.dumps(second, sort_keys=True)
         assert first_blockers == second_blockers
+
+
+# ---------------------------------------------------------------------------
+# Multi-page workspace aggregation (per-page evidence under qa/capture-evidence/).
+
+
+def _multi_page_document(*page_ids: str) -> DesignDocument:
+    def _section(page_id: str) -> Section:
+        heading = ContentElement(
+            id=f"{page_id}-h",
+            order=1,
+            kind=ContentKind.HEADING,
+            role="section_title",
+            value="Services",
+            style=StyleSet(
+                observations=[
+                    StyleObservation(property=StyleProperty.FONT_FAMILY, value="Inter"),
+                    StyleObservation(property=StyleProperty.FONT_SIZE, value="48px"),
+                    StyleObservation(property=StyleProperty.FONT_WEIGHT, value=700),
+                ]
+            ),
+            provenance=[],
+            confidence=1,
+        )
+        return Section(
+            id=f"{page_id}.s1",
+            order=0,
+            semantic_role="feature_cards",
+            role_confidence=1,
+            candidate_roles=[],
+            layout=LayoutObservation(kind=LayoutKind.GRID, contained=True, columns=3),
+            content=[heading],
+            groups=[],
+            style=StyleSet(
+                observations=[
+                    StyleObservation(property=StyleProperty.BACKGROUND_COLOR, value="#ffffff"),
+                    StyleObservation(property=StyleProperty.TEXT_COLOR, value="#111111"),
+                    StyleObservation(property=StyleProperty.PADDING, value="64px 0"),
+                ]
+            ),
+            responsive=[],
+            decorative_layers=[],
+            interactions=[],
+            provenance=[
+                Provenance(
+                    source_kind=SourceKind.LIVE_HTML,
+                    method=ObservationMethod.RENDERED,
+                    source_url="https://agency.example/",
+                    viewport=breakpoint,
+                    bounds=BoundingBox(x=0, y=0, width=width, height=560),
+                )
+                for breakpoint, width in (
+                    (BreakpointName.DESKTOP, 1440),
+                    (BreakpointName.TABLET, 768),
+                    (BreakpointName.MOBILE, 390),
+                )
+            ],
+        )
+
+    pages = [
+        Page(
+            id=page_id,
+            source_reference="https://agency.example/",
+            title=page_id.title(),
+            slug=page_id,
+            sections=[_section(page_id)],
+            breakpoints=[BreakpointName.DESKTOP],
+            navigation_visibility=NavigationVisibility.VISIBLE,
+            provenance=[],
+        )
+        for page_id in page_ids
+    ]
+    return DesignDocument(
+        schema_version="1.0",
+        source=DesignSource(
+            kind=SourceKind.LIVE_HTML,
+            identifier="https://agency.example/",
+            captured_at=datetime(2026, 8, 4, tzinfo=timezone.utc),
+            adapter_version="1.0.0",
+        ),
+        tokens=DesignTokens(),
+        assets=[],
+        pages=pages,
+        warnings=[],
+        analysis=DesignAnalysis(section_confidence_mean=1.0, unsupported_traits=[]),
+    )
+
+
+class _MultiPageRenderer:
+    def render(self, url: str, breakpoint: BreakpointName, destination: Path):
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_bytes(b"png")
+        return CaptureStability(
+            lazy_load_triggered=True, fonts_settled=True, animations_disabled=True
+        )
+
+
+class _MultiPageMeasurer:
+    _widths = {
+        BreakpointName.DESKTOP: 1440.0,
+        BreakpointName.TABLET: 768.0,
+        BreakpointName.MOBILE: 390.0,
+    }
+
+    def __init__(self, page_id: str) -> None:
+        self.page_id = page_id
+
+    def measure(self, url: str, breakpoint: BreakpointName) -> RenderedPage:
+        width = self._widths[breakpoint]
+        return RenderedPage(
+            viewport_width=width,
+            sections=(
+                RenderedSection(
+                    section_id=f"{self.page_id}.s1",
+                    order=0,
+                    bounds=LayoutBox(x=0, y=0, width=width, height=560),
+                    columns=3,
+                    background_color="#ffffff",
+                    text_color="#111111",
+                    typography={"heading": RenderedText(family="Inter", size_px=48, weight=700)},
+                    padding_top=64,
+                    padding_bottom=64,
+                    horizontal_overflow_px=0,
+                    empty_slot_count=0,
+                ),
+            ),
+            console_error_count=0,
+        )
+
+
+def _write_resolved_document(root: Path, document: DesignDocument) -> None:
+    path = root / "plans/resolved-design-document.json"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(serialize_design_document(document), encoding="utf-8", newline="\n")
+
+
+def _manifest() -> ProjectManifest:
+    return create_manifest(
+        name="Multi Page Fidelity",
+        project_id="multi-page-fidelity",
+        target_profile="client-one",
+        sources=[
+            ProjectSource(
+                id="live-home",
+                kind=SourceKind.LIVE_HTML,
+                reference="https://agency.example/",
+            )
+        ],
+        agency_pack_name="clicks-and-mortars",
+        agency_pack_version="2.0.0",
+        clock=lambda: datetime(2026, 9, 1, tzinfo=timezone.utc),
+    )
+
+
+def _write_build_manifests(root: Path) -> None:
+    atomic_write_json(root / "build/page-manifest.json", {"schema_version": "1.0", "page": {}})
+    atomic_write_json(root / "build/global-page-manifest.json", {"schema_version": "1.0", "pages": []})
+    atomic_write_json(
+        root / "build/global-block-manifest.json", {"schema_version": "1.0", "blocks": []}
+    )
+
+
+def _record_multi_page(
+    root: Path, document: DesignDocument, page_id: str, *, manifest: ProjectManifest | None
+) -> None:
+    _write_build_manifests(root)
+    record_project_fidelity_evidence(
+        root,
+        document,
+        page_id=page_id,
+        source_url=f"https://agency.example/{page_id}",
+        built_url=f"https://build.example/{page_id}",
+        renderer=_MultiPageRenderer(),
+        measurer=_MultiPageMeasurer(page_id),
+        manifest=manifest,
+    )
+
+
+class TestWorkspaceMultiPage:
+    def test_a_page_with_no_recorded_evidence_is_a_blocker_not_a_silent_pass(
+        self, tmp_path: Path
+    ) -> None:
+        manifest = _manifest()
+        document = _multi_page_document("home", "about")
+        _write_resolved_document(tmp_path, document)
+        _record_multi_page(tmp_path, document, "home", manifest=manifest)
+        # "about" is a real current design page but was never captured.
+
+        report, blockers = evaluate_project_fidelity(tmp_path, manifest)
+
+        assert report["status"] == "partially_scored"
+        assert report["pages"]["home"]["status"] == "scored"
+        assert report["pages"]["about"]["status"] == "not_scored"
+        assert any("about" in blocker for blocker in blockers)
+
+    def test_a_stale_page_is_a_blocker_even_though_it_was_once_captured(
+        self, tmp_path: Path
+    ) -> None:
+        manifest = _manifest()
+        document = _multi_page_document("home", "about")
+        _write_resolved_document(tmp_path, document)
+        _record_multi_page(tmp_path, document, "home", manifest=manifest)
+        _record_multi_page(tmp_path, document, "about", manifest=manifest)
+
+        first, _ = evaluate_project_fidelity(tmp_path, manifest)
+        assert first["status"] == "scored"
+
+        changed = _multi_page_document("home", "about", "contact")
+        _write_resolved_document(tmp_path, changed)
+
+        report, blockers = evaluate_project_fidelity(tmp_path, manifest)
+
+        assert report["status"] != "scored"
+        assert report["pages"]["home"]["status"] == "not_scored"
+        assert report["pages"]["about"]["status"] == "not_scored"
+        assert any("home" in blocker for blocker in blockers)
+        assert any("about" in blocker for blocker in blockers)
+
+    def test_multi_page_workspace_scores_when_every_current_page_is_current(
+        self, tmp_path: Path
+    ) -> None:
+        manifest = _manifest()
+        document = _multi_page_document("home", "about")
+        _write_resolved_document(tmp_path, document)
+        _record_multi_page(tmp_path, document, "home", manifest=manifest)
+        _record_multi_page(tmp_path, document, "about", manifest=manifest)
+
+        report, blockers = evaluate_project_fidelity(tmp_path, manifest)
+
+        assert report["status"] == "scored"
+        assert report["legacy"] is False
+        assert blockers == []
+
+
+# ---------------------------------------------------------------------------
+# Source-aware `capture-evidence-v2` consumption, alongside legacy v1 pages.
+
+
+def _v2_observation(page_id: str, width: float) -> dict[str, object]:
+    return {
+        "viewport_width": width,
+        "sections": [{"geometry": {"section_id": f"{page_id}.s1", "order": 0}}],
+    }
+
+
+def _v2_canonical_attempt(root: Path, page_id: str, breakpoint: BreakpointName) -> BreakpointCaptureAttempt:
+    directory = root / "qa/captures"
+    directory.mkdir(parents=True, exist_ok=True)
+    source = directory / f"v2-{page_id}-{breakpoint.value}-source.png"
+    output = directory / f"v2-{page_id}-{breakpoint.value}-output.png"
+    source.write_bytes(f"{page_id}-{breakpoint.value}-source".encode("utf-8"))
+    output.write_bytes(f"{page_id}-{breakpoint.value}-output".encode("utf-8"))
+    settled = {"lazy_load_triggered": True, "fonts_settled": True, "animations_disabled": True}
+    width = float(CANONICAL_VIEWPORTS[breakpoint].width)
+    return BreakpointCaptureAttempt(
+        breakpoint=breakpoint,
+        status=CaptureAttemptStatus.CAPTURED,
+        viewport_width=CANONICAL_VIEWPORTS[breakpoint].width,
+        viewport_height=CANONICAL_VIEWPORTS[breakpoint].height,
+        source_kind="live",
+        source_path=source.relative_to(root).as_posix(),
+        source_sha256=hashlib.sha256(source.read_bytes()).hexdigest(),
+        source_stability=dict(settled),
+        output_path=output.relative_to(root).as_posix(),
+        output_sha256=hashlib.sha256(output.read_bytes()).hexdigest(),
+        output_stability=dict(settled),
+        expected=_v2_observation(page_id, width),
+        observed=_v2_observation(page_id, width),
+    )
+
+
+def _not_declared(breakpoint: BreakpointName) -> BreakpointCaptureAttempt:
+    return BreakpointCaptureAttempt(
+        breakpoint=breakpoint, status=CaptureAttemptStatus.REFERENCE_NOT_DECLARED,
+        diagnostics=(f"{breakpoint.value}: no reference declared",),
+    )
+
+
+class TestWorkspaceSourceAwareV2:
+    def test_v2_page_with_no_valid_comparisons_is_not_scored(self, tmp_path: Path) -> None:
+        manifest = _manifest()
+        document = _multi_page_document("home")
+        _write_resolved_document(tmp_path, document)
+        _write_build_manifests(tmp_path)
+
+        record_page_capture_v2(
+            tmp_path, document, manifest,
+            page_id="home", built_url="https://build.example/home",
+            attempts=(
+                _not_declared(BreakpointName.DESKTOP),
+                _not_declared(BreakpointName.TABLET),
+                _not_declared(BreakpointName.MOBILE),
+            ),
+        )
+
+        report, blockers = evaluate_project_fidelity(tmp_path, manifest)
+        page_report = report["pages"]["home"]
+        assert page_report["status"] == "not_scored"
+        assert page_report["schema_version"] == "capture-evidence-v2"
+        assert page_report["release_completeness"]["canonical_complete"] is False
+        assert blockers
+
+    def test_v1_and_v2_pages_coexist_in_one_workspace_report(self, tmp_path: Path) -> None:
+        manifest = _manifest()
+        document = _multi_page_document("home", "about")
+        _write_resolved_document(tmp_path, document)
+        _record_multi_page(tmp_path, document, "home", manifest=manifest)
+
+        _write_build_manifests(tmp_path)
+        attempts = tuple(
+            _v2_canonical_attempt(tmp_path, "about", breakpoint)
+            for breakpoint in (BreakpointName.DESKTOP, BreakpointName.TABLET, BreakpointName.MOBILE)
+        )
+        record_page_capture_v2(
+            tmp_path, document, manifest,
+            page_id="about", built_url="https://build.example/about",
+            attempts=attempts,
+        )
+
+        report, blockers = evaluate_project_fidelity(tmp_path, manifest)
+
+        assert report["pages"]["home"]["status"] == "scored"
+        assert report["pages"]["home"].get("schema_version") != "capture-evidence-v2"
+        assert report["pages"]["about"]["status"] == "scored"
+        assert report["pages"]["about"]["schema_version"] == "capture-evidence-v2"
+        assert report["pages"]["about"]["release_completeness"]["canonical_complete"] is True
+        assert report["status"] == "scored"
+        assert blockers == []

@@ -21,6 +21,7 @@ __all__ = [
     "build_variant_lookup",
     "build_page_lookup",
     "rewrite_tree",
+    "substitute_css_urls",
 ]
 
 
@@ -235,8 +236,8 @@ def rewrite_tree(
             if not isinstance(style, dict):
                 continue
             for prop, value in style.items():
-                if isinstance(value, str) and "url(" in value:
-                    style[prop] = _substitute_css_urls(value, asset_lookup, report)
+                if isinstance(value, str) and "url(" in value.lower():
+                    style[prop] = substitute_css_urls(value, asset_lookup, report)
 
     return report
 
@@ -299,18 +300,29 @@ def _wrap_images_in_list(
             report.images_wrapped += 1
 
 
-_STYLE_URL = re.compile(r"url\(\s*['\"]?([^'\")]+)['\"]?\s*\)")
+# Quote group is captured and back-referenced on the close so a quoted
+# reference stays quoted (with its original quote character) and an
+# unquoted one stays unquoted; IGNORECASE covers authored ``URL(...)``.
+_STYLE_URL = re.compile(r"url\(\s*(['\"]?)([^'\")]+)\1\s*\)", re.IGNORECASE)
 
 
-def _substitute_css_urls(
+def substitute_css_urls(
     css_value: str,
     asset_lookup: dict[str, str],
     report: RewriteReport,
 ) -> str:
-    """Rewrite every url(...) reference in a CSS value string."""
+    """Rewrite every url(...) reference in a CSS value string.
+
+    Handles multiple ``url(...)`` tokens in one value (e.g. a layered
+    background), quoted and unquoted forms, and a case-insensitive
+    ``URL(...)`` function name. A reference with no entry in
+    ``asset_lookup`` is left exactly as written -- callers rely on this to
+    keep unmigrated references explicit rather than silently dropped.
+    """
 
     def _substitute(match: re.Match) -> str:
-        original = match.group(1)
+        quote = match.group(1)
+        original = match.group(2)
         replacement = _lookup_url(original, asset_lookup)
         if replacement is None:
             report.record_missing_asset(original)
@@ -319,7 +331,7 @@ def _substitute_css_urls(
             report.images_rewritten += 1
         else:
             report.images_unchanged += 1
-        return f"url({replacement})"
+        return f"url({quote}{replacement}{quote})"
 
     return _STYLE_URL.sub(_substitute, css_value)
 
@@ -335,10 +347,10 @@ def _rewrite_style_urls(
     style attribute, outside the src/href fields the component walk covers.
     """
     style = attributes.get("style")
-    if not isinstance(style, str) or "url(" not in style:
+    if not isinstance(style, str) or "url(" not in style.lower():
         return
 
-    attributes["style"] = _substitute_css_urls(style, asset_lookup, report)
+    attributes["style"] = substitute_css_urls(style, asset_lookup, report)
 
 
 def _is_image_component(node: dict) -> bool:

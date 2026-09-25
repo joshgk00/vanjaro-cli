@@ -25,7 +25,11 @@ from vanjaro_cli.design.semantics import (
     normalize_semantic_name,
     section_capability_aliases,
 )
-from vanjaro_cli.design.template_catalog import CapabilityManifest, TemplateCatalogEntry
+from vanjaro_cli.design.template_catalog import (
+    CapabilityManifest,
+    LayoutCapability,
+    TemplateCatalogEntry,
+)
 
 __all__ = [
     "CandidateSnapshot",
@@ -438,22 +442,44 @@ def _repeat_score(section: Section, capabilities: CapabilityManifest) -> float:
     return _bounded(best)
 
 
-def _layout_kind_score(source: LayoutKind, target: str) -> float:
-    target = _normalize(target)
-    compatible = {
+def _layout_kind_score(source: LayoutKind, target: LayoutCapability) -> float:
+    """Score spatial-structure compatibility, not presentation-label similarity.
+
+    ``target.kind`` is a presentation label ("band", "grid", "single", ...);
+    it says nothing on its own about column count. A "band" that itself
+    declares more than one column (e.g. a 3-up stats band) is spatially a
+    repeated grid with band styling, so it earns at least the row's "grid"
+    credit rather than being demoted for its name. A single-column band (a
+    CTA or photo band) keeps only its own literal entry -- it must not
+    inherit grid credit it has no columns to hold.
+
+    FREEFORM and OTHER sources make no reliable spatial claim at all --
+    unlike GRID/SPLIT/STACK/FLEX/CAROUSEL, they are not themselves evidence
+    of a structure, so their rows stay empty and every target label falls
+    through to the same no-evidence default. Unobserved geometry must be
+    neutral across every candidate spatial label, not a positive signal for
+    whichever label happens to be spelled "grid".
+    """
+
+    target_kind = _normalize(target.kind)
+    compatible: dict[LayoutKind, dict[str, float]] = {
         LayoutKind.GRID: {"grid": 1.0, "list": 0.72, "band": 0.68},
         LayoutKind.SPLIT: {"split": 1.0, "grid": 0.65},
         LayoutKind.STACK: {"single": 1.0, "band": 0.90, "list": 0.78, "accordion": 0.72},
         LayoutKind.FLEX: {"split": 0.9, "grid": 0.85, "band": 0.82, "navigation": 0.72},
         LayoutKind.CAROUSEL: {"grid": 0.62, "single": 0.55},
-        LayoutKind.FREEFORM: {"single": 0.58, "split": 0.55, "grid": 0.5},
-        LayoutKind.OTHER: {target: 0.55},
+        LayoutKind.FREEFORM: {},
+        LayoutKind.OTHER: {},
     }
-    return compatible.get(source, {}).get(target, 0.25)
+    row = compatible.get(source, {})
+    score = row.get(target_kind, 0.25)
+    if target_kind == "band" and any(column > 1 for column in target.columns):
+        score = max(score, row.get("grid", score))
+    return score
 
 
 def _layout_score(section: Section, capabilities: CapabilityManifest) -> float:
-    parts: list[tuple[float, float]] = [(_layout_kind_score(section.layout.kind, capabilities.layout.kind), 0.5)]
+    parts: list[tuple[float, float]] = [(_layout_kind_score(section.layout.kind, capabilities.layout), 0.5)]
     if section.layout.columns is not None:
         distance = min(abs(section.layout.columns - column) for column in capabilities.layout.columns)
         parts.append((max(0.0, 1.0 - distance / max(section.layout.columns, 1)), 0.25))

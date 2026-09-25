@@ -308,7 +308,15 @@ _NON_STRUCTURAL_TAGS = ("script", "style", "noscript", "input", "link", "meta", 
 # Tags that commonly wrap an entire page body without contributing structure.
 # ``form`` matters for ASP.NET WebForms/DNN sites, where <body> holds a single
 # page-wide <form> and every real section lives inside it.
-_WRAPPER_TAGS = ("div", "article", "form", "main")
+#
+# ``article`` is deliberately excluded: unlike a div/form/main, an <article>
+# is itself a semantic content boundary — a real article can legitimately
+# carry its own local header/footer (byline, attribution) alongside its
+# headline and body, and unwrapping it here would scatter that one owning
+# section into pieces before the distinct-nested-sections guard below ever
+# runs. An article that truly wraps multiple distinct sections is still
+# descended into by that guard (`_wraps_distinct_sections`).
+_WRAPPER_TAGS = ("div", "form", "main")
 
 _MAX_WRAPPER_DESCENT = 6
 
@@ -596,11 +604,18 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
                     node = node_inner[0]
                 expanded.append(node)
                 did_expand = True
-            elif text_share > _DOMINANT_TEXT_SHARE and any(
-                _is_chrome_like(child) for child in inner
+            elif (
+                text_share > _DOMINANT_TEXT_SHARE
+                and section.name in _WRAPPER_TAGS
+                and any(_is_chrome_like(child) for child in inner)
             ):
-                # Content sections never contain headers/footers/menus — an
-                # element wrapping chrome is a page-level layout wrapper.
+                # An anonymous layout wrapper (div/form/main) never contains
+                # headers/footers/menus of its own — one that does is really
+                # the page-level wrapper. That assumption does not hold for a
+                # <section>/<article>: those are semantic content boundaries
+                # that can legitimately own a local header or attribution
+                # footer (a byline, a case-study source line), so the same
+                # signal must not expand them apart from their own content.
                 expanded.extend(inner)
                 did_expand = True
             elif (

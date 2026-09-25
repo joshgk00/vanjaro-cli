@@ -11,20 +11,24 @@ import math
 import re
 from enum import Enum
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 from vanjaro_cli.design.models import (
     BreakpointName,
     EvidenceStatus,
     ObservationMethod,
+    ResponsiveCondition,
+    ResponsiveConditionStatus,
     ResponsiveObservation,
     StyleObservation,
     StyleProperty,
     StyleSet,
 )
+from vanjaro_cli.design.responsive_conditions import encode_condition_key, to_bound_tokens
 from vanjaro_cli.design.template_catalog import CapabilityManifest
 
 __all__ = [
+    "DEFAULT_AVAILABLE_PLATFORM_UTILITIES",
     "StyleDecision",
     "StyleTranslationConfig",
     "StyleTranslationResult",
@@ -77,6 +81,29 @@ class StyleTranslationConfig(_StrictModel):
     palette_distance_threshold: float = Field(default=0.12, ge=0, le=1)
     max_scoped_rules_per_section: int = Field(default=12, ge=0)
     important_allowlist: frozenset[StyleProperty] = frozenset()
+    available_platform_utilities: frozenset[str] = Field(
+        default_factory=lambda: DEFAULT_AVAILABLE_PLATFORM_UTILITIES
+    )
+
+    @field_validator("available_platform_utilities")
+    @classmethod
+    def _validate_available_platform_utilities(cls, values: frozenset[str]) -> frozenset[str]:
+        """Restrict this field to the fixed set of already-known utility classes.
+
+        The field selects among the translator's own hardcoded Bootstrap/Vanjaro
+        utility mappings; it is never emitted as a raw class string, so an
+        unrecognized entry can only be a caller mistake or a target-availability
+        claim this module has no way to verify. Rejecting it here keeps the
+        field from becoming a way to smuggle arbitrary class strings through.
+        """
+
+        unknown = sorted(values - _ALL_PLATFORM_UTILITY_CLASSES)
+        if unknown:
+            raise ValueError(
+                "available_platform_utilities contains unrecognized utility "
+                f"classes not produced by any existing mapping: {unknown}"
+            )
+        return values
 
 
 class StyleTranslationResult(_StrictModel):
@@ -143,8 +170,13 @@ _CSS_PROPERTY_NAMES: dict[StyleProperty, str] = {
 # layout and works against the native-component and editable-coverage ratios.
 #
 # This set governs translation only. Scoring still reads every measured
-# property. Non-rendered sources are unaffected: a Figma frame that declares
-# min-height is stating intent, while a browser reporting min-height is not.
+# property. MIN_HEIGHT is included even though it is rendered, because a
+# minimum-height is an authored sizing *constraint* (CSS Box Sizing Level 3:
+# https://www.w3.org/TR/css-sizing-3/#min-size-properties), not the resulting
+# measured HEIGHT of an element -- a browser reporting a nondefault min-height
+# is reporting the same constraint a Figma frame would declare directly.
+# Ordinary WIDTH/HEIGHT stay out of this set: those are measured outcomes, not
+# constraints, regardless of source.
 _RENDERED_REPRODUCIBLE_PROPERTIES: frozenset[StyleProperty] = frozenset(
     {
         StyleProperty.BACKGROUND_COLOR,
@@ -166,6 +198,7 @@ _RENDERED_REPRODUCIBLE_PROPERTIES: frozenset[StyleProperty] = frozenset(
         StyleProperty.BOX_SHADOW,
         StyleProperty.OBJECT_FIT,
         StyleProperty.OBJECT_POSITION,
+        StyleProperty.MIN_HEIGHT,
     }
 )
 
@@ -181,6 +214,7 @@ _CSS_INITIAL_VALUES: dict[str, frozenset[str]] = {
     "row-gap": frozenset({"normal", "0px"}),
     "letter-spacing": frozenset({"normal"}),
     "line-height": frozenset({"normal"}),
+    "min-height": frozenset({"auto", "0px", "0"}),
     "object-fit": frozenset({"fill"}),
     "object-position": frozenset({"50% 50%"}),
     "padding": frozenset({"0px"}),
@@ -232,6 +266,26 @@ _UTILITY_VALUES: dict[StyleProperty, dict[str, str]] = {
         "hidden": "invisible",
     },
 }
+
+# Every utility class this module knows how to produce. Used to bound
+# StyleTranslationConfig.available_platform_utilities to values this module
+# already emits deliberately, rather than allowing arbitrary strings through.
+_ALL_PLATFORM_UTILITY_CLASSES: frozenset[str] = frozenset(
+    utility for mapping in _UTILITY_VALUES.values() for utility in mapping.values()
+)
+
+# Root-inspected target: installed Basic Theme.css + Bootstrap 5.1.0 source.
+# Of the 27 unique classes above, 25 are present; object-fit-cover and
+# object-fit-contain are the only ones this target does not ship. This default
+# is a fixed record of that inspection, not a version guess or a live probe --
+# a genuinely different target must configure its own verified set.
+_UNAVAILABLE_ON_BOOTSTRAP_5_1: frozenset[str] = frozenset(
+    {"object-fit-cover", "object-fit-contain"}
+)
+
+DEFAULT_AVAILABLE_PLATFORM_UTILITIES: frozenset[str] = frozenset(
+    _ALL_PLATFORM_UTILITY_CLASSES - _UNAVAILABLE_ON_BOOTSTRAP_5_1
+)
 
 _HEX_RE = re.compile(r"^#([0-9a-f]{3}|[0-9a-f]{6})$", re.IGNORECASE)
 _RGB_RE = re.compile(
@@ -349,10 +403,11 @@ def _theme_decision(
 def _utility_decision(
     observation: StyleObservation,
     value: str,
+    config: StyleTranslationConfig,
     breakpoint: BreakpointName | None,
 ) -> StyleDecision | None:
     utility = _UTILITY_VALUES.get(observation.property, {}).get(value.casefold())
-    if utility is None:
+    if utility is None or utility not in config.available_platform_utilities:
         return None
     return StyleDecision(
         property=observation.property,
@@ -500,8 +555,59 @@ def _css_decision(
         breakpoint=breakpoint,
         evidence_status=observation.status,
     )
-    key = f"{breakpoint.value}:{css_property}" if breakpoint else css_property
+    key = _scoped_css_key(observation, breakpoint, css_property)
     return decision, (key, f"{value}{suffix}"), None
+
+
+def _scoped_css_key(
+    observation: StyleObservation, breakpoint: BreakpointName | None, css_property: str
+) -> str:
+    """Build the scoped-style transport key for one property's declaration.
+
+    Prefers an observed source condition's real bounds (``cond-max1023``)
+    over the sample breakpoint name when
+    ``observation.condition.status == OBSERVED`` -- ``style_transport.py``
+    turns that key straight into the generated ``@media`` rule's exact
+    threshold, instead of the agency's fixed per-breakpoint policy width. A
+    condition gathered but not provably attributed (``UNRESOLVED``), or no
+    condition at all, falls back to the existing breakpoint-name key
+    unchanged, so a source with no acquired CSS evidence keeps exactly its
+    prior behavior.
+    """
+
+    condition = observation.condition
+    if condition is not None and condition.status == ResponsiveConditionStatus.OBSERVED:
+        return f"{encode_condition_key(to_bound_tokens(condition))}:{css_property}"
+    return f"{breakpoint.value}:{css_property}" if breakpoint else css_property
+
+
+def _fallback_threshold_warning(
+    breakpoint: BreakpointName | None,
+    subject: str,
+    condition: ResponsiveCondition | None,
+) -> str | None:
+    """Disclose that a breakpoint-keyed output used the agency's fixed policy
+    width, not a threshold proven from the source.
+
+    Fires whenever ``subject`` (a CSS property or ``"visibility"``) reaches a
+    breakpoint-scoped fallback with no ``OBSERVED`` condition behind it --
+    either no condition was gathered at all, or one was gathered but its
+    cascade attribution could not be proven (``UNRESOLVED``). An ``OBSERVED``
+    condition transports its own exact source threshold instead of this
+    fallback, so it never reaches this function.
+    """
+
+    if breakpoint is None:
+        return None
+    if condition is not None and condition.status == ResponsiveConditionStatus.OBSERVED:
+        return None
+    message = (
+        f"{breakpoint.value} {subject} uses an approximate policy fallback "
+        "threshold instead of a proven observed source condition"
+    )
+    if condition is not None and condition.reason:
+        message = f"{message} ({condition.reason})"
+    return message
 
 
 def _translate_observations(
@@ -518,13 +624,49 @@ def _translate_observations(
     warnings: list[str] = []
     for observation in observations:
         value = _string_value(observation.value)
-        decision = (
-            _theme_decision(observation, value, config, breakpoint)
-            or _utility_decision(observation, value, breakpoint)
-            or _modifier_decision(observation, value, capabilities, config, breakpoint)
-            or _agency_decision(observation, value, config, breakpoint)
-            or _measurement_only_decision(observation, value, breakpoint)
-        )
+        condition = observation.condition
+        # A property carrying its own source condition is scoped by
+        # definition -- theme/platform-utility/template-modifier/agency
+        # layers have no way to express that scope (their target is a bare
+        # reusable class or capability label, applied unconditionally by
+        # build_native_style_report whenever StyleDecision.breakpoint is
+        # None). Gating on the *observation's* condition rather than the
+        # translation call's own breakpoint parameter means an element-style
+        # translation (always called with breakpoint=None -- see
+        # translate_style_set) cannot smuggle a conditional property through
+        # as an unconditional utility just because no breakpoint sample was
+        # in play; only an observation with no condition at all reaches
+        # those layers.
+        if condition is not None and condition.status == ResponsiveConditionStatus.UNRESOLVED and breakpoint is None:
+            decision = StyleDecision(
+                property=observation.property,
+                source_value=value,
+                layer=TranslationLayer.MANUAL,
+                target="manual_review",
+                confidence=0.0,
+                reason=(
+                    "condition attribution unresolved and no breakpoint policy fallback is "
+                    f"available to key a scoped rule: {condition.reason}"
+                ),
+                breakpoint=breakpoint,
+                evidence_status=observation.status,
+            )
+            decisions.append(decision)
+            warnings.append(
+                f"manual review required for {observation.property.value}: condition "
+                f"unresolved with no usable breakpoint ({condition.reason})"
+            )
+            continue
+
+        decision = None
+        if condition is None:
+            decision = (
+                _theme_decision(observation, value, config, breakpoint)
+                or _utility_decision(observation, value, config, breakpoint)
+                or _modifier_decision(observation, value, capabilities, config, breakpoint)
+                or _agency_decision(observation, value, config, breakpoint)
+            )
+        decision = decision or _measurement_only_decision(observation, value, breakpoint)
         if decision is not None:
             decisions.append(decision)
             continue
@@ -534,6 +676,12 @@ def _translate_observations(
         decisions.append(decision)
         if declaration is not None:
             declarations[declaration[0]] = declaration[1]
+            css_property = _CSS_PROPERTY_NAMES.get(observation.property, observation.property.value)
+            fallback_warning = _fallback_threshold_warning(
+                breakpoint, css_property, observation.condition
+            )
+            if fallback_warning:
+                warnings.append(fallback_warning)
         if warning:
             warnings.append(warning)
 
@@ -596,6 +744,12 @@ def translate_responsive_observations(
                 f"{responsive.breakpoint.value} navigation is marked collapsed and hidden; "
                 "verify a visible menu trigger exists"
             )
+        if responsive.hidden:
+            visibility_warning = _fallback_threshold_warning(
+                responsive.breakpoint, "visibility", responsive.section_condition
+            )
+            if visibility_warning:
+                warnings.append(visibility_warning)
         if responsive.style.raw:
             warnings.append(
                 f"raw {responsive.breakpoint.value} styles were not copied automatically"

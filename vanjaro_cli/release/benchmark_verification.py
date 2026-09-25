@@ -7,7 +7,6 @@ from typing import Any, Callable
 
 from pydantic import ValidationError
 
-from vanjaro_cli.design.benchmark_corpus import load_benchmark_predictions
 from vanjaro_cli.design.metrics import (
     BenchmarkFixtureError,
     BenchmarkReport,
@@ -249,6 +248,13 @@ def _run_current_benchmark(
     baseline_path: Path,
     case_ids: tuple[str, ...],
 ) -> BenchmarkReport:
+    # Deferred: importing this at module load time re-enters
+    # vanjaro_cli.design.benchmark_corpus while it is still initializing
+    # (benchmark_corpus -> orchestration.image_acquisition -> orchestration
+    # package init -> release.paths -> release package init -> verifier ->
+    # this module), which fails with a partial-init ImportError.
+    from vanjaro_cli.design.benchmark_corpus import load_benchmark_predictions
+
     predictions = load_benchmark_predictions(manifest_path, case_ids)
     result = run_offline_benchmark(
         predictions,

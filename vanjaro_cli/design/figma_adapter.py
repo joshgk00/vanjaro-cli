@@ -51,6 +51,8 @@ from vanjaro_cli.design.models import (
     Viewport,
     WarningSeverity,
 )
+from vanjaro_cli.design.figma_layout_geometry import infer_side_media as _infer_side_media
+from vanjaro_cli.design.figma_text_roles import select_hero_title
 from vanjaro_cli.design.figma_sections import segment_frame as _segment_frame
 from vanjaro_cli.design.figma_tree import (
     CONTAINER_TYPES as _CONTAINER_TYPES,
@@ -264,39 +266,21 @@ def _layout(node: Mapping[str, Any], page_frame: Mapping[str, Any], role: str) -
             metadata={"evidence": "figma_auto_layout", "confidence": 1.0},
         ), 1.0, ObservationMethod.API
 
-    if role == "call_to_action" and node_box is not None:
-        side_media = [
-            current for current in _walk(node)
-            if current is not node
-            and _box(current) is not None
-            and any(
-                isinstance(fill, Mapping) and fill.get("type") == "IMAGE"
-                for fill in (current.get("fills") or [])
-            )
-            and node_box.width * 0.15 <= _box(current).width <= node_box.width * 0.6
-        ]
-        text_boxes = [
-            _box(current) for current in _walk(node)
-            if current.get("type") == "TEXT" and _box(current) is not None
-        ]
-        if side_media and text_boxes:
-            media_box = max(side_media, key=lambda current: _box(current).width * _box(current).height)
-            media_bounds = _box(media_box)
-            text_center = sum(box.x + box.width / 2 for box in text_boxes) / len(text_boxes)
-            media_position = (
-                MediaPosition.LEFT
-                if media_bounds.x + media_bounds.width / 2 < text_center
-                else MediaPosition.RIGHT
-            )
+    if node_box is not None:
+        side_media = _infer_side_media(node, node_box)
+        if side_media is not None:
             return LayoutObservation(
                 kind=LayoutKind.SPLIT, contained=contained, columns=2,
-                media_position=media_position, full_bleed=not contained,
+                media_position=MediaPosition(side_media.media_position),
+                full_bleed=not contained,
                 metadata={
-                    "evidence": "inferred_from_side_media_geometry",
-                    "confidence": 0.88,
-                    "observed_child_boxes": len(text_boxes) + 1,
+                    "evidence": "inferred_from_geometry",
+                    "confidence": side_media.confidence,
+                    "layout_pattern": "side_media",
+                    "observed_child_boxes": side_media.text_box_count + 1,
+                    "text_overlaps_media": side_media.had_overlap,
                 },
-            ), 0.88, ObservationMethod.INFERRED
+            ), side_media.confidence, ObservationMethod.INFERRED
 
     child_boxes = [_box(child) for child in _children(node) if _visible(child)]
     boxes = [box for box in child_boxes if box is not None]
@@ -685,14 +669,7 @@ def _refine_section_content(
         if element.kind in {ContentKind.HEADING, ContentKind.TEXT, ContentKind.OTHER}
     ]
     if section_role in {"hero", "split_media", "call_to_action", "video_feature"} and text:
-        title = max(
-            text,
-            key=lambda element: (
-                _font_size(element),
-                len(str(element.value or "")),
-                -_content_position(element)[0],
-            ),
-        )
+        title = select_hero_title(text)
         remaining = [element for element in text if element.id != title.id]
         subtitles: list[ContentElement] = []
         eyebrow: ContentElement | None = None
@@ -1364,7 +1341,13 @@ def _infer_mobile(section: Section) -> dict[str, Any]:
         changes["wrap"] = {"from": False, "to": True}
     if section.layout.direction == "row" or section.layout.kind == LayoutKind.SPLIT:
         changes["direction"] = {"from": section.layout.direction or "row", "to": "column"}
-    if section.layout.media_position in {MediaPosition.LEFT, MediaPosition.RIGHT}:
+    if (
+        section.semantic_role in _FIGMA_ACTION_ROLES
+        and section.layout.media_position in {MediaPosition.LEFT, MediaPosition.RIGHT}
+    ):
+        # A dedicated action side-media split is deliberate, declared
+        # structure — it leads with media on mobile regardless of content
+        # order.
         changes["media_position"] = {"from": section.layout.media_position.value, "to": "top"}
     elif section.layout.media_position is MediaPosition.BOTTOM:
         # Media already trailing the copy stays trailing when the split stacks.
@@ -1372,13 +1355,32 @@ def _infer_mobile(section: Section) -> dict[str, Any]:
     elif section.layout.media_position is MediaPosition.TOP:
         changes["media_position"] = {"from": "top", "to": "top"}
     else:
+        # Any other desktop reading — including a geometry-inferred side
+        # media position on a non-action section such as a hero — says
+        # nothing about mobile order. Horizontal position is the wrong
+        # signal (a photo placed right of the copy can still lead on
+        # mobile), so stacking follows declared content order instead.
         stacked = _stacked_media_position(section)
         if stacked is not None:
-            changes["media_position"] = {"from": "none", "to": stacked}
+            from_value = (
+                section.layout.media_position.value
+                if section.layout.media_position is not MediaPosition.NONE
+                else "none"
+            )
+            changes["media_position"] = {"from": from_value, "to": stacked}
     if section.layout.kind == LayoutKind.FREEFORM:
         # Overlapping decoration cannot survive a 390px viewport, whether or
         # not the desktop layout overlapped.
         overlapped = bool(section.layout.metadata.get("overlap"))
+        changes["overlap"] = {"from": overlapped, "to": False}
+    elif section.layout.kind == LayoutKind.SPLIT and "text_overlaps_media" in section.layout.metadata:
+        # A geometry-inferred side-media split (e.g. text partially overlapping
+        # a dominant photo) records its own bounded overlap evidence separately
+        # from the freeform "overlap" key above. That evidence must carry
+        # through here too: once the section stacks to one column, whatever
+        # actual overlap existed cannot persist. Sections with no such key —
+        # unknown geometry, or a non-overlapping split — make no claim either way.
+        overlapped = bool(section.layout.metadata["text_overlaps_media"])
         changes["overlap"] = {"from": overlapped, "to": False}
     if section.semantic_role in _FIGMA_ACTION_ROLES:
         changes.setdefault("direction", {"from": "horizontal", "to": "vertical"})
@@ -1646,16 +1648,32 @@ def analyze_figma_document(
                     )],
                 ))
 
+        # One frame-level provenance record per *observed* variant -- not just
+        # the base frame, and not only variants whose sections managed to
+        # pair with the base.  Each record carries the frame node's own
+        # bounds (via `_box`), which is the only place downstream capture
+        # planning can learn a Figma frame's real, directly-observed
+        # dimensions; a section's bounds are section-local and must never be
+        # substituted for it.
+        frame_provenance = [_provenance(
+            base_frame, file_key=file_key, page_node_id=base_canvas,
+            frame_node_id=str(base_frame.get("id")), viewport=base_breakpoint,
+        )]
+        for canvas_id, variant in variants:
+            if variant is base_frame:
+                continue
+            frame_provenance.append(_provenance(
+                variant, file_key=file_key, page_node_id=canvas_id,
+                frame_node_id=str(variant.get("id")), viewport=_breakpoint(variant),
+            ))
+
         pages.append(Page(
             id=page_id, source_reference=str(base_frame.get("id")),
             title=str(base_frame.get("name") or family_name.title()), slug=_safe(family_name),
             sections=sections,
             breakpoints=sorted(observed_breakpoints, key=lambda item: {BreakpointName.DESKTOP: 0, BreakpointName.TABLET: 1, BreakpointName.MOBILE: 2}[item]),
             navigation_visibility=NavigationVisibility.UNKNOWN,
-            provenance=[_provenance(
-                base_frame, file_key=file_key, page_node_id=base_canvas,
-                frame_node_id=str(base_frame.get("id")), viewport=base_breakpoint,
-            )],
+            provenance=frame_provenance,
             metadata={"figma_page_family": family_name},
         ))
 

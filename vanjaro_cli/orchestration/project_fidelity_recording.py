@@ -28,10 +28,12 @@ from vanjaro_cli.design.fidelity_capture import (
 from vanjaro_cli.design.fidelity_extraction import observe_expected_page
 from vanjaro_cli.design.fidelity_observation import PageMeasurer, observe_built_page
 from vanjaro_cli.design.models import BreakpointName, DesignDocument
+from vanjaro_cli.orchestration.project_capture_evidence import record_page_capture_evidence
 from vanjaro_cli.orchestration.project_fidelity import (
     FIDELITY_EVIDENCE_PATH,
     ProjectFidelityError,
 )
+from vanjaro_cli.project.models import ProjectManifest
 from vanjaro_cli.reliability import atomic_write_json
 
 __all__ = [
@@ -52,12 +54,22 @@ def record_project_fidelity_evidence(
     renderer: PageRenderer,
     measurer: PageMeasurer,
     breakpoints: Iterable[BreakpointName] | None = None,
+    manifest: ProjectManifest | None = None,
 ) -> dict[str, Any]:
     """Capture, measure, and write the evidence the fidelity gate consumes.
 
     Returns the payload as written. Raises `ProjectFidelityError` when the
     design has no such page — scoring a page the design never described would
     compare a build against nothing.
+
+    Writes two things: the legacy single-file `qa/fidelity-evidence.json`
+    (kept for existing consumers of that path) and a durable per-page record
+    under `qa/capture-evidence/` via `record_page_capture_evidence`, which is
+    what workspace-wide coverage and the multi-page fidelity gate actually
+    read. The per-page write fully replaces this page's prior record, so a
+    partial recapture (fewer breakpoints than last time) cannot leave stale
+    "complete" evidence behind for this page; other pages' records are
+    untouched.
     """
 
     page = next((item for item in document.pages if item.id == page_id), None)
@@ -118,6 +130,19 @@ def record_project_fidelity_evidence(
 
     destination = root / FIDELITY_EVIDENCE_PATH
     atomic_write_json(destination, payload)
+
+    record_page_capture_evidence(
+        root,
+        document,
+        page_id=page_id,
+        source_url=source_url,
+        built_url=built_url,
+        expected=expected,
+        observed=observed,
+        pairs=tuple(pair for pair in outcome.pairs if pair.breakpoint.value in observed),
+        warnings=warnings,
+        manifest=manifest,
+    )
     return payload
 
 

@@ -1,0 +1,104 @@
+{
+  "$defs": {
+    "AgencyStyleUtility": {
+      "additionalProperties": false,
+      "description": "One executable utility: a validated CSS declaration bound to one class.",
+      "properties": {
+        "property": {
+          "$ref": "#/$defs/StyleProperty"
+        },
+        "source_value": {
+          "minLength": 1,
+          "title": "Source Value",
+          "type": "string"
+        },
+        "class_name": {
+          "pattern": "^[a-z][a-z0-9-]*$",
+          "title": "Class Name",
+          "type": "string"
+        },
+        "important": {
+          "default": false,
+          "title": "Important",
+          "type": "boolean"
+        }
+      },
+      "required": [
+        "property",
+        "source_value",
+        "class_name"
+      ],
+      "title": "AgencyStyleUtility",
+      "type": "object"
+    },
+    "StyleProperty": {
+      "description": "Normalized style properties supported by Design Document v1.",
+      "enum": [
+        "background_color",
+        "background_image",
+        "background_position",
+        "text_color",
+        "font_family",
+        "font_size",
+        "font_weight",
+        "line_height",
+        "letter_spacing",
+        "width",
+        "height",
+        "min_height",
+        "max_width",
+        "margin",
+        "padding",
+        "row_gap",
+        "column_gap",
+        "text_align",
+        "item_align",
+        "border",
+        "border_radius",
+        "box_shadow",
+        "object_fit",
+        "object_position",
+        "position",
+        "overlap",
+        "transform",
+        "rotation",
+        "opacity",
+        "overlay_color",
+        "display",
+        "visibility",
+        "flex_direction",
+        "flex_wrap",
+        "order",
+        "column_count"
+      ],
+      "title": "StyleProperty",
+      "type": "string"
+    }
+  },
+  "additionalProperties": false,
+  "properties": {
+    "schema_version": {
+      "const": "1.0",
+      "default": "1.0",
+      "title": "Schema Version",
+      "type": "string"
+    },
+    "version": {
+      "title": "Version",
+      "type": "string"
+    },
+    "utilities": {
+      "default": [],
+      "items": {
+        "$ref": "#/$defs/AgencyStyleUtility"
+      },
+      "title": "Utilities",
+      "type": "array"
+    }
+  },
+  "required": [
+    "version"
+  ],
+  "title": "AgencyStylePayload",
+  "type": "object"
+}

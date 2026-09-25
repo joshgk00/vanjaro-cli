@@ -240,6 +240,18 @@ def validate_evidence_identity(
         )
 
 
+def image_identity(payload: bytes) -> tuple[str, int, int]:
+    """Public wrapper: parse PNG/JPEG/WebP mime type and pixel dimensions.
+
+    Reuses the same parser `acquire_reference_image` uses internally, so any
+    caller hashing and dimensioning already-acquired bytes -- including
+    outside this module -- gets identical results from the same input, with
+    no second decoder implementation to drift out of sync.
+    """
+
+    return _image_identity(payload)
+
+
 def _image_identity(payload: bytes) -> tuple[str, int, int]:
     if payload.startswith(b"\x89PNG\r\n\x1a\n"):
         if len(payload) < 24 or payload[12:16] != b"IHDR":
@@ -313,6 +325,7 @@ __all__ = [
     "AcquiredReferenceImage",
     "ImageAcquisitionError",
     "acquire_reference_image",
+    "image_identity",
     "load_image_evidence",
     "resolve_evidence_file",
     "resolve_workspace_file",

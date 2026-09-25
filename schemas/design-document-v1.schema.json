@@ -232,6 +232,27 @@
       "title": "CandidateRole",
       "type": "object"
     },
+    "ConditionBound": {
+      "additionalProperties": false,
+      "description": "One bounded pixel-width comparison, e.g. ``max-width: 1023px``.",
+      "properties": {
+        "kind": {
+          "$ref": "#/$defs/ResponsiveConditionKind"
+        },
+        "threshold_px": {
+          "exclusiveMinimum": 0,
+          "maximum": 20000,
+          "title": "Threshold Px",
+          "type": "integer"
+        }
+      },
+      "required": [
+        "kind",
+        "threshold_px"
+      ],
+      "title": "ConditionBound",
+      "type": "object"
+    },
     "ContentElement": {
       "additionalProperties": false,
       "description": "Visitor-facing content with semantic ownership and provenance.",
@@ -1176,6 +1197,87 @@
       "title": "RepeatGroupKind",
       "type": "string"
     },
+    "ResponsiveCondition": {
+      "additionalProperties": false,
+      "description": "A source CSS media condition and the cascade evidence behind it.\n\nDistinct from the sample breakpoint/viewport a ``ResponsiveObservation``\nwas captured at: a breakpoint names *where a value was measured*, while\na condition names *the authored width threshold a real stylesheet rule\nused to apply that value*. ``bounds`` is empty when ``status`` is\n``UNRESOLVED`` and no bound could be parsed at all (e.g. an unsupported\nmedia expression); an ``OBSERVED`` condition always declares at least\none bound. At most two bounds are supported (a single ``min-width`` or\n``max-width`` comparison, or one of each forming a bounded range from\nnested/intersecting conditions).",
+      "properties": {
+        "bounds": {
+          "items": {
+            "$ref": "#/$defs/ConditionBound"
+          },
+          "title": "Bounds",
+          "type": "array"
+        },
+        "important": {
+          "default": false,
+          "title": "Important",
+          "type": "boolean"
+        },
+        "provenance": {
+          "items": {
+            "$ref": "#/$defs/Provenance"
+          },
+          "title": "Provenance",
+          "type": "array"
+        },
+        "reason": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Reason"
+        },
+        "rule_order": {
+          "minimum": 0,
+          "title": "Rule Order",
+          "type": "integer"
+        },
+        "selector": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Selector"
+        },
+        "status": {
+          "$ref": "#/$defs/ResponsiveConditionStatus"
+        }
+      },
+      "required": [
+        "status",
+        "rule_order"
+      ],
+      "title": "ResponsiveCondition",
+      "type": "object"
+    },
+    "ResponsiveConditionKind": {
+      "description": "A supported bounded width comparison for a responsive condition.",
+      "enum": [
+        "min_width",
+        "max_width"
+      ],
+      "title": "ResponsiveConditionKind",
+      "type": "string"
+    },
+    "ResponsiveConditionStatus": {
+      "description": "Whether a responsive condition's winning-rule attribution is proven.\n\n``OBSERVED`` means a media-conditioned declaration was proven to win the\ncascade among every declaration whose bounds are satisfied at the\nsampled viewport, and its value matches the sampled computed value.\n``UNRESOLVED`` means evidence was gathered but correct attribution could\nnot be proved (an unsupported media/container expression could win the\ncascade, no declaration's condition is satisfied at the sampled width,\nor the winning declaration's value does not match the sample) -- this is\nan explicit, actionable gap, never a fabricated authored breakpoint.",
+      "enum": [
+        "observed",
+        "unresolved"
+      ],
+      "title": "ResponsiveConditionStatus",
+      "type": "string"
+    },
     "ResponsiveObservation": {
       "additionalProperties": false,
       "description": "Breakpoint delta from a section's base layout and styles.",
@@ -1208,6 +1310,17 @@
           },
           "title": "Provenance",
           "type": "array"
+        },
+        "section_condition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResponsiveCondition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
         },
         "status": {
           "$ref": "#/$defs/EvidenceStatus"
@@ -1424,6 +1537,17 @@
       "additionalProperties": false,
       "description": "A supported style value and the evidence that produced it.",
       "properties": {
+        "condition": {
+          "anyOf": [
+            {
+              "$ref": "#/$defs/ResponsiveCondition"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null
+        },
         "confidence": {
           "default": 1.0,
           "maximum": 1,

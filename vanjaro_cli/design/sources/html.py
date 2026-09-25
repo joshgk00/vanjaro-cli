@@ -13,6 +13,7 @@ from vanjaro_cli.design.html_adapter import (
     capture_rendered_observations,
     design_document_from_html,
 )
+from vanjaro_cli.design.html_media_evidence import MediaEvidenceResult
 from vanjaro_cli.design.models import DesignDocument, DesignWarning, SourceKind
 
 
@@ -97,12 +98,14 @@ class HtmlSourceAdapter:
     def analyze(self, request: HtmlSourceRequest) -> DesignDocument:
         observations: tuple[RenderedPageObservation, ...] = ()
         warnings: tuple[DesignWarning, ...] = ()
+        media_evidence: MediaEvidenceResult | None = None
         if request.render:
             captured = self._capture(request.effective_render_url)
             observations = _rebased_observations(
                 captured.observations, request.effective_render_url, request.source_url
             )
             warnings = captured.warnings
+            media_evidence = captured.media_evidence
         return design_document_from_html(
             request.html,
             request.source_url,
@@ -111,4 +114,5 @@ class HtmlSourceAdapter:
             captured_at=request.captured_at,
             rendered_observations=observations,
             rendered_warnings=warnings,
+            media_evidence=media_evidence,
         )

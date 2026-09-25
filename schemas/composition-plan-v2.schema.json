@@ -53,6 +53,14 @@
           "default": null,
           "title": "Css Scope"
         },
+        "element_styles": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/ElementStyleAction"
+          },
+          "title": "Element Styles",
+          "type": "array"
+        },
         "form_fields": {
           "default": [],
           "items": {
@@ -147,6 +155,68 @@
         "block"
       ],
       "title": "CompositionPlanEntry",
+      "type": "object"
+    },
+    "ElementStyleAction": {
+      "additionalProperties": false,
+      "description": "One content element's own captured style, translated onto the exact\nphysical slot its semantic binding owns -- never onto the section that\ncontains it, and never onto a sibling slot.\n\n``slot`` reuses the same override-slot vocabulary as ``SemanticBinding.slot``\n(see ``utils/block_compose.enumerate_slots``): the physical owner is\nresolved by that same slot key at composition time, through\n``apply_overrides_with_owners``, not by any independent text/position\nsearch.",
+      "properties": {
+        "css_scope": {
+          "anyOf": [
+            {
+              "pattern": "^\\.[a-z][a-z0-9-]*(?: \\.[a-z][a-z0-9-]*)+$",
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Css Scope"
+        },
+        "item_id": {
+          "anyOf": [
+            {
+              "type": "string"
+            },
+            {
+              "type": "null"
+            }
+          ],
+          "default": null,
+          "title": "Item Id"
+        },
+        "scoped_css": {
+          "additionalProperties": {
+            "type": "string"
+          },
+          "title": "Scoped Css",
+          "type": "object"
+        },
+        "slot": {
+          "pattern": "^[a-z][a-z0-9_-]*(?:_\\d+)?(?:_[a-z]+)?$",
+          "title": "Slot",
+          "type": "string"
+        },
+        "source_element_id": {
+          "minLength": 1,
+          "title": "Source Element Id",
+          "type": "string"
+        },
+        "style_decisions": {
+          "default": [],
+          "items": {
+            "$ref": "#/$defs/StyleDecision"
+          },
+          "title": "Style Decisions",
+          "type": "array"
+        }
+      },
+      "required": [
+        "source_element_id",
+        "slot"
+      ],
+      "title": "ElementStyleAction",
       "type": "object"
     },
     "EvidenceStatus": {

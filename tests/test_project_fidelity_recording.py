@@ -36,6 +36,7 @@ from vanjaro_cli.design.models import (
     StyleProperty,
     StyleSet,
 )
+from vanjaro_cli.design.serialization import serialize_design_document
 from vanjaro_cli.design.visual_gate import CaptureStability
 from vanjaro_cli.orchestration.project_fidelity import (
     FIDELITY_EVIDENCE_PATH,
@@ -45,6 +46,9 @@ from vanjaro_cli.orchestration.project_fidelity import (
 from vanjaro_cli.orchestration.project_fidelity_recording import (
     record_project_fidelity_evidence,
 )
+from vanjaro_cli.project import ProjectSource, create_manifest
+from vanjaro_cli.project.models import ProjectManifest
+from vanjaro_cli.reliability.artifacts import atomic_write_json
 
 
 def _document() -> DesignDocument:
@@ -180,15 +184,56 @@ class _FakeMeasurer:
         )
 
 
+def _manifest() -> ProjectManifest:
+    return create_manifest(
+        name="Fidelity Recording",
+        project_id="fidelity-recording",
+        target_profile="client-one",
+        sources=[
+            ProjectSource(
+                id="live-home",
+                kind=SourceKind.LIVE_HTML,
+                reference="https://agency.example/",
+            )
+        ],
+        agency_pack_name="clicks-and-mortars",
+        agency_pack_version="2.0.0",
+        clock=lambda: datetime(2026, 9, 1, tzinfo=timezone.utc),
+    )
+
+
+def _write_build_manifests(root: Path) -> None:
+    atomic_write_json(root / "build/page-manifest.json", {"schema_version": "1.0", "page": {}})
+    atomic_write_json(root / "build/global-page-manifest.json", {"schema_version": "1.0", "pages": []})
+    atomic_write_json(
+        root / "build/global-block-manifest.json", {"schema_version": "1.0", "blocks": []}
+    )
+
+
+_UNSET = object()
+
+
 def _record(tmp_path: Path, **kwargs):
+    """Record with a real, current local build and target binding by
+    default -- exactly what the reader now requires for scored evidence.
+    Pass `manifest=None` to deliberately record unbound evidence."""
+
+    document = _document()
+    resolved_path = tmp_path / "plans/resolved-design-document.json"
+    resolved_path.parent.mkdir(parents=True, exist_ok=True)
+    resolved_path.write_text(serialize_design_document(document), encoding="utf-8", newline="\n")
+    _write_build_manifests(tmp_path)
+    manifest = kwargs.pop("manifest", _UNSET)
+    manifest = _manifest() if manifest is _UNSET else manifest
     return record_project_fidelity_evidence(
         tmp_path,
-        _document(),
+        document,
         page_id="home",
         source_url="https://agency.example/",
         built_url="https://build.example/home",
         renderer=kwargs.pop("renderer", _FakeRenderer()),
         measurer=kwargs.pop("measurer", _FakeMeasurer()),
+        manifest=manifest,
         **kwargs,
     )
 
@@ -206,9 +251,10 @@ def test_recording_writes_evidence_the_gate_can_read(tmp_path: Path) -> None:
 def test_recorded_evidence_actually_scores_instead_of_reporting_not_scored(
     tmp_path: Path,
 ) -> None:
-    _record(tmp_path)
+    manifest = _manifest()
+    _record(tmp_path, manifest=manifest)
 
-    report, blockers = evaluate_project_fidelity(tmp_path)
+    report, blockers = evaluate_project_fidelity(tmp_path, manifest)
 
     assert report["status"] == "scored"
     assert blockers == []
@@ -277,9 +323,10 @@ def test_a_degraded_build_is_recorded_and_fails_the_gate(tmp_path: Path) -> None
             placeholder_leaks=("Lorem ipsum",),
         ),
     )
-    _record(tmp_path, measurer=_FakeMeasurer(sections=degraded))
+    manifest = _manifest()
+    _record(tmp_path, measurer=_FakeMeasurer(sections=degraded), manifest=manifest)
 
-    report, blockers = evaluate_project_fidelity(tmp_path)
+    report, blockers = evaluate_project_fidelity(tmp_path, manifest)
 
     assert report["status"] == "scored"
     assert blockers

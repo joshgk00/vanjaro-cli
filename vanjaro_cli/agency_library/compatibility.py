@@ -211,6 +211,23 @@ def plan_agency_pack_upgrade(
             f"target {target.manifest.version} must be newer than {current.manifest.version}",
             recommended_action="Select a newer published Semantic Version.",
         )
+    if current.styles is not None or target.styles is not None:
+        # W1 only defines the executable style payload and its pure,
+        # non-installing resolution (style_context.py); it does not yet
+        # define how an upgrade should compare, migrate, or replan style
+        # utilities. Approving an upgrade here would be a silent guess about
+        # compatibility this codebase has not reviewed, so it fails closed
+        # -- called from apply_agency_pack_upgrade before any project file
+        # is touched, so this also blocks before mutation.
+        raise AgencyPackCompatibilityError(
+            "agency_pack_style_upgrade_unsupported",
+            "executable agency-pack styles are not yet supported by the upgrade "
+            "planner; style compatibility and replanning ships in a later stage",
+            recommended_action=(
+                "Do not upgrade to or from a pack version that declares executable "
+                "styles until style-aware upgrade planning is implemented."
+            ),
+        )
 
     current_templates = {item.template_id: item for item in current.templates.templates}
     target_templates = {item.template_id: item for item in target.templates.templates}

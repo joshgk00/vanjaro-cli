@@ -535,6 +535,7 @@ def _read_optional_json(path: Path) -> dict | None:
 
 
 from vanjaro_cli.commands.project_build_cmd import build_project
+from vanjaro_cli.commands.project_capture_cmd import project_capture
 from vanjaro_cli.commands.project_evidence_cmd import evidence
 from vanjaro_cli.commands.project_gaps_cmd import capability_gaps
 from vanjaro_cli.commands.project_handoff_cmd import handoff_project
@@ -547,6 +548,7 @@ from vanjaro_cli.commands.project_target_cmd import target
 
 project.add_command(build_project)
 project.add_command(capability_gaps)
+project.add_command(project_capture)
 project.add_command(evidence)
 project.add_command(handoff_project)
 project.add_command(launch_project)

@@ -12,11 +12,18 @@ from typing import Generator
 from urllib.parse import urlsplit
 
 from vanjaro_cli.utils.color import parse_color
+from vanjaro_cli.utils.image_links import (
+    apply_image_link,
+    collect_component_ids,
+    is_generated_image_link_wrapper,
+    is_image_link_wrapper,
+)
 from vanjaro_cli.utils.theme_palette import nearest_palette_slot
 
 __all__ = [
     "TemplateNotFoundError",
     "apply_overrides",
+    "apply_overrides_with_owners",
     "apply_section_background",
     "attach_form_placeholder",
     "check_overflow",
@@ -97,17 +104,41 @@ def _walk_overridable(
     """Yield (component, type, index) for each overridable component in document order.
 
     Counters are per-type and 1-based, shared across the entire tree walk.
+    Every ``link``/``button`` counts here regardless of content shape --
+    wraps a single image, wraps text, or is a bare authored placeholder --
+    with one exception: a link this code itself generated as an image's
+    ``image_N_href`` destination wrapper (see
+    ``image_links.is_generated_image_link_wrapper``) is never counted or
+    yielded. Such a wrapper is addressed only through its owning image's
+    ``image_N_href`` slot; letting it also consume a ``link_N`` slot would
+    make that numbering drift across repeated composition rounds as wrappers
+    come and go. An authored link that merely has the same content-free,
+    single-image shape is not mistaken for one of ours: only an explicit
+    creation marker excludes a wrapper, so an unmarked authored link keeps
+    its ordinary ``link_N``/``link_N_href`` slot.
     """
     if counters is None:
         counters = {}
 
     comp_type = component.get("type", "")
     if comp_type in CONTENT_TYPES or comp_type in ATTRIBUTE_SLOTS:
-        counters[comp_type] = counters.get(comp_type, 0) + 1
-        yield component, comp_type, counters[comp_type]
+        if not (comp_type == "link" and is_generated_image_link_wrapper(component)):
+            counters[comp_type] = counters.get(comp_type, 0) + 1
+            yield component, comp_type, counters[comp_type]
 
     for child in component.get("components", []):
         yield from _walk_overridable(child, counters)
+
+
+def _current_image_href(image: dict, ancestors: list[dict]) -> str:
+    """The href an image's native owner currently carries, or "" if unlinked."""
+    if not ancestors:
+        return ""
+    parent = ancestors[-1]
+    if is_image_link_wrapper(parent) and parent.get("components", [None])[0] is image:
+        href = parent.get("attributes", {}).get("href", "")
+        return href if isinstance(href, str) else ""
+    return ""
 
 
 def enumerate_slots(template_component: dict) -> list[dict]:
@@ -121,9 +152,16 @@ def enumerate_slots(template_component: dict) -> list[dict]:
     section-level URL applied as a cover background (see ``apply_overrides``),
     so full-bleed photo bands work on any template without a dedicated image
     component.
+
+    Every image also exposes an ``image_N_href`` slot -- the image's native
+    clickable destination, applied by wrapping the image in a ``link``
+    component rather than by writing an attribute onto the image itself (see
+    ``apply_overrides``). It is a distinct slot type from ``link_N``/
+    ``link_N_href``: those number editable text links, this numbers image
+    destinations, and the two must never collide or shift one another.
     """
     slots: list[dict] = []
-    for comp, comp_type, n in _walk_overridable(template_component):
+    for comp, ancestors, comp_type, n in _walk_overridable_with_ancestors(template_component):
         if comp_type in CONTENT_TYPES:
             slots.append({
                 "key": f"{comp_type}_{n}",
@@ -137,6 +175,13 @@ def enumerate_slots(template_component: dict) -> list[dict]:
                 "type": comp_type,
                 "field": f"attributes.{attr_name}",
                 "value": comp.get("attributes", {}).get(attr_name, ""),
+            })
+        if comp_type == "image":
+            slots.append({
+                "key": f"image_{n}_href",
+                "type": "image",
+                "field": "link.href",
+                "value": _current_image_href(comp, ancestors),
             })
     if template_component.get("type") == "section":
         slots.append({
@@ -636,7 +681,10 @@ def _walk_overridable_with_ancestors(
 
     The chain (root-to-parent order) lets a caller splice a component out of
     its parent's children and walk back up pruning any wrapper the removal
-    leaves empty.
+    leaves empty. Applies the same generated-image-link-wrapper exclusion as
+    ``_walk_overridable`` (see its docstring) so every caller -- including
+    ``enumerate_slots`` -- reports the same ``link_N`` numbering that
+    ``apply_overrides`` actually honors.
     """
     if ancestors is None:
         ancestors = []
@@ -645,8 +693,9 @@ def _walk_overridable_with_ancestors(
 
     comp_type = component.get("type", "")
     if comp_type in CONTENT_TYPES or comp_type in ATTRIBUTE_SLOTS:
-        counters[comp_type] = counters.get(comp_type, 0) + 1
-        yield component, ancestors, comp_type, counters[comp_type]
+        if not (comp_type == "link" and is_generated_image_link_wrapper(component)):
+            counters[comp_type] = counters.get(comp_type, 0) + 1
+            yield component, ancestors, comp_type, counters[comp_type]
 
     for child in component.get("components", []):
         yield from _walk_overridable_with_ancestors(child, ancestors + [component], counters)
@@ -733,6 +782,37 @@ def _prune_explicitly_empty_slots(section: dict, overrides: dict[str, str]) -> N
                 break
 
 
+def _apply_image_link_overrides(section: dict, overrides: dict[str, str]) -> None:
+    """Apply every requested ``image_N_href`` to the image it actually owns.
+
+    Runs before ``_prune_explicitly_empty_slots``: image indices number the
+    physical components as they exist right after expansion, the same shape
+    ``image_N_src``/``image_N_alt`` were assigned against. Pruning removes
+    components, and numbering a later pass against the pruned tree would let
+    a removed leading image silently shift every later image's href onto the
+    wrong picture.
+
+    Targets are collected before any mutation (matching the pattern used by
+    ``prune_unfilled_images``/``_prune_explicitly_empty_slots`` above): wrapping
+    an image in place, in the middle of the same tree walk that found it, would
+    make the walk's own live ancestor lists inconsistent mid-traversal.
+    """
+    targets: list[tuple[dict, dict, list[dict], str]] = []
+    for component, ancestors, comp_type, index in _walk_overridable_with_ancestors(section):
+        if comp_type != "image" or not ancestors:
+            continue
+        key = f"image_{index}_href"
+        if key not in overrides:
+            continue
+        targets.append((component, ancestors[-1], ancestors, overrides[key]))
+
+    if not targets:
+        return
+    existing_ids = collect_component_ids(section)
+    for image, parent, ancestors, href in targets:
+        apply_image_link(image, parent, ancestors, href, existing_ids)
+
+
 def _expand_slots(template_data: dict, overrides: dict[str, str]) -> dict:
     """Run unit expansion, then leaf expansion for any residue units don't cover."""
     expanded = expand_column_units(template_data, overrides)
@@ -740,6 +820,28 @@ def _expand_slots(template_data: dict, overrides: dict[str, str]) -> dict:
     return expand_button_slots(
         expand_list_slots(expand_image_slots(expanded, overrides), overrides), overrides
     )
+
+
+def _apply_content_overrides(template_root: dict, overrides: dict[str, str]) -> None:
+    """Write every content/attribute override onto its matching slot, in place.
+
+    Shared by ``apply_overrides`` and ``apply_overrides_with_owners`` so both
+    walk the tree with the exact same numbering rules exactly once.
+    """
+    for comp, comp_type, n in _walk_overridable(template_root):
+        # A link this code generated as an image's destination wrapper is
+        # never yielded here at all (see _walk_overridable) -- it is
+        # addressed only through the owning image's image_N_href, handled
+        # by _apply_image_link_overrides below. Anything that does reach
+        # this loop, including an authored content-free single-image
+        # wrapper, is a legitimate link_N/link_N_href slot like any other.
+        content_key = f"{comp_type}_{n}"
+        if content_key in overrides and comp_type in CONTENT_TYPES:
+            comp["content"] = overrides[content_key]
+        for suffix, attr_name in ATTRIBUTE_SLOTS.get(comp_type, []):
+            attr_key = f"{comp_type}_{n}_{suffix}"
+            if attr_key in overrides:
+                comp.setdefault("attributes", {})[attr_name] = overrides[attr_key]
 
 
 def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
@@ -753,20 +855,94 @@ def apply_overrides(template_data: dict, overrides: dict[str, str]) -> dict:
     """
     expanded = _expand_slots(template_data, overrides)
     result = copy.deepcopy(expanded)
-    for comp, comp_type, n in _walk_overridable(result["template"]):
-        content_key = f"{comp_type}_{n}"
-        if content_key in overrides and comp_type in CONTENT_TYPES:
-            comp["content"] = overrides[content_key]
-        for suffix, attr_name in ATTRIBUTE_SLOTS.get(comp_type, []):
-            attr_key = f"{comp_type}_{n}_{suffix}"
-            if attr_key in overrides:
-                comp.setdefault("attributes", {})[attr_name] = overrides[attr_key]
+    _apply_content_overrides(result["template"], overrides)
     background_image = overrides.get("background_image")
     if background_image and result["template"].get("type") == "section":
         apply_section_background(result["template"], {"background_image": background_image})
+    _apply_image_link_overrides(result["template"], overrides)
     _prune_explicitly_empty_slots(result["template"], overrides)
     _balance_card_rows(result["template"])
     return result
+
+
+def _capture_owners(template_root: dict) -> dict[str, dict]:
+    """Map every current override slot key to its physical component, by identity.
+
+    Uses the exact same numbering ``_walk_overridable``/``enumerate_slots``
+    produce, at the exact tree shape ``apply_overrides`` itself walks right
+    after expansion -- before any content is written, image is wrapped, or
+    empty slot is pruned. This is the "stable owner reference" a later
+    ``image_N_href`` wrap or an earlier slot's pruning must never invalidate.
+    """
+    owners: dict[str, dict] = {}
+    for comp, comp_type, n in _walk_overridable(template_root):
+        owners[f"{comp_type}_{n}"] = comp
+        for suffix, _attr_name in ATTRIBUTE_SLOTS.get(comp_type, []):
+            owners[f"{comp_type}_{n}_{suffix}"] = comp
+    return owners
+
+
+def _capture_image_href_owners(template_root: dict, owners: dict[str, dict]) -> None:
+    """Record each linked image's wrapper as the owner of its ``image_N_href`` slot.
+
+    Must run after ``_apply_image_link_overrides`` so a wrapper that call just
+    created or adopted is present in the tree. An image with no clickable
+    wrapper simply gets no ``image_N_href`` entry -- there is no owner for that
+    slot, not a fallback to the image itself or a sibling.
+    """
+    for comp, ancestors, comp_type, n in _walk_overridable_with_ancestors(template_root):
+        if comp_type != "image" or not ancestors:
+            continue
+        parent = ancestors[-1]
+        if is_image_link_wrapper(parent) and parent.get("components", [None])[0] is comp:
+            owners[f"image_{n}_href"] = parent
+
+
+def _collect_identities(component: dict, seen: set[int]) -> None:
+    seen.add(id(component))
+    for child in component.get("components", []) or []:
+        if isinstance(child, dict):
+            _collect_identities(child, seen)
+
+
+def _drop_removed_owners(template_root: dict, owners: dict[str, dict]) -> None:
+    """Remove any owner reference pruning left outside the final tree.
+
+    A pruned slot's owner is simply absent from ``owners`` afterward -- never
+    silently repointed at whatever component ended up at its old numeric
+    position, which pruning can and does renumber.
+    """
+    present: set[int] = set()
+    _collect_identities(template_root, present)
+    for key in [key for key, comp in owners.items() if id(comp) not in present]:
+        del owners[key]
+
+
+def apply_overrides_with_owners(
+    template_data: dict, overrides: dict[str, str]
+) -> tuple[dict, dict[str, dict]]:
+    """Like ``apply_overrides``, but also return each surviving slot's owner component.
+
+    The returned mapping's keys are the same slot-key vocabulary
+    ``enumerate_slots``/``SemanticBinding.slot`` use (``heading_2``,
+    ``button_1``, ``image_3_src``, ``image_3_href`` ...). A slot removed by
+    ``_prune_explicitly_empty_slots`` -- or an image never given a clickable
+    wrapper -- is simply absent; callers must treat a missing key as a removed
+    or nonexistent owner, never fall back to a sibling or a stale position.
+    """
+    expanded = _expand_slots(template_data, overrides)
+    result = copy.deepcopy(expanded)
+    owners = _capture_owners(result["template"])
+    _apply_content_overrides(result["template"], overrides)
+    background_image = overrides.get("background_image")
+    if background_image and result["template"].get("type") == "section":
+        apply_section_background(result["template"], {"background_image": background_image})
+    _apply_image_link_overrides(result["template"], overrides)
+    _capture_image_href_owners(result["template"], owners)
+    _prune_explicitly_empty_slots(result["template"], overrides)
+    _drop_removed_owners(result["template"], owners)
+    _balance_card_rows(result["template"])
+    return result, owners
 
 
 _COL_WIDTH_CLASS = re.compile(r"^col(?:-(?:sm|md|lg|xl))?-\d+$")

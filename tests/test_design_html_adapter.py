@@ -3252,9 +3252,11 @@ def test_a_button_repeating_a_destination_the_page_kept_is_not_reported() -> Non
     assert _section_losses(document) == {}
 
 
-def test_a_link_whose_destination_never_arrived_is_still_reported() -> None:
-    """The hold-back is about a destination the page kept, not about links. A
-    button pointing somewhere nothing else reaches is a real loss."""
+def test_a_standalone_read_more_is_retained_as_its_own_card_action() -> None:
+    """The hold-back at TC-116 is about a destination the page kept, not about
+    links in general: a standalone `Read More >` pointing somewhere no image
+    reaches is now kept as that card's own action, so its destination has
+    arrived and there is nothing left for the boundary check to report."""
 
     document = design_document_from_html(
         "<html><body>"
@@ -3272,7 +3274,68 @@ def test_a_link_whose_destination_never_arrived_is_still_reported() -> None:
         "https://example.invalid/blog",
     )
 
-    assert list(_section_losses(document)) == ["#dnn_ListPane"]
+    assert _section_losses(document) == {}
+
+    cards = next(
+        section
+        for section in document.pages[0].sections
+        if section.semantic_role == "feature_cards"
+    )
+    assert len(cards.groups[0].items) == 2
+    for item, expected_title in zip(
+        cards.groups[0].items, ["Platform options", "Serious about security"]
+    ):
+        action = next(e for e in cards.content if e.id == item.fields["action"])
+        assert action.role == "primary_action"
+        assert action.value == "Read More >"
+        assert action.attributes["href"] == "/elsewhere"
+        title = next(e for e in cards.content if e.id == item.fields["title"])
+        assert title.value == expected_title
+
+
+def test_a_link_whose_destination_never_reaches_the_document_is_still_reported(
+    monkeypatch,
+) -> None:
+    """The boundary check compares its offered text runs against what the
+    built document actually carries (`_arrived_content`), not against what
+    extraction attempted. Starve that comparison of one card's action —
+    exactly what an action-retention regression, or a bug in the reconciler
+    itself, would look like — and the destination it never received is still
+    a real loss, reported against the boundary that offered it."""
+
+    html = (
+        "<html><body>"
+        "<header class='site-header'><nav><a href='/'>Home</a><a href='/x'>Work</a></nav></header>"
+        "<section id='dnn_content'><div id='dnn_ListPane' class='Pane'>"
+        "<article class='post'><a href='/blog/one'><img src='/one.jpg' alt='One'></a>"
+        "<h3>Platform options</h3><p>Getting started can be daunting.</p>"
+        "<a class='list-btn' href='/deep-dive-one'>Read the write-up</a></article>"
+        "<article class='post'><a href='/blog/two'><img src='/two.jpg' alt='Two'></a>"
+        "<h3>Serious about security</h3><p>Chrome changed the rules.</p>"
+        "<a class='list-btn' href='/deep-dive-two'>See details</a></article>"
+        "</div></section>"
+        "<footer class='site-footer'><p>Copyright 2026.</p></footer>"
+        "</body></html>"
+    )
+
+    original_arrived_content = html_adapter._arrived_content
+
+    def _starved_of_one_cards_action(page, assets):
+        text, media, destinations = original_arrived_content(page, assets)
+        return (
+            [value for value in text if value != "Read the write-up"],
+            media,
+            destinations - {"/deep-dive-one"},
+        )
+
+    monkeypatch.setattr(html_adapter, "_arrived_content", _starved_of_one_cards_action)
+
+    document = design_document_from_html(html, "https://example.invalid/blog")
+
+    losses = _section_losses(document)
+    assert list(losses) == ["#dnn_ListPane"]
+    assert "kept 5 of 6" in losses["#dnn_ListPane"]
+    assert "1 reached no element" in losses["#dnn_ListPane"]
 
 
 def test_a_form_label_wrapped_in_a_div_is_not_body_copy() -> None:

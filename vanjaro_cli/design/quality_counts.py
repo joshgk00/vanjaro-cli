@@ -33,14 +33,28 @@ Rules, applied exactly:
     `GENERIC_FALLBACK_TEMPLATE_IDS` and whose `match.blocking` is `False`.
 
 (d) desktop_tablet_mobile_evidence
-    Denominator: the number of pages the plan covers, at least 1. A page is
-    identified by the text before the first "." in `source_section_id`,
-    which is how every source adapter composes a section id from its owning
-    page id (for example "home.section.1"); a section id with no "." is its
-    own single-section page.
+    Denominator: the number of pages the *resolved design document* actually
+    has, including pages with no sections — but only when an authoritative,
+    non-empty `page_identity` (built by `resolve_page_identity` from that
+    document) is supplied. Page identity for a plan entry comes from
+    `page_identity.section_page_ids[entry.source_section_id]` — the section's
+    real owning page, not a string heuristic. An entry whose section is
+    absent from that map (or whose mapped page id is not one of
+    `page_identity.page_ids`) is warned about and contributes to no page,
+    rather than being guessed from ID punctuation. `page_identity.page_ids`
+    is de-duplicated before counting, so a malformed identity map can never
+    inflate the denominator.
+    When no usable `page_identity` is supplied — either none at all, or one
+    that resolves to zero pages (legacy callers, or a workspace with no
+    resolved design document) — this metric is recorded 0/1 with an explicit
+    warning. It never falls back to guessing page identity from
+    `source_section_id` punctuation: that heuristic mis-identifies pages for
+    source adapters (such as the image adapter) whose section ids are opaque
+    hashes with no ".", so a missing authoritative mapping must earn zero
+    capture credit rather than an unearned one.
     Numerator: pages for which `capture_evidence` reports all three of
     "desktop", "tablet", and "mobile". `capture_evidence` is a plain mapping
-    of `{page_key: set of breakpoint names}` supplied by the caller; when the
+    of `{page_id: set of breakpoint names}` supplied by the caller; when the
     caller has none, it passes an empty mapping and the count is 0/N. This
     module never invents captures.
 
@@ -56,14 +70,17 @@ from collections.abc import Iterable, Mapping, Sequence
 from pydantic import BaseModel, ConfigDict, Field
 
 from vanjaro_cli.design.composition import BlockType, CompositionPlan, CompositionPlanEntry
+from vanjaro_cli.design.models import DesignDocument
 from vanjaro_cli.design.template_catalog import TemplateCatalogEntry
 
 __all__ = [
     "GENERIC_FALLBACK_TEMPLATE_IDS",
+    "PageIdentityMap",
     "QualityCount",
     "QualityCountsReport",
     "QualityEntryRow",
     "compute_quality_counts",
+    "resolve_page_identity",
 ]
 
 GENERIC_FALLBACK_TEMPLATE_IDS = frozenset({"Content/rich-text"})
@@ -106,12 +123,35 @@ class QualityCountsReport(_QualityModel):
     warnings: tuple[str, ...]
 
 
+class PageIdentityMap(_QualityModel):
+    """Authoritative page identity from a resolved `DesignDocument`.
+
+    `page_ids` lists every page exactly once, including pages with no
+    sections. `section_page_ids` maps each section id to its owning page id,
+    so a plan entry's real page never has to be guessed from ID punctuation.
+    """
+
+    page_ids: tuple[str, ...] = Field(default_factory=tuple)
+    section_page_ids: dict[str, str] = Field(default_factory=dict)
+
+
+def resolve_page_identity(document: DesignDocument) -> PageIdentityMap:
+    """Build the section->page map and complete page id list from a document.
+
+    Pure: takes an already-parsed `DesignDocument`, does no I/O. Reading the
+    document off disk is the caller's job (an orchestration concern); this is
+    just the data transformation.
+    """
+
+    page_ids = tuple(page.id for page in document.pages)
+    section_page_ids = {
+        section.id: page.id for page in document.pages for section in page.sections
+    }
+    return PageIdentityMap(page_ids=page_ids, section_page_ids=section_page_ids)
+
+
 def _is_body(entry: CompositionPlanEntry) -> bool:
     return entry.block.type != BlockType.GLOBAL
-
-
-def _page_key(entry: CompositionPlanEntry) -> str:
-    return entry.source_section_id.split(".", 1)[0]
 
 
 def _count(numerator: int, denominator: int, *, empty_note: str, warnings: list[str]) -> QualityCount:
@@ -145,11 +185,21 @@ def compute_quality_counts(
     plan: CompositionPlan,
     catalog: Sequence[TemplateCatalogEntry],
     capture_evidence: Mapping[str, Iterable[str]],
+    *,
+    page_identity: PageIdentityMap | None = None,
 ) -> QualityCountsReport:
     """Derive the four release quality ratios from a plan and its catalog.
 
     Pure and deterministic: no network access, no filesystem writes, and no
     timestamps. `capture_evidence` is caller-supplied and never invented here.
+
+    `page_identity`, built by `resolve_page_identity` from the workspace's
+    resolved design document, is the authoritative source for what pages
+    exist and which page each plan entry's section belongs to.
+    `desktop_tablet_mobile_evidence` is recorded 0/1 with an explicit
+    warning whenever no such authoritative, non-empty `page_identity` is
+    supplied -- it is never inferred by guessing page identity from
+    `source_section_id` punctuation.
     """
 
     warnings: list[str] = []
@@ -200,12 +250,45 @@ def compute_quality_counts(
         for template_id in sorted(unknown_templates)
     )
 
-    page_keys = sorted({_page_key(entry) for entry in plan.entries})
-    evidence_pages = 0
-    for page_key in page_keys:
-        breakpoints = set(capture_evidence.get(page_key, ()))
-        if {"desktop", "tablet", "mobile"} <= breakpoints:
-            evidence_pages += 1
+    page_ids = list(dict.fromkeys(page_identity.page_ids)) if page_identity is not None else []
+
+    if page_ids:
+        valid_page_ids = set(page_ids)
+        section_page_ids = page_identity.section_page_ids
+        unmapped_sections = sorted(
+            {
+                entry.source_section_id
+                for entry in plan.entries
+                if section_page_ids.get(entry.source_section_id) not in valid_page_ids
+            }
+        )
+        warnings.extend(
+            f"source section {section_id!r} has no page mapping in the resolved "
+            "design document; its capture evidence cannot be attributed to a page"
+            for section_id in unmapped_sections
+        )
+        evidence_pages = 0
+        for page_id in page_ids:
+            breakpoints = set(capture_evidence.get(page_id, ()))
+            if {"desktop", "tablet", "mobile"} <= breakpoints:
+                evidence_pages += 1
+        desktop_tablet_mobile_evidence = QualityCount(
+            numerator=evidence_pages, denominator=len(page_ids)
+        )
+    else:
+        if page_identity is not None:
+            warnings.append(
+                "resolved design document supplied no authoritative pages; "
+                "desktop_tablet_mobile_evidence cannot be attributed to real "
+                "pages and is recorded 0/1"
+            )
+        else:
+            warnings.append(
+                "no resolved design document page mapping was supplied; "
+                "desktop_tablet_mobile_evidence is never inferred from "
+                "source_section_id punctuation, so it is recorded 0/1"
+            )
+        desktop_tablet_mobile_evidence = QualityCount(numerator=0, denominator=1)
 
     rows.sort(key=lambda row: row.entry_id)
 
@@ -231,12 +314,7 @@ def compute_quality_counts(
             empty_note="body_without_generic_fallback: no body entries; recorded 0/1",
             warnings=warnings,
         ),
-        # A plan always covers at least one page by definition, so this
-        # denominator can never legitimately be 0; guard it anyway so an
-        # empty plan still reports 0/1 instead of raising.
-        desktop_tablet_mobile_evidence=QualityCount(
-            numerator=evidence_pages, denominator=max(len(page_keys), 1)
-        ),
+        desktop_tablet_mobile_evidence=desktop_tablet_mobile_evidence,
         rows=tuple(rows),
         warnings=tuple(sorted(set(warnings))),
     )

@@ -16,6 +16,7 @@ from vanjaro_cli.design.composition import (
 )
 from vanjaro_cli.design.quality_counts import (
     GENERIC_FALLBACK_TEMPLATE_IDS,
+    PageIdentityMap,
     compute_quality_counts,
 )
 from vanjaro_cli.design.template_catalog import TemplateCatalogEntry, load_template_catalog
@@ -270,6 +271,10 @@ def test_capture_evidence_with_two_of_three_breakpoints_does_not_count() -> None
             ),
         )
     )
+    page_identity = PageIdentityMap(
+        page_ids=("home", "about"),
+        section_page_ids={"home.section.1": "home", "about.section.1": "about"},
+    )
 
     report = compute_quality_counts(
         plan,
@@ -278,6 +283,7 @@ def test_capture_evidence_with_two_of_three_breakpoints_does_not_count() -> None
             "home": {"desktop", "tablet"},
             "about": {"desktop", "tablet", "mobile"},
         },
+        page_identity=page_identity,
     )
 
     assert report.desktop_tablet_mobile_evidence.numerator == 1
@@ -295,10 +301,125 @@ def test_no_capture_evidence_supplied_records_zero_numerator() -> None:
             ),
         )
     )
+    page_identity = PageIdentityMap(
+        page_ids=("home",), section_page_ids={"home.section.1": "home"}
+    )
 
-    report = compute_quality_counts(plan, CATALOG, {})
+    report = compute_quality_counts(plan, CATALOG, {}, page_identity=page_identity)
 
     assert report.desktop_tablet_mobile_evidence.numerator == 0
+    assert report.desktop_tablet_mobile_evidence.denominator == 1
+
+
+def test_missing_page_identity_earns_zero_capture_credit_even_with_matching_evidence() -> None:
+    # Regression for the punctuation-heuristic bug: without an authoritative
+    # page_identity, a capture_evidence mapping keyed by what *looks* like a
+    # page id (because it happens to be the text before the first ".") must
+    # never be credited.
+    plan = _plan(
+        (
+            _entry(
+                entry_id="a",
+                source_section_id="home.section.1",
+                template=HIGH_NATIVE,
+                bindings=(_binding(),),
+            ),
+        )
+    )
+
+    report = compute_quality_counts(
+        plan, CATALOG, {"home": {"desktop", "tablet", "mobile"}}
+    )
+
+    assert report.desktop_tablet_mobile_evidence.numerator == 0
+    assert report.desktop_tablet_mobile_evidence.denominator == 1
+    assert any(
+        "punctuation" in warning for warning in report.warnings
+    )
+
+
+def test_page_identity_with_no_pages_earns_zero_capture_credit() -> None:
+    plan = _plan(
+        (
+            _entry(
+                entry_id="a",
+                source_section_id="home.section.1",
+                template=HIGH_NATIVE,
+                bindings=(_binding(),),
+            ),
+        )
+    )
+    empty_identity = PageIdentityMap(page_ids=(), section_page_ids={})
+
+    report = compute_quality_counts(
+        plan,
+        CATALOG,
+        {"home": {"desktop", "tablet", "mobile"}},
+        page_identity=empty_identity,
+    )
+
+    assert report.desktop_tablet_mobile_evidence.numerator == 0
+    assert report.desktop_tablet_mobile_evidence.denominator == 1
+    assert any(
+        "no authoritative pages" in warning for warning in report.warnings
+    )
+
+
+def test_ambiguous_section_page_mapping_warns_but_real_pages_still_earn_credit() -> None:
+    # A section mapped to a page id that is not in the identity's own
+    # page_ids list is ambiguous/unresolvable membership, not a real page.
+    plan = _plan(
+        (
+            _entry(
+                entry_id="a",
+                source_section_id="home.section.1",
+                template=HIGH_NATIVE,
+                bindings=(_binding(),),
+            ),
+        )
+    )
+    dangling_identity = PageIdentityMap(
+        page_ids=("home",), section_page_ids={"home.section.1": "ghost-page"}
+    )
+
+    report = compute_quality_counts(
+        plan,
+        CATALOG,
+        {"home": {"desktop", "tablet", "mobile"}, "ghost-page": {"desktop", "tablet", "mobile"}},
+        page_identity=dangling_identity,
+    )
+
+    # "ghost-page" is not a real page (absent from page_ids), so it can never
+    # be credited no matter what capture_evidence claims about it; "home" is
+    # a real page and earns credit independently of which entries map to it.
+    assert report.desktop_tablet_mobile_evidence.numerator == 1
+    assert report.desktop_tablet_mobile_evidence.denominator == 1
+    assert any("no page mapping" in warning for warning in report.warnings)
+
+
+def test_duplicate_page_ids_are_deduplicated_for_the_denominator() -> None:
+    plan = _plan(
+        (
+            _entry(
+                entry_id="a",
+                source_section_id="home.section.1",
+                template=HIGH_NATIVE,
+                bindings=(_binding(),),
+            ),
+        )
+    )
+    dup_identity = PageIdentityMap(
+        page_ids=("home", "home"), section_page_ids={"home.section.1": "home"}
+    )
+
+    report = compute_quality_counts(
+        plan,
+        CATALOG,
+        {"home": {"desktop", "tablet", "mobile"}},
+        page_identity=dup_identity,
+    )
+
+    assert report.desktop_tablet_mobile_evidence.numerator == 1
     assert report.desktop_tablet_mobile_evidence.denominator == 1
 
 

@@ -35,6 +35,10 @@ from vanjaro_cli.design.html_boundaries import (
     prepare_static_sections as _prepare_static_sections,
     unclaimed_boundaries as _unclaimed_boundaries,
 )
+from vanjaro_cli.design.html_media_evidence import (
+    MediaEvidenceResult,
+    collect_media_condition_evidence,
+)
 from vanjaro_cli.design.html_ownership import (
     CANONICAL_VIEWPORTS,
     enrich_section_from_static_dom as _enrich_section_from_static_dom,
@@ -51,9 +55,13 @@ from vanjaro_cli.design.models import (
     DesignDocument,
     DesignWarning,
     Page,
+    Provenance,
+    ResponsiveConditionStatus,
     StyleProperty,
     Viewport,
 )
+from vanjaro_cli.design.responsive_conditions import resolve_property_condition
+from vanjaro_cli.design.style_translation import _CSS_PROPERTY_NAMES
 from vanjaro_cli.migration.crawler import CrawlError, fetch_url_text, same_domain
 from vanjaro_cli.migration.sections import extract_page_title, extract_sections
 from vanjaro_cli.migration.visual import (
@@ -222,8 +230,18 @@ _RENDERED_OBSERVATION_JS = r"""() => {
     // The outermost chrome element is the one the static extractor treats as the
     // section, and it is where the author puts the id, so it is what pairing
     // matches on. An inner nav is only used when no header wraps it.
+    // A <footer> nested inside a <blockquote>, <article> or <section> is the
+    // HTML5 citation/byline idiom, not page chrome — the same distinction the
+    // static candidate rule makes, and pairing depends on both sides agreeing
+    // on which elements are boundaries. Without this, the last testimonial's
+    // "— Jane Doe, CEO" was measured and reported as the rendered site footer.
     const chrome = [];
-    document.querySelectorAll('header, footer').forEach((el) => chrome.push(el));
+    document.querySelectorAll('header, footer').forEach((el) => {
+        if (el.tagName.toLowerCase() === 'footer' && el.closest('blockquote, article, section')) {
+            return;
+        }
+        chrome.push(el);
+    });
     document.querySelectorAll('body > nav').forEach((el) => {
         if (!el.closest('header, footer')) chrome.push(el);
     });
@@ -502,6 +520,14 @@ class RenderedCaptureResult:
 
     observations: tuple[RenderedPageObservation, ...]
     warnings: tuple[DesignWarning, ...]
+    # Accessible width-media declaration evidence collected once per capture
+    # (stylesheet text/order do not vary with viewport -- see
+    # `html_media_evidence.py`). Defaults to empty so existing positional
+    # `RenderedCaptureResult(observations, warnings)` construction keeps
+    # working for any caller that predates this field.
+    media_evidence: MediaEvidenceResult = field(
+        default_factory=lambda: MediaEvidenceResult(by_selector={}, sheet_gaps=())
+    )
 
 
 def _normalize_stylesheet_url(url: str) -> str:
@@ -640,6 +666,7 @@ def capture_rendered_observations(
 
     observations: list[RenderedPageObservation] = []
     warnings: list[DesignWarning] = []
+    media_evidence: MediaEvidenceResult | None = None
 
     for breakpoint, viewport in viewports.items():
         try:
@@ -705,6 +732,40 @@ def capture_rendered_observations(
                             ),
                         )
                     )
+                if media_evidence is None:
+                    # Collected once: stylesheet text/rule order/specificity
+                    # do not change with viewport, only which `@media` block
+                    # currently matches -- and this evidence intentionally
+                    # reads every block's condition text regardless of
+                    # whether it matches right now.
+                    try:
+                        media_evidence = collect_media_condition_evidence(
+                            page, [section.selector for section in sections]
+                        )
+                        for gap in media_evidence.sheet_gaps:
+                            warnings.append(
+                                DesignWarning(
+                                    code="rendered_media_stylesheet_inaccessible",
+                                    message=(
+                                        f"Stylesheet evidence for {url} is incomplete: {gap}; "
+                                        "responsive conditions from this sheet cannot be attributed "
+                                        "and remain unresolved rather than assumed"
+                                    ),
+                                    path=url,
+                                )
+                            )
+                    except Exception as exc:  # noqa: BLE001 - a gap here must not fail capture
+                        media_evidence = MediaEvidenceResult(by_selector={}, sheet_gaps=())
+                        warnings.append(
+                            DesignWarning(
+                                code="rendered_media_evidence_failed",
+                                message=(
+                                    f"Responsive condition evidence collection failed for "
+                                    f"{url} at {breakpoint.value}: {exc}"
+                                ),
+                                path=url,
+                            )
+                        )
                 unresolved = raw_snapshot.get("unresolved_stylesheets")
                 if not isinstance(unresolved, int):
                     unresolved = 0
@@ -750,7 +811,11 @@ def capture_rendered_observations(
                 )
             )
 
-    return RenderedCaptureResult(tuple(observations), tuple(warnings))
+    return RenderedCaptureResult(
+        tuple(observations),
+        tuple(warnings),
+        media_evidence or MediaEvidenceResult(by_selector={}, sheet_gaps=()),
+    )
 
 
 def _legacy_provenance(
@@ -1185,6 +1250,7 @@ def _style_from_content(
     content: Mapping[str, JsonValue],
     provenance: dict[str, JsonValue],
     rendered_styles: Mapping[str, JsonValue] | None = None,
+    conditions: Mapping[str, JsonValue] | None = None,
 ) -> dict[str, JsonValue]:
     observations: dict[str, dict[str, JsonValue]] = {}
     for content_key, style_property in _STYLE_CONTENT_KEYS.items():
@@ -1204,13 +1270,17 @@ def _style_from_content(
             style_property = _RENDERED_STYLE_KEYS.get(key)
             if style_property is None or value in (None, ""):
                 continue
-            observations[style_property.value] = {
+            observation: dict[str, JsonValue] = {
                 "property": style_property.value,
                 "value": value,
                 "status": "observed",
                 "confidence": 1.0,
                 "provenance": [rendered_provenance],
             }
+            condition = (conditions or {}).get(style_property.value)
+            if condition is not None:
+                observation["condition"] = condition
+            observations[style_property.value] = observation
     return {"observations": list(observations.values()), "raw": {}}
 
 
@@ -1239,6 +1309,65 @@ def _repeat_alignment(
     return (max(nonzero, default=0), counts, heading_offset)
 
 
+def _resolve_style_conditions(
+    changed_styles: Mapping[str, JsonValue],
+    *,
+    media_evidence: MediaEvidenceResult | None,
+    selector: str,
+    query_width_px: int,
+    provenance: dict[str, JsonValue],
+    breakpoint: BreakpointName,
+    section_id: str,
+    artifact_path: str,
+    warnings: list[dict[str, JsonValue]],
+) -> dict[str, JsonValue]:
+    """Resolve a proven or explicitly unresolved condition for each changed style.
+
+    Returns a mapping of ``StyleProperty.value`` -> serialized
+    ``ResponsiveCondition`` for every changed property accessible CSS
+    evidence could say anything about. A property with no matching
+    declaration at all is left out entirely (a pure sample, nothing to
+    report) rather than defaulted to a fabricated gap.
+    """
+
+    conditions: dict[str, JsonValue] = {}
+    if not changed_styles or media_evidence is None:
+        return conditions
+    section_evidence = media_evidence.by_selector.get(selector)
+    declarations = section_evidence.declarations if section_evidence is not None else ()
+    condition_provenance = [Provenance.model_validate(provenance)]
+    for key, value in changed_styles.items():
+        style_property = _RENDERED_STYLE_KEYS.get(key)
+        if style_property is None or value in (None, ""):
+            continue
+        css_property = _CSS_PROPERTY_NAMES.get(style_property)
+        if css_property is None:
+            continue
+        resolved = resolve_property_condition(
+            declarations,
+            css_property,
+            query_width_px,
+            str(value),
+            provenance=condition_provenance,
+        )
+        if resolved is None:
+            continue
+        conditions[style_property.value] = resolved.model_dump(mode="json")
+        if resolved.status == ResponsiveConditionStatus.UNRESOLVED:
+            warnings.append(
+                _warning(
+                    "responsive_condition_unresolved",
+                    (
+                        f"Section {section_id} {style_property.value} at "
+                        f"{breakpoint.value} ({query_width_px}px) could not be attributed "
+                        f"to a proven source width condition: {resolved.reason}"
+                    ),
+                    artifact_path,
+                )
+            )
+    return conditions
+
+
 def _section_from_legacy(
     raw_section: Mapping[str, JsonValue],
     *,
@@ -1252,6 +1381,7 @@ def _section_from_legacy(
     extra_interactions: Sequence[str],
     warnings: list[dict[str, JsonValue]],
     artifact_path: str,
+    media_evidence: MediaEvidenceResult | None = None,
 ) -> dict[str, JsonValue]:
     section_type = str(raw_section.get("type") or "content")
     template = str(raw_section.get("template") or "")
@@ -1608,13 +1738,25 @@ def _section_from_legacy(
                 if desktop_styles.get(key) != value
             }
         )
-        style = _style_from_content({}, _legacy_provenance(
+        style_provenance = _legacy_provenance(
             source_url,
             method="rendered",
             selector=observation.selector,
             breakpoint=breakpoint,
             bounds=observation.bounds,
-        ), changed_styles)
+        )
+        conditions = _resolve_style_conditions(
+            changed_styles,
+            media_evidence=media_evidence,
+            selector=observation.selector,
+            query_width_px=rendered_viewports[breakpoint].width,
+            provenance=style_provenance,
+            breakpoint=breakpoint,
+            section_id=section_id,
+            artifact_path=artifact_path,
+            warnings=warnings,
+        )
+        style = _style_from_content({}, style_provenance, changed_styles, conditions)
         layout_changes: dict[str, JsonValue] = {}
         if "column_count" in changed_styles and changed_styles["column_count"] is not None:
             layout_changes["columns"] = changed_styles["column_count"]
@@ -1798,6 +1940,7 @@ def _build_document(
     global_metadata: Mapping[str, JsonValue],
     rendered_observations: Mapping[str, Sequence[RenderedPageObservation]],
     initial_warnings: Sequence[DesignWarning | Mapping[str, JsonValue]],
+    media_evidence: Mapping[str, MediaEvidenceResult] | None = None,
 ) -> DesignDocument:
     warnings: list[dict[str, JsonValue]] = [
         warning.model_dump(mode="json") if isinstance(warning, DesignWarning) else dict(warning)
@@ -1892,6 +2035,7 @@ def _build_document(
                 extra_interactions=interaction_kinds.get(section_index, ()),
                 warnings=warnings,
                 artifact_path=str(raw_section.get("_artifact_path") or page_input.url),
+                media_evidence=(media_evidence or {}).get(page_input.url),
             )
             _drop_dangling_interaction_targets(section)
             confidence_values.append(float(section["role_confidence"]))
@@ -1994,6 +2138,7 @@ def design_document_from_html(
     captured_at: datetime | None = None,
     rendered_observations: Sequence[RenderedPageObservation] = (),
     rendered_warnings: Sequence[DesignWarning] = (),
+    media_evidence: MediaEvidenceResult | None = None,
 ) -> DesignDocument:
     """Convert one static HTML page, optionally enriched by rendered evidence."""
 
@@ -2028,6 +2173,7 @@ def design_document_from_html(
         global_metadata={},
         rendered_observations={source_url: rendered_observations},
         initial_warnings=list(rendered_warnings),
+        media_evidence={source_url: media_evidence} if media_evidence is not None else None,
     )
     return _with_dropped_boundary_warnings(document, [(extraction_html, raw_sections)])
 
@@ -2039,6 +2185,7 @@ def analyze_html_pages(
     stylesheet_cache: StylesheetCache | None = None,
     captured_at: datetime | None = None,
     rendered_observations: Mapping[str, Sequence[RenderedPageObservation]] | None = None,
+    media_evidence: Mapping[str, MediaEvidenceResult] | None = None,
 ) -> DesignDocument:
     """Analyze multiple static pages with shared and page-specific stylesheets."""
 
@@ -2089,6 +2236,7 @@ def analyze_html_pages(
         global_metadata={},
         rendered_observations=observations,
         initial_warnings=warning_models,
+        media_evidence=media_evidence,
     )
     return _with_dropped_boundary_warnings(document, boundary_inputs)
 

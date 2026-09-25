@@ -16,6 +16,9 @@ from vanjaro_cli.design.quality_counts import (
     compute_quality_counts,
 )
 from vanjaro_cli.design.template_catalog import TemplateCatalogError, load_template_catalog
+from vanjaro_cli.orchestration.project_capture_evidence import (
+    resolve_workspace_capture_coverage,
+)
 from vanjaro_cli.project import ProjectWorkspaceError, load_manifest
 from vanjaro_cli.release.models import (
     ProjectQualityEvidence,
@@ -28,17 +31,6 @@ __all__ = ["project_quality"]
 
 _PLAN_RELATIVE_PATH = Path("plans") / "composition-plan.json"
 _RELEASE_SOURCE_KINDS = ("live_html", "figma", "image")
-# `fidelity_capture.py` and `project_fidelity_recording.py` only ever record
-# one page's breakpoints at a time (`qa/fidelity-evidence.json`); neither
-# exposes a `{page_key: breakpoints}` reader across a whole workspace. Rather
-# than write a new capture parser here, this command reports an empty
-# mapping and says so, so the ratio it prints is never mistaken for gathered
-# evidence.
-_NO_CAPTURE_READER_WARNING = (
-    "no reusable qa/ fidelity capture reader exists yet; desktop/tablet/mobile "
-    "evidence was not gathered from the workspace, so that ratio is reported "
-    "as 0 coverage"
-)
 
 
 def _release_count(count: QualityCount) -> ReleaseQualityCount:
@@ -153,8 +145,11 @@ def project_quality(
     except TemplateCatalogError as exc:
         exit_error(f"cannot read the template library: {'; '.join(exc.issues)}", as_json)
 
-    report = compute_quality_counts(plan, catalog, {})
-    warnings = (*report.warnings, _NO_CAPTURE_READER_WARNING)
+    coverage = resolve_workspace_capture_coverage(root, manifest)
+    report = compute_quality_counts(
+        plan, catalog, coverage.capture_evidence, page_identity=coverage.page_identity
+    )
+    warnings = (*report.warnings, *coverage.warnings)
 
     written_path: Path | None = None
     if output_path is not None:

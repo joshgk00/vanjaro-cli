@@ -17,6 +17,7 @@ from vanjaro_cli.agency_library.models import (
     PackPayloadReference,
     TemplateLibraryPayload,
 )
+from vanjaro_cli.agency_library.style_payload import AgencyStylePayload
 from vanjaro_cli.utils.semver import validate_semver
 
 
@@ -53,6 +54,10 @@ class ResolvedAgencyPack:
     modifiers: ModifierLibraryPayload
     manifest_path: Path
     digest: str
+    # Additive and optional: absent for every schema_version 1.0 pack and for
+    # any 1.1 pack that opted out, so existing keyword-argument callers built
+    # before styles existed are unaffected.
+    styles: AgencyStylePayload | None = None
 
 
 class AgencyPackRegistry:
@@ -121,6 +126,16 @@ class AgencyPackRegistry:
             ModifierLibraryPayload,
             label="modifier",
         )
+        styles = (
+            self._read_payload(
+                family_root,
+                manifest.styles,
+                AgencyStylePayload,
+                label="style",
+            )
+            if manifest.styles is not None
+            else None
+        )
         digest = _canonical_sha256(manifest.model_dump(mode="json"))
         return ResolvedAgencyPack(
             manifest=manifest,
@@ -128,6 +143,7 @@ class AgencyPackRegistry:
             modifiers=modifiers,
             manifest_path=manifest_path,
             digest=digest,
+            styles=styles,
         )
 
     def _read_payload(

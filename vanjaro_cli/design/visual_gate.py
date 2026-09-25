@@ -29,6 +29,7 @@ __all__ = [
     "ScoreHook",
     "SectionAggregateScore",
     "SectionVisualScore",
+    "StaticCaptureSource",
     "SystemicVisualFinding",
     "VisualFindingSeverity",
     "VisualGateInputError",
@@ -97,12 +98,29 @@ class CaptureImage(_GateModel):
     stability: CaptureStability
 
 
+class StaticCaptureSource(_GateModel):
+    """A static (image/Figma) capture source, never a browser render.
+
+    Only a caller that has already re-validated this source's identity,
+    containment, and hash against the current design (the capture planner in
+    `orchestration.project_capture_plan`) may construct one -- `validated`
+    has no other value, so it can never be defaulted into existence the way
+    a fabricated `CaptureStability` could. A static source has no settlement
+    evidence, and none is invented here: it is simply absent from this type.
+    """
+
+    source_kind: Literal["image", "figma"]
+    path: Path
+    sha256: str = Field(min_length=64, max_length=64)
+    validated: Literal[True] = True
+
+
 class ViewportCapturePair(_GateModel):
     """Source/output screenshots captured at one canonical breakpoint."""
 
     breakpoint: BreakpointName
     viewport: Viewport
-    source: CaptureImage
+    source: CaptureImage | StaticCaptureSource
     output: CaptureImage
     metadata: dict[str, str | int | float | bool | None] = Field(default_factory=dict)
 
@@ -207,6 +225,21 @@ def _validate_complete_breakpoints(values: Iterable[BreakpointName], label: str)
         raise VisualGateInputError(issues)
 
 
+def _validate_capture_image(
+    breakpoint: BreakpointName, label: str, image: CaptureImage, *, require_files: bool
+) -> list[str]:
+    issues: list[str] = []
+    if require_files and not image.path.is_file():
+        issues.append(f"{breakpoint.value} {label} image does not exist: {image.path}")
+    if not image.stability.lazy_load_triggered:
+        issues.append(f"{breakpoint.value} {label} capture did not trigger lazy loading")
+    if not image.stability.fonts_settled:
+        issues.append(f"{breakpoint.value} {label} capture did not settle fonts")
+    if not image.stability.animations_disabled:
+        issues.append(f"{breakpoint.value} {label} capture did not disable animations")
+    return issues
+
+
 def _validate_capture(capture: ViewportCapturePair, *, require_files: bool) -> list[str]:
     issues: list[str] = []
     expected = CANONICAL_VIEWPORTS[capture.breakpoint]
@@ -216,23 +249,24 @@ def _validate_capture(capture: ViewportCapturePair, *, require_files: bool) -> l
             f"{expected.width}x{expected.height}, got "
             f"{capture.viewport.width}x{capture.viewport.height}"
         )
-    for label, image in (("source", capture.source), ("output", capture.output)):
-        if require_files and not image.path.is_file():
+    if isinstance(capture.source, StaticCaptureSource):
+        # A validated static source carries no settlement evidence to check
+        # -- it was never rendered -- only that its identified file exists.
+        if require_files and not capture.source.path.is_file():
             issues.append(
-                f"{capture.breakpoint.value} {label} image does not exist: {image.path}"
+                f"{capture.breakpoint.value} source image does not exist: {capture.source.path}"
             )
-        if not image.stability.lazy_load_triggered:
-            issues.append(
-                f"{capture.breakpoint.value} {label} capture did not trigger lazy loading"
+    else:
+        issues.extend(
+            _validate_capture_image(
+                capture.breakpoint, "source", capture.source, require_files=require_files
             )
-        if not image.stability.fonts_settled:
-            issues.append(
-                f"{capture.breakpoint.value} {label} capture did not settle fonts"
-            )
-        if not image.stability.animations_disabled:
-            issues.append(
-                f"{capture.breakpoint.value} {label} capture did not disable animations"
-            )
+        )
+    issues.extend(
+        _validate_capture_image(
+            capture.breakpoint, "output", capture.output, require_files=require_files
+        )
+    )
     return issues
 
 

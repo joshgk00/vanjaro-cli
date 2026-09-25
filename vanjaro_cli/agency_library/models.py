@@ -4,9 +4,17 @@ from __future__ import annotations
 
 from pathlib import PurePosixPath
 import re
-from typing import Literal
+from typing import Any, Literal
 
-from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
+from pydantic import (
+    BaseModel,
+    ConfigDict,
+    Field,
+    SerializerFunctionWrapHandler,
+    field_validator,
+    model_serializer,
+    model_validator,
+)
 
 from vanjaro_cli.utils.semver import validate_semver
 
@@ -163,11 +171,18 @@ class PackUpgradeRule(_PackModel):
 
 
 class AgencyPackManifest(_PackModel):
-    schema_version: Literal["1.0"] = "1.0"
+    # 1.1 is opt-in: it adds an optional executable ``styles`` payload
+    # reference alongside the unchanged 1.0 templates/modifiers contract. A
+    # 1.0 manifest must never carry a styles reference -- see
+    # ``reject_styles_on_legacy_schema`` -- so every historical pack byte,
+    # its canonical digest, and its ``model_dump(mode="json")`` shape stay
+    # unchanged (``model_dump`` below drops the field entirely when unset).
+    schema_version: Literal["1.0", "1.1"] = "1.0"
     name: str = Field(pattern=r"^[a-z0-9][a-z0-9-]*$")
     version: str
     templates: PackPayloadReference
     modifiers: PackPayloadReference
+    styles: PackPayloadReference | None = None
     upgrade_rules: tuple[PackUpgradeRule, ...] = ()
 
     @field_validator("version")
@@ -183,6 +198,31 @@ class AgencyPackManifest(_PackModel):
         if self.version in versions:
             raise ValueError("an agency pack cannot define an upgrade from itself")
         return self
+
+    @model_validator(mode="after")
+    def reject_styles_on_legacy_schema(self) -> "AgencyPackManifest":
+        if self.schema_version == "1.0" and self.styles is not None:
+            raise ValueError(
+                "schema_version 1.0 does not accept a styles payload reference; "
+                "use schema_version 1.1 to publish executable styles"
+            )
+        return self
+
+    @model_serializer(mode="wrap")
+    def _drop_unset_styles(self, handler: SerializerFunctionWrapHandler) -> Any:
+        """Drop an unset ``styles`` field so legacy 1.0 output is byte-identical.
+
+        A ``model_serializer`` (rather than overriding ``model_dump``) is
+        used so both ``model_dump(...)`` and ``model_dump_json(...)`` agree:
+        every historical pack's serialized shape, canonical digest, and
+        fixtures predate this field, and a newly emitted ``"styles": null``
+        would silently change all three for packs that never opted into 1.1.
+        """
+
+        data = handler(self)
+        if isinstance(data, dict) and data.get("styles") is None:
+            data.pop("styles", None)
+        return data
 
 
 __all__ = [

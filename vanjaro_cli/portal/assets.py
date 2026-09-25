@@ -5,17 +5,78 @@ from __future__ import annotations
 import base64
 import hashlib
 import json
+import re
 from pathlib import Path
 from typing import Any
 
 from vanjaro_cli.design.models import DesignDocument
+from vanjaro_cli.migration.url_rewrite import RewriteReport, substitute_css_urls
+from vanjaro_cli.utils.image_links import is_safe_link_href
 
 
 UPLOAD_ENDPOINT = "/API/VanjaroAI/AIAsset/Upload"
 
+# Upload-acceptance boundary for a resolved asset destination (a fresh upload
+# response's URL, or a cached manifest record considered for reuse). Raw
+# control characters and CSS/HTML breakout characters are rejected outright
+# because this value can land unquoted inside a generated ``url(...)`` token
+# or an ``<img src>`` attribute; percent-encoded characters and ordinary
+# ``?``/``&``/``=`` query strings pass through untouched.
+_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]")
+_SCHEME = re.compile(r"^([a-zA-Z][a-zA-Z0-9+.-]*):")
+_SAFE_RESOURCE_SCHEMES = frozenset({"http", "https"})
+_BREAKOUT_CHARS = frozenset("\"'()<>\\`")
+
 
 class ProjectAssetError(ValueError):
     """Raised when a project asset cannot be uploaded or reconciled safely."""
+
+
+def _is_safe_resource_destination(url: Any) -> bool:
+    """Whether ``url`` may be accepted as an uploaded-or-reused asset destination.
+
+    This is the acceptance boundary itself: nothing reaches a manifest
+    record, a rewritten override, or a CSS ``url(...)`` substitution unless
+    it passes here first. Consistent with -- and stricter than -- the
+    downstream CSS-safety filter in ``_build_css_asset_lookup``
+    (``is_safe_link_href``): a portal-relative path or a safe ``http``/
+    ``https`` URL is accepted, but ``mailto:``/``tel:`` (valid link
+    destinations, meaningless as an image resource) are not.
+    """
+    if not isinstance(url, str):
+        return False
+    text = url.strip()
+    if not text or text != url:
+        return False
+    if _CONTROL_CHARS.search(text):
+        return False
+    if any(char in _BREAKOUT_CHARS for char in text):
+        return False
+    if not is_safe_link_href(text):
+        return False
+    match = _SCHEME.match(text)
+    if match is not None and match.group(1).casefold() not in _SAFE_RESOURCE_SCHEMES:
+        return False
+    return True
+
+
+def _conflicting_source_aliases(document: DesignDocument) -> dict[str, list[str]]:
+    """Original ``source_url`` values shared by more than one distinct asset.
+
+    A shared alias is inherently ambiguous -- CSS authored against it could
+    resolve to either asset's uploaded destination -- so it must be rejected
+    explicitly by ``upload_project_assets`` rather than silently dropped or
+    guessed at.
+    """
+    by_source: dict[str, list[str]] = {}
+    for asset in document.assets:
+        source_url = asset.source_url
+        if not isinstance(source_url, str) or not source_url:
+            continue
+        by_source.setdefault(source_url, []).append(asset.id)
+    return {
+        source_url: ids for source_url, ids in by_source.items() if len(set(ids)) > 1
+    }
 
 
 def preview_project_assets(
@@ -58,6 +119,12 @@ def preview_project_assets(
             and isinstance(previous.get("vanjaro_url"), str)
             and previous["vanjaro_url"]
         )
+        if reusable and not _is_safe_resource_destination(previous["vanjaro_url"]):
+            raise ProjectAssetError(
+                f"cached asset manifest entry for {asset.id!r} has an unsafe "
+                "or malformed destination and cannot be reused; remove or "
+                "correct the manifest entry before retrying"
+            )
         payload_identity = {
             "fileName": local.name,
             "folderPath": folder,
@@ -129,6 +196,17 @@ def upload_project_assets(
 ) -> tuple[DesignDocument, list[dict[str, Any]], list[dict[str, Any]]]:
     """Upload local design assets once and rewrite build inputs to portal URLs."""
 
+    conflicts = _conflicting_source_aliases(document)
+    if conflicts:
+        detail = "; ".join(
+            f"{source_url!r} -> assets {sorted(ids)}"
+            for source_url, ids in sorted(conflicts.items())
+        )
+        raise ProjectAssetError(
+            "ambiguous original source URL(s) are shared by more than one "
+            f"asset and cannot be resolved to a single upload: {detail}"
+        )
+
     plan = preview_project_assets(root=root, project_id=project_id, document=document)
     manifest_path = root / plan["final_write_path"]
     records = _load_records(manifest_path)
@@ -162,6 +240,12 @@ def upload_project_assets(
         if not isinstance(portal_url, str) or not portal_url:
             raise ProjectAssetError(
                 f"asset upload returned no portal URL for {item['local_path']}"
+            )
+        if not _is_safe_resource_destination(portal_url):
+            raise ProjectAssetError(
+                "asset upload returned an unsafe or malformed destination "
+                f"for {item['local_path']}; refusing to accept it as a "
+                "successful upload"
             )
         record = {
             "asset_id": item["asset_id"],
@@ -203,7 +287,10 @@ def upload_project_assets(
                 }
             )
         )
-    rewritten_plan = _replace_strings(library_plan, replacements)
+    css_lookup = _build_css_asset_lookup(document, replacements)
+    rewritten_plan = _rewrite_style_declarations(
+        _replace_strings(library_plan, replacements), css_lookup, RewriteReport()
+    )
     return (
         DesignDocument.model_validate(
             document.model_copy(update={"assets": assets}).model_dump()
@@ -211,6 +298,80 @@ def upload_project_assets(
         rewritten_plan,
         records,
     )
+
+
+def _build_css_asset_lookup(
+    document: DesignDocument, replacements: dict[str, str]
+) -> dict[str, str]:
+    """Map both an asset's local path and its original source URL to the
+    portal URL it resolved to, for rewriting ``url(...)`` references in
+    library-plan CSS (``_rewrite_style_declarations``).
+
+    ``replacements`` already keys by local path (both reused and freshly
+    uploaded assets); this adds the pre-upload ``source_url`` alongside it
+    so CSS authored against the original absolute source URL resolves too.
+    A source URL shared by two assets that resolved to different portal
+    URLs is ambiguous and is dropped rather than guessed -- any CSS
+    referencing it stays unmigrated and explicit. A portal URL that is not
+    a safe link destination (see ``is_safe_link_href``) never enters the
+    lookup, so it can never land inside generated CSS.
+    """
+
+    lookup: dict[str, str] = {
+        local_path: portal_url
+        for local_path, portal_url in replacements.items()
+        if is_safe_link_href(portal_url)
+    }
+    ambiguous: set[str] = set()
+    for asset in document.assets:
+        source_url = asset.source_url
+        if not isinstance(source_url, str) or not source_url:
+            continue
+        portal_url = replacements.get(asset.local_path or "")
+        if portal_url is None or not is_safe_link_href(portal_url):
+            continue
+        existing = lookup.get(source_url)
+        if existing is not None and existing != portal_url:
+            ambiguous.add(source_url)
+            continue
+        lookup[source_url] = portal_url
+    for alias in ambiguous:
+        lookup.pop(alias, None)
+    return lookup
+
+
+def _rewrite_style_declarations(
+    value: Any, css_lookup: dict[str, str], report: RewriteReport
+) -> Any:
+    """Rewrite ``url(...)`` tokens inside every ``style_declarations`` map
+    found while walking a library plan, leaving everything else untouched.
+
+    Reuses ``migration.url_rewrite.substitute_css_urls`` -- the same CSS
+    ``url(...)`` substitution already applied to migrated page content --
+    rather than a second, redundant parser. Breakpoint-prefixed keys
+    (``"tablet:background-image"``) are ordinary dict keys here and need no
+    special casing: every string value in a ``style_declarations`` map is
+    checked. Non-string values, and non-CSS-url strings, pass through
+    unchanged; a value is rebuilt only when it actually contains a
+    ``url(...)`` token.
+    """
+
+    if isinstance(value, dict):
+        result: dict[Any, Any] = {}
+        for key, item in value.items():
+            if key == "style_declarations" and isinstance(item, dict):
+                result[key] = {
+                    prop: substitute_css_urls(css_value, css_lookup, report)
+                    if isinstance(css_value, str) and "url(" in css_value.lower()
+                    else css_value
+                    for prop, css_value in item.items()
+                }
+            else:
+                result[key] = _rewrite_style_declarations(item, css_lookup, report)
+        return result
+    if isinstance(value, list):
+        return [_rewrite_style_declarations(item, css_lookup, report) for item in value]
+    return value
 
 
 def _replace_strings(value: Any, replacements: dict[str, str]) -> Any:

@@ -17,6 +17,9 @@ from vanjaro_cli.design.template_catalog import TemplateCatalogError, load_templ
 from vanjaro_cli.migration.audit import audit_page
 from vanjaro_cli.migration.text_match import fuzzy_set_match
 from vanjaro_cli.orchestration.portal_identity import verify_project_portal
+from vanjaro_cli.orchestration.project_capture_evidence import (
+    resolve_workspace_capture_coverage,
+)
 from vanjaro_cli.orchestration.project_fidelity import evaluate_project_fidelity
 from vanjaro_cli.portal.global_block_manifest import global_block_content_hash
 from vanjaro_cli.portal.page_composition import page_content_hash
@@ -234,9 +237,9 @@ def preview_project_drafts(
             f"{len(missing_action_urls)} source action(s) have no URL mapping"
         )
 
-    visual_fidelity, fidelity_blockers = evaluate_project_fidelity(root)
+    visual_fidelity, fidelity_blockers = evaluate_project_fidelity(root, manifest)
     blockers.extend(fidelity_blockers)
-    quality_counts = _quality_counts_report(root)
+    quality_counts = _quality_counts_report(root, manifest)
 
     return {
             "schema_version": "1.1",
@@ -275,13 +278,15 @@ def preview_project_drafts(
         }
 
 
-def _quality_counts_report(root: Path) -> dict[str, Any]:
+def _quality_counts_report(root: Path, manifest: ProjectManifest) -> dict[str, Any]:
     """Compute the release quality ratios from the workspace's plan, or warn.
 
     Local reads only, and never fails the verify stage: a missing or invalid
     plan is unusual at verify time (planning runs first), but reporting a
     warning instead of raising keeps this read-only gate available even when
-    it is.
+    it is. Page identity and capture coverage come from
+    `resolve_workspace_capture_coverage`, the same read used by
+    `vanjaro project quality`, so the two never disagree.
     """
 
     plan_path = root / _COMPOSITION_PLAN_PATH
@@ -306,14 +311,17 @@ def _quality_counts_report(root: Path) -> dict[str, Any]:
             "status": "not_available",
             "warnings": [f"cannot read the template library: {'; '.join(error.issues)}"],
         }
-    report = compute_quality_counts(plan, catalog, {})
+    coverage = resolve_workspace_capture_coverage(root, manifest)
+    report = compute_quality_counts(
+        plan, catalog, coverage.capture_evidence, page_identity=coverage.page_identity
+    )
     return {
         "status": "scored",
         "eligible_section_editable_coverage": report.eligible_section_editable_coverage.model_dump(mode="json"),
         "native_agency_component_ratio": report.native_agency_component_ratio.model_dump(mode="json"),
         "body_without_generic_fallback": report.body_without_generic_fallback.model_dump(mode="json"),
         "desktop_tablet_mobile_evidence": report.desktop_tablet_mobile_evidence.model_dump(mode="json"),
-        "warnings": list(report.warnings),
+        "warnings": list(report.warnings) + list(coverage.warnings),
     }
 
 

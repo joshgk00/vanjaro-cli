@@ -279,7 +279,9 @@ def test_a_measured_css_initial_value_states_no_intent():
 
 
 def test_a_declared_value_from_a_non_rendered_source_is_unaffected():
-    """Figma declaring min-height states intent. A browser reporting it does not."""
+    """Figma declaring min-height states intent, and a browser measuring the
+    same nondefault min-height is reporting the same sizing constraint, not
+    the element's resultant HEIGHT -- both are preserved the same way."""
 
     declared = StyleSet(observations=[_observation(StyleProperty.MIN_HEIGHT, "520px")])
     measured = StyleSet(
@@ -291,7 +293,37 @@ def test_a_declared_value_from_a_non_rendered_source_is_unaffected():
     measured_result = translate_style_set(measured, _capabilities(), config)
 
     assert declared_result.css_declarations.get("min-height") == "520px"
-    assert "min-height" not in measured_result.css_declarations
+    assert measured_result.css_declarations.get("min-height") == "520px"
+
+
+def test_rendered_default_min_height_is_still_dropped():
+    """The policy change only retains nondefault constraints; auto/0 stay noise."""
+
+    for default_value in ("auto", "0", "0px"):
+        style = StyleSet(
+            observations=[_rendered_observation(StyleProperty.MIN_HEIGHT, default_value)]
+        )
+        result = translate_style_set(style, _capabilities(), StyleTranslationConfig())
+
+        assert "min-height" not in result.css_declarations
+        assert _layer_for(result, StyleProperty.MIN_HEIGHT) is TranslationLayer.MEASUREMENT_ONLY
+
+
+def test_rendered_ordinary_height_and_width_remain_measurement_only():
+    """Only MIN_HEIGHT changed meaning. A measured box HEIGHT/WIDTH is still noise."""
+
+    style = StyleSet(
+        observations=[
+            _rendered_observation(StyleProperty.HEIGHT, "520px"),
+            _rendered_observation(StyleProperty.WIDTH, "1200px"),
+        ]
+    )
+
+    result = translate_style_set(style, _capabilities(), StyleTranslationConfig())
+
+    assert result.css_declarations == {}
+    assert _layer_for(result, StyleProperty.HEIGHT) is TranslationLayer.MEASUREMENT_ONLY
+    assert _layer_for(result, StyleProperty.WIDTH) is TranslationLayer.MEASUREMENT_ONLY
 
 
 def test_every_reproducible_property_has_a_css_name():

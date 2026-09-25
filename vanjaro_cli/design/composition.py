@@ -73,6 +73,32 @@ class SemanticBinding(_PlanModel):
     editable: bool = True
 
 
+class ElementStyleAction(_PlanModel):
+    """One content element's own captured style, translated onto the exact
+    physical slot its semantic binding owns -- never onto the section that
+    contains it, and never onto a sibling slot.
+
+    ``slot`` reuses the same override-slot vocabulary as ``SemanticBinding.slot``
+    (see ``utils/block_compose.enumerate_slots``): the physical owner is
+    resolved by that same slot key at composition time, through
+    ``apply_overrides_with_owners``, not by any independent text/position
+    search.
+    """
+
+    source_element_id: str = Field(min_length=1)
+    slot: str = Field(pattern=r"^[a-z][a-z0-9_-]*(?:_\d+)?(?:_[a-z]+)?$")
+    item_id: str | None = None
+    style_decisions: tuple[StyleDecision, ...] = ()
+    css_scope: str | None = Field(default=None, pattern=r"^\.[a-z][a-z0-9-]*(?: \.[a-z][a-z0-9-]*)+$")
+    scoped_css: dict[str, str] = Field(default_factory=dict)
+
+    @model_validator(mode="after")
+    def validate_action(self) -> "ElementStyleAction":
+        if self.scoped_css and not self.css_scope:
+            raise ValueError("scoped_css requires an explicit client-safe css_scope")
+        return self
+
+
 class SimplificationDecision(_PlanModel):
     trait: str = Field(min_length=1)
     classification: SimplificationKind
@@ -103,6 +129,10 @@ class CompositionPlanEntry(_PlanModel):
     style_decisions: tuple[StyleDecision, ...] = ()
     css_scope: str | None = Field(default=None, pattern=r"^\.[a-z][a-z0-9-]*(?: \.[a-z][a-z0-9-]*)+$")
     scoped_css: dict[str, str] = Field(default_factory=dict)
+    # Owner-aware element styles, additive to schema 2.0: a plan serialized
+    # before this field existed simply has none (the default below), so it
+    # still validates and loads unchanged.
+    element_styles: tuple[ElementStyleAction, ...] = ()
     simplifications: tuple[SimplificationDecision, ...] = ()
     warnings: tuple[str, ...] = ()
     # Fields of a form the source page had. A form is never rebuilt from a
@@ -120,6 +150,9 @@ class CompositionPlanEntry(_PlanModel):
             raise ValueError("clear_slots must be unique within an entry")
         if set(slots) & set(cleared):
             raise ValueError("a slot cannot be both bound and cleared")
+        element_slots = [action.slot.casefold() for action in self.element_styles]
+        if len(element_slots) != len(set(element_slots)):
+            raise ValueError("element_styles slots must be unique within an entry")
         if self.scoped_css and not self.css_scope:
             raise ValueError("scoped_css requires an explicit client-safe css_scope")
         should_block = any(

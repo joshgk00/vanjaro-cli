@@ -19,6 +19,7 @@ __all__ = [
     "BoundingBox",
     "BreakpointName",
     "CandidateRole",
+    "ConditionBound",
     "ContentElement",
     "ContentKind",
     "DecorativeLayer",
@@ -41,6 +42,9 @@ __all__ = [
     "RepeatGroup",
     "RepeatGroupItem",
     "RepeatGroupKind",
+    "ResponsiveCondition",
+    "ResponsiveConditionKind",
+    "ResponsiveConditionStatus",
     "ResponsiveObservation",
     "Section",
     "SeoMetadata",
@@ -84,6 +88,30 @@ class EvidenceStatus(str, Enum):
 
     OBSERVED = "observed"
     INFERRED = "inferred"
+
+
+class ResponsiveConditionKind(str, Enum):
+    """A supported bounded width comparison for a responsive condition."""
+
+    MIN_WIDTH = "min_width"
+    MAX_WIDTH = "max_width"
+
+
+class ResponsiveConditionStatus(str, Enum):
+    """Whether a responsive condition's winning-rule attribution is proven.
+
+    ``OBSERVED`` means a media-conditioned declaration was proven to win the
+    cascade among every declaration whose bounds are satisfied at the
+    sampled viewport, and its value matches the sampled computed value.
+    ``UNRESOLVED`` means evidence was gathered but correct attribution could
+    not be proved (an unsupported media/container expression could win the
+    cascade, no declaration's condition is satisfied at the sampled width,
+    or the winning declaration's value does not match the sample) -- this is
+    an explicit, actionable gap, never a fabricated authored breakpoint.
+    """
+
+    OBSERVED = "observed"
+    UNRESOLVED = "unresolved"
 
 
 class ObservationMethod(str, Enum):
@@ -374,6 +402,60 @@ class LayoutObservation(_DesignModel):
     metadata: dict[str, JsonValue] = Field(default_factory=dict)
 
 
+class ConditionBound(_DesignModel):
+    """One bounded pixel-width comparison, e.g. ``max-width: 1023px``."""
+
+    kind: ResponsiveConditionKind
+    threshold_px: int = Field(gt=0, le=20000)
+
+
+class ResponsiveCondition(_DesignModel):
+    """A source CSS media condition and the cascade evidence behind it.
+
+    Distinct from the sample breakpoint/viewport a ``ResponsiveObservation``
+    was captured at: a breakpoint names *where a value was measured*, while
+    a condition names *the authored width threshold a real stylesheet rule
+    used to apply that value*. ``bounds`` is empty when ``status`` is
+    ``UNRESOLVED`` and no bound could be parsed at all (e.g. an unsupported
+    media expression); an ``OBSERVED`` condition always declares at least
+    one bound. At most two bounds are supported (a single ``min-width`` or
+    ``max-width`` comparison, or one of each forming a bounded range from
+    nested/intersecting conditions).
+    """
+
+    bounds: list[ConditionBound] = Field(default_factory=list)
+    status: ResponsiveConditionStatus
+    important: bool = False
+    rule_order: int = Field(ge=0)
+    selector: str | None = None
+    reason: str | None = None
+    provenance: list[Provenance] = Field(default_factory=list)
+
+    @model_validator(mode="after")
+    def validate_condition(self) -> ResponsiveCondition:
+        if self.status == ResponsiveConditionStatus.OBSERVED and not self.bounds:
+            raise ValueError("an observed condition must declare at least one bound")
+        if self.status == ResponsiveConditionStatus.UNRESOLVED and not self.reason:
+            raise ValueError("an unresolved condition must explain why attribution failed")
+        if len(self.bounds) > 2:
+            raise ValueError("a condition may declare at most two width bounds")
+        kinds = [bound.kind for bound in self.bounds]
+        if len(set(kinds)) != len(kinds):
+            raise ValueError("a condition cannot repeat the same bound kind")
+        if self.bounds:
+            lower = max(
+                (b.threshold_px for b in self.bounds if b.kind == ResponsiveConditionKind.MIN_WIDTH),
+                default=0,
+            )
+            upper = min(
+                (b.threshold_px for b in self.bounds if b.kind == ResponsiveConditionKind.MAX_WIDTH),
+                default=None,
+            )
+            if upper is not None and lower >= upper:
+                raise ValueError("condition bounds describe an empty width range")
+        return self
+
+
 class StyleObservation(_DesignModel):
     """A supported style value and the evidence that produced it."""
 
@@ -381,6 +463,7 @@ class StyleObservation(_DesignModel):
     value: JsonValue
     status: EvidenceStatus = EvidenceStatus.OBSERVED
     confidence: float = Field(default=1.0, ge=0, le=1)
+    condition: ResponsiveCondition | None = None
     provenance: list[Provenance] = Field(default_factory=list)
 
 
@@ -447,6 +530,11 @@ class ResponsiveObservation(_DesignModel):
     layout_changes: dict[str, JsonValue] = Field(default_factory=dict)
     style: StyleSet = Field(default_factory=StyleSet)
     hidden: bool | None = None
+    # Section-wide condition ownership, distinct from a single property's own
+    # `StyleObservation.condition`: set only when the whole section-level
+    # delta (e.g. `layout_changes`/`hidden`, not one style property) is known
+    # to be gated by one proven or explicitly unresolved width condition.
+    section_condition: ResponsiveCondition | None = None
     provenance: list[Provenance] = Field(default_factory=list)
 
 

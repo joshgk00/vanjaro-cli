@@ -48,6 +48,7 @@ from vanjaro_cli.design.models import (
     Section,
     StyleProperty,
     StyleSet,
+    Viewport,
 )
 from vanjaro_cli.design.visual_gate import CANONICAL_VIEWPORTS
 
@@ -78,19 +79,25 @@ def observe_expected_page(
     page: Page,
     document: DesignDocument,
     breakpoint: BreakpointName,
+    viewport: Viewport | None = None,
 ) -> PageObservation | None:
     """Build the expected observation for one page at one breakpoint.
 
     Returns ``None`` for a page with no sections: `PageObservation` requires at
     least one, and an empty bundle would score nothing anyway.
+
+    `viewport` overrides the canonical breakpoint viewport with an explicit
+    one -- e.g. a validated source reference's own declared width -- without
+    resizing or inventing any other geometry. Every existing caller omits it
+    and keeps the canonical lookup unchanged.
     """
 
     if not page.sections:
         return None
     assets = {asset.id: asset for asset in document.assets}
-    viewport = CANONICAL_VIEWPORTS[breakpoint]
+    resolved_viewport = viewport if viewport is not None else CANONICAL_VIEWPORTS[breakpoint]
     return PageObservation(
-        viewport_width=float(viewport.width),
+        viewport_width=float(resolved_viewport.width),
         sections=tuple(
             observe_expected_section(section, assets, breakpoint)
             for section in sorted(page.sections, key=lambda item: (item.order, item.id))

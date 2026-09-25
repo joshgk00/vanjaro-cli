@@ -117,7 +117,7 @@ def test_project_quality_reports_table_and_ratios(tmp_path: Path) -> None:
     assert "eligible_section_editable_coverage: 2/2" in result.output
     assert "body_without_generic_fallback: 1/2" in result.output
     assert "home.section.1.plan" in result.output
-    assert "no reusable qa/ fidelity capture reader exists" in result.output
+    assert "no resolved design document" in result.output
 
 
 def test_project_quality_json_output(tmp_path: Path) -> None:
@@ -133,7 +133,7 @@ def test_project_quality_json_output(tmp_path: Path) -> None:
     assert payload["quality"]["eligible_section_editable_coverage"]["denominator"] == 2
     assert payload["quality"]["body_without_generic_fallback"]["numerator"] == 1
     assert len(payload["rows"]) == 2
-    assert any("no reusable qa/ fidelity capture reader" in warning for warning in payload["warnings"])
+    assert any("no resolved design document" in warning for warning in payload["warnings"])
     assert payload["output"] is None
 
 

@@ -24,9 +24,9 @@ from vanjaro_cli.design.template_catalog import (
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_REGISTRY = _PROJECT_ROOT / "artifacts" / "agency-packs"
 _PACK_NAME = "clicks-and-mortars"
-_TEMPLATE_VERSION = "1.11.0"
+_TEMPLATE_VERSION = "1.12.0"
 _MODIFIER_VERSION = "1.0.0"
-_PACK_VERSION = "1.11.0"
+_PACK_VERSION = "1.12.0"
 _HISTORICAL_DIGESTS = {
     "templates/1.0.0.json": "c4e1316345e4c275ae9fb99312a3c2014de1ce39781a547b6a2d8685f42c8a73",
     "modifiers/1.0.0.json": "331b7c14af6ae87ac9d04a6559ff9ae3ed4c252a21be80c6fa5159c1f720f087",
@@ -52,6 +52,8 @@ _HISTORICAL_DIGESTS = {
     "packs/1.9.0.json": "7ca77c0932137b1686d9a4478e070124566d1ed9ec5001d4b8ffee3277fe0f82",
     "templates/1.10.0.json": "8cd5d3bfddd1d14d6c6ca71028b8a54abacdd8477b56c3842a85fc30182b4e77",
     "packs/1.10.0.json": "65e006a5ecbaa15a447879a4e0f6118bec1f1b8f28b15000cc684b72a6f20e63",
+    "templates/1.11.0.json": "e1f334f40b3251e3aacc501306aca14424180ed0eded66fbc24aae6fdc295679",
+    "packs/1.11.0.json": "1293e2c803b1708c878e7db0f180dd872a787a60b6113f18c5f938ab39a5a595",
 }
 _AUDITED_EXECUTABLE_DIGESTS = {
     "CTAs/cta-banner": "f1af9e60b5086e510411ac5548097bdcfc5530ee1d474caa55cb04f3c2fe3028",
@@ -59,7 +61,7 @@ _AUDITED_EXECUTABLE_DIGESTS = {
     "Cards/blog-post-cards-3up": "cffaad2e72b57141fedf16dab66348b9e8c574950a6852b7bbef64b3df935c71",
     "Cards/blog-post-cards-4up": "21e493ed02959946206a38e1de9b01d51664dda61bc171d185da50f3e6047761",
     "Cards/class-photo-cards-4up": "5ee0813e8e8ddc04e7aeb431910ebbd56965f1128eca518c774dbe1a8bd926d3",
-    "Cards/feature-cards-3up": "507b2b267d07ed87a809e330587572fda572272e3813be256550bbfbbc99239f",
+    "Cards/feature-cards-3up": "82456ad1d3c75733f66cc0dab6c88ec5b7ae908a7ba2190114cdf5794b062d82",
     "Cards/feature-cards-4up": "fcc844c86a804c2241da45ddd8510095c218ced39d36e862e0d375a5b332484e",
     "Cards/gallery-3up": "949c1d7115e174518e75a74cde8665ec9dd071f61c6e463b6071714d9a53c109",
     "Cards/gallery-6up": "ed9d0cb2eba475cb071d917bea66e0685cf23e8e3acfd0db10b56ef941c26124",
@@ -91,9 +93,10 @@ _REVIEWED_EXECUTABLE_CHANGES = (
     "Cards/gallery-6up",
     "Lists/icon-feature-list",
 )
+_FEATURE_CARDS_3UP = "Cards/feature-cards-3up"
 _CURRENT_RELEASE_DIGESTS = {
-    "templates/1.11.0.json": "e1f334f40b3251e3aacc501306aca14424180ed0eded66fbc24aae6fdc295679",
-    "packs/1.11.0.json": "1293e2c803b1708c878e7db0f180dd872a787a60b6113f18c5f938ab39a5a595",
+    "templates/1.12.0.json": "aae01415732f6cb1440e0c91ffee084c65db51c327ce6219271ce3c20e17d9c9",
+    "packs/1.12.0.json": "5fe4f767b30a3800498003c2b7af7f8e89b0ffefb083f3a50ae2f4799486dadf",
 }
 
 
@@ -133,24 +136,42 @@ def render_repository_pack_artifacts(
         sha256=_HISTORICAL_DIGESTS["modifiers/1.0.0.json"],
     )
     compatible_changes = tuple(entry.template_id for entry in catalog)
+    baseline_notes = (
+        "Adds validated physical slot ownership and cardinality metadata for all templates.",
+        "Reviewed executable fixes are limited to gallery placeholder copy and icon-list mobile columns: "
+        + ", ".join(_REVIEWED_EXECUTABLE_CHANGES),
+        "This baseline also carries the later, separately reviewed Cards/feature-cards-3up "
+        "structural fix (section heading moved into its own grid/row/column with head-style-2, "
+        "card nodes and capabilities unchanged); see the narrow 1.11.0 upgrade rule for that "
+        "change's own review record.",
+    )
+    upgrade_rules = tuple(
+        PackUpgradeRule(
+            from_version=from_version,
+            compatible_capability_schema_change=True,
+            compatible_template_changes=compatible_changes,
+            notes=baseline_notes,
+        )
+        for from_version in ("1.0.0", "1.0.1")
+    ) + (
+        PackUpgradeRule(
+            from_version="1.11.0",
+            compatible_capability_schema_change=False,
+            compatible_template_changes=(_FEATURE_CARDS_3UP,),
+            notes=(
+                "Narrow reviewed upgrade from 1.11.0: only Cards/feature-cards-3up changed. "
+                "The section heading moved into its own standard grid/row/column with "
+                "head-style-2; existing card nodes and capabilities are unchanged. This rule "
+                "approves no other template or modifier change.",
+            ),
+        ),
+    )
     physical_contract_release = AgencyPackManifest(
         name=_PACK_NAME,
         version=_PACK_VERSION,
         templates=template_reference,
         modifiers=modifier_reference,
-        upgrade_rules=tuple(
-            PackUpgradeRule(
-                from_version=from_version,
-                compatible_capability_schema_change=True,
-                compatible_template_changes=compatible_changes,
-                notes=(
-                    "Adds validated physical slot ownership and cardinality metadata for all templates.",
-                    "Reviewed executable fixes are limited to gallery placeholder copy and icon-list mobile columns: "
-                    + ", ".join(_REVIEWED_EXECUTABLE_CHANGES),
-                ),
-            )
-            for from_version in ("1.0.0", "1.0.1")
-        ),
+        upgrade_rules=upgrade_rules,
     )
     rendered = {
         template_path: template_bytes,

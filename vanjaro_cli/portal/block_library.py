@@ -4,17 +4,34 @@ from __future__ import annotations
 
 import hashlib
 import json
+from collections.abc import Mapping
 from pathlib import Path
 from typing import Any
 
+from vanjaro_cli.design.element_style_transport import (
+    ElementStyleTransportError,
+    apply_element_styles,
+)
+from vanjaro_cli.design.native_style_transport import (
+    NativeStyleTransportError,
+    apply_important_to_buckets,
+    apply_native_class_actions,
+    important_css_properties_for_component,
+    validate_native_class_actions,
+)
+from vanjaro_cli.design.style_transport import (
+    StyleTransportError,
+    build_style_rules,
+    ensure_scoped_selector_id,
+    validate_style_payload,
+)
 from vanjaro_cli.utils.block_compose import (
     TemplateNotFoundError,
-    apply_overrides,
+    apply_overrides_with_owners,
     attach_form_placeholder,
     check_overflow,
     find_template,
 )
-from vanjaro_cli.utils.grapesjs import render_styles
 
 
 LIST_BLOCKS = "/API/Vanjaro/Block/GetAllCustomBlock"
@@ -25,8 +42,19 @@ class BlockLibraryError(ValueError):
     """Raised before or during an unsafe library reconciliation."""
 
 
-def compose_project_library(plan: list[object]) -> list[dict[str, Any]]:
-    """Validate and compose the complete plan before any portal mutation."""
+def compose_project_library(
+    plan: list[object], *, agency_utilities: Mapping[str, str] | None = None
+) -> list[dict[str, Any]]:
+    """Validate and compose the complete plan before any portal mutation.
+
+    ``agency_utilities`` declares which ``AGENCY_UTILITY``-layer native class
+    each entry's ``native_classes`` is allowed to apply; without it, an entry
+    claiming an agency-utility class is rejected rather than trusted, since
+    this stage has no other way to confirm the class is a real, deliberately
+    configured one. Platform-utility and safe theme-slot classes need no such
+    declaration -- they come from ``native_style_transport``'s own static,
+    project-independent tables.
+    """
 
     errors: list[str] = []
     composed: list[dict[str, Any]] = []
@@ -90,13 +118,86 @@ def compose_project_library(plan: list[object]) -> list[dict[str, Any]]:
         if not isinstance(category, str) or not category.strip():
             errors.append(f"entry {index} requires a non-empty category")
             continue
-        rendered = apply_overrides(template, overrides)
+        rendered, owners = apply_overrides_with_owners(template, overrides)
         form_fields = raw.get("form_fields")
         if isinstance(form_fields, list) and form_fields:
             # The legacy migration path has marked forms this way since it was
             # built; the project path did not, so a migrated page carried a
             # heading where a contact form used to be and nothing said so.
             attach_form_placeholder(rendered["template"], form_fields)
+        # library-plan.json is untrusted serialized input by the time it
+        # reaches this stage (project_build.py reads it off disk with no
+        # schema check), so a planner-accepted style is re-validated here,
+        # not merely trusted because emit_library_plan validated it once.
+        #
+        # native_classes is applied to the section root before style_declarations
+        # is even validated, so that -- by the time a scoped rule for the same
+        # property is checked for a colliding class -- this request's own
+        # class already landed next to whatever the matched template baked in
+        # by default (e.g. feature-cards-3up.json's heading always carries
+        # text-center, independent of any style decision at all). See
+        # native_style_transport.important_css_properties_for_component.
+        native_classes = raw.get("native_classes")
+        if "native_classes" in raw and native_classes != []:
+            try:
+                actions = validate_native_class_actions(
+                    native_classes, agency_utilities=agency_utilities
+                )
+            except NativeStyleTransportError as exc:
+                errors.append(f"entry {index}: {exc}")
+                continue
+            apply_native_class_actions(rendered["template"], actions)
+        style_declarations = raw.get("style_declarations")
+        # A truthiness check here would treat an explicitly malformed value
+        # (False, 0, '', []) the same as a legacy plan that never mentions
+        # style_declarations at all -- both are falsy, but only the latter
+        # is a legitimate "no styles" absence. An empty dict is the one
+        # falsy shape that IS a deliberate, valid "no styles" payload (an
+        # entry that opted into style metadata but has nothing to declare),
+        # so it is excluded from validation the same way an absent key is,
+        # rather than tripping validate_style_payload's own non-empty check.
+        if "style_declarations" in raw and style_declarations != {}:
+            try:
+                buckets = validate_style_payload(raw.get("style_scope"), style_declarations)
+            except StyleTransportError as exc:
+                errors.append(f"entry {index}: {exc}")
+                continue
+            # A Bootstrap utility class already on the section root (from the
+            # native_classes action just applied above, or a baked-in
+            # template default) compiles with !important on this
+            # root-inspected target, so a same-property scoped rule at
+            # normal priority is otherwise inert against it.
+            important = important_css_properties_for_component(
+                rendered["template"],
+                {prop: value for style in buckets.values() for prop, value in style.items()},
+            )
+            buckets = apply_important_to_buckets(buckets, important)
+            # Target the section root by a stable id selector -- the same
+            # convention block_compose.py's palette-background rules use --
+            # rather than the plan's descendant-class css_scope string,
+            # which no rendered component ever carries a matching class for.
+            element_id = ensure_scoped_selector_id(rendered["template"], key)
+            rendered["styles"] = [
+                *rendered.get("styles", []),
+                *build_style_rules(element_id, buckets),
+            ]
+        # element_styles targets a specific bound owner component (a card's
+        # own heading/action/image), never the section root -- resolved
+        # through `owners`, the same slot-key vocabulary `overrides` uses,
+        # captured by apply_overrides_with_owners before pruning could
+        # renumber a later slot out from under it.
+        if "element_styles" in raw:
+            try:
+                apply_element_styles(
+                    rendered,
+                    owners,
+                    raw.get("element_styles"),
+                    library_key=key,
+                    agency_utilities=agency_utilities,
+                )
+            except ElementStyleTransportError as exc:
+                errors.append(f"entry {index}: {exc}")
+                continue
         desired = {
             "type": "custom",
             "name": name,
@@ -294,11 +395,17 @@ def _matching_rows(rows: list[dict[str, Any]], name: str) -> list[dict[str, Any]
 
 
 def _registration_form(item: dict[str, Any], portal_name: str) -> dict[str, str]:
+    # Vanjaro's BlockManager.Add (BlockController.AddCustomBlock) selects
+    # custom-block storage only when BOTH Html and Css are empty; any
+    # nonempty Css takes the global-block branch regardless of IsGlobal.
+    # Editor styling and visitor-facing CSS are carried by StyleJSON/
+    # ContentJSON and by page composition's own render_styles pass, not by
+    # this form's Css field, so leaving it empty loses nothing.
     return {
         "Name": portal_name,
         "Category": item["category"],
         "Html": "",
-        "Css": render_styles(item["style_json"]),
+        "Css": "",
         "IsGlobal": "false",
         "ContentJSON": json.dumps(item["content_json"], ensure_ascii=False),
         "StyleJSON": json.dumps(item["style_json"], ensure_ascii=False),

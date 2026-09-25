@@ -126,28 +126,6 @@
     },
     "components": [
       {
-        "type": "heading",
-        "tagName": "h2",
-        "content": "Section heading",
-        "classes": [
-          {
-            "name": "vj-heading",
-            "active": false
-          },
-          {
-            "name": "text-center",
-            "active": false
-          },
-          {
-            "name": "mb-4",
-            "active": false
-          }
-        ],
-        "attributes": {
-          "id": "tpl-fc3-h0"
-        }
-      },
-      {
         "type": "grid",
         "classes": [
           {
@@ -159,6 +137,60 @@
           "id": "tpl-fc3-g1"
         },
         "components": [
+          {
+            "type": "row",
+            "classes": [
+              {
+                "name": "row",
+                "active": false
+              }
+            ],
+            "attributes": {
+              "id": "tpl-fc3-r0"
+            },
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {
+                    "name": "col-12",
+                    "active": false
+                  }
+                ],
+                "attributes": {
+                  "id": "tpl-fc3-c0"
+                },
+                "components": [
+                  {
+                    "type": "heading",
+                    "tagName": "h2",
+                    "content": "Section heading",
+                    "classes": [
+                      {
+                        "name": "vj-heading",
+                        "active": false
+                      },
+                      {
+                        "name": "head-style-2",
+                        "active": false
+                      },
+                      {
+                        "name": "text-center",
+                        "active": false
+                      },
+                      {
+                        "name": "mb-4",
+                        "active": false
+                      }
+                    ],
+                    "attributes": {
+                      "id": "tpl-fc3-h0"
+                    }
+                  }
+                ]
+              }
+            ]
+          },
           {
             "type": "row",
             "classes": [

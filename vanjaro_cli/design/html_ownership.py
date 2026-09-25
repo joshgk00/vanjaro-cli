@@ -15,6 +15,8 @@ from vanjaro_cli.design.html_primitives import (
     register_asset as _register_asset,
 )
 from vanjaro_cli.design.html_boundaries import media_text_split
+from vanjaro_cli.design.html_card_actions import extract_card_actions
+from vanjaro_cli.design.html_card_fields import classify_card_paragraphs
 from vanjaro_cli.design.models import BreakpointName, Viewport
 from vanjaro_cli.migration.sections import (
     extract_form_fields,
@@ -589,51 +591,98 @@ def enrich_section_from_static_dom(
                 # was never widened with it, so three card titles reached
                 # nothing.
                 heading = item.find(_HEADING_LEVELS)
+                # A standalone visible action -- `<a class="btn">Learn more</a>`
+                # beside a card's description -- has its own destination, kept
+                # separate from the media's (see `html_card_actions`). An
+                # action-only paragraph is excluded from `paragraphs` below so
+                # its text is not also emitted as body copy.
+                actions, action_paragraph_ids = extract_card_actions(item)
                 # The first paragraph is not the body. `normalize_text_blocks`
                 # rewrites a text-bearing leaf div into a `<p>`, so a blog
                 # card's date badge becomes its first paragraph — and every
                 # card in cmw-blog's listing arrived carrying `Nov 13, 2017`
                 # as its body while the excerpt beneath was discarded.
-                paragraphs = item.find_all("p")
-                published = next(
-                    (
-                        paragraph
-                        for paragraph in paragraphs
-                        if is_publication_date(paragraph.get_text(" ", strip=True))
-                    ),
-                    None,
-                )
-                body = next(
-                    (paragraph for paragraph in paragraphs if paragraph is not published), None
-                )
+                paragraphs = [
+                    paragraph
+                    for paragraph in item.find_all("p")
+                    if id(paragraph) not in action_paragraph_ids
+                ]
                 if isinstance(media, Tag):
                     media_id = image(media, "card_media", group_id)
                     if media_id:
                         fields["media"] = media_id
                 if isinstance(heading, Tag):
                     fields["title"] = add("heading", "card_title", heading.get_text(" ", strip=True), group_id=group_id)
-                if isinstance(published, Tag):
-                    fields["tag"] = add("text", "tag", published.get_text(" ", strip=True), group_id=group_id)
-                # A card is allowed more than one paragraph. Keeping only the
-                # first dropped a class card's whole description and a blog
-                # card's byline.
-                #
-                # Every one of them is named in the item's field, which already
-                # accepts a list: the planner binds as many as the template owns
-                # slots for and reports the rest as `field 'X' has N values but
-                # owns M physical slots`, the same string the capability report
-                # ranks a section-level overflow by. Left out of the field they
-                # arrived in the document and were invisible to the plan — no
-                # warning, no loss, nothing for the queue to rank.
-                field = "type" if role == "project_gallery" else "body"
-                element_role = "eyebrow" if field == "type" else "card_body"
-                body_ids = [
-                    add("text", element_role, paragraph.get_text(" ", strip=True), group_id=group_id)
-                    for paragraph in ([body] if isinstance(body, Tag) else [])
-                    + [extra for extra in paragraphs if extra is not published and extra is not body]
-                ]
-                if body_ids:
-                    fields[field] = body_ids[0] if len(body_ids) == 1 else body_ids
+                if role == "blog_cards":
+                    # A blog card's paragraphs are not interchangeable body
+                    # copy: an explicit category label, a byline, and the
+                    # excerpt are distinct editorial parts, and
+                    # `Cards/blog-post-cards-4up` already owns a slot for
+                    # each (`item.tag`, `item.body`, `item.meta`). Collapsing
+                    # them into one `body` list lost that distinction even
+                    # though nothing downstream needed it to.
+                    classified = classify_card_paragraphs(paragraphs)
+                    for element_role, field, paragraphs_for_field in (
+                        ("tag", "tag", classified.tag),
+                        ("card_body", "body", classified.body),
+                        ("meta", "meta", classified.meta),
+                    ):
+                        field_ids = [
+                            add("text", element_role, paragraph.get_text(" ", strip=True), group_id=group_id)
+                            for paragraph in paragraphs_for_field
+                        ]
+                        if field_ids:
+                            fields[field] = field_ids[0] if len(field_ids) == 1 else field_ids
+                else:
+                    published = next(
+                        (
+                            paragraph
+                            for paragraph in paragraphs
+                            if is_publication_date(paragraph.get_text(" ", strip=True))
+                        ),
+                        None,
+                    )
+                    body = next(
+                        (paragraph for paragraph in paragraphs if paragraph is not published), None
+                    )
+                    if isinstance(published, Tag):
+                        fields["tag"] = add("text", "tag", published.get_text(" ", strip=True), group_id=group_id)
+                    # A card is allowed more than one paragraph. Keeping only the
+                    # first dropped a class card's whole description.
+                    #
+                    # Every one of them is named in the item's field, which already
+                    # accepts a list: the planner binds as many as the template owns
+                    # slots for and reports the rest as `field 'X' has N values but
+                    # owns M physical slots`, the same string the capability report
+                    # ranks a section-level overflow by. Left out of the field they
+                    # arrived in the document and were invisible to the plan — no
+                    # warning, no loss, nothing for the queue to rank.
+                    field = "type" if role == "project_gallery" else "body"
+                    element_role = "eyebrow" if field == "type" else "card_body"
+                    body_ids = [
+                        add("text", element_role, paragraph.get_text(" ", strip=True), group_id=group_id)
+                        for paragraph in ([body] if isinstance(body, Tag) else [])
+                        + [extra for extra in paragraphs if extra is not published and extra is not body]
+                    ]
+                    if body_ids:
+                        fields[field] = body_ids[0] if len(body_ids) == 1 else body_ids
+                if actions:
+                    # Every action is named, in document order: the planner
+                    # binds as many as the selected template owns action slots
+                    # for and blocks with an explicit capacity diagnostic when
+                    # a card has more actions than a slot to hold them, rather
+                    # than silently keeping only the first.
+                    action_ids = [
+                        add(
+                            action.kind,
+                            "primary_action",
+                            action.label,
+                            group_id=group_id,
+                            attributes={"href": action.href},
+                        )
+                        for action in actions
+                    ]
+                    fields["action"] = action_ids[0] if len(action_ids) == 1 else action_ids
             else:
                 fields["text"] = add("list_item", "benefit", item.get_text(" ", strip=True), group_id=group_id)
             if fields:

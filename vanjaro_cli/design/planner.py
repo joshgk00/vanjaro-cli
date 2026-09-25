@@ -48,6 +48,17 @@ from vanjaro_cli.design.template_catalog import (
     load_template_catalog,
     load_template_data,
 )
+from vanjaro_cli.design.element_style_transport import (
+    emit_element_style_payload,
+    translate_element_styles,
+)
+from vanjaro_cli.design.native_style_transport import (
+    NativeStyleTransportError,
+    apply_important_css_properties,
+    build_native_style_report,
+    validate_native_class_actions,
+)
+from vanjaro_cli.design.style_transport import StyleTransportError, validate_style_payload
 from vanjaro_cli.design.style_translation import (
     StyleTranslationConfig,
     TranslationLayer,
@@ -55,6 +66,7 @@ from vanjaro_cli.design.style_translation import (
     translate_style_set,
 )
 from vanjaro_cli.utils.block_compose import enumerate_slots
+from vanjaro_cli.utils.image_links import is_safe_link_href
 
 
 _PLACEHOLDER_RE = re.compile(
@@ -250,9 +262,11 @@ def _discard_semantic_slot(queues: dict[str, deque[str]], semantic_field: str) -
     if slot is None:
         return
     if slot.startswith("image_") and slot.endswith("_src"):
-        paired = slot.removesuffix("_src") + "_alt"
-        if paired in queues.get("image", ()):
-            queues["image"].remove(paired)
+        base = slot.removesuffix("_src")
+        for suffix in ("_alt", "_href"):
+            paired = base + suffix
+            if paired in queues.get("image", ()):
+                queues["image"].remove(paired)
     elif slot.startswith(("button_", "link_")) and not slot.endswith("_href"):
         slot_type = slot.split("_", 1)[0]
         paired = slot + "_href"
@@ -280,6 +294,24 @@ def _element_match_rank(element: ContentElement, field: str) -> int:
     return 0 if _normalized(element.role) in aliases or field_name in role_fields else 1
 
 
+def _background_link_blocker(element: ContentElement) -> str | None:
+    """An image with a retained destination cannot silently lose it to a background slot.
+
+    A background-only slot has no native clickable owner: unlike an
+    ``image_N_src`` slot, there is no anchor to wrap. Rather than binding the
+    image and quietly dropping its destination, this is reported the same way
+    an unsafe URL is -- as an actionable blocker, not a warning the plan can
+    still approve.
+    """
+    href = _string_value(element.attributes.get("href"))
+    if not href or _is_placeholder(href):
+        return None
+    return (
+        f"image {element.id} has a retained destination but its selected slot is a "
+        "background image, which has no native clickable owner to carry it"
+    )
+
+
 def _bind_element(
     *,
     semantic_field: str,
@@ -289,6 +321,7 @@ def _bind_element(
     assets: Mapping[str, AssetRecord],
     item_id: str | None,
     dropped: list[str] | None = None,
+    issues: list[str] | None = None,
 ) -> list[SemanticBinding]:
     leaf = semantic_field.rsplit(".", 1)[-1]
     preferred = semantic_slot_types(leaf) or _KIND_SLOT_TYPES[element.kind]
@@ -327,6 +360,9 @@ def _bind_element(
 
     if is_image or slot.startswith("image_"):
         if slot == "background_image":
+            blocker = _background_link_blocker(element)
+            if blocker is not None and issues is not None:
+                issues.append(blocker)
             return [
                 SemanticBinding(
                     semantic_field=semantic_field,
@@ -349,9 +385,12 @@ def _bind_element(
             )
         ]
         alt_slot = slot.removesuffix("_src") + "_alt"
+        href_slot = slot.removesuffix("_src") + "_href"
         # Attribute slots are present independently in enumerate_slots.
         if alt_slot in queues.get("image", ()):
             queues["image"].remove(alt_slot)
+        if href_slot in queues.get("image", ()):
+            queues["image"].remove(href_slot)
         if alt:
             result.append(
                 SemanticBinding(
@@ -362,6 +401,22 @@ def _bind_element(
                     item_id=item_id,
                 )
             )
+        href = _string_value(element.attributes.get("href"))
+        if href and not _is_placeholder(href):
+            if is_safe_link_href(href):
+                result.append(
+                    SemanticBinding(
+                        semantic_field=f"{semantic_field}.href",
+                        slot=href_slot,
+                        source_element_ids=(element.id,),
+                        value=href,
+                        item_id=item_id,
+                    )
+                )
+            elif issues is not None:
+                issues.append(
+                    f"image {element.id} has an unsafe link destination that cannot be bound"
+                )
         return result
 
     result = [
@@ -380,15 +435,24 @@ def _bind_element(
         if href_slot in queues.get(slot_type, ()):
             queues[slot_type].remove(href_slot)
         if href and not _is_placeholder(href):
-            result.append(
-                SemanticBinding(
-                    semantic_field=f"{semantic_field}.href",
-                    slot=href_slot,
-                    source_element_ids=(element.id,),
-                    value=href,
-                    item_id=item_id,
+            # A button/link's destination is validated the same way an
+            # image's retained href already is: an unsafe scheme must become
+            # an actionable planning blocker, never a silently dropped or
+            # silently executed native href.
+            if is_safe_link_href(href):
+                result.append(
+                    SemanticBinding(
+                        semantic_field=f"{semantic_field}.href",
+                        slot=href_slot,
+                        source_element_ids=(element.id,),
+                        value=href,
+                        item_id=item_id,
+                    )
                 )
-            )
+            elif issues is not None:
+                issues.append(
+                    f"{element.id} has an unsafe link destination that cannot be bound"
+                )
     return result
 
 
@@ -446,7 +510,9 @@ def _append_virtual_slots(
     ) + 1
     for index in range(next_index, next_index + count):
         if slot_type == "image":
-            queues[slot_type].extend((f"image_{index}_src", f"image_{index}_alt"))
+            queues[slot_type].extend(
+                (f"image_{index}_src", f"image_{index}_alt", f"image_{index}_href")
+            )
         elif slot_type in {"button", "link"}:
             queues[slot_type].extend(
                 (f"{slot_type}_{index}", f"{slot_type}_{index}_href")
@@ -552,6 +618,7 @@ def bind_section(
                 assets=asset_map,
                 item_id=None,
                 dropped=dropped,
+                issues=issues,
             )
             if candidate
             else []
@@ -598,6 +665,7 @@ def bind_section(
                                 assets=asset_map,
                                 dropped=dropped,
                                 item_id=item.id,
+                                issues=issues,
                             )
                         )
                     if not created:
@@ -684,6 +752,7 @@ def _bind_section_physical(
                     assets=asset_map,
                     item_id=None,
                     dropped=dropped,
+                    issues=issues,
                 )
             )
         if not created and requirement == "required":
@@ -739,6 +808,7 @@ def _bind_section_physical(
                                 assets=asset_map,
                                 item_id=item.id,
                                 dropped=dropped,
+                                issues=issues,
                             )
                         )
                     consumed_slots = slots_before - len(owned[semantic_field])
@@ -954,6 +1024,20 @@ def plan_design_document(
             )
             style_decisions = base_style.decisions + responsive_style.decisions
             scoped_css = {**base_style.css_declarations, **responsive_style.css_declarations}
+            native_report = build_native_style_report(
+                style_decisions, agency_utilities=resolved_style_config.agency_utilities
+            )
+            scoped_css = apply_important_css_properties(
+                scoped_css, native_report.important_css_properties
+            )
+            element_style_actions, element_style_warnings = translate_element_styles(
+                section.content,
+                bindings,
+                entry.capabilities,
+                resolved_style_config,
+                css_scope=_css_scope(resolved_style_config, section),
+                agency_utilities=resolved_style_config.agency_utilities,
+            )
             simplification_list = list(_simplifications(section, entry))
             if binding_issues:
                 simplification_list.append(
@@ -1035,6 +1119,7 @@ def plan_design_document(
                     style_decisions=style_decisions,
                     css_scope=_css_scope(resolved_style_config, section) if scoped_css else None,
                     scoped_css=scoped_css,
+                    element_styles=element_style_actions,
                     form_fields=section_form_fields,
                     simplifications=simplifications,
                     # Dropped content reports on the entry rather than as a
@@ -1048,6 +1133,8 @@ def plan_design_document(
                             + tuple(dropped_content)
                             + base_style.warnings
                             + responsive_style.warnings
+                            + native_report.diagnostics
+                            + element_style_warnings
                         )
                     ),
                 )
@@ -1055,8 +1142,17 @@ def plan_design_document(
             native_total += entry.capabilities.native_component_ratio
             editable_values += len({binding.source_element_ids[0] for binding in bindings})
             source_values += len([element for element in section.content if element.value is not None or element.asset_id])
-            css_rule_count += len(scoped_css)
-            css_bytes += len(json.dumps(scoped_css, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+            element_scoped_css_count = sum(len(action.scoped_css) for action in element_style_actions)
+            element_scoped_css_bytes = sum(
+                len(json.dumps(dict(action.scoped_css), sort_keys=True, separators=(",", ":")).encode("utf-8"))
+                for action in element_style_actions
+                if action.scoped_css
+            )
+            css_rule_count += len(scoped_css) + element_scoped_css_count
+            css_bytes += (
+                len(json.dumps(scoped_css, sort_keys=True, separators=(",", ":")).encode("utf-8"))
+                + element_scoped_css_bytes
+            )
 
     section_count = len(entries)
     return CompositionPlan(
@@ -1074,8 +1170,89 @@ def plan_design_document(
     )
 
 
-def emit_library_plan(plan: CompositionPlan) -> list[dict[str, Any]]:
-    """Emit the current build-library format with placeholder leakage protection."""
+def _lost_agency_decision_reason(
+    decisions: Sequence[Any],
+    native_report: Any,
+    agency_utilities: Mapping[str, str] | None,
+) -> str | None:
+    """Explain a previously accepted AGENCY_UTILITY decision that would vanish.
+
+    ``build_native_style_report`` keeps, per property, the *last* decision in
+    sequence order that both reaches its applicable-layer/breakpoint checks
+    and passes ``_validate_target`` -- an earlier decision for that property
+    is only truly superseded when a later one actually lands in
+    ``native_report.actions``; a later decision that itself fails validation
+    changes nothing there, and must not be able to hide behind whatever
+    stale entry an earlier decision left in place. So "is this accepted
+    decision's own property still covered" is not enough by itself: the
+    covering action's own position in ``decisions`` must be at or after this
+    decision's position, never before it, or the entry an emission sees is a
+    leftover from before this decision was even accepted, not confirmation
+    that it (or something that legitimately supersedes it) survived.
+
+    Matching a candidate's ``source_value``/``layer``/``target`` against the
+    surviving action is necessary but not sufficient to credit it as the
+    decision that produced that action: ``build_native_style_report`` never
+    lets a breakpoint-scoped decision win a property's action -- it is always
+    reported as a diagnostic instead, no matter what it would otherwise
+    resolve to. A later decision that merely echoes an earlier winner's
+    fields at a breakpoint never reaches ``native_report.actions`` itself, so
+    it must not be credited as the thing that kept that property's action
+    alive; only an unconditional (``breakpoint is None``) decision can
+    actually explain a surviving action.
+    """
+
+    resolved = agency_utilities or {}
+    actions_by_property = {action.property: action for action in native_report.actions}
+    winner_index_by_property: dict[Any, int] = {}
+    for index, decision in enumerate(decisions):
+        action = actions_by_property.get(decision.property)
+        if (
+            action is not None
+            and decision.breakpoint is None
+            and action.source_value == decision.source_value
+            and action.layer == decision.layer
+            and action.target == decision.target
+        ):
+            winner_index_by_property[decision.property] = index
+
+    for index, decision in enumerate(decisions):
+        if decision.layer is not TranslationLayer.AGENCY_UTILITY or decision.breakpoint is not None:
+            continue
+        winner_index = winner_index_by_property.get(decision.property)
+        if winner_index is not None and winner_index >= index:
+            continue
+        key = f"{decision.property.value}:{decision.source_value.strip().casefold()}"
+        if not resolved:
+            reason = "no agency_utilities mapping was supplied"
+        elif key not in resolved:
+            reason = f"the supplied mapping has no entry for {key!r}"
+        elif resolved[key] != decision.target:
+            reason = (
+                f"the supplied mapping resolves {key!r} to {resolved[key]!r}, "
+                f"not the accepted class {decision.target!r}"
+            )
+        else:
+            reason = "the supplied agency mapping does not reproduce the accepted class"
+        return (
+            f"accepted agency decision for property '{decision.property.value}' "
+            f"(target {decision.target!r}) would be silently dropped: {reason}"
+        )
+    return None
+
+
+def emit_library_plan(
+    plan: CompositionPlan, *, agency_utilities: Mapping[str, str] | None = None
+) -> list[dict[str, Any]]:
+    """Emit the current build-library format with placeholder leakage protection.
+
+    ``agency_utilities`` is the same property-value-to-class mapping a caller
+    may have passed into ``plan_design_document`` via ``style_config``; it
+    only widens which ``AGENCY_UTILITY``-layer decisions are transported as
+    ``native_classes`` entries. Platform-utility and safe theme-slot classes
+    are transported regardless, since those come from this module's own
+    static, project-independent tables.
+    """
 
     catalog = load_template_catalog()
     templates_by_id = {entry.template_id.casefold(): entry for entry in catalog}
@@ -1107,6 +1284,66 @@ def emit_library_plan(plan: CompositionPlan) -> list[dict[str, Any]]:
                 separators=(",", ":"),
             ).encode("utf-8")
         ).hexdigest()
+        style_fields: dict[str, Any] = {}
+        if entry.scoped_css:
+            # Defense in depth: emit_library_plan runs on the planner's own
+            # trusted CompositionPlan, but validating here mirrors the same
+            # boundary check compose_project_library performs on a
+            # serialized (and therefore untrusted) library-plan.json, so a
+            # planner-side bug surfaces at emission time rather than only
+            # downstream.
+            try:
+                validate_style_payload(entry.css_scope, dict(entry.scoped_css))
+            except StyleTransportError as exc:
+                raise PlanningError((f"{entry.source_section_id}: {exc}",)) from exc
+            style_fields = {
+                "style_scope": entry.css_scope,
+                "style_declarations": dict(entry.scoped_css),
+            }
+        native_report = build_native_style_report(
+            entry.style_decisions, agency_utilities=agency_utilities or {}
+        )
+        lost_reason = _lost_agency_decision_reason(
+            entry.style_decisions, native_report, agency_utilities
+        )
+        if lost_reason is not None:
+            raise PlanningError((f"{entry.source_section_id}: {lost_reason}",))
+        native_fields: dict[str, Any] = {}
+        if native_report.actions:
+            native_payload = [
+                action.model_dump(mode="json") for action in native_report.actions
+            ]
+            try:
+                validate_native_class_actions(
+                    native_payload, agency_utilities=agency_utilities
+                )
+            except NativeStyleTransportError as exc:
+                raise PlanningError((f"{entry.source_section_id}: {exc}",)) from exc
+            native_fields = {"native_classes": native_payload}
+        element_style_fields: dict[str, Any] = {}
+        if entry.element_styles:
+            for action in entry.element_styles:
+                element_native_report = build_native_style_report(
+                    action.style_decisions, agency_utilities=agency_utilities or {}
+                )
+                element_lost_reason = _lost_agency_decision_reason(
+                    action.style_decisions, element_native_report, agency_utilities
+                )
+                if element_lost_reason is not None:
+                    raise PlanningError(
+                        (
+                            f"{entry.source_section_id}/{action.source_element_id} "
+                            f"(slot {action.slot}): {element_lost_reason}",
+                        )
+                    )
+            try:
+                element_style_payload = emit_element_style_payload(
+                    entry.element_styles, agency_utilities=agency_utilities
+                )
+            except ValueError as exc:
+                raise PlanningError((f"{entry.source_section_id}: {exc}",)) from exc
+            if element_style_payload:
+                element_style_fields = {"element_styles": element_style_payload}
         output.append(
             {
                 "key": entry.source_section_id,
@@ -1117,13 +1354,26 @@ def emit_library_plan(plan: CompositionPlan) -> list[dict[str, Any]]:
                 "template_digest": template_digest,
                 "overrides": overrides,
                 "form_fields": [dict(field) for field in entry.form_fields],
+                **style_fields,
+                **native_fields,
+                **element_style_fields,
             }
         )
     return output
 
 
-def serialize_library_plan(plan: CompositionPlan) -> str:
-    return json.dumps(emit_library_plan(plan), indent=2, sort_keys=True, ensure_ascii=False) + "\n"
+def serialize_library_plan(
+    plan: CompositionPlan, *, agency_utilities: Mapping[str, str] | None = None
+) -> str:
+    return (
+        json.dumps(
+            emit_library_plan(plan, agency_utilities=agency_utilities),
+            indent=2,
+            sort_keys=True,
+            ensure_ascii=False,
+        )
+        + "\n"
+    )
 
 
 def validate_composition_plan(
@@ -1144,7 +1394,7 @@ def validate_composition_plan(
             return False
         return bool(
             re.fullmatch(
-                r"(?:heading|text|list-item)_\d+|(?:image)_\d+_(?:src|alt)|"
+                r"(?:heading|text|list-item)_\d+|(?:image)_\d+_(?:src|alt|href)|"
                 r"(?:button|link)_\d+(?:_href)?",
                 slot,
             )
@@ -1167,7 +1417,14 @@ def validate_composition_plan(
         for slot in entry.clear_slots:
             if slot not in available_slots:
                 issues.append(f"{prefix}: clear slot '{slot}' is not exposed by {template.name}")
-        scoped_rules = len(entry.scoped_css)
+        for action in entry.element_styles:
+            if action.slot not in available_slots and not expandable_slot(action.slot, template):
+                issues.append(
+                    f"{prefix}: element style slot '{action.slot}' is not exposed by {template.name}"
+                )
+        scoped_rules = len(entry.scoped_css) + sum(
+            len(action.scoped_css) for action in entry.element_styles
+        )
         if entry.scoped_css and not entry.css_scope:
             issues.append(f"{prefix}: generated CSS has no project/section scope")
         if scoped_rules > plan.policy.css_rule_budget:

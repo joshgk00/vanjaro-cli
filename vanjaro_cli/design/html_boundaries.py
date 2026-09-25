@@ -81,6 +81,25 @@ def _structural_selector(element: Tag) -> str | None:
     return " > ".join(reversed(steps))
 
 
+def _local_footers(soup: BeautifulSoup) -> list[Tag]:
+    """Return `<footer>` elements that are content, not page chrome.
+
+    A `<footer>` nested inside a `<blockquote>`, `<article>` or `<section>` is
+    the HTML5 citation/byline idiom — a testimonial's attribution or an
+    article's byline — owned by whichever boundary the quote or story belongs
+    to, not the site's chrome. Both the candidate rule below and the rendered
+    observation script in `html_adapter.py` need the same test, and
+    `prepare_static_sections` needs it again to notice when one of these
+    elements is about to be silently dropped.
+    """
+
+    return [
+        element
+        for element in soup.find_all("footer")
+        if element.find_parent(["blockquote", "article", "section"]) is not None
+    ]
+
+
 def static_boundary_candidates(html: str) -> list[Tag]:
     """Find source-authored page boundaries without depending on a builder."""
 
@@ -117,7 +136,20 @@ def static_boundary_candidates(html: str) -> list[Tag]:
     # builder containers and panes. Every page of the CMW family carries a real
     # footer holding a tagline, a telephone and 13 links, and none of it reached
     # any section.
+    #
+    # But a `<footer>` nested inside a `<blockquote>`, `<article>` or `<section>`
+    # is the HTML5 citation/byline idiom, not page chrome — a testimonial's
+    # "— Jane Doe, CEO" is content the visitor reads as part of that quote, owned
+    # by whichever boundary the quote itself belongs to. A real page nests its
+    # genuine footer under plain layout divs and DNN panes instead, so ownership
+    # by a content-sectioning ancestor is what tells the two apart; the tag alone
+    # does not. Adding it here as its own candidate let `_trailing_footer` treat
+    # the last testimonial's attribution as the whole site's footer, promoting
+    # one visitor's byline into a global section and losing its neighbours.
+    local_footer_ids = {id(element) for element in _local_footers(soup)}
     for element in soup.find_all("footer"):
+        if id(element) in local_footer_ids:
+            continue
         add(element)
     for element in soup.select("[data-elementor-type] > [data-id][data-element_type='container']"):
         add(element)

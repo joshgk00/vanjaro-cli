@@ -5,12 +5,64 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
+import pytest
+
 from vanjaro_cli.cli import cli
+from vanjaro_cli.commands import migrate_benchmark_cmd
+from vanjaro_cli.design.benchmark_corpus import (
+    load_benchmark_predictions as real_load_benchmark_predictions,
+)
+from vanjaro_cli.design.metrics import BenchmarkCasePrediction
 
 
 IMAGE_MANIFEST = (
     Path(__file__).parent / "fixtures" / "design-image-benchmarks" / "manifest.json"
 )
+
+# A template_id that cannot appear in any committed fixture's acceptable-templates
+# annotation, so the matcher's top-1 selection is unambiguously wrong.
+_SENTINEL_WRONG_TEMPLATE_ID = "sentinel/deliberately-wrong-template.json"
+
+
+def _degrade_top1_selection(
+    predictions: dict[str, BenchmarkCasePrediction], case_id: str, count: int
+) -> dict[str, BenchmarkCasePrediction]:
+    """Return `predictions` with the first `count` top-1 picks in `case_id` forced wrong.
+
+    Operates on real, already-loaded predictions (real adapters, real matcher) so
+    only the top-1 template choice for a controlled handful of sections is
+    replaced with a sentinel that cannot satisfy any annotation. This isolates the
+    committed-fixture regression test from the matcher's actual accuracy, which
+    drifts as matching heuristics improve.
+    """
+    degraded = dict(predictions)
+    prediction = degraded[case_id]
+    matches = list(prediction.matches)
+    for index in range(min(count, len(matches))):
+        match = matches[index]
+        wrong_candidate = match.selected_candidate.model_copy(
+            update={
+                "template_id": _SENTINEL_WRONG_TEMPLATE_ID,
+                "template_name": "Deliberately Wrong Sentinel Template",
+            }
+        )
+        matches[index] = match.model_copy(update={"selected_candidate": wrong_candidate})
+    degraded[case_id] = prediction.model_copy(update={"matches": tuple(matches)})
+    return degraded
+
+
+def _install_degraded_loader(monkeypatch, *, case_id: str, count: int) -> None:
+    """Patch the command's `load_benchmark_predictions` boundary to degrade top-1 picks.
+
+    The real loader (adapters, matcher) still runs; only its output is adjusted
+    before the real evaluator, thresholds, and report writer see it.
+    """
+
+    def loader(manifest_path, case_ids):
+        predictions = real_load_benchmark_predictions(manifest_path, case_ids)
+        return _degrade_top1_selection(predictions, case_id=case_id, count=count)
+
+    monkeypatch.setattr(migrate_benchmark_cmd, "load_benchmark_predictions", loader)
 
 
 def test_offline_benchmark_passes_and_writes_both_reports(runner, tmp_path) -> None:
@@ -45,8 +97,12 @@ def test_offline_benchmark_supports_case_filter(runner, tmp_path) -> None:
     assert json.loads(result.output)["cases"] == ["figma-auto-layout-saas"]
 
 
-def test_offline_benchmark_threshold_failure_is_nonzero_and_reported(runner, tmp_path) -> None:
+def test_offline_benchmark_threshold_failure_is_nonzero_and_reported(
+    runner, tmp_path, monkeypatch
+) -> None:
+    _install_degraded_loader(monkeypatch, case_id="html-bootstrap-agency", count=1)
     output = tmp_path / "strict"
+
     result = runner.invoke(
         cli,
         [
@@ -63,8 +119,56 @@ def test_offline_benchmark_threshold_failure_is_nonzero_and_reported(runner, tmp
     assert result.exit_code == 1
     payload = json.loads(result.output)
     assert payload["status"] == "failed"
-    assert payload["threshold_failures"][0]["metric"] == "template_top1_accuracy"
+    failure = payload["threshold_failures"][0]
+    assert failure["metric"] == "template_top1_accuracy"
+    assert failure["minimum"] == pytest.approx(0.99)
+    assert failure["actual"] == pytest.approx(24 / 25)
+
     assert (output / "benchmark.json").exists()
+    assert (output / "benchmark.md").exists()
+    report = json.loads((output / "benchmark.json").read_text(encoding="utf-8"))
+    top1 = report["aggregate"]["matcher"]["template_top1_accuracy"]
+    assert top1["numerator"] == 24
+    assert top1["denominator"] == 25
+    assert top1["value"] == pytest.approx(24 / 25)
+    assert any(
+        failure["metric"] == "template_top1_accuracy"
+        for failure in report["threshold_failures"]
+    )
+    markdown = (output / "benchmark.md").read_text(encoding="utf-8")
+    assert "template_top1_accuracy" in markdown
+
+
+def test_offline_benchmark_same_threshold_passes_with_real_predictions(
+    runner, tmp_path
+) -> None:
+    """Paired control: the 0.99 top-1 threshold above only fails because the
+    degraded prediction is genuinely below it, not because any --threshold
+    flag unconditionally trips a failure. Undegraded, real predictions clear
+    the identical threshold.
+    """
+    output = tmp_path / "strict-control"
+
+    result = runner.invoke(
+        cli,
+        [
+            "migrate",
+            "benchmark",
+            "--output",
+            str(output),
+            "--threshold",
+            "template_top1_accuracy=0.99",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert payload["status"] == "ok"
+    assert payload["threshold_failures"] == []
+    report = json.loads((output / "benchmark.json").read_text(encoding="utf-8"))
+    top1 = report["aggregate"]["matcher"]["template_top1_accuracy"]
+    assert top1["value"] == pytest.approx(1.0)
 
 
 def test_offline_benchmark_unknown_case_returns_structured_error(runner, tmp_path) -> None:
