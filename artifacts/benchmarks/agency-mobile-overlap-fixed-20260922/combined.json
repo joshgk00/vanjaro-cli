@@ -1,0 +1,214 @@
+{
+  "corpora": [
+    "design-benchmarks",
+    "design-image-benchmarks"
+  ],
+  "passed": true,
+  "rows": [
+    {
+      "cells": [
+        {
+          "corpus": "design-benchmarks",
+          "denominator": 25,
+          "numerator": 25,
+          "status": "measured",
+          "value": 1.0
+        },
+        {
+          "corpus": "design-image-benchmarks",
+          "denominator": 3,
+          "numerator": 3,
+          "status": "measured",
+          "value": 1.0
+        }
+      ],
+      "metric": "section_boundary_precision"
+    },
+    {
+      "cells": [
+        {
+          "corpus": "design-benchmarks",
+          "denominator": 25,
+          "numerator": 25,
+          "status": "measured",
+          "value": 1.0
+        },
+        {
+          "corpus": "design-image-benchmarks",
+          "denominator": 3,
+          "numerator": 3,
+          "status": "measured",
+          "value": 1.0
+        }
+      ],
+      "metric": "section_boundary_recall"
+    },
+    {
+      "cells": [
+        {
+          "corpus": "design-benchmarks",
+          "denominator": 25,
+          "numerator": 25,
+          "status": "measured",
+          "value": 1.0
+        },
+        {
+          "corpus": "design-image-benchmarks",
+          "denominator": 3,
+          "numerator": 3,
+          "status": "measured",
+          "value": 1.0
+        }
+      ],
+      "metric": "semantic_role_accuracy"
+    },
+    {
+      "cells": [
+        {
+          "corpus": "design-benchmarks",
+          "denominator": 127,
+          "numerator": 127,
+          "status": "measured",
+          "value": 1.0
+        },
+        {
+          "corpus": "design-image-benchmarks",
+          "denominator": 11,
+          "numerator": 11,
+          "status": "measured",
+          "value": 1.0
+        }
+      ],
+      "metric": "visitor_content_retention"
+    },
+    {
+      "cells": [
+        {
+          "corpus": "design-benchmarks",
+          "denominator": 79,
+          "numerator": 79,
+          "status": "measured",
+          "value": 1.0
+        },
+        {
+          "corpus": "design-image-benchmarks",
+          "denominator": 3,
+          "numerator": 3,
+          "status": "measured",
+          "value": 1.0
+        }
+      ],
+      "metric": "group_field_association_accuracy"
+    },
+    {
+      "cells": [
+        {
+          "corpus": "design-benchmarks",
+          "denominator": 15,
+          "numerator": 15,
+          "status": "measured",
+          "value": 1.0
+        },
+        {
+          "corpus": "design-image-benchmarks",
+          "denominator": 0,
+          "numerator": 0,
+          "status": "not_measurable",
+          "value": null
+        }
+      ],
+      "metric": "asset_association_accuracy"
+    },
+    {
+      "cells": [
+        {
+          "corpus": "design-benchmarks",
+          "denominator": 44,
+          "numerator": 39,
+          "status": "measured",
+          "value": 0.886364
+        },
+        {
+          "corpus": "design-image-benchmarks",
+          "denominator": 6,
+          "numerator": 6,
+          "status": "measured",
+          "value": 1.0
+        }
+      ],
+      "metric": "responsive_observation_coverage"
+    },
+    {
+      "cells": [
+        {
+          "corpus": "design-benchmarks",
+          "denominator": 25,
+          "numerator": 25,
+          "status": "measured",
+          "value": 1.0
+        },
+        {
+          "corpus": "design-image-benchmarks",
+          "denominator": 2,
+          "numerator": 2,
+          "status": "measured",
+          "value": 1.0
+        }
+      ],
+      "metric": "template_top1_accuracy"
+    },
+    {
+      "cells": [
+        {
+          "corpus": "design-benchmarks",
+          "denominator": 25,
+          "numerator": 25,
+          "status": "measured",
+          "value": 1.0
+        },
+        {
+          "corpus": "design-image-benchmarks",
+          "denominator": 2,
+          "numerator": 2,
+          "status": "measured",
+          "value": 1.0
+        }
+      ],
+      "metric": "template_top3_accuracy"
+    },
+    {
+      "cells": [
+        {
+          "corpus": "design-benchmarks",
+          "denominator": 19,
+          "numerator": 19,
+          "status": "measured",
+          "value": 1.0
+        },
+        {
+          "corpus": "design-image-benchmarks",
+          "denominator": 2,
+          "numerator": 2,
+          "status": "measured",
+          "value": 1.0
+        }
+      ],
+      "metric": "high_confidence_precision"
+    }
+  ],
+  "schema_version": "1.0",
+  "statuses": [
+    {
+      "corpus": "design-benchmarks",
+      "passed": true,
+      "regression_failure_count": 0,
+      "threshold_failure_count": 0
+    },
+    {
+      "corpus": "design-image-benchmarks",
+      "passed": true,
+      "regression_failure_count": 0,
+      "threshold_failure_count": 0
+    }
+  ]
+}

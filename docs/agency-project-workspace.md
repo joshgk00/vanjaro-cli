@@ -247,11 +247,21 @@ and the template catalog the plan was made against -- the same catalog the
   within the plan's `policy.css_rule_budget`.
 - `body_without_generic_fallback` -- of body entries, how many did not land on
   the generic rich-text fallback template and are not a blocking match.
-- `desktop_tablet_mobile_evidence` -- of the pages the plan covers, how many
-  have recorded desktop, tablet, and mobile capture evidence. No reusable
-  reader for `qa/` fidelity captures exists yet, so this command always
-  passes an empty capture set and says so in its warnings; the ratio is
-  reported as 0 coverage until that reader is built.
+- `desktop_tablet_mobile_evidence` -- of the actual pages in
+  `plans/resolved-design-document.json`, including empty pages, how many have
+  valid desktop, tablet, and mobile records in `qa/capture-evidence/`.
+  The shared reader checks design and local build fingerprints, target
+  identity, screenshot hashes, observation structure, section ownership,
+  and canonical viewport widths. Missing or stale evidence earns no credit
+  and produces a diagnostic. Without authoritative page IDs, the count is
+  0/1 with a warning; page identity is never inferred from section names.
+
+These records establish correspondence to local build artifacts, not the
+current live portal. Legacy `qa/fidelity-evidence.json` files do not earn
+workspace-wide coverage. The recorder currently has no operator-facing CLI
+entry point, so existing projects need new bound recordings before this
+metric can pass; a capture command remains outstanding. See the
+[responsive evidence contract](agency-responsive-evidence-contract.md).
 
 With `--candidate-id` and `--output`, the command writes a
 `project-quality-evidence-v1` document at the given path instead of (or in

@@ -743,6 +743,120 @@ Verification: 2,648 non-integration tests pass with 16 live integrations
 deselected; `benchmark-all` exits 0 with no threshold or regression failures
 on either corpus.
 
+### 2026-09-21 — Per-page responsive evidence and truthful quality coverage
+
+- Replaced section-ID punctuation guesses with actual page identities from the
+  resolved design document. Empty pages remain in the denominator; absent
+  authoritative identities earn zero coverage with a diagnostic.
+- Added a shared per-page capture store and reader. Capturing another page
+  preserves prior pages; a partial recapture replaces that page's old evidence.
+  Coverage requires current local build/target bindings, canonical design
+  fingerprints, matching screenshot hashes, valid paired observations, page
+  ownership, canonical viewport widths, and safe workspace paths.
+- Connected quality reporting and draft verification to the same reader.
+  Multi-page fidelity verification reports missing or stale pages as blockers.
+  Legacy records remain distinguishable and do not earn current workspace
+  coverage.
+- Root review rejected the first worker's permissive missing-binding test and
+  exposed a malformed-breakpoint crash. Independent acceptance checks now pass
+  after both corrections; worker PASS alone was not treated as acceptance.
+
+Root verification: **2,694 passed, 16 integration tests deselected**, plus the
+independent binding/page-map check and six malformed-input cases. The real
+`kts-fidelity` quality command still correctly reports capture coverage 0/1
+because new bound records are absent; editable 8/8, native 11/11, and body
+without fallback 5/11 remain unchanged.
+
+Remaining: an operator-facing capture command (the recorder currently has only
+test callers), real per-source portal evidence, translation improvements for
+fallback-heavy projects, and measured agency effort reduction. Local artifact
+binding does not prove the live portal is unchanged. See
+`agency-responsive-evidence-contract.md` for the implementation and acceptance
+record. The overall goal remains active.
+
+## 2026-09-22 — Current evidence and trial readiness
+
+This snapshot supersedes earlier open-item statements about the absence of an
+operator-facing capture command; it does not replace historical test results.
+
+- `project capture` now collects source/output evidence at the required
+  breakpoints. The isolated Northstar pilot produced six real browser screenshots,
+  but its fidelity score was **56.89**, below the draft threshold of 75.
+  The source fixture lacked styling and media, and the output was a historical
+  build, so this is capture-workflow evidence, not representative client accuracy.
+  See `agency-capture-command-contract.md`.
+- Explicit article category/excerpt/byline semantics now reach distinct native
+  editing fields. Final root verification passed **2,957 tests**, with two skips
+  and 16 integration tests deselected, including independent final-tree and
+  deliberate-corruption checks. See `agency-article-retention-contract.md`.
+- A separate reproducible probe found that six image destinations across a
+  listing and gallery reach design evidence but not clickable composed output.
+  The native-image-link correction is now accepted offline: exact native link
+  ownership, safe destinations, read-back and existing-link edit compatibility
+  pass 22 independent checks. Root's broader regression suite passed **3,039
+  tests**, with two skips and 16 integration tests deselected. The composed
+  example passes native structural validation; live renderer/editor behavior
+  remains unverified.
+  See `agency-image-link-retention-contract.md`.
+- The card-action diagnostic found eight missing standalone controls. Extraction
+  and final native ownership are now integrated offline, including absent-first
+  actions, expanded repeats, grouped actions, metadata exclusions and unsafe
+  targets. The related native Feature Cards repair is governed by immutable
+  agency pack 1.12.0. Root's combined suite passed **3,093 tests**, with two skips
+  and 16 live integrations deselected; the generated native example validates.
+  Live rendering and representative accuracy remain unproven. See
+  `agency-card-action-retention-contract.md`.
+- Inspection of all **11** `artifacts/projects/*/project.json` manifests found
+  only `live_html` sources: `wwo`, `oasis-probe`, `cmw-blog`, `rendered-home`,
+  `oasis-lighting`, `kts-fidelity`, `contact-page`, `edca-pilot`, `post-security`,
+  `pilot-measure`, and `northstar-recheck`. None is a Figma or image-source
+  project. Benchmark fixtures are not substitutes for those representative
+  project trials.
+- Broader inspection found a historical real Figma trial outside that directory:
+  `artifacts/e2e/agency-project-kts-2026-07-16`. Its manifest targets portal 2,
+  pins pack 1.0.0, and names the Keys to Success Figma design. Cached analysis,
+  24 downloaded assets, and a July live report exist. The report records 12
+  unmapped actions and comparison against the live homepage, not a Figma-frame
+  raster. This is a useful revalidation candidate, not current release proof.
+- `artifacts/e2e/agency-image-provider-dryrun` also exists, but both source PNGs
+  exactly match the committed assisted-image benchmark PNGs by SHA-256. It is
+  fixture-derived intake, not a representative designer-image trial. The earlier
+  projects-only inventory must not be read as an exhaustive repository inventory.
+- Selection of a real Figma design and image mockup has been requested from the
+  operator. Real build/capture evidence and baseline hands-on effort are still
+  needed to evaluate the required 60% time reduction; no such saving is claimed.
+
+No portal build, publication, or launch is authorized merely by this readiness
+snapshot. Reviewed target and mutation receipts remain required. The overall
+agency goal remains active.
+
+### Follow-up benchmark and Figma revalidation findings
+
+The refreshed offline reports under
+`artifacts/benchmarks/agency-retention-integrated-20260922` retain the previous
+aggregate scores. Their configured corpus thresholds pass, but per-case review
+shows the freeform Figma fixture still chooses the wrong hero and stats templates
+(including a wrong high-confidence stats match). Across the two Figma cases,
+top-1 is 8/10; the combined HTML/Figma 23/25 score must not hide that weakness.
+A scratch-only diagnostic in `artifacts/agency-figma-match-diagnostic.json`
+now traces source geometry/cardinality through extraction and candidate scoring
+before any matching change is authorized. Five missing mobile observations in
+the HTML fixtures remain another known gap.
+
+The benchmark worker finished PASS on attempt 2, authoritative exit 0. Its
+first attempt ran the benchmark successfully but omitted the required notes
+deliverable; the retry supplied it. Root read the produced reports and raw
+retry evidence. Worker wording that repeat ownership is unavailable refers to
+the absence of that exact metric name; the actual proxy reported by this corpus
+is `group_field_association_accuracy` (79/79 and 3/3). Neither proxy nor fixture
+success proves ownership across representative live projects.
+
+The historical KTS Figma workspace is schema 1.0. Current `project status`
+correctly refuses it until explicit migration. A read-only `migrate-contract`
+preview proposed schema 1.1 plus a pending launch stage. Its original manifest
+SHA-256 remained `de43f34c02c3024bf9d6d8ee01587b3c63a0de1c487d0dd5ce8561ad8295314a`.
+No migration, new approval, build, publication, or portal action was performed.
+
 ## Completion rule
 
 Passing unit tests or finishing one migration does not complete this goal. The
