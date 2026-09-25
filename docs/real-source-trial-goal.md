@@ -120,6 +120,8 @@ One bounded unit at a time:
 | RT-4 | 4 | Figma: 73 `FIGMA_VECTOR_EXPORT_UNRESOLVED` warnings (icons). Find out why vector exports fail and whether icons reach the build. | KTS analyze report |
 | RT-5 | 5 | Figma sources with no tablet/mobile frames: say plainly in the plan and verify output that these breakpoints are inferred, and don't count them as missing evidence the operator can fix. | KTS capture: tablet/mobile `reference_not_declared` |
 | RT-6 | 6 | `project capture --references` resolves the path against the workspace, not the current directory. Accept either, or say so in the error. | 2026-09-25 "does not exist" error on a correct repo-relative path |
+| RT-8 | 2 | Figma static references are captured but never scored: `no valid source-paired comparisons recorded`. Wire Figma frame evidence into the fidelity scorer. | KTS capture evidence `qa/capture-evidence/8569cce6….json` |
+| RT-9 | 3 | KTS visual gaps found by eye: header/footer render empty (globals are still drafts); class cards lose their colored panels and some titles (Prelude, Symphony); team photos aren't circles and the grid is uneven; headings render underlined; hero is much shorter; marquee color is wrong. | Figma vs page 188 screenshots, 2026-09-25 |
 | RT-7 | 7 | Trial 2 (live website) and trial 3 (images): need Josh to name the sources. | none yet |
 
 ## Progress log
@@ -144,3 +146,14 @@ One bounded unit at a time:
   The page allows anonymous view but isn't in the menu. The tool's order
   (verify before publish) can't finish a fresh build unless the operator
   publishes the hidden page first. Publishing is Josh's action.
+- Josh granted the publish. Page 188 was backed up
+  (`qa/page-188-before-publish.json`), then published. It's still out of the
+  menu. The desktop capture succeeded.
+- The loop is worse than first thought: verify now refuses with `managed page
+  'kts-figma-trial-home' is visible or published`. Verify needs capture,
+  capture needs published content, and verify rejects published pages. RT-1
+  needs a design change to the stage order.
+- Scoring: the tool's scorer returns `not_scored` for Figma references (RT-8).
+  Eye review: nearly all text and images arrived, including the ∞ stat, but the
+  visual match is far off (RT-9). This is a rough estimate, not a measured
+  score: about 90% of the content and less than half of the look.
