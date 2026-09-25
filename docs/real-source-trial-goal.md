@@ -66,9 +66,6 @@ the following.
   `http://vanjarobaseline.local`), run any project-owned stage: pin or check a
   target, upload assets, add blocks, create **hidden** draft pages, create
   project-prefixed header/footer blocks, capture, verify, and write the handoff.
-- Publish the content of a **hidden** page that this goal's trial workspace
-  created and owns. Publishing an owned hidden page that is not in the menu
-  is needed to get visitor-view evidence.
 - Log back in to local portals with `.env` (per the existing re-auth rule).
 - Fix tool code, with tests, and commit to `main` in this repo (standing
   permission from 2026-06-10). Push after each finished unit.
@@ -80,6 +77,8 @@ the following.
   tool's safety check blocks self-approval. Claude batches requests and hands
   Josh the exact commands. Josh can remove this stop by adding a permission rule
   for that command.
+- Publishing any page content, even a hidden page this goal owns
+  (`vanjaro content publish`). The safety check blocked this on 2026-09-25.
 - `vanjaro project launch`, or anything that makes a page visible, puts it in a
   menu, replaces a homepage, or swaps the live site header/footer.
 - Any change to theme settings, or to pages and blocks this goal did not create.
@@ -140,3 +139,8 @@ One bounded unit at a time:
   (hidden page 188), and globals (2 project header/footer blocks plus a page
   update).
 - Stuck at verify. See RT-1.
+- RT-1 finding: Vanjaro shows only published content outside its page editor.
+  Logged-out and logged-in browsers both get an empty page for draft 188.
+  The page allows anonymous view but isn't in the menu. The tool's order
+  (verify before publish) can't finish a fresh build unless the operator
+  publishes the hidden page first. Publishing is Josh's action.
