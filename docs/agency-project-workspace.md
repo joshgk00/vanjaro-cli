@@ -213,8 +213,10 @@ page, and global-block manifests before atomically writing:
   the same evidence, with SHA-256 digests for every input.
 
 The scorecard checks plan validity, content loss, editable coverage, native
-component usage, built text retention, action destinations, draft blockers,
-and visual fidelity. `publish_ready` means all eight checks passed. A
+component usage, built text retention, action destinations, and draft
+blockers. `publish_ready` means all seven checks passed. Visual fidelity is
+not a publish check: it can only be captured after hidden publication, so
+launch enforces it instead (see below). A
 `review_required` result still produces the handoff successfully so the open
 work is explicit, but it is a stop condition rather than permission to
 publish. Missing or stale verification evidence fails without writing partial
@@ -335,7 +337,14 @@ different collision and rollback risks.
 Launch is a separate authority boundary after hidden-content publication. It
 renames project-owned draft pages into editor-facing names, lets DNN derive the
 final routes, applies reviewed navigation visibility, and can select the portal
-home page. First create the deterministic launch plan:
+home page.
+
+Launch is also the visual-fidelity gate. After publication, run
+`vanjaro project capture` for every page. `launch prepare` refuses with
+`visual_fidelity_failed` unless the current capture evidence passes the draft
+fidelity thresholds, and it binds that result's fingerprint into the receipt.
+`launch apply` re-scores the evidence and refuses with `visual_fidelity_stale`
+if it changed after preparation. First create the deterministic launch plan:
 
 ```powershell
 vanjaro project launch plan artifacts/projects/example `

@@ -283,15 +283,11 @@ def test_verify_project_drafts_accepts_complete_unpublished_drafts(
 
     report = _run(tmp_path, monkeypatch, client)
 
-    # Content is complete, so no content blocker remains. Publication is still
-    # withheld because no visual fidelity evidence was recorded (VF-007); an
-    # unmeasured build must never report itself as valid.
-    assert report["valid"] is False
-    assert report["visual_fidelity"]["status"] == "not_scored"
-    assert report["blockers"] == [
-        "visual fidelity was not scored: no evidence recorded at "
-        "qa/fidelity-evidence.json"
-    ]
+    # Rendered fidelity cannot exist before hidden publication, so this gate
+    # defers it to launch instead of blocking on evidence it cannot have.
+    assert report["valid"] is True
+    assert "visual_fidelity" not in report
+    assert report["blockers"] == []
     assert report["source_text_coverage"] == 1.0
     assert report["missing_action_url_count"] == 0
     assert report["pages"][0]["global_wrappers"] == 2
@@ -392,7 +388,7 @@ def test_verify_project_drafts_excludes_sample_copy_from_text_threshold(
     )
 
     # Sample copy is excluded from the text threshold, so no text blocker is
-    # raised. The unscored fidelity gate is the only remaining blocker.
+    # raised.
     assert report["source_text_total"] == 3
     assert report["source_text_matched"] == 3
     assert report["missing_source_text"] == []

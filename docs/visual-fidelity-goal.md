@@ -3815,3 +3815,18 @@ as VF-235.
 **What remains on the leading site is five losses**: three sections with a
 section-level `body` that card templates have no field for, one decorative
 mascot, and one action. None is a section heading any more.
+
+### 2026-09-26 — Fidelity gate moved from verify to launch (supersedes VF-007 wiring)
+
+The first real Figma trial (`docs/real-source-trial-goal.md`, RT-1) showed the
+VF-007 placement could not finish a fresh build. Vanjaro renders only published
+content outside its editor, so capture needs hidden publication, but publish
+required a verify report that required capture. Verify no longer scores
+fidelity and no longer lists `qa/fidelity-evidence.json` as an input
+(`draft-publish-gate-v2`). Launch, the first visitor-facing step, now refuses
+with `visual_fidelity_failed` unless current per-page capture evidence passes,
+binds the passing report's fingerprint into the launch receipt
+(`agency-launch-review-v2`), and refuses with `visual_fidelity_stale` if the
+evidence changes before apply. Legacy single-file evidence no longer
+authorizes launch. The "absent evidence is a blocker" rule is unchanged; it
+now blocks going live instead of hidden publication.

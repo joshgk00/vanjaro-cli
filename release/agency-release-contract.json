@@ -3,13 +3,13 @@
   "candidate_id": "agency-m6-current",
   "compatibility_policy": {
     "path": "release/compatibility-policy.json",
-    "sha256": "0e4af18400244ed21f65b291b3b965729942071768b1effb60b8b57a8cfcd636"
+    "sha256": "bad28c386b6002f9a4146fe36907f7fa39f955a84cd222b40615b97b5708044b"
   },
   "control_evidence": null,
   "deterministic_json_files": [
     {
       "path": "release/compatibility-policy.json",
-      "sha256": "0e4af18400244ed21f65b291b3b965729942071768b1effb60b8b57a8cfcd636"
+      "sha256": "bad28c386b6002f9a4146fe36907f7fa39f955a84cd222b40615b97b5708044b"
     }
   ],
   "evaluation_date": "2026-08-30",

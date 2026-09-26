@@ -6,7 +6,7 @@ PUBLISH_JOURNAL_SCHEMA = "agency-publish-journal-v1"
 PUBLISH_LOCK_SCHEMA = "agency-publish-lock-v1"
 
 LAUNCH_PLAN_SCHEMA = "agency-launch-plan-v1"
-LAUNCH_REVIEW_SCHEMA = "agency-launch-review-v1"
+LAUNCH_REVIEW_SCHEMA = "agency-launch-review-v2"
 LAUNCH_RESULT_SCHEMA = "agency-launch-result-v1"
 LAUNCH_TRANSACTION_SCHEMA = "agency-launch-transaction-v1"
 

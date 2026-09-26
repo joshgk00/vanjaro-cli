@@ -387,18 +387,15 @@ def build_stage_spec(
             preview_project_global_stage,
         )
     if stage == ProjectStage.VERIFY:
-        from vanjaro_cli.orchestration.project_fidelity import FIDELITY_EVIDENCE_PATH
-
         return BuildStageSpec(
             stage,
             StageInputs(
-                data={"verification_policy": "draft-publish-gate-v1"},
+                data={"verification_policy": "draft-publish-gate-v2"},
                 files=(
                     Path("build/design-document.json"),
                     Path("build/global-block-manifest.json"),
                     Path("build/global-page-manifest.json"),
                     Path("build/pages-with-globals-desired.json"),
-                    Path(FIDELITY_EVIDENCE_PATH),
                 ),
             ),
             verify_project_drafts,

@@ -54,8 +54,7 @@ _CHECKS = (
     ("native_components", "Native or agency-standard component ratio", 15),
     ("source_text", "Built source-text coverage", 15),
     ("action_urls", "All source actions have destinations", 10),
-    ("verification", "Draft verification has no blockers", 15),
-    ("visual_fidelity", "Visual fidelity gate passed", 10),
+    ("verification", "Draft verification has no blockers", 25),
 )
 
 class ProjectHandoffError(ValueError):
@@ -311,7 +310,6 @@ def _validate_target(manifest: Any, verification: Mapping[str, Any]) -> None:
 def _build_checks(
     validation: Mapping[str, Any], verification: Mapping[str, Any]
 ) -> list[dict[str, Any]]:
-    visual = verification.get("visual_fidelity")
     values: dict[str, tuple[object, object, bool | None]] = {
         "plan_valid": (validation.get("valid"), True, _bool_pass(validation.get("valid"), True)),
         "content_loss": (validation.get("content_loss_count"), 0, _count_pass(validation.get("content_loss_count"), 0)),
@@ -323,11 +321,6 @@ def _build_checks(
             {"valid": verification.get("valid"), "blocker_count": verification.get("blocker_count")},
             {"valid": True, "blocker_count": 0},
             _verification_pass(verification),
-        ),
-        "visual_fidelity": (
-            visual.get("passed") if isinstance(visual, dict) else None,
-            True,
-            _bool_pass(visual.get("passed"), True) if isinstance(visual, dict) else None,
         ),
     }
     checks: list[dict[str, Any]] = []

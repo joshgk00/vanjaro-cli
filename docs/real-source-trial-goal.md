@@ -114,7 +114,7 @@ One bounded unit at a time:
 
 | ID | Rank | Work | Evidence |
 |---|---:|---|---|
-| RT-1 | 1 | Break the publish ↔ verify ↔ capture loop for fresh builds. Either capture can see an owned hidden draft, or a supported path publishes an owned hidden page before verify. | KTS trial: capture says `captured output has no agency sections` on page 188 (`is_published: false`). `publish prepare` refuses with `verification_incomplete`. |
+| RT-1 | done | Break the publish ↔ verify ↔ capture loop for fresh builds. Done 2026-09-26: the fidelity gate moved from verify to launch. Either capture can see an owned hidden draft, or a supported path publishes an owned hidden page before verify. | KTS trial: capture says `captured output has no agency sections` on page 188 (`is_published: false`). `publish prepare` refuses with `verification_incomplete`. |
 | RT-2 | 2 | Finish KTS Figma trial 1: capture, verify, handoff, fidelity score. | `artifacts/projects/kts-figma-trial` |
 | RT-3 | 3 | `vanjaro --profile X auth login --url …` ignores the global `--profile` and saves to the hostname profile, overwriting its `base_url`. Honor the global flag, or refuse the conflict. | 2026-09-25 login wrote the child-portal URL into `vanjarocli-local`. |
 | RT-4 | 4 | Figma: 73 `FIGMA_VECTOR_EXPORT_UNRESOLVED` warnings (icons). Find out why vector exports fail and whether icons reach the build. | KTS analyze report |
@@ -122,6 +122,7 @@ One bounded unit at a time:
 | RT-6 | 6 | `project capture --references` resolves the path against the workspace, not the current directory. Accept either, or say so in the error. | 2026-09-25 "does not exist" error on a correct repo-relative path |
 | RT-8 | 2 | Figma static references are captured but never scored: `no valid source-paired comparisons recorded`. Wire Figma frame evidence into the fidelity scorer. | KTS capture evidence `qa/capture-evidence/8569cce6….json` |
 | RT-9 | 3 | KTS visual gaps found by eye: header/footer render empty (globals are still drafts); class cards lose their colored panels and some titles (Prelude, Symphony); team photos aren't circles and the grid is uneven; headings render underlined; hero is much shorter; marquee color is wrong. | Figma vs page 188 screenshots, 2026-09-25 |
+| RT-10 | 4 | Capture records don't record which publish they measured, so evidence taken before publication, or against an earlier publish, still counts at launch. Bind the publish receipt fingerprint into capture records and reject mismatches at launch. | 2026-09-26 review of the RT-1 change |
 | RT-7 | 7 | Trial 2 (live website) and trial 3 (images): need Josh to name the sources. | none yet |
 
 ## Progress log
@@ -157,3 +158,18 @@ One bounded unit at a time:
   Eye review: nearly all text and images arrived, including the ∞ stat, but the
   visual match is far off (RT-9). This is a rough estimate, not a measured
   score: about 90% of the content and less than half of the look.
+
+### 2026-09-26 — RT-1 fixed: the look score gates launch, not publish
+
+- Josh chose to move the look score to launch rather than add a preview step,
+  after the code showed that publish already publishes only hidden content.
+- Verify no longer scores fidelity or needs `qa/fidelity-evidence.json`.
+  Handoff drops the fidelity check (verification weight 15 → 25).
+- Launch prepare refuses `visual_fidelity_failed`. Apply refuses
+  `visual_fidelity_stale` if evidence changed after the receipt, but a
+  completed launch's GET-only re-entry skips the re-score. Legacy
+  single-file evidence and unreadable evidence both refuse.
+- Launch receipt format is now `agency-launch-review-v2`. The compatibility
+  policy and release contract digests were updated to match.
+- Suite 3,439 passed. Found during review and filed as RT-10: capture records
+  aren't tied to a specific publish.

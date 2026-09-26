@@ -1,4 +1,4 @@
-"""Record the fidelity evidence `project verify` scores (VF-009).
+"""Record the fidelity evidence the launch gate scores (VF-009).
 
 `project_fidelity` reads `qa/fidelity-evidence.json` and gates on it; until now
 nothing wrote that file, so every verification reported `not_scored`. This

@@ -575,7 +575,7 @@ def test_complete_synthetic_release_passes_every_closed_gate(tmp_path: Path) -> 
     )
     assert all(gate["status"] == "passed" for gate in canonical_dump["gates"])
     assert canonical_json_sha256(report) == (
-        "4bdef765d2fd87312e0a2ad8d09e6ab941c04b64989b89e20fcfa56268f51029"
+        "01d3ce81cc535fa6832c937facd852c6edfb557560d3e7bdc438bef8209ce4c1"
     )
 
 

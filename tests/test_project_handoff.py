@@ -124,7 +124,6 @@ def _workspace(
             "blocker_count": 0 if ready else 1,
             "blockers": [] if ready else ["Contact action has no destination."],
             "warnings": [warning] if warning else [],
-            "visual_fidelity": {"passed": ready, "overall_score": 91.0 if ready else 70.0},
         },
     )
     _write(

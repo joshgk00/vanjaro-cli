@@ -59,9 +59,9 @@
     },
     "launch_review": {
       "accepted": [
-        "agency-launch-review-v1"
+        "agency-launch-review-v2"
       ],
-      "current": "agency-launch-review-v1"
+      "current": "agency-launch-review-v2"
     },
     "launch_transaction": {
       "accepted": [

@@ -1,15 +1,13 @@
-"""Run the deterministic visual fidelity gate during project verification.
+"""Score a project's recorded capture evidence against the visual fidelity gate.
 
-Reads the fidelity evidence a project workspace has recorded, scores it with
-the pure metrics, and applies the draft gate thresholds. The result becomes
-part of `draft-verification.json`, which is already a fingerprinted stage
-artifact, so a change in score invalidates any downstream publish approval
-without extra machinery.
+Reads the per-page capture evidence a workspace has recorded, scores it with
+the pure metrics, and applies the draft gate thresholds. Launch enforces the
+result, because rendered evidence only exists after hidden publication.
 
 Absent evidence is a blocker, not a pass. A build nobody looked at is not a
 build that looked right, and the release measures require desktop, tablet, and
 mobile evidence for every release candidate. Reporting "not scored" as valid
-would let an unmeasured build publish.
+would let an unmeasured build go live.
 """
 
 from __future__ import annotations

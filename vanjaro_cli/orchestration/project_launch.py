@@ -11,6 +11,10 @@ from typing import Any
 
 from vanjaro_cli.orchestration.portal_identity import verify_project_portal
 from vanjaro_cli.orchestration.project_handoff_output import redact_handoff_text
+from vanjaro_cli.orchestration.project_fidelity import (
+    ProjectFidelityError,
+    evaluate_project_fidelity,
+)
 from vanjaro_cli.orchestration.project_launch_state import (
     ProjectLaunchStateError,
     adopt_launch_receipt,
@@ -37,6 +41,7 @@ from vanjaro_cli.project import (
     StageOperationError,
     StageResult,
     StageStatus,
+    fingerprint_data,
     fingerprint_files,
     load_manifest,
 )
@@ -256,6 +261,7 @@ def _build_launch_receipt(root, manifest) -> dict[str, Any]:
             "publish result is not for the adopted publish receipt",
             "Reconcile project publish before launch preparation.",
         )
+    visual_fidelity_fingerprint = _require_passing_fidelity(root, manifest)
     try:
         client, verified = verify_project_portal(manifest)
     except Exception as exc:
@@ -300,6 +306,7 @@ def _build_launch_receipt(root, manifest) -> dict[str, Any]:
             "publish_output_fingerprint": publish.output_fingerprint,
             "publish_receipt_fingerprint": publish_review["fingerprint"],
             "publish_result_sha256": hashlib.sha256((root / PUBLISH_RESULT_PATH).read_bytes()).hexdigest(),
+            "visual_fidelity_fingerprint": visual_fidelity_fingerprint,
             "namespace_fingerprint": preview["namespace_fingerprint"],
             "actions": preview["actions"],
             "home": preview["home"],
@@ -456,6 +463,14 @@ def _authorized_launch_state(
         raise ProjectLaunchWorkflowError(
             "launch_approval_invalid", str(exc), "Approve the exact adopted launch review."
         ) from exc
+    if not _launch_completed_for(root, manifest, fingerprint) and (
+        _require_passing_fidelity(root, manifest) != receipt.get("visual_fidelity_fingerprint")
+    ):
+        raise ProjectLaunchWorkflowError(
+            "visual_fidelity_stale",
+            "capture evidence changed after launch preparation",
+            "Prepare, review, and approve a new launch receipt.",
+        )
     home = receipt["home"]
     changes_home = home["before_page_id"] != home["after_page_id"]
     if changes_home and home_confirmation != home["after_page_id"]:
@@ -467,6 +482,35 @@ def _authorized_launch_state(
             "unexpected_home_confirmation", "receipt does not change the home page", "Remove --confirm-home."
         )
     return manifest, receipt, fingerprint
+
+
+def _require_passing_fidelity(root: Path, manifest) -> str:
+    # Rendered fidelity can only be captured after hidden publication, so the
+    # draft verify gate cannot require it; launch is the first visitor-facing step.
+    try:
+        report, blockers = evaluate_project_fidelity(root, manifest)
+    except ProjectFidelityError as exc:
+        report, blockers = {}, [str(exc)]
+    if not blockers and report.get("legacy") is not False:
+        blockers = ["launch requires per-page capture evidence from `vanjaro project capture`"]
+    if blockers:
+        raise ProjectLaunchWorkflowError(
+            "visual_fidelity_failed",
+            redact_handoff_text("; ".join(blockers)),
+            "Run `vanjaro project capture` for every page and fix fidelity before launch.",
+        )
+    return fingerprint_data(report)
+
+
+def _launch_completed_for(root: Path, manifest, fingerprint: str) -> bool:
+    # Completed re-entry only reconciles; evidence recaptured after launch must
+    # not turn that GET-only path into a stale-fidelity refusal.
+    if manifest.stages[ProjectStage.LAUNCH].status != StageStatus.COMPLETED:
+        return False
+    result_path = root / LAUNCH_RESULT_PATH
+    if not result_path.is_file():
+        return False
+    return _read_object(result_path).get("receipt_fingerprint") == fingerprint
 
 
 def _local_projection(manifest) -> str:

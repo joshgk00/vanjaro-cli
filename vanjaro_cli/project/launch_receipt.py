@@ -115,6 +115,8 @@ def current_launch_review(root: Path, manifest: ProjectManifest) -> dict[str, An
         raise LaunchReceiptError(f"publish result is unavailable: {exc}") from exc
     if receipt.get("publish_result_sha256") != observed_publish_result:
         raise LaunchReceiptError("publish result changed after launch preparation")
+    if not _sha256(receipt.get("visual_fidelity_fingerprint")):
+        raise LaunchReceiptError("launch review has no visual fidelity fingerprint")
     _require_launch_actions(receipt)
     return receipt
 

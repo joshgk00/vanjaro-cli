@@ -20,7 +20,6 @@ from vanjaro_cli.orchestration.portal_identity import verify_project_portal
 from vanjaro_cli.orchestration.project_capture_evidence import (
     resolve_workspace_capture_coverage,
 )
-from vanjaro_cli.orchestration.project_fidelity import evaluate_project_fidelity
 from vanjaro_cli.portal.global_block_manifest import global_block_content_hash
 from vanjaro_cli.portal.page_composition import page_content_hash
 from vanjaro_cli.project.models import ProjectManifest
@@ -237,14 +236,11 @@ def preview_project_drafts(
             f"{len(missing_action_urls)} source action(s) have no URL mapping"
         )
 
-    visual_fidelity, fidelity_blockers = evaluate_project_fidelity(root, manifest)
-    blockers.extend(fidelity_blockers)
     quality_counts = _quality_counts_report(root, manifest)
 
     return {
             "schema_version": "1.1",
             "valid": not blockers,
-            "visual_fidelity": visual_fidelity,
             "quality_counts": quality_counts,
             "target": verified.as_dict(),
             "page_count": len(pages),
