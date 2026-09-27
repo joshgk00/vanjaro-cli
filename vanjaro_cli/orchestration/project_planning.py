@@ -28,6 +28,7 @@ from vanjaro_cli.design.template_catalog import (
     load_template_catalog,
     load_template_data,
 )
+from vanjaro_cli.migration.global_blocks import FOOTER_COMPOSER_CONTRACT_VERSION
 from vanjaro_cli.portal.global_header import HEADER_COMPOSER_CONTRACT_VERSION
 from vanjaro_cli.project.stage_engine import StageContext, StageResult
 from vanjaro_cli.reliability import atomic_write_json
@@ -244,6 +245,7 @@ def _scope_global_identity(
     return {
         **plan,
         "header_composer_contract_version": HEADER_COMPOSER_CONTRACT_VERSION,
+        "footer_composer_contract_version": FOOTER_COMPOSER_CONTRACT_VERSION,
         "entries": entries,
     }
 

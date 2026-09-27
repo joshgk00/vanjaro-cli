@@ -23,9 +23,13 @@ from typing import Any
 from vanjaro_cli.utils.block_compose import apply_section_background
 from vanjaro_cli.utils.image_links import is_safe_link_href
 
+# Bump when build_footer_block output changes so project plans regenerate.
+FOOTER_COMPOSER_CONTRACT_VERSION = "1.1"
+
 __all__ = [
     "build_header_block",
     "build_footer_block",
+    "FOOTER_COMPOSER_CONTRACT_VERSION",
     "make_global_block_wrapper",
     "GLOBAL_BLOCK_WRAPPER_TYPE_GUID",
     "MENU_BLOCK_GUID",
