@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections import Counter
 import json
 from pathlib import Path
 import re
@@ -25,6 +26,7 @@ from vanjaro_cli.portal.page_composition import page_content_hash
 from vanjaro_cli.project.models import ProjectManifest
 from vanjaro_cli.project.stage_engine import StageContext, StageResult
 from vanjaro_cli.reliability import atomic_write_json
+from vanjaro_cli.utils.image_links import is_safe_link_href
 
 
 _COMPOSITION_PLAN_PATH = "plans/composition-plan.json"
@@ -91,13 +93,13 @@ def preview_project_drafts(
     pages: list[dict[str, Any]] = []
     blockers: list[str] = []
     warnings: list[str] = []
-    all_rendered_text = _component_text(
-        [
-            component
-            for detail in global_details.values()
-            for component in _json_value(detail.get("contentJSON"), "global contentJSON")
-        ]
-    )
+    global_components = [
+        component
+        for detail in global_details.values()
+        for component in _json_value(detail.get("contentJSON"), "global contentJSON")
+    ]
+    all_rendered_text = _component_text(global_components)
+    built_destinations = Counter(_component_hrefs(global_components))
 
     for record in page_records:
         if not isinstance(record, dict) or not isinstance(record.get("page_id"), int):
@@ -158,6 +160,7 @@ def preview_project_drafts(
             )
         blockers.extend(f"page {record['page_id']}: {message}" for message in page_blockers)
         all_rendered_text.extend(_component_text(components))
+        built_destinations.update(_component_hrefs(components))
         pages.append(
             {
                 "page_id": record["page_id"],
@@ -236,6 +239,28 @@ def preview_project_drafts(
             f"{len(missing_action_urls)} source action(s) have no URL mapping"
         )
 
+    # A mapped destination proves nothing until a built link carries it; a
+    # composer that renders an action as text would otherwise pass this gate.
+    source_destinations = Counter(
+        href
+        for page in document.pages
+        for section in page.sections
+        for element in section.content
+        if element.kind in {ContentKind.BUTTON, ContentKind.LINK}
+        for href in [str(element.attributes.get("href") or element.attributes.get("url") or "").strip()]
+        if href and is_safe_link_href(href)
+    )
+    unbuilt_destinations = {
+        href: count - built_destinations[href]
+        for href, count in sorted(source_destinations.items())
+        if count > built_destinations[href]
+    }
+    if unbuilt_destinations:
+        blockers.append(
+            f"{sum(unbuilt_destinations.values())} source action destination(s) "
+            "are missing from the built page and global links"
+        )
+
     quality_counts = _quality_counts_report(root, manifest)
 
     return {
@@ -251,6 +276,7 @@ def preview_project_drafts(
             "missing_source_text": missing,
             "missing_action_url_count": len(missing_action_urls),
             "missing_action_url_element_ids": missing_action_urls,
+            "unbuilt_action_destinations": unbuilt_destinations,
             "blocker_count": len(blockers),
             "blockers": blockers,
             "warning_count": len(warnings),
@@ -343,6 +369,20 @@ def _is_sample_copy(value: str) -> bool:
             re.IGNORECASE,
         )
     )
+
+
+def _component_hrefs(components: list[dict[str, Any]]) -> list[str]:
+    result: list[str] = []
+    stack: list[object] = list(components)
+    while stack:
+        component = stack.pop()
+        if not isinstance(component, dict):
+            continue
+        href = component.get("attributes", {}).get("href")
+        if isinstance(href, str) and href.strip():
+            result.append(href.strip())
+        stack.extend(component.get("components", []))
+    return result
 
 
 def _component_ids(components: list[dict[str, Any]]) -> list[str]:

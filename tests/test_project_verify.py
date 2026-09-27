@@ -98,8 +98,14 @@ def _page_detail(
     visible: bool = False,
     header_guid: str = HEADER_GUID,
     footer_guid: str = FOOTER_GUID,
-    text: tuple[str, ...] = ("Welcome", "Real body copy", "Contact"),
+    text: tuple[str, ...] = ("Welcome", "Real body copy"),
+    action_href: str | None = "/contact",
 ) -> dict[str, object]:
+    action: dict[str, object] = {
+        "type": "link" if action_href else "text",
+        "attributes": {"id": "body-action", **({"href": action_href} if action_href else {})},
+        "content": "Contact",
+    }
     components: list[dict[str, object]] = [
         _wrapper("Header", header_guid, "wrapper-header"),
         {
@@ -112,7 +118,8 @@ def _page_detail(
                     "content": value,
                 }
                 for index, value in enumerate(text, 1)
-            ],
+            ]
+            + [action],
         },
         _wrapper("Footer", footer_guid, "wrapper-footer"),
     ]
@@ -288,6 +295,7 @@ def test_verify_project_drafts_accepts_complete_unpublished_drafts(
     assert report["valid"] is True
     assert "visual_fidelity" not in report
     assert report["blockers"] == []
+    assert report["unbuilt_action_destinations"] == {}
     assert report["source_text_coverage"] == 1.0
     assert report["missing_action_url_count"] == 0
     assert report["pages"][0]["global_wrappers"] == 2
@@ -373,6 +381,21 @@ def test_verify_project_drafts_blocks_source_action_without_url(
     assert report["missing_action_url_count"] == 1
     assert len(report["missing_action_url_element_ids"]) == 1
     assert "1 source action(s) have no URL mapping" in report["blockers"]
+
+
+def test_verify_project_drafts_blocks_a_mapped_action_built_without_its_link(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    client = _Client(page=_page_detail(action_href=None))
+
+    report = _run(tmp_path, monkeypatch, client)
+
+    assert report["valid"] is False
+    assert report["missing_action_url_count"] == 0
+    assert report["unbuilt_action_destinations"] == {"/contact": 1}
+    assert report["blockers"] == [
+        "1 source action destination(s) are missing from the built page and global links"
+    ]
 
 
 def test_verify_project_drafts_excludes_sample_copy_from_text_threshold(
