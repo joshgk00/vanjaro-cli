@@ -127,6 +127,7 @@ One bounded unit at a time:
 | RT-12 | done | Footer builder rendered every footer entry as plain text and ignored link destinations, so Contact Us, Call Me, and Schedule a Free Call lost their `/contact-us` links. Done 2026-09-27: entries with a safe destination render as links. | Trial 2 `build/global-blocks-desired.json` footer had 0 hrefs |
 | RT-13 | done | Done 2026-09-27: verify compares design destinations with built link hrefs. Verify counts missing destinations in the design, not in the built blocks, so RT-12 passed verify. Check built page and global link hrefs against the design's destinations. | Trial 2 verify: `missing_action_url_count: 0` while the footer had no links |
 | RT-14 | 5 | Header brand falls back to the project name ('Kts Figma Trial 2') because the logo is 50 vector fragments with no export URL. Use the client or site name, and fix vector export (see RT-4). | Trial 2 verify warning |
+| RT-15 | 1 | The local site's server module doesn't advertise `supportsExactVersionPublish` for global blocks, so `project publish prepare` refuses. The support exists only as **uncommitted** changes in `C:\Codeanjaro-ai\source` (AIGlobalBlockController, AIPageController, AILaunchController, models). Publish and launch have only run against mocks. Review, commit, build, and deploy the module to the local test site. | Trial 2 `publish prepare`: `portal global block endpoint does not advertise exact-version publication support` |
 | RT-7 | 7 | Trial 2 (live website) and trial 3 (images): need Josh to name the sources. | none yet |
 
 ## Progress log
@@ -192,3 +193,15 @@ One bounded unit at a time:
   there are no real destinations to map to. Blocked on Josh (destinations)
   and RT-11 (a way to record them).
 - Page 188 from trial 1 remains as a hidden leftover.
+
+### 2026-09-27 — Trial 2 is publish-ready, but the server can't publish
+
+- Added all 12 link targets with `overlay set-action-url`. Fixed the footer
+  dropping links (RT-12), versioned the footer composer so plans rebuild, and
+  made verify check the built links (RT-13). Josh re-approved twice.
+- Verify: valid, 0 blockers, text coverage 1.0, every destination built.
+  Handoff: `publish_ready`, 100/100.
+- `publish prepare` refuses because the local server module is older than
+  the tool's publish contract (RT-15). The needed server code is uncommitted
+  in the vanjaro-ai repo. Stopped for Josh: deploying server code is outside
+  this goal's authority.
