@@ -704,3 +704,49 @@ def test_menu_nav_header_has_no_hamburger():
     rendered = str(block)
 
     assert "kts-nav-toggle" not in rendered
+
+
+def _footer_components(block: dict, component_type: str) -> list[dict]:
+    found: list[dict] = []
+    stack = list(block["components"])
+    while stack:
+        component = stack.pop()
+        if component.get("type") == component_type:
+            found.append(component)
+        stack.extend(component.get("components") or [])
+    return found
+
+
+def test_footer_item_with_a_destination_renders_as_a_link():
+    from vanjaro_cli.migration.global_blocks import build_footer_block
+
+    block = build_footer_block({
+        "list_items": ["Contact Us", "Our Story"],
+        "links": [{"text": "Contact Us", "href": "/contact-us"}],
+    })
+
+    links = _footer_components(block, "link")
+    assert [(link["content"], link["attributes"]["href"]) for link in links] == [
+        ("Contact Us", "/contact-us")
+    ]
+    assert [item["content"] for item in _footer_components(block, "list-item")] == [
+        "Our Story"
+    ]
+
+
+def test_footer_item_with_an_unsafe_or_empty_destination_stays_text():
+    from vanjaro_cli.migration.global_blocks import build_footer_block
+
+    block = build_footer_block({
+        "list_items": ["Call Me", "Schedule"],
+        "links": [
+            {"text": "Call Me", "href": "javascript:alert(1)"},
+            {"text": "Schedule", "href": ""},
+        ],
+    })
+
+    assert _footer_components(block, "link") == []
+    assert sorted(item["content"] for item in _footer_components(block, "list-item")) == [
+        "Call Me",
+        "Schedule",
+    ]

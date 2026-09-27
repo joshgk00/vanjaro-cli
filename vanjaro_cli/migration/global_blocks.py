@@ -21,6 +21,7 @@ import uuid
 from typing import Any
 
 from vanjaro_cli.utils.block_compose import apply_section_background
+from vanjaro_cli.utils.image_links import is_safe_link_href
 
 __all__ = [
     "build_header_block",
@@ -530,8 +531,9 @@ def _footer_link_columns(content: dict) -> list[dict]:
     if not headings and not list_items:
         return []
 
+    destinations = _footer_link_destinations(content)
     if not headings:
-        column_children = [_list_item(text) for text in list_items]
+        column_children = [_footer_entry(text, destinations) for text in list_items]
         return [_col(column_children, size_classes=["col-12"])]
 
     columns: list[dict] = []
@@ -544,13 +546,32 @@ def _footer_link_columns(content: dict) -> list[dict]:
             start = index * items_per_col
             end = start + items_per_col if index < n_headings - 1 else len(list_items)
             for item in list_items[start:end]:
-                column_children.append(_list_item(item))
+                column_children.append(_footer_entry(item, destinations))
 
         # Bootstrap column size: even split up to 4, otherwise col-md-3
         col_size = f"col-md-{max(3, 12 // n_headings)}"
         columns.append(_col(column_children, size_classes=[col_size]))
 
     return columns
+
+
+def _footer_link_destinations(content: dict) -> dict[str, str]:
+    """Map each footer link's text to its first safe, non-empty destination."""
+    destinations: dict[str, str] = {}
+    for link in content.get("links") or []:
+        if not _has_text(link):
+            continue
+        href = link.get("href")
+        if isinstance(href, str) and href.strip() and is_safe_link_href(href):
+            destinations.setdefault(link["text"], href.strip())
+    return destinations
+
+
+def _footer_entry(text: str, destinations: dict[str, str]) -> dict:
+    href = destinations.get(text)
+    if href is None:
+        return _list_item(text)
+    return _component("link", tag_name="a", content=text, attributes={"href": href})
 
 
 def _first_paragraph(content: dict) -> str | None:
