@@ -123,6 +123,7 @@ One bounded unit at a time:
 | RT-8 | 2 | Figma static references are captured but never scored: `no valid source-paired comparisons recorded`. Wire Figma frame evidence into the fidelity scorer. | KTS capture evidence `qa/capture-evidence/8569cce6….json` |
 | RT-9 | 3 | KTS visual gaps found by eye: header/footer render empty (globals are still drafts); class cards lose their colored panels and some titles (Prelude, Symphony); team photos aren't circles and the grid is uneven; headings render underlined; hero is much shorter; marquee color is wrong. | Figma vs page 188 screenshots, 2026-09-25 |
 | RT-10 | 4 | Capture records don't record which publish they measured, so evidence taken before publication, or against an earlier publish, still counts at launch. Bind the publish receipt fingerprint into capture records and reject mismatches at launch. | 2026-09-26 review of the RT-1 change |
+| RT-11 | 1 | No audited way to give a button or link its destination. Figma designs rarely carry URLs, so every Figma project will stop at `N source action(s) have no URL mapping`. Add an overlay (for example `overlay set-action-url`) that records the operator's destination with provenance, and feeds plan and pages. | Trial 2: 12 actions (Register Now, Contact Us, Learn More ×5, Join Now, Load More, Call Me, Schedule a Free Call) |
 | RT-7 | 7 | Trial 2 (live website) and trial 3 (images): need Josh to name the sources. | none yet |
 
 ## Progress log
@@ -173,3 +174,18 @@ One bounded unit at a time:
   policy and release contract digests were updated to match.
 - Suite 3,439 passed. Found during review and filed as RT-10: capture records
   aren't tied to a specific publish.
+
+### 2026-09-26 — Trial 2 (clean run in the new order)
+
+- `artifacts/projects/kts-figma-trial-2`: same Figma source, pack 1.12.0, and
+  the ∞ overlay. Josh approved the plan and portal-mutation gates.
+- Built hidden page 189, 24 assets, 10 blocks, and 2 project header/footer
+  blocks. Every portal action was a create, apart from the one update to
+  the trial's own page 189.
+- Verify completed: source text coverage 1.0, and one blocker, `12 source
+  action(s) have no URL mapping`. Handoff scored 65/100, `review_required`.
+  Only `action_urls` and `verification` fail, both from the same cause.
+- The KTS test portal has no Contact, Register, Classes, or Blog pages, so
+  there are no real destinations to map to. Blocked on Josh (destinations)
+  and RT-11 (a way to record them).
+- Page 188 from trial 1 remains as a hidden leftover.
