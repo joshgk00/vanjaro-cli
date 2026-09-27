@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
 from enum import Enum
 import json
 from pathlib import Path
@@ -17,6 +18,7 @@ from vanjaro_cli.design.models import (
     Provenance,
 )
 from vanjaro_cli.design.serialization import stable_design_id
+from vanjaro_cli.utils.image_links import is_safe_link_href
 
 
 class DesignOverlayError(ValueError):
@@ -26,6 +28,10 @@ class DesignOverlayError(ValueError):
 class OverlayOperation(str, Enum):
     ADD_REPEAT_FIELD = "add_repeat_field"
     SET_ELEMENT_VALUE = "set_element_value"
+    SET_ACTION_URL = "set_action_url"
+
+
+_ACTION_KINDS = frozenset({ContentKind.BUTTON, ContentKind.LINK})
 
 
 class _OverlayModel(BaseModel):
@@ -52,7 +58,14 @@ class DesignOverlay(_OverlayModel):
                 )
         elif self.field is not None or self.content_kind is not None:
             raise ValueError(
-                "set_element_value does not accept field or content_kind"
+                f"{self.operation.value} does not accept field or content_kind"
+            )
+        if self.operation == OverlayOperation.SET_ACTION_URL and not (
+            isinstance(self.value, str) and is_safe_link_href(self.value)
+        ):
+            raise ValueError(
+                "set_action_url requires a relative path or an http, https, "
+                "mailto, or tel destination"
             )
         return self
 
@@ -78,8 +91,10 @@ def apply_design_overlays(
     for overlay in overlay_set.overlays:
         if overlay.operation == OverlayOperation.ADD_REPEAT_FIELD:
             resolved = _add_repeat_field(resolved, overlay)
+        elif overlay.operation == OverlayOperation.SET_ACTION_URL:
+            resolved = _update_element(resolved, overlay, _with_action_url)
         else:
-            resolved = _set_element_value(resolved, overlay)
+            resolved = _update_element(resolved, overlay, _with_value)
     return DesignDocument.model_validate(resolved.model_dump())
 
 
@@ -157,8 +172,23 @@ def _add_repeat_field(
     return document.model_copy(update={"pages": pages})
 
 
-def _set_element_value(
-    document: DesignDocument, overlay: DesignOverlay
+def _with_value(element: ContentElement, overlay: DesignOverlay) -> dict[str, object]:
+    return {"value": overlay.value}
+
+
+def _with_action_url(element: ContentElement, overlay: DesignOverlay) -> dict[str, object]:
+    if element.kind not in _ACTION_KINDS:
+        raise DesignOverlayError(
+            f"overlay {overlay.id!r} target {overlay.target_id!r} is a "
+            f"{element.kind.value}, not a button or link"
+        )
+    return {"attributes": {**element.attributes, "href": overlay.value}}
+
+
+def _update_element(
+    document: DesignDocument,
+    overlay: DesignOverlay,
+    changes: Callable[[ContentElement, DesignOverlay], dict[str, object]],
 ) -> DesignDocument:
     matched = 0
     pages = []
@@ -174,7 +204,7 @@ def _set_element_value(
                 content.append(
                     element.model_copy(
                         update={
-                            "value": overlay.value,
+                            **changes(element, overlay),
                             "provenance": [
                                 *element.provenance,
                                 _provenance(document, overlay),

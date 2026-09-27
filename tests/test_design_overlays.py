@@ -5,6 +5,9 @@ from __future__ import annotations
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
+import pytest
+from click.testing import CliRunner
+
 from vanjaro_cli.design.models import (
     ContentKind,
     ObservationMethod,
@@ -13,8 +16,10 @@ from vanjaro_cli.design.models import (
     RepeatGroupKind,
     SourceKind,
 )
+from vanjaro_cli.commands.project_overlay_cmd import overlay as overlay_cli
 from vanjaro_cli.design.overlays import (
     DesignOverlay,
+    DesignOverlayError,
     DesignOverlaySet,
     OverlayOperation,
     apply_design_overlays,
@@ -65,6 +70,107 @@ def _repeat_document():
     )
     page = page.model_copy(update={"sections": [section]})
     return document.model_copy(update={"pages": [page]}), item_id
+
+
+def _action_document(kind: ContentKind = ContentKind.BUTTON):
+    document = analyze_source(
+        HtmlSourceRequest(html=HTML, source_url="https://example.test/")
+    )
+    page = document.pages[0]
+    section = page.sections[0]
+    title = section.content[0]
+    action = title.model_copy(
+        update={"id": "join-action", "kind": kind, "value": "Join now", "order": title.order + 1}
+    )
+    section = section.model_copy(update={"content": [title, action]})
+    page = page.model_copy(update={"sections": [section]})
+    return document.model_copy(update={"pages": [page]}), action.id, title.id
+
+
+def _action_url_overlay(target_id: str, url: str = "/register") -> DesignOverlay:
+    return DesignOverlay(
+        id="join-destination",
+        operation=OverlayOperation.SET_ACTION_URL,
+        target_id=target_id,
+        value=url,
+        author="curator",
+        reason="The site map sends every sign-up action to registration.",
+        created_at=datetime(2026, 9, 26, tzinfo=timezone.utc),
+    )
+
+
+def test_set_action_url_overlay_gives_a_button_its_destination() -> None:
+    document, action_id, _ = _action_document()
+
+    resolved = apply_design_overlays(
+        document, DesignOverlaySet(overlays=[_action_url_overlay(action_id)])
+    )
+
+    action = next(
+        element
+        for element in resolved.pages[0].sections[0].content
+        if element.id == action_id
+    )
+    assert action.attributes["href"] == "/register"
+    assert action.value == "Join now"
+    assert action.metadata["design_overlay_id"] == "join-destination"
+    assert action.provenance[-1].method == ObservationMethod.MANUAL
+    assert action.provenance[-1].metadata["author"] == "curator"
+
+
+def test_set_action_url_overlay_accepts_a_link() -> None:
+    document, action_id, _ = _action_document(ContentKind.LINK)
+
+    resolved = apply_design_overlays(
+        document,
+        DesignOverlaySet(overlays=[_action_url_overlay(action_id, "tel:+15555550100")]),
+    )
+
+    action = next(
+        element
+        for element in resolved.pages[0].sections[0].content
+        if element.id == action_id
+    )
+    assert action.attributes["href"] == "tel:+15555550100"
+
+
+def test_set_action_url_overlay_refuses_a_non_action_target() -> None:
+    document, _, heading_id = _action_document()
+
+    with pytest.raises(DesignOverlayError, match="not a button or link"):
+        apply_design_overlays(
+            document, DesignOverlaySet(overlays=[_action_url_overlay(heading_id)])
+        )
+
+
+@pytest.mark.parametrize("url", ["javascript:alert(1)", "\tjavascript:alert(1)", "ftp://x", ""])
+def test_set_action_url_overlay_rejects_unsafe_or_empty_destinations(url: str) -> None:
+    with pytest.raises(ValueError, match="set_action_url requires"):
+        _action_url_overlay("join-action", url)
+
+
+def test_set_action_url_cli_refuses_an_unsafe_destination(tmp_path: Path) -> None:
+    result = CliRunner().invoke(
+        overlay_cli,
+        [
+            "set-action-url",
+            str(tmp_path),
+            "--id",
+            "join-destination",
+            "--target-element",
+            "join-action",
+            "--url",
+            "javascript:alert(1)",
+            "--by",
+            "curator",
+            "--reason",
+            "Unsafe input",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code != 0
+    assert "set_action_url requires" in result.output
 
 
 def test_add_repeat_field_overlay_retains_manual_provenance() -> None:

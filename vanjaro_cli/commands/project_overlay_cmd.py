@@ -128,6 +128,56 @@ def set_value_overlay(
     )
 
 
+@overlay.command("set-action-url")
+@click.argument("directory", type=click.Path(path_type=Path))
+@click.option("--id", "overlay_id", required=True, help="Stable correction ID.")
+@click.option("--target-element", required=True, help="Exact button or link element ID.")
+@click.option(
+    "--url",
+    required=True,
+    help="Destination: a relative path, or an http, https, mailto, or tel URL.",
+)
+@click.option("--by", "author", required=True, help="Correction author identity.")
+@click.option("--reason", required=True, help="Evidence and rationale for the destination.")
+@click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
+def set_action_url_overlay(
+    directory: Path,
+    overlay_id: str,
+    target_element: str,
+    url: str,
+    author: str,
+    reason: str,
+    as_json: bool,
+) -> None:
+    """Give one button or link the destination the source design left out."""
+
+    try:
+        record = add_project_overlay(
+            directory,
+            DesignOverlay(
+                id=overlay_id,
+                operation=OverlayOperation.SET_ACTION_URL,
+                target_id=target_element,
+                value=url,
+                author=author,
+                reason=reason,
+                created_at=datetime.now(timezone.utc),
+            ),
+        )
+    except (ProjectOverlayError, ProjectWorkspaceError, ValidationError, ValueError) as exc:
+        exit_error(str(exc), as_json)
+    output_result(
+        as_json,
+        status="ok",
+        human_message=(
+            f"Recorded design overlay {record.id}; the plan and downstream approvals "
+            "must be regenerated."
+        ),
+        overlay=record.model_dump(mode="json"),
+        next_stage="plan",
+    )
+
+
 @overlay.command("list")
 @click.argument("directory", type=click.Path(path_type=Path), default=Path("."))
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
