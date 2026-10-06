@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import re
+from urllib.parse import urlsplit
 
 from vanjaro_cli.design.models import BreakpointName, SourceKind, Viewport
 from vanjaro_cli.project import ProjectSource
@@ -112,6 +113,62 @@ def parse_sources(
     return sources
 
 
+def apply_source_origins(
+    sources: list[ProjectSource], values: tuple[str, ...]
+) -> list[ProjectSource]:
+    """Record the original address of each saved local live-HTML page.
+
+    A saved page's root-relative asset paths only resolve against the address it
+    was saved from, so the operator declares it; the HTML adapter then uses it as
+    the page's base URL.
+    """
+
+    by_id = {source.id: source for source in sources}
+    origins: dict[str, str] = {}
+    for value in values:
+        if "=" not in value:
+            raise ValueError(
+                f"invalid source origin {value!r}; expected SOURCE_ID=URL"
+            )
+        source_id, origin = (part.strip() for part in value.split("=", 1))
+        source = by_id.get(source_id)
+        if source is None:
+            raise ValueError(
+                f"source origin refers to unknown source {source_id!r}; "
+                f"available IDs: {', '.join(sorted(by_id))}"
+            )
+        if source.kind != SourceKind.LIVE_HTML:
+            raise ValueError(
+                f"source origin refers to non-live_html source {source_id!r}"
+            )
+        if urlsplit(source.reference).scheme.casefold() in {"http", "https"}:
+            raise ValueError(
+                f"source origin only applies to a local file; {source_id!r} is already a URL"
+            )
+        if source_id in origins:
+            raise ValueError(f"duplicate source origin assignment for {source_id!r}")
+        origins[source_id] = _validated_origin(source_id, origin)
+    return [
+        source.model_copy(
+            update={"metadata": {**source.metadata, "source_url": origins[source.id]}}
+        )
+        if source.id in origins
+        else source
+        for source in sources
+    ]
+
+
+def _validated_origin(source_id: str, origin: str) -> str:
+    parsed = urlsplit(origin)
+    if parsed.scheme.casefold() not in {"http", "https"} or not parsed.hostname:
+        raise ValueError(
+            f"source origin for {source_id!r} must be an absolute http(s) URL: {origin!r}"
+        )
+    if parsed.username is not None or parsed.password is not None:
+        raise ValueError(f"source origin for {source_id!r} must not contain credentials")
+    return origin
+
+
 def parse_template_overrides(values: tuple[str, ...]) -> dict[str, str]:
     overrides: dict[str, str] = {}
     for value in values:
@@ -189,4 +246,4 @@ def _parse_viewport(value: str) -> Viewport:
     return Viewport(width=int(match.group(1)), height=int(match.group(2)))
 
 
-__all__ = ["apply_source_pages", "parse_sources", "parse_template_overrides"]
+__all__ = ["apply_source_origins", "apply_source_pages", "parse_sources", "parse_template_overrides"]

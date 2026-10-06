@@ -18,6 +18,7 @@ from vanjaro_cli.project.models import (
     TargetPortal,
 )
 from vanjaro_cli.project.workspace import (
+    LocalSourceImport,
     MANIFEST_FILENAME,
     ProjectWorkspaceError,
     WORKSPACE_DIRECTORIES,
@@ -28,6 +29,7 @@ from vanjaro_cli.project.workspace import (
     fingerprint_files,
     initialize_workspace,
     load_manifest,
+    plan_local_source_imports,
     workspace_status,
     write_manifest,
 )
@@ -86,6 +88,7 @@ from vanjaro_cli.project.migrations import (
 )
 
 __all__ = [
+    "LocalSourceImport",
     "AgencyPack",
     "ApprovalGate",
     "ApprovalRecord",
@@ -149,6 +152,7 @@ __all__ = [
     "invalidate_stage_state",
     "load_manifest",
     "migrate_project_manifest",
+    "plan_local_source_imports",
     "load_project_overlays",
     "pin_project_target",
     "request_approval",

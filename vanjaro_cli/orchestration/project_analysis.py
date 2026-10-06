@@ -297,13 +297,15 @@ def _analyze_source(
 ) -> tuple[DesignDocument, tuple[str, ...]]:
     local = _local_reference(root, source.reference)
     if source.kind == SourceKind.LIVE_HTML:
+        declared_origin = None
         if local is None:
             html = html_fetcher(source.reference)
             source_url = source.reference
             render_url = source.reference
         else:
             html = local.read_text(encoding="utf-8")
-            source_url = _string_metadata(source, "source_url") or local.as_uri()
+            declared_origin = _string_metadata(source, "source_url")
+            source_url = declared_origin or local.as_uri()
             render_url = local.as_uri()
         request_fields = {
             "html": html,
@@ -311,6 +313,7 @@ def _analyze_source(
             "title": _string_metadata(source, "title"),
             "slug": source.page_reference or _string_metadata(source, "slug"),
             "render": render,
+            "honor_base_href": declared_origin is not None,
         }
         if render and local is not None:
             # Serve the saved copy rather than rendering it from `file://`: its

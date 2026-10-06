@@ -484,6 +484,7 @@ class HtmlPageInput:
     title: str | None = None
     slug: str | None = None
     parent_slug: str | None = None
+    base_url: str | None = None
 
 
 @dataclass(frozen=True)
@@ -852,6 +853,7 @@ def _warning(
 def _with_dropped_boundary_warnings(
     document: DesignDocument,
     per_page: Sequence[tuple[str, Sequence[Mapping[str, JsonValue]]]],
+    page_urls: Sequence[str] | None = None,
 ) -> DesignDocument:
     """Append a warning for every boundary whose content the page did not keep.
 
@@ -862,12 +864,13 @@ def _with_dropped_boundary_warnings(
 
     assets = {asset.id: asset.source_url or asset.id for asset in document.assets}
     warnings = list(document.warnings)
-    for page, (html, raw_sections) in zip(document.pages, per_page):
+    resolution_urls = page_urls or [page.source_reference for page in document.pages]
+    for page, (html, raw_sections), resolution_url in zip(
+        document.pages, per_page, resolution_urls
+    ):
         text, media, destinations = _arrived_content(page, assets)
         warnings.extend(
-            _dropped_boundary_warnings(
-                html, raw_sections, page.source_reference, text, media
-            )
+            _dropped_boundary_warnings(html, raw_sections, resolution_url, text, media)
         )
         warnings.extend(_section_content_warnings(html, page, text, destinations))
     return document.model_copy(update={"warnings": warnings})
@@ -1382,6 +1385,7 @@ def _section_from_legacy(
     warnings: list[dict[str, JsonValue]],
     artifact_path: str,
     media_evidence: MediaEvidenceResult | None = None,
+    base_url: str | None = None,
 ) -> dict[str, JsonValue]:
     section_type = str(raw_section.get("type") or "content")
     template = str(raw_section.get("template") or "")
@@ -1817,7 +1821,7 @@ def _section_from_legacy(
         _enrich_section_from_static_dom(
             result,
             static_html,
-            source_url=source_url,
+            source_url=base_url or source_url,
             assets=assets,
             provenance=provenance,
         )
@@ -2036,6 +2040,7 @@ def _build_document(
                 warnings=warnings,
                 artifact_path=str(raw_section.get("_artifact_path") or page_input.url),
                 media_evidence=(media_evidence or {}).get(page_input.url),
+                base_url=page_input.base_url,
             )
             _drop_dangling_interaction_targets(section)
             confidence_values.append(float(section["role_confidence"]))
@@ -2139,8 +2144,15 @@ def design_document_from_html(
     rendered_observations: Sequence[RenderedPageObservation] = (),
     rendered_warnings: Sequence[DesignWarning] = (),
     media_evidence: MediaEvidenceResult | None = None,
+    honor_base_href: bool = False,
 ) -> DesignDocument:
-    """Convert one static HTML page, optionally enriched by rendered evidence."""
+    """Convert one static HTML page, optionally enriched by rendered evidence.
+
+    `honor_base_href` resolves relative URLs against the page's `<base href>`
+    when it declares one. A saved copy of a page carries the tag for the
+    address it came from, so it is only trusted when the caller has said where
+    the page lived; a live fetch keeps resolving against its own address.
+    """
 
     desktop = next(
         (
@@ -2151,17 +2163,19 @@ def design_document_from_html(
         None,
     )
     extraction_html = desktop.html if desktop else html
-    sections = extract_sections(extraction_html, source_url, css_text=css_text)
+    soup = BeautifulSoup(extraction_html, "html.parser")
+    resolution_url = _declared_base_url(soup, source_url) if honor_base_href else source_url
+    sections = extract_sections(extraction_html, resolution_url, css_text=css_text)
     _enrich_faq_relationships(extraction_html, sections)
-    _append_missing_video_sections(extraction_html, source_url, sections)
+    _append_missing_video_sections(extraction_html, resolution_url, sections)
     raw_sections = list(sections)
     sections = _prepare_static_sections(extraction_html, sections)
-    soup = BeautifulSoup(extraction_html, "html.parser")
     page = HtmlPageInput(
         url=source_url,
         html=html,
         title=title or extract_page_title(soup) or _slug_from_url(source_url).title(),
         slug=slug,
+        base_url=resolution_url if resolution_url != source_url else None,
     )
     document = _build_document(
         source_kind="live_html",
@@ -2175,7 +2189,19 @@ def design_document_from_html(
         initial_warnings=list(rendered_warnings),
         media_evidence={source_url: media_evidence} if media_evidence is not None else None,
     )
-    return _with_dropped_boundary_warnings(document, [(extraction_html, raw_sections)])
+    return _with_dropped_boundary_warnings(
+        document,
+        [(extraction_html, raw_sections)],
+        page_urls=[resolution_url],
+    )
+
+
+def _declared_base_url(soup: BeautifulSoup, page_url: str) -> str:
+    base = soup.find("base", href=True)
+    if base is None:
+        return page_url
+    href = str(base.get("href")).strip()
+    return urljoin(page_url, href) if href else page_url
 
 
 def analyze_html_pages(

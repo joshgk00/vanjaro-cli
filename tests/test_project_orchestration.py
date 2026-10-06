@@ -558,3 +558,150 @@ def test_plan_refresh_re_runs_a_resumable_plan(tmp_path: Path) -> None:
 
     assert json.loads(resumed.output)["execution"]["action"] == "resume"
     assert json.loads(refreshed.output)["execution"]["action"] == "execute"
+
+
+SAVED_PAGE = """<!doctype html>
+<html>
+  <head>{head}<title>Saved Home</title></head>
+  <body>
+    <main>
+      <section class="hero">
+        <h1>Build a clearer future</h1>
+        <p>Strategy and implementation for growing organizations.</p>
+        <img src="/Portals/0/hero.jpg" alt="Team at work">
+      </section>
+    </main>
+  </body>
+</html>
+"""
+
+
+def _asset_urls(document: DesignDocument) -> list[str]:
+    return [asset.source_url or "" for asset in document.assets]
+
+
+def _analyze_saved_page(
+    *, head: str, source_url: str, honor_base_href: bool
+) -> DesignDocument:
+    return analyze_source(
+        HtmlSourceRequest(
+            html=SAVED_PAGE.format(head=head),
+            source_url=source_url,
+            honor_base_href=honor_base_href,
+        )
+    )
+
+
+def test_saved_page_assets_resolve_against_declared_origin() -> None:
+    document = _analyze_saved_page(
+        head="", source_url="https://agency.example/", honor_base_href=True
+    )
+
+    assert _asset_urls(document) == ["https://agency.example/Portals/0/hero.jpg"]
+
+
+def test_saved_page_without_origin_keeps_file_urls() -> None:
+    document = _analyze_saved_page(
+        head="", source_url="file:///work/sources/home.html", honor_base_href=False
+    )
+
+    assert _asset_urls(document) == ["file:///Portals/0/hero.jpg"]
+
+
+def test_base_href_is_honored_only_when_origin_is_declared() -> None:
+    head = '<base href="https://cdn.agency.example/site/">'
+
+    honored = _analyze_saved_page(
+        head=head, source_url="https://agency.example/", honor_base_href=True
+    )
+    ignored = _analyze_saved_page(
+        head=head, source_url="https://agency.example/", honor_base_href=False
+    )
+
+    assert _asset_urls(honored) == ["https://cdn.agency.example/Portals/0/hero.jpg"]
+    assert _asset_urls(ignored) == ["https://agency.example/Portals/0/hero.jpg"]
+    assert honored.pages[0].source_reference == "https://agency.example/"
+
+
+def test_relative_base_href_resolves_against_declared_origin() -> None:
+    document = _analyze_saved_page(
+        head='<base href="/site/">',
+        source_url="https://agency.example/page",
+        honor_base_href=True,
+    )
+
+    assert _asset_urls(document) == ["https://agency.example/Portals/0/hero.jpg"]
+
+
+def test_project_init_with_outside_file_and_origin_analyzes_with_resolvable_assets(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    saved = tmp_path / "inbox" / "home.html"
+    saved.parent.mkdir()
+    saved.write_text(SAVED_PAGE.format(head=""), encoding="utf-8")
+    root = tmp_path / "project"
+    result = runner.invoke(
+        cli,
+        [
+            "project",
+            "init",
+            str(root),
+            "--name",
+            "Saved Copy",
+            "--target-profile",
+            "saved-copy",
+            "--source",
+            f"html={saved}",
+            "--source-origin",
+            "live-html-1=https://agency.example/",
+            "--json",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+
+    seen: list[list[str]] = []
+
+    def record_assets(*, root, source_id, document):
+        seen.append(_asset_urls(document))
+        return document, ()
+
+    monkeypatch.setattr(
+        "vanjaro_cli.orchestration.project_analysis.acquire_html_assets",
+        record_assets,
+    )
+    analyzed = runner.invoke(cli, ["project", "analyze", str(root), "--json"])
+
+    assert analyzed.exit_code == 0, analyzed.output
+    assert seen == [["https://agency.example/Portals/0/hero.jpg"]]
+
+
+def test_project_analyze_still_rejects_hand_edited_outside_reference(
+    runner, tmp_path: Path
+) -> None:
+    outside = tmp_path / "outside.html"
+    outside.write_text(HTML, encoding="utf-8")
+    root = tmp_path / "project"
+    init = runner.invoke(
+        cli,
+        [
+            "project",
+            "init",
+            str(root),
+            "--name",
+            "Escape",
+            "--target-profile",
+            "escape",
+            "--source",
+            "html=https://agency.example/",
+            "--json",
+        ],
+    )
+    assert init.exit_code == 0, init.output
+    manifest_path = root / "project.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    manifest["sources"][0]["reference"] = str(outside)
+    manifest_path.write_text(json.dumps(manifest), encoding="utf-8")
+
+    analyzed = runner.invoke(cli, ["project", "analyze", str(root), "--json"])
+
+    assert analyzed.exit_code != 0

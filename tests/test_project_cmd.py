@@ -233,6 +233,198 @@ def test_project_init_refuses_existing_content(runner, tmp_path: Path) -> None:
     assert existing.read_text(encoding="utf-8") == "keep"
 
 
+def _init_args(root: Path, *extra: str) -> list[str]:
+    return [
+        "project",
+        "init",
+        str(root),
+        "--name",
+        "Local Files",
+        "--target-profile",
+        "local-files",
+        *extra,
+        "--json",
+    ]
+
+
+def test_project_init_copies_outside_local_files_into_sources(
+    runner, tmp_path: Path
+) -> None:
+    outside = tmp_path / "inbox"
+    outside.mkdir()
+    page = outside / "home.html"
+    page.write_text("<html><body><h1>Hi</h1></body></html>", encoding="utf-8")
+    shot = outside / "home.png"
+    shot.write_bytes(b"fake png bytes")
+    root = tmp_path / "project"
+
+    result = runner.invoke(
+        cli,
+        _init_args(
+            root,
+            "--source",
+            f"live_html={page}",
+            "--source",
+            f"image={shot}",
+            "--image-viewport",
+            "1440x900",
+            "--image-breakpoint",
+            "image-1=desktop",
+            "--source-page",
+            "image-1=home",
+        ),
+    )
+
+    assert result.exit_code == 0, result.output
+    manifest = json.loads((root / MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert [source["reference"] for source in manifest["sources"]] == [
+        "sources/home.html",
+        "sources/home.png",
+    ]
+    assert (root / "sources" / "home.html").read_bytes() == page.read_bytes()
+    assert (root / "sources" / "home.png").read_bytes() == shot.read_bytes()
+    assert page.is_file() and shot.is_file()
+
+
+def test_project_init_import_names_collisions_deterministically(
+    runner, tmp_path: Path
+) -> None:
+    first = tmp_path / "a" / "page.html"
+    second = tmp_path / "b" / "page.html"
+    first.parent.mkdir()
+    second.parent.mkdir()
+    first.write_text("<p>first</p>", encoding="utf-8")
+    second.write_text("<p>second</p>", encoding="utf-8")
+    root = tmp_path / "project"
+
+    result = runner.invoke(
+        cli,
+        _init_args(
+            root,
+            "--source",
+            f"html={first}",
+            "--source",
+            f"html={second}",
+            "--source",
+            f"html={first}",
+        ),
+    )
+
+    assert result.exit_code == 0, result.output
+    manifest = json.loads((root / MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert [source["reference"] for source in manifest["sources"]] == [
+        "sources/page.html",
+        "sources/page-2.html",
+        "sources/page.html",
+    ]
+    assert (root / "sources" / "page.html").read_text(encoding="utf-8") == "<p>first</p>"
+    assert (root / "sources" / "page-2.html").read_text(encoding="utf-8") == "<p>second</p>"
+
+
+def test_project_init_leaves_urls_and_missing_files_unchanged(
+    runner, tmp_path: Path
+) -> None:
+    root = tmp_path / "project"
+
+    result = runner.invoke(
+        cli,
+        _init_args(
+            root,
+            "--source",
+            "html=https://agency.example/",
+            "--source",
+            "html=sources/not-there.html",
+            "--source",
+            "figma=https://figma.example/design/file?node-id=1-2",
+        ),
+    )
+
+    assert result.exit_code == 0, result.output
+    manifest = json.loads((root / MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert [source["reference"] for source in manifest["sources"]] == [
+        "https://agency.example/",
+        "sources/not-there.html",
+        "https://figma.example/design/file?node-id=1-2",
+    ]
+    assert list((root / "sources").iterdir()) == []
+
+
+def test_project_init_still_refuses_non_empty_directory_with_local_file(
+    runner, tmp_path: Path
+) -> None:
+    page = tmp_path / "home.html"
+    page.write_text("<p>x</p>", encoding="utf-8")
+    root = tmp_path / "existing"
+    root.mkdir()
+    (root / "keep.txt").write_text("keep", encoding="utf-8")
+
+    result = runner.invoke(cli, _init_args(root, "--source", f"html={page}"))
+
+    assert result.exit_code == 1
+    assert "not empty" in json.loads(result.output)["message"]
+    assert not (root / "sources").exists()
+
+
+def test_project_init_cleans_up_when_copy_fails(
+    runner, tmp_path: Path, monkeypatch
+) -> None:
+    page = tmp_path / "home.html"
+    page.write_text("<p>x</p>", encoding="utf-8")
+    root = tmp_path / "project"
+
+    def broken_copy(origin, destination):
+        raise OSError("disk full")
+
+    monkeypatch.setattr("vanjaro_cli.project.workspace.shutil.copyfile", broken_copy)
+    result = runner.invoke(cli, _init_args(root, "--source", f"html={page}"))
+
+    assert result.exit_code == 1
+    assert "could not copy source file" in json.loads(result.output)["message"]
+    assert not root.exists()
+
+
+def test_project_init_records_source_origin_for_local_html(
+    runner, tmp_path: Path
+) -> None:
+    page = tmp_path / "home.html"
+    page.write_text("<p>x</p>", encoding="utf-8")
+    root = tmp_path / "project"
+
+    result = runner.invoke(
+        cli,
+        _init_args(
+            root,
+            "--source",
+            f"html={page}",
+            "--source-origin",
+            "live-html-1=https://agency.example/",
+        ),
+    )
+
+    assert result.exit_code == 0, result.output
+    manifest = json.loads((root / MANIFEST_FILENAME).read_text(encoding="utf-8"))
+    assert manifest["sources"][0]["metadata"] == {"source_url": "https://agency.example/"}
+
+
+def test_project_init_rejects_invalid_source_origins(runner, tmp_path: Path) -> None:
+    page = tmp_path / "home.html"
+    page.write_text("<p>x</p>", encoding="utf-8")
+    base = ["--source", f"html={page}", "--source", "html=https://agency.example/"]
+    cases = {
+        "nope=https://agency.example/": "unknown source",
+        "live-html-1=not-a-url": "absolute http(s) URL",
+        "live-html-1=https://user:pw@agency.example/": "credentials",
+        "live-html-2=https://agency.example/": "already a URL",
+        "live-html-1": "SOURCE_ID=URL",
+    }
+    for value, expected in cases.items():
+        root = tmp_path / f"project-{abs(hash(value))}"
+        result = runner.invoke(cli, _init_args(root, *base, "--source-origin", value))
+        assert result.exit_code == 1, value
+        assert expected in json.loads(result.output)["message"], value
+        assert not root.exists()
+
+
 def test_project_approval_request_and_resolution_are_explicit(runner, tmp_path: Path) -> None:
     root = tmp_path / "approval"
     initialized = runner.invoke(

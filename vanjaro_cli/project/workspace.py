@@ -9,9 +9,11 @@ import hashlib
 from pathlib import Path
 import re
 import shutil
+from urllib.parse import urlsplit
 
 from pydantic import JsonValue, ValidationError
 
+from vanjaro_cli.design.models import SourceKind
 from vanjaro_cli.project.models import (
     AgencyPack,
     ApprovalStatus,
@@ -152,7 +154,79 @@ def create_manifest(
     )
 
 
-def initialize_workspace(root: Path, manifest: ProjectManifest) -> Path:
+@dataclass(frozen=True, slots=True)
+class LocalSourceImport:
+    """One local source file to copy into a new workspace's `sources/` folder."""
+
+    origin: Path
+    relative_path: str
+
+
+_IMPORTABLE_SOURCE_KINDS = (SourceKind.LIVE_HTML, SourceKind.IMAGE)
+
+
+def plan_local_source_imports(
+    root: Path, sources: Sequence[ProjectSource]
+) -> tuple[list[ProjectSource], list[LocalSourceImport]]:
+    """Point every existing local file source at a copy inside the workspace.
+
+    `analyze` rejects a local source outside the workspace, and `init` refuses a
+    non-empty directory, so the operator could not place the file first. Remote
+    URLs and references that do not name an existing file are left untouched.
+    Copies keep the file name; a clash gets `-2`, `-3`, ... in source order, and
+    two sources naming one file share one copy. Nothing is written here.
+    """
+
+    root = root.expanduser().resolve()
+    imports: list[LocalSourceImport] = []
+    destination_by_origin: dict[Path, str] = {}
+    taken: set[str] = set()
+    updated: list[ProjectSource] = []
+    for source in sources:
+        origin = _local_file_for_import(root, source)
+        if origin is None:
+            updated.append(source)
+            continue
+        relative = destination_by_origin.get(origin)
+        if relative is None:
+            relative = _free_source_name(origin.name, taken)
+            destination_by_origin[origin] = relative
+            imports.append(LocalSourceImport(origin=origin, relative_path=relative))
+        updated.append(source.model_copy(update={"reference": relative}))
+    return updated, imports
+
+
+def _local_file_for_import(root: Path, source: ProjectSource) -> Path | None:
+    if source.kind not in _IMPORTABLE_SOURCE_KINDS:
+        return None
+    if urlsplit(source.reference).scheme.casefold() in {"http", "https"}:
+        return None
+    origin = Path(source.reference).expanduser().resolve()
+    if not origin.is_file():
+        return None
+    try:
+        origin.relative_to(root)
+    except ValueError:
+        return origin
+    return None
+
+
+def _free_source_name(file_name: str, taken: set[str]) -> str:
+    stem, suffix = Path(file_name).stem, Path(file_name).suffix
+    candidate = f"sources/{file_name}"
+    counter = 2
+    while candidate.casefold() in taken:
+        candidate = f"sources/{stem}-{counter}{suffix}"
+        counter += 1
+    taken.add(candidate.casefold())
+    return candidate
+
+
+def initialize_workspace(
+    root: Path,
+    manifest: ProjectManifest,
+    imports: Sequence[LocalSourceImport] = (),
+) -> Path:
     """Create a new workspace without overwriting any existing content."""
 
     root = root.expanduser().resolve()
@@ -165,12 +239,29 @@ def initialize_workspace(root: Path, manifest: ProjectManifest) -> Path:
         root.mkdir(parents=True, exist_ok=True)
         for directory in WORKSPACE_DIRECTORIES:
             (root / directory).mkdir()
+        for item in imports:
+            _copy_verified(item.origin, root / item.relative_path)
         write_manifest(root, manifest)
     except Exception:
         if created_root and root.exists():
             shutil.rmtree(root)
         raise
     return root / MANIFEST_FILENAME
+
+
+def _copy_verified(origin: Path, destination: Path) -> None:
+    try:
+        shutil.copyfile(origin, destination)
+        copied = hashlib.sha256(destination.read_bytes()).hexdigest()
+        original = hashlib.sha256(origin.read_bytes()).hexdigest()
+    except OSError as exc:
+        raise ProjectWorkspaceError(
+            f"could not copy source file {origin} into the workspace: {exc}"
+        ) from exc
+    if copied != original:
+        raise ProjectWorkspaceError(
+            f"copy of source file {origin} does not match the original"
+        )
 
 
 def write_manifest(root: Path, manifest: ProjectManifest) -> Path:
@@ -321,6 +412,7 @@ def _utc_now() -> datetime:
 
 
 __all__ = [
+    "LocalSourceImport",
     "MANIFEST_FILENAME",
     "ProjectWorkspaceError",
     "WORKSPACE_DIRECTORIES",
@@ -331,6 +423,7 @@ __all__ = [
     "fingerprint_files",
     "initialize_workspace",
     "load_manifest",
+    "plan_local_source_imports",
     "workspace_status",
     "write_manifest",
 ]

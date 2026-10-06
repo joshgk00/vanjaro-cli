@@ -11,7 +11,11 @@ import click
 from pydantic import ValidationError
 
 from vanjaro_cli.commands.helpers import exit_error, output_result
-from vanjaro_cli.commands.project_inputs import parse_sources, parse_template_overrides
+from vanjaro_cli.commands.project_inputs import (
+    apply_source_origins,
+    parse_sources,
+    parse_template_overrides,
+)
 from vanjaro_cli.project import (
     ApprovalGate,
     ProjectMigrationError,
@@ -25,6 +29,7 @@ from vanjaro_cli.project import (
     create_manifest,
     initialize_workspace,
     load_manifest,
+    plan_local_source_imports,
     migrate_project_manifest,
     request_approval,
     resolve_approval,
@@ -118,6 +123,13 @@ def _exit_project_analysis_error(
     metavar="SOURCE_ID=PAGE_REFERENCE",
     help="Explicitly pair multiple source captures as evidence for the same page.",
 )
+@click.option(
+    "--source-origin",
+    "source_origins",
+    multiple=True,
+    metavar="SOURCE_ID=URL",
+    help="Original address of a saved local live_html page, so its relative asset paths resolve.",
+)
 @click.option("--agency-pack", default="clicks-and-mortars", show_default=True)
 @click.option("--agency-pack-version", default="1.0.0", show_default=True)
 @click.option("--json", "as_json", is_flag=True, help="Output as JSON.")
@@ -133,11 +145,16 @@ def init_project(
     image_breakpoints: tuple[str, ...],
     image_evidence: tuple[str, ...],
     source_pages: tuple[str, ...],
+    source_origins: tuple[str, ...],
     agency_pack: str,
     agency_pack_version: str,
     as_json: bool,
 ) -> None:
-    """Initialize a non-destructive project workspace in DIRECTORY."""
+    """Initialize a non-destructive project workspace in DIRECTORY.
+
+    Local image and live_html files outside DIRECTORY are copied into its
+    sources/ folder and referenced from there.
+    """
 
     try:
         sources = parse_sources(
@@ -147,6 +164,8 @@ def init_project(
             image_breakpoints=image_breakpoints,
             image_evidence=image_evidence,
         )
+        sources = apply_source_origins(sources, source_origins)
+        sources, imports = plan_local_source_imports(directory, sources)
         manifest = create_manifest(
             name=name,
             project_id=project_id,
@@ -157,7 +176,7 @@ def init_project(
             agency_pack_name=agency_pack,
             agency_pack_version=agency_pack_version,
         )
-        manifest_path = initialize_workspace(directory, manifest)
+        manifest_path = initialize_workspace(directory, manifest, imports)
         status = workspace_status(directory, manifest)
     except (ProjectWorkspaceError, ValidationError, ValueError) as exc:
         exit_error(str(exc), as_json)

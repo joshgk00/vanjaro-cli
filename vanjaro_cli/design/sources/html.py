@@ -65,6 +65,7 @@ class HtmlSourceRequest:
     captured_at: datetime | None = None
     render: bool = False
     render_url: str | None = None
+    honor_base_href: bool = False
     source_kind: SourceKind = field(default=SourceKind.LIVE_HTML, init=False)
 
     def __post_init__(self) -> None:
@@ -115,4 +116,5 @@ class HtmlSourceAdapter:
             rendered_observations=observations,
             rendered_warnings=warnings,
             media_evidence=media_evidence,
+            honor_base_href=request.honor_base_href,
         )
