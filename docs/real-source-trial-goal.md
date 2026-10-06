@@ -158,9 +158,10 @@ One bounded unit at a time:
 | RT-17 | partly done | 2026-10-05: card rows fixed; real re-plan editable 0.25 -> 0.42, losses 32 -> 5 (`artifacts/projects/qualityhc-trial-2`). Still open: hero (1), merged band (2), split media (7), merged reviews/FAQ (8); see RT-19. Card lists on a real site land on picture-only gallery templates, so card titles, text, and buttons are dropped. | `artifacts/projects/qualityhc-trial`: editable 0.25, 4 blockers, 6 sections lose `item.body`/`item.item_title` |
 | RT-18 | done | Done 2026-10-05 (`9024841`). `project init` can't take a local file source: it needs an empty folder, but analyze needs the file inside it. Copy local sources into `sources/` at init. | `kts-mockup-trial` and `edca-trial-1` needed a hand edit of project.json |
 | RT-19 | done | Done 2026-10-06: live re-plan editable 0.75, 2 blockers (`qualityhc-trial-3`). The Quality HC page is built with the YOOtheme page builder (`div.uk-section`). The tool finds no section edges in it, so sections fall back to the old guesswork path and some get merged (reviews + FAQ + services in one). Teach section detection about this builder. Also keep the fetched page HTML in the workspace so later steps and test fixtures can reuse it. | RT-17 helper report; `qualityhc-trial-2` sections 2, 7, 8 |
-| RT-20 | 1 | Quality HC FAQ blocks: items carry title/body, the FAQ template wants question/answer, and the accordion interaction is unsupported. | `qualityhc-trial-3` section 10 |
+| RT-20 | done | Done 2026-10-06 (`87bbfeb`): live re-plan editable 0.756, native 0.995, 1 blocker (`qualityhc-trial-4`). Quality HC FAQ blocks: items carry title/body, the FAQ template wants question/answer, and the accordion interaction is unsupported. | `qualityhc-trial-3` section 10 |
 | RT-21 | 2 | Quality HC hero blocks: 2 buttons and 3 badges, but no hero template has 2 actions. Needs a template change (agency pack release, Josh's call) or an audited overlay. | `qualityhc-trial-3` section 2 |
-| RT-22 | 4 | The browser-render observation script does not know UIkit sections, so `--render` on these pages can't pair sections. | RT-19 helper report |
+| RT-22 | done | Done 2026-10-06 (`87bbfeb`). The browser-render observation script does not know UIkit sections, so `--render` on these pages can't pair sections. | RT-19 helper report |
+| RT-23 | 3 | `project plan` on a workspace that already has a plan says "resumed" and keeps the old plan, even after the matching code changed. A fixed tool can't improve an existing project without a new workspace. Stamp the planner version into the plan fingerprint, as was done for the footer composer. | 2026-10-06: `qualityhc-trial-3` kept the FAQ blocker after RT-20 landed |
 | RT-7 | 7 | Trial sources. Live website: Quality HC (`https://quality-hc.com/`, portal 1) picked 2026-10-05 because EDCA and Oasis refuse script downloads. Images: Keys to Success mockups, still to set up. | `artifacts/projects/qualityhc-trial` |
 
 ## Progress log
@@ -275,3 +276,10 @@ One bounded unit at a time:
 - RT-17 card fix landed (suite 3,506, benchmark flat). Quality HC real re-plan: editable 0.42, 4 blockers left. Filed RT-19 (page-builder section edges).
 - RT-4 and RT-14 done (suite 3,518). Fresh KTS Figma analyze: 12 sections, 4 warnings (was 77).
 - RT-19 done (suite 3,552, benchmark flat). Live Quality HC: editable 0.75, native 1.0, blockers: hero (RT-21), FAQ (RT-20).
+- RT-20 and RT-22 done (suite 3,560). Live Quality HC (`qualityhc-trial-4`):
+  editable 0.756, native 0.995, one blocker, the hero (RT-21: 2 buttons and
+  3 badges, no hero template holds 2 actions; needs a pack template = Josh).
+- Josh approved publish and OpenAI in chat; the safety check still blocks
+  Claude from running both (approval resolve = "production deploy"; image
+  evidence = "sensitive source"). Josh must run them at the PC, or add
+  permission rules.
