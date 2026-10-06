@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from dataclasses import replace
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
 
@@ -9,6 +10,7 @@ import pytest
 
 from vanjaro_cli.design.models import SourceKind
 from vanjaro_cli.project import (
+    STAGE_DEFINITIONS,
     ApprovalGate,
     ApprovalRecord,
     ApprovalStatus,
@@ -409,3 +411,125 @@ def test_approval_cannot_be_requested_before_owner_stage(tmp_path: Path) -> None
             gate=ApprovalGate.PORTAL_MUTATION,
             requested_by="operator",
         )
+
+
+def _bump_contract_version(monkeypatch, stage: ProjectStage, version: str) -> None:
+    monkeypatch.setitem(
+        STAGE_DEFINITIONS,
+        stage,
+        replace(STAGE_DEFINITIONS[stage], contract_version=version),
+    )
+
+
+def _complete_plan_with_approved_gate(root: Path, clock: SequenceClock) -> None:
+    _complete_analysis_and_plan(root, clock)
+    approval = request_approval(
+        root,
+        gate=ApprovalGate.PORTAL_MUTATION,
+        requested_by="operator",
+        clock=clock,
+    )
+    resolve_approval(
+        root,
+        approval.id,
+        approved=True,
+        resolved_by="operator",
+        clock=clock,
+    )
+
+
+def _rerun_plan(root: Path, clock: SequenceClock, calls: list[int]):
+    return StageEngine(root, clock=clock).execute(
+        ProjectStage.PLAN,
+        StageInputs(files=(Path("analysis/design-document.json"),)),
+        _write_operation("plans/composition-plan.json", "plan", calls),
+    )
+
+
+def test_same_stage_contract_version_resumes_completed_plan(tmp_path: Path) -> None:
+    root = _workspace(tmp_path)
+    clock = SequenceClock()
+    _complete_plan_with_approved_gate(root, clock)
+    calls: list[int] = []
+
+    execution = _rerun_plan(root, clock, calls)
+
+    assert execution.status == "resumed"
+    assert calls == []
+    assert load_manifest(root).approvals[0].status == ApprovalStatus.APPROVED
+
+
+def test_bumped_plan_contract_version_reruns_and_supersedes_approvals(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = _workspace(tmp_path)
+    clock = SequenceClock()
+    _complete_plan_with_approved_gate(root, clock)
+    StageEngine(root, clock=clock).execute(
+        ProjectStage.THEME,
+        StageInputs(),
+        _write_operation("build/theme-result.json", "theme"),
+    )
+    calls: list[int] = []
+    bumped = STAGE_DEFINITIONS[ProjectStage.PLAN].contract_version + ".1"
+    _bump_contract_version(monkeypatch, ProjectStage.PLAN, bumped)
+
+    execution = _rerun_plan(root, clock, calls)
+
+    manifest = load_manifest(root)
+    assert execution.status == "completed"
+    assert calls == [2]
+    assert manifest.stages[ProjectStage.ANALYZE].status == StageStatus.COMPLETED
+    assert manifest.stages[ProjectStage.THEME].status == StageStatus.PENDING
+    assert manifest.approvals[0].status == ApprovalStatus.SUPERSEDED
+    with pytest.raises(StageApprovalError, match="approved portal_mutation fingerprint"):
+        StageEngine(root, clock=clock).execute(
+            ProjectStage.THEME,
+            StageInputs(),
+            _write_operation("build/theme-result.json", "theme"),
+        )
+
+
+def test_bumped_analyze_contract_version_reruns_and_invalidates_plan(
+    tmp_path: Path, monkeypatch
+) -> None:
+    root = _workspace(tmp_path)
+    clock = SequenceClock()
+    _complete_plan_with_approved_gate(root, clock)
+    calls: list[int] = []
+    bumped = STAGE_DEFINITIONS[ProjectStage.ANALYZE].contract_version + ".1"
+    _bump_contract_version(monkeypatch, ProjectStage.ANALYZE, bumped)
+
+    execution = StageEngine(root, clock=clock).execute(
+        ProjectStage.ANALYZE,
+        StageInputs(data={"mode": "offline"}),
+        _write_operation("analysis/design-document.json", "analysis", calls),
+    )
+
+    manifest = load_manifest(root)
+    assert execution.status == "completed"
+    assert calls == [2]
+    assert manifest.stages[ProjectStage.PLAN].status == StageStatus.PENDING
+    assert manifest.approvals[0].status == ApprovalStatus.SUPERSEDED
+
+
+def test_legacy_plan_fingerprint_without_contract_stamp_reruns_cleanly(
+    tmp_path: Path,
+) -> None:
+    root = _workspace(tmp_path)
+    clock = SequenceClock()
+    _complete_plan_with_approved_gate(root, clock)
+    manifest = load_manifest(root)
+    manifest.stages[ProjectStage.PLAN] = manifest.stages[
+        ProjectStage.PLAN
+    ].model_copy(update={"input_fingerprint": "0" * 64})
+    write_manifest(root, manifest)
+    calls: list[int] = []
+
+    execution = _rerun_plan(root, clock, calls)
+
+    reloaded = load_manifest(root)
+    assert execution.status == "completed"
+    assert calls == [2]
+    assert reloaded.stages[ProjectStage.PLAN].status == StageStatus.COMPLETED
+    assert reloaded.approvals[0].status == ApprovalStatus.SUPERSEDED

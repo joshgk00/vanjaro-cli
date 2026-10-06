@@ -63,17 +63,21 @@ class StageDefinition:
     contract_version: str = "1.0"
 
 
+# contract_version is hashed into each stage's input fingerprint. Bump ANALYZE
+# when extraction output changes and PLAN when template matching or planning
+# output changes; completed projects then rerun the stage (invalidating
+# downstream state and approvals) instead of resuming a stale result.
 STAGE_DEFINITIONS: dict[ProjectStage, StageDefinition] = {
     ProjectStage.INTAKE: StageDefinition(ProjectStage.INTAKE),
     ProjectStage.ANALYZE: StageDefinition(
         ProjectStage.ANALYZE,
         (ProjectStage.INTAKE,),
-        contract_version="1.1",
+        contract_version="1.2",
     ),
     ProjectStage.PLAN: StageDefinition(
         ProjectStage.PLAN,
         (ProjectStage.ANALYZE,),
-        contract_version="1.6",
+        contract_version="1.7",
     ),
     ProjectStage.THEME: StageDefinition(
         ProjectStage.THEME,
