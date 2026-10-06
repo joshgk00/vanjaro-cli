@@ -88,6 +88,32 @@ the following.
 - New dependencies, and agency pack releases (governed releases stay Josh's
   call).
 
+### 2026-10-05 update: Claude runs this as project manager
+
+Josh said on 2026-10-05: "I want you to drive the efforts and coordinate.
+Own the follow up and decisions. If there's anything that is reversible and
+non destructive, feel free to make the call. Only bring things to me if you
+truly can't decide or the effect will be hard to unwind or revert."
+
+What changes:
+
+- **Team.** Claude (Opus) plans, assigns, reviews, and commits. Coding goes to
+  the `sonnet-implementer` helper (`.claude/agents/sonnet-implementer.md`,
+  Sonnet at extra-high effort). Claude checks every helper result itself:
+  reads the diff, reruns the suite, and rejects work that doesn't prove its
+  claim. A helper's report is a claim, not proof.
+- **Trial sources.** Claude may now pick the real live website and image
+  mockups for the remaining trials, using sources already in this repo's
+  history (earlier benchmark sites, the Keys to Success mockups). Reading a
+  public site is reversible. Josh can swap the pick at any time.
+- **Ranking and scope.** Claude reorders the backlog, adds items, and closes
+  items without asking.
+
+What does not change: everything in the "must ask" list above still goes to
+Josh. Publishing, launch, approval gates, theme changes, and server installs
+are hard to undo, so they stay his. Claude batches those asks into one
+message with exact commands, and keeps working on other items while waiting.
+
 ### Stop conditions
 
 Stop and report when any of these happens:
@@ -127,7 +153,7 @@ One bounded unit at a time:
 | RT-12 | done | Footer builder rendered every footer entry as plain text and ignored link destinations, so Contact Us, Call Me, and Schedule a Free Call lost their `/contact-us` links. Done 2026-09-27: entries with a safe destination render as links. | Trial 2 `build/global-blocks-desired.json` footer had 0 hrefs |
 | RT-13 | done | Done 2026-09-27: verify compares design destinations with built link hrefs. Verify counts missing destinations in the design, not in the built blocks, so RT-12 passed verify. Check built page and global link hrefs against the design's destinations. | Trial 2 verify: `missing_action_url_count: 0` while the footer had no links |
 | RT-14 | 5 | Header brand falls back to the project name ('Kts Figma Trial 2') because the logo is 50 vector fragments with no export URL. Use the client or site name, and fix vector export (see RT-4). | Trial 2 verify warning |
-| RT-15 | 1 | The local site's server module doesn't advertise `supportsExactVersionPublish` for global blocks, so `project publish prepare` refuses. The support exists only as **uncommitted** changes in the `vanjaro-ai` repo's `source` folder (AIGlobalBlockController, AIPageController, AILaunchController, models). Publish and launch have only run against mocks. Review, commit, build, and deploy the module to the local test site. | Trial 2 `publish prepare`: `portal global block endpoint does not advertise exact-version publication support` |
+| RT-15 | done | Done 2026-09-28: module committed (`1829c474`, local branch `vanjaro-ai-module-phase1`) and installed on the local site (old file kept as `Vanjaro.AI.dll.bak-20260927`). Publish prepare now passes. The local site's server module doesn't advertise `supportsExactVersionPublish` for global blocks, so `project publish prepare` refuses. The support exists only as **uncommitted** changes in the `vanjaro-ai` repo's `source` folder (AIGlobalBlockController, AIPageController, AILaunchController, models). Publish and launch have only run against mocks. Review, commit, build, and deploy the module to the local test site. | Trial 2 `publish prepare`: `portal global block endpoint does not advertise exact-version publication support` |
 | RT-7 | 7 | Trial 2 (live website) and trial 3 (images): need Josh to name the sources. | none yet |
 
 ## Progress log
@@ -205,3 +231,18 @@ One bounded unit at a time:
   the tool's publish contract (RT-15). The needed server code is uncommitted
   in the vanjaro-ai repo. Stopped for Josh: deploying server code is outside
   this goal's authority.
+
+### 2026-09-28 — Server module installed, publish waits on Josh
+
+- Josh approved installing the server module. It's in, the site restarted
+  and answers `ok`, and the old file is kept as a backup.
+- `publish prepare` passed and saved `qa/publish-review.json` for the
+  header, footer, and page 189 (all hidden). Publishing needs Josh's approval
+  gate.
+
+### 2026-10-05 — Claude takes over as project manager
+
+- Josh handed over day-to-day decisions (see Authority). Opus plans and
+  reviews; the Sonnet helper writes code.
+- Next, in parallel with the publish ask: RT-8 (score Figma references),
+  then RT-10, then the small fixes RT-3 and RT-6.
