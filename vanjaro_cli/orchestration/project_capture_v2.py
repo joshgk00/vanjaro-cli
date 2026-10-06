@@ -46,6 +46,8 @@ from vanjaro_cli.orchestration.project_capture_evidence import (
     CAPTURE_EVIDENCE_DIRECTORY,
     _build_artifact_fingerprints,
     _record_filename,
+    _publish_receipt_binding,
+    recorded_publish_binding,
     _target_identity_fingerprint,
     _validate_observation,
 )
@@ -204,6 +206,7 @@ def record_page_capture_v2(
         ).hexdigest(),
         "build_artifact_sha256": _build_artifact_fingerprints(root),
         "target_identity_sha256": _target_identity_fingerprint(manifest),
+        "publish_receipt_fingerprint": _publish_receipt_binding(root, manifest),
         "breakpoints": [attempt.to_json() for attempt in attempts],
         "warnings": list(warnings),
     }
@@ -250,6 +253,7 @@ class PageCaptureV2Validation:
     record_valid: bool
     breakpoints: dict[str, BreakpointV2Result] = field(default_factory=dict)
     warnings: tuple[str, ...] = ()
+    publish_receipt_fingerprint: str | None = None
 
     def canonical_breakpoints(self) -> frozenset[str]:
         """Breakpoints valid *and* at exactly the canonical viewport.
@@ -633,5 +637,9 @@ def validate_page_capture_v2(
         warnings.extend(issues)
 
     return PageCaptureV2Validation(
-        page_id=page_id, record_valid=True, breakpoints=results, warnings=tuple(warnings)
+        page_id=page_id,
+        record_valid=True,
+        breakpoints=results,
+        warnings=tuple(warnings),
+        publish_receipt_fingerprint=recorded_publish_binding(payload),
     )

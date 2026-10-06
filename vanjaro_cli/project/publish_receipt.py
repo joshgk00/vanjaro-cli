@@ -134,6 +134,31 @@ def current_publish_review_fingerprint(
     return str(current_publish_review(root, manifest)["fingerprint"])
 
 
+def completed_publish_receipt_fingerprint(
+    root: Path, manifest: ProjectManifest
+) -> str | None:
+    """Return the adopted receipt fingerprint only while its publish is completed.
+
+    Lenient on purpose: capture records bind whatever this returns, and a
+    missing binding is refused at launch, so an unpublished or half-published
+    workspace yields `None` instead of blocking evidence collection.
+    """
+
+    if manifest.stages[ProjectStage.PUBLISH].status != StageStatus.COMPLETED:
+        return None
+    adopted = manifest.metadata.get("publish_review")
+    fingerprint = adopted.get("fingerprint") if isinstance(adopted, dict) else None
+    if not _is_sha256(fingerprint):
+        return None
+    try:
+        result = load_strict_json(artifact_path(root, PUBLISH_RESULT_PATH.as_posix()))
+    except (ArtifactContractError, ValueError, OSError):
+        return None
+    if not isinstance(result, dict) or result.get("receipt_fingerprint") != fingerprint:
+        return None
+    return str(fingerprint)
+
+
 def _require_publish_ready_handoff(
     root: Path, receipt: Mapping[str, Any]
 ) -> None:
@@ -210,6 +235,7 @@ __all__ = [
     "PUBLISH_RESULT_PATH",
     "PUBLISH_REVIEW_PATH",
     "PublishReceiptError",
+    "completed_publish_receipt_fingerprint",
     "current_publish_review",
     "current_publish_review_fingerprint",
     "finalize_publish_receipt",

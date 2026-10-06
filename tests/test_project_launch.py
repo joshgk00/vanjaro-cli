@@ -218,12 +218,30 @@ def _launch_workspace(
     return root, client
 
 
+_CURRENT_PUBLISH = object()
+
+
 def _set_fidelity(
-    monkeypatch: pytest.MonkeyPatch, *, report: dict, blockers: list[str]
+    monkeypatch: pytest.MonkeyPatch,
+    *,
+    report: dict,
+    blockers: list[str],
+    bound_to: object = _CURRENT_PUBLISH,
 ) -> None:
+    def evaluate(root: Path, manifest: object) -> tuple[dict, list[str]]:
+        if bound_to is _CURRENT_PUBLISH:
+            binding = json.loads(
+                (root / "qa/publish-result.json").read_text(encoding="utf-8")
+            )["receipt_fingerprint"]
+        else:
+            binding = bound_to
+        return (
+            {**report, "pages": {"home": {"publish_receipt_fingerprint": binding}}},
+            blockers,
+        )
+
     monkeypatch.setattr(
-        "vanjaro_cli.orchestration.project_launch.evaluate_project_fidelity",
-        lambda root, manifest: (report, blockers),
+        "vanjaro_cli.orchestration.project_launch.evaluate_project_fidelity", evaluate
     )
 
 
@@ -359,6 +377,94 @@ def test_apply_refuses_when_fidelity_evidence_changed_after_prepare(
         _apply(root, receipt, approval_id)
 
     assert excinfo.value.code == "visual_fidelity_stale"
+    assert client.launch_apply_posts == 0
+
+
+def test_prepare_refuses_evidence_with_no_publish_binding(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, client = _launch_workspace(tmp_path, monkeypatch)
+    _set_fidelity(monkeypatch, report=_PASSING_FIDELITY, blockers=[], bound_to=None)
+
+    with pytest.raises(ProjectLaunchWorkflowError) as excinfo:
+        prepare_project_launch(root, dry_run=True)
+
+    assert excinfo.value.code == "visual_fidelity_unbound"
+    assert "no publish binding recorded for page(s) home" in excinfo.value.detail
+    assert client.launch_preview_posts == 0
+
+
+def test_prepare_refuses_evidence_bound_to_an_earlier_publish(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, client = _launch_workspace(tmp_path, monkeypatch)
+    _set_fidelity(
+        monkeypatch, report=_PASSING_FIDELITY, blockers=[], bound_to="b" * 64
+    )
+
+    with pytest.raises(ProjectLaunchWorkflowError) as excinfo:
+        prepare_project_launch(root, dry_run=True)
+
+    assert excinfo.value.code == "visual_fidelity_unbound"
+    assert "earlier publish for page(s) home" in excinfo.value.detail
+    assert client.launch_preview_posts == 0
+
+
+def test_unbound_evidence_is_refused_before_its_scores_are_judged(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, _ = _launch_workspace(tmp_path, monkeypatch)
+    _set_fidelity(
+        monkeypatch,
+        report={"status": "scored", "passed": False, "legacy": False},
+        blockers=["page home: overall 61.0 is below the draft minimum 75"],
+        bound_to="b" * 64,
+    )
+
+    with pytest.raises(ProjectLaunchWorkflowError) as excinfo:
+        prepare_project_launch(root, dry_run=True)
+
+    assert excinfo.value.code == "visual_fidelity_unbound"
+
+
+def test_prepare_refuses_a_passing_report_that_carries_no_page_bindings(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, _ = _launch_workspace(tmp_path, monkeypatch)
+    monkeypatch.setattr(
+        "vanjaro_cli.orchestration.project_launch.evaluate_project_fidelity",
+        lambda root, manifest: (_PASSING_FIDELITY, []),
+    )
+
+    with pytest.raises(ProjectLaunchWorkflowError) as excinfo:
+        prepare_project_launch(root, dry_run=True)
+
+    assert excinfo.value.code == "visual_fidelity_unbound"
+
+
+def test_prepare_accepts_evidence_bound_to_the_current_publish(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, client = _launch_workspace(tmp_path, monkeypatch)
+
+    result = prepare_project_launch(root, dry_run=True)
+
+    assert result["status"] == "ready_for_review"
+    assert client.launch_preview_posts == 1
+
+
+def test_apply_refuses_when_evidence_was_rebound_away_from_the_publish(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, client = _launch_workspace(tmp_path, monkeypatch)
+    receipt = prepare_project_launch(root, clock=lambda: NOW)["receipt"]
+    approval_id = _approve_launch(root, receipt["fingerprint"])
+    _set_fidelity(monkeypatch, report=_PASSING_FIDELITY, blockers=[], bound_to=None)
+
+    with pytest.raises(ProjectLaunchWorkflowError) as excinfo:
+        _apply(root, receipt, approval_id)
+
+    assert excinfo.value.code == "visual_fidelity_unbound"
     assert client.launch_apply_posts == 0
 
 

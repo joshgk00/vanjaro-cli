@@ -261,7 +261,9 @@ def _build_launch_receipt(root, manifest) -> dict[str, Any]:
             "publish result is not for the adopted publish receipt",
             "Reconcile project publish before launch preparation.",
         )
-    visual_fidelity_fingerprint = _require_passing_fidelity(root, manifest)
+    visual_fidelity_fingerprint = _require_passing_fidelity(
+        root, manifest, publish_review["fingerprint"]
+    )
     try:
         client, verified = verify_project_portal(manifest)
     except Exception as exc:
@@ -464,7 +466,8 @@ def _authorized_launch_state(
             "launch_approval_invalid", str(exc), "Approve the exact adopted launch review."
         ) from exc
     if not _launch_completed_for(root, manifest, fingerprint) and (
-        _require_passing_fidelity(root, manifest) != receipt.get("visual_fidelity_fingerprint")
+        _require_passing_fidelity(root, manifest, receipt["publish_receipt_fingerprint"])
+        != receipt.get("visual_fidelity_fingerprint")
     ):
         raise ProjectLaunchWorkflowError(
             "visual_fidelity_stale",
@@ -484,13 +487,14 @@ def _authorized_launch_state(
     return manifest, receipt, fingerprint
 
 
-def _require_passing_fidelity(root: Path, manifest) -> str:
+def _require_passing_fidelity(root: Path, manifest, publish_receipt_fingerprint: str) -> str:
     # Rendered fidelity can only be captured after hidden publication, so the
     # draft verify gate cannot require it; launch is the first visitor-facing step.
     try:
         report, blockers = evaluate_project_fidelity(root, manifest)
     except ProjectFidelityError as exc:
         report, blockers = {}, [str(exc)]
+    _require_evidence_bound_to_publish(report, publish_receipt_fingerprint)
     if not blockers and report.get("legacy") is not False:
         blockers = ["launch requires per-page capture evidence from `vanjaro project capture`"]
     if blockers:
@@ -500,6 +504,43 @@ def _require_passing_fidelity(root: Path, manifest) -> str:
             "Run `vanjaro project capture` for every page and fix fidelity before launch.",
         )
     return fingerprint_data(report)
+
+
+def _require_evidence_bound_to_publish(report: Mapping[str, Any], publish_fingerprint: str) -> None:
+    # Checked before scores: evidence that never measured this publish must not
+    # count, so a pass or a fail on it says nothing about what will go live.
+    # Distinct from `visual_fidelity_stale`, which means evidence changed
+    # after launch preparation; here it never described this publish at all.
+    # Pages without a valid record carry no key and surface as score blockers.
+    pages = report.get("pages")
+    recorded = {
+        page_id: page.get("publish_receipt_fingerprint")
+        for page_id, page in (pages.items() if isinstance(pages, dict) else ())
+        if isinstance(page, dict) and "publish_receipt_fingerprint" in page
+    }
+    if not recorded and report.get("passed") is True and report.get("legacy") is False:
+        raise ProjectLaunchWorkflowError(
+            "visual_fidelity_unbound",
+            "capture evidence is not bound to the completed publish",
+            "Run `vanjaro project capture` again after publication.",
+        )
+    unbound = sorted(page_id for page_id, value in recorded.items() if value is None)
+    earlier = sorted(
+        page_id
+        for page_id, value in recorded.items()
+        if value is not None and value != publish_fingerprint
+    )
+    if unbound or earlier:
+        parts = []
+        if unbound:
+            parts.append(f"no publish binding recorded for page(s) {', '.join(unbound)}")
+        if earlier:
+            parts.append(f"measured an earlier publish for page(s) {', '.join(earlier)}")
+        raise ProjectLaunchWorkflowError(
+            "visual_fidelity_unbound",
+            redact_handoff_text("; ".join(parts)),
+            "Run `vanjaro project capture` again after the current publish completes.",
+        )
 
 
 def _launch_completed_for(root: Path, manifest, fingerprint: str) -> bool:

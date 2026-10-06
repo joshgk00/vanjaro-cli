@@ -38,6 +38,7 @@ from vanjaro_cli.design.visual_gate import (
 )
 from vanjaro_cli.orchestration.project_capture_evidence import (
     CAPTURE_EVIDENCE_DIRECTORY,
+    recorded_publish_binding,
     resolve_workspace_capture_coverage,
 )
 from vanjaro_cli.orchestration.project_capture_plan import REQUIRED_BREAKPOINTS
@@ -190,6 +191,7 @@ def _evaluate_workspace_fidelity(
     usable_count = 0
     for page_id in coverage.page_identity.page_ids:
         payload = coverage.valid_records.get(page_id)
+        v2_record = coverage.v2_records.get(page_id)
         if payload is not None:
             try:
                 page_report, page_blockers = _score_payload(payload, root)
@@ -201,10 +203,9 @@ def _evaluate_workspace_fidelity(
                 # workspace-wide report.
                 page_report, page_blockers = _not_scored(str(error))
         else:
-            v2 = coverage.v2_records.get(page_id)
-            if v2 is not None:
+            if v2_record is not None:
                 try:
-                    page_report, page_blockers = _score_v2_page(v2, root)
+                    page_report, page_blockers = _score_v2_page(v2_record, root)
                 except (ProjectFidelityError, ValueError) as error:
                     page_report, page_blockers = _not_scored(str(error))
             else:
@@ -215,6 +216,12 @@ def _evaluate_workspace_fidelity(
                 ]
                 reason = "; ".join(reasons) if reasons else "no current capture evidence recorded"
                 page_report, page_blockers = _not_scored(reason)
+        # Key presence means "a valid record exists for this page"; the value
+        # is the publish it measured, or None when it never recorded one.
+        if payload is not None:
+            page_report["publish_receipt_fingerprint"] = recorded_publish_binding(payload)
+        elif v2_record is not None:
+            page_report["publish_receipt_fingerprint"] = v2_record.publish_receipt_fingerprint
         pages[page_id] = page_report
         if page_report["status"] == "scored":
             scored_count += 1

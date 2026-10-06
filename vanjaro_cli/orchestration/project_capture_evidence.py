@@ -58,6 +58,7 @@ from vanjaro_cli.design.serialization import (
 )
 from vanjaro_cli.design.visual_gate import CANONICAL_VIEWPORTS, ViewportCapturePair
 from vanjaro_cli.project.models import ProjectManifest
+from vanjaro_cli.project.publish_receipt import completed_publish_receipt_fingerprint
 from vanjaro_cli.reliability.artifacts import (
     ArtifactContractError,
     atomic_write_json,
@@ -74,6 +75,7 @@ __all__ = [
     "ProjectCaptureEvidenceError",
     "WorkspaceCaptureCoverage",
     "record_page_capture_evidence",
+    "recorded_publish_binding",
     "resolve_workspace_capture_coverage",
 ]
 
@@ -122,6 +124,19 @@ def _target_identity_fingerprint(manifest: ProjectManifest | None) -> str | None
     if manifest is None:
         return None
     return canonical_json_sha256(manifest.target.model_dump(mode="json"))
+
+
+def _publish_receipt_binding(root: Path, manifest: ProjectManifest | None) -> str | None:
+    if manifest is None:
+        return None
+    return completed_publish_receipt_fingerprint(root, manifest)
+
+
+def recorded_publish_binding(payload: Mapping[str, Any]) -> str | None:
+    """The publish receipt a record claims to have measured; `None` when absent or malformed."""
+
+    value = payload.get("publish_receipt_fingerprint")
+    return value if isinstance(value, str) and value else None
 
 
 def record_page_capture_evidence(
@@ -177,6 +192,7 @@ def record_page_capture_evidence(
         ).hexdigest(),
         "build_artifact_sha256": _build_artifact_fingerprints(root),
         "target_identity_sha256": _target_identity_fingerprint(manifest),
+        "publish_receipt_fingerprint": _publish_receipt_binding(root, manifest),
         "expected": dict(expected),
         "observed": dict(observed),
         "captures": captures,
