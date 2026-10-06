@@ -142,11 +142,11 @@ One bounded unit at a time:
 |---|---:|---|---|
 | RT-1 | done | Break the publish ↔ verify ↔ capture loop for fresh builds. Done 2026-09-26: the fidelity gate moved from verify to launch. Either capture can see an owned hidden draft, or a supported path publishes an owned hidden page before verify. | KTS trial: capture says `captured output has no agency sections` on page 188 (`is_published: false`). `publish prepare` refuses with `verification_incomplete`. |
 | RT-2 | 2 | Finish KTS Figma trial 1: capture, verify, handoff, fidelity score. | `artifacts/projects/kts-figma-trial` |
-| RT-3 | 3 | `vanjaro --profile X auth login --url …` ignores the global `--profile` and saves to the hostname profile, overwriting its `base_url`. Honor the global flag, or refuse the conflict. | 2026-09-25 login wrote the child-portal URL into `vanjarocli-local`. |
+| RT-3 | done | Done 2026-10-05 (`8397ca1`). `vanjaro --profile X auth login --url …` ignores the global `--profile` and saves to the hostname profile, overwriting its `base_url`. Honor the global flag, or refuse the conflict. | 2026-09-25 login wrote the child-portal URL into `vanjarocli-local`. |
 | RT-4 | 4 | Figma: 73 `FIGMA_VECTOR_EXPORT_UNRESOLVED` warnings (icons). Find out why vector exports fail and whether icons reach the build. | KTS analyze report |
 | RT-5 | 5 | Figma sources with no tablet/mobile frames: say plainly in the plan and verify output that these breakpoints are inferred, and don't count them as missing evidence the operator can fix. | KTS capture: tablet/mobile `reference_not_declared` |
-| RT-6 | 6 | `project capture --references` resolves the path against the workspace, not the current directory. Accept either, or say so in the error. | 2026-09-25 "does not exist" error on a correct repo-relative path |
-| RT-8 | 2 | Figma static references are captured but never scored: `no valid source-paired comparisons recorded`. Wire Figma frame evidence into the fidelity scorer. | KTS capture evidence `qa/capture-evidence/8569cce6….json` |
+| RT-6 | done | Done 2026-10-05 (`8397ca1`). `project capture --references` resolves the path against the workspace, not the current directory. Accept either, or say so in the error. | 2026-09-25 "does not exist" error on a correct repo-relative path |
+| RT-8 | done | Done 2026-10-05 (`825b6e8`): the scorer already paired Figma frames; the real block was that a desktop-only design always got tablet/mobile blockers. Static designs are now scored on the breakpoints they declare, against the draft thresholds. Re-scoring trial 1 read-only gives 66.66 (below 75; header, footer, and video sections score low). Figma static references are captured but never scored: `no valid source-paired comparisons recorded`. Wire Figma frame evidence into the fidelity scorer. | KTS capture evidence `qa/capture-evidence/8569cce6….json` |
 | RT-9 | 3 | KTS visual gaps found by eye: header/footer render empty (globals are still drafts); class cards lose their colored panels and some titles (Prelude, Symphony); team photos aren't circles and the grid is uneven; headings render underlined; hero is much shorter; marquee color is wrong. | Figma vs page 188 screenshots, 2026-09-25 |
 | RT-10 | 4 | Capture records don't record which publish they measured, so evidence taken before publication, or against an earlier publish, still counts at launch. Bind the publish receipt fingerprint into capture records and reject mismatches at launch. | 2026-09-26 review of the RT-1 change |
 | RT-11 | done | Done 2026-09-26: `vanjaro project overlay set-action-url`. No audited way to give a button or link its destination. Figma designs rarely carry URLs, so every Figma project will stop at `N source action(s) have no URL mapping`. Add an overlay (for example `overlay set-action-url`) that records the operator's destination with provenance, and feeds plan and pages. | Trial 2: 12 actions (Register Now, Contact Us, Learn More ×5, Join Now, Load More, Call Me, Schedule a Free Call) |
@@ -154,7 +154,10 @@ One bounded unit at a time:
 | RT-13 | done | Done 2026-09-27: verify compares design destinations with built link hrefs. Verify counts missing destinations in the design, not in the built blocks, so RT-12 passed verify. Check built page and global link hrefs against the design's destinations. | Trial 2 verify: `missing_action_url_count: 0` while the footer had no links |
 | RT-14 | 5 | Header brand falls back to the project name ('Kts Figma Trial 2') because the logo is 50 vector fragments with no export URL. Use the client or site name, and fix vector export (see RT-4). | Trial 2 verify warning |
 | RT-15 | done | Done 2026-09-28: module committed (`1829c474`, local branch `vanjaro-ai-module-phase1`) and installed on the local site (old file kept as `Vanjaro.AI.dll.bak-20260927`). Publish prepare now passes. The local site's server module doesn't advertise `supportsExactVersionPublish` for global blocks, so `project publish prepare` refuses. The support exists only as **uncommitted** changes in the `vanjaro-ai` repo's `source` folder (AIGlobalBlockController, AIPageController, AILaunchController, models). Publish and launch have only run against mocks. Review, commit, build, and deploy the module to the local test site. | Trial 2 `publish prepare`: `portal global block endpoint does not advertise exact-version publication support` |
-| RT-7 | 7 | Trial 2 (live website) and trial 3 (images): need Josh to name the sources. | none yet |
+| RT-16 | 6 | A saved copy of a live page loses its home address, so every relative picture path turns into `file:///…` and can't be fetched. Sites that block scripts (EDCA, Oasis) can only be trialed from a saved copy. Let the operator declare the original URL for a saved page, and use it for asset paths. | `artifacts/projects/edca-trial-1`: 3 blockers, all "asset was never acquired", editable 0.08 |
+| RT-17 | 1 | Card lists on a real site land on picture-only gallery templates, so card titles, text, and buttons are dropped. | `artifacts/projects/qualityhc-trial`: editable 0.25, 4 blockers, 6 sections lose `item.body`/`item.item_title` |
+| RT-18 | 4 | `project init` can't take a local file source: it needs an empty folder, but analyze needs the file inside it. Copy local sources into `sources/` at init. | `kts-mockup-trial` and `edca-trial-1` needed a hand edit of project.json |
+| RT-7 | 7 | Trial sources. Live website: Quality HC (`https://quality-hc.com/`, portal 1) picked 2026-10-05 because EDCA and Oasis refuse script downloads. Images: Keys to Success mockups, still to set up. | `artifacts/projects/qualityhc-trial` |
 
 ## Progress log
 
@@ -246,3 +249,18 @@ One bounded unit at a time:
   reviews; the Sonnet helper writes code.
 - Next, in parallel with the publish ask: RT-8 (score Figma references),
   then RT-10, then the small fixes RT-3 and RT-6.
+
+- Picked the live-website trial. EDCA and Oasis both cut the connection on
+  any script download (normal sites like quality-hc.com answer fine), so
+  Quality HC is the trial (`artifacts/projects/qualityhc-trial`, portal 1).
+  Analyze: 10 sections. Plan: editable 0.25, native 1.0, 4 blockers. Filed
+  RT-17 (card lists lose their text) and RT-16 (saved pages lose their home
+  address). Leftover empty workspaces from the failed starts:
+  `edca-live-trial`, `edca-trial`, `edca-trial-1`, `oasis-trial`.
+- Done: RT-3, RT-6, RT-8 (helpers wrote them, Claude reviewed and reran the
+  suite on main: 3,462 passed). Policy call made: a design that only has a
+  desktop frame is judged on desktop alone. Easy to tighten later.
+- Image trial set up as `artifacts/projects/kts-mockup-trial` (the 1440x8090
+  Keys to Success mockup, portal 2). The next step sends the mockup to
+  OpenAI to read it, which is Josh's call (sharing a client file outside).
+- In progress with helpers: RT-17, RT-10, RT-16 + RT-18.
