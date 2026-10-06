@@ -286,3 +286,118 @@ def test_status_not_logged_in(runner, tmp_path):
 def test_login_missing_url(runner):
     result = runner.invoke(cli, ["auth", "login", "-u", "admin", "-p", "secret"])
     assert result.exit_code != 0
+
+
+def _login_with_global_profile(runner, tmp_path, monkeypatch, initial_config, *args, url=BASE_URL):
+    config_dir = tmp_path / ".vanjaro-cli"
+    config_dir.mkdir()
+    config_file = config_dir / "config.json"
+    if initial_config is not None:
+        config_file.write_text(json.dumps(initial_config))
+    monkeypatch.setattr("vanjaro_cli.config._profile_override", None)
+
+    with (
+        patch("vanjaro_cli.config.CONFIG_DIR", config_dir),
+        patch("vanjaro_cli.config.CONFIG_FILE", config_file),
+    ):
+        result = runner.invoke(
+            cli,
+            [*args, "auth", "login", "--url", url, "-u", "admin", "-p", "secret"],
+        )
+    saved = json.loads(config_file.read_text()) if config_file.exists() else None
+    return result, saved
+
+
+@responses.activate
+def test_login_with_global_profile_saves_into_that_profile(runner, tmp_path, monkeypatch):
+    _mock_login_success()
+
+    result, saved = _login_with_global_profile(
+        runner, tmp_path, monkeypatch, None, "--profile", "my-site"
+    )
+
+    assert result.exit_code == 0, result.output
+    assert list(saved["profiles"]) == ["my-site"]
+    assert saved["profiles"]["my-site"]["base_url"] == BASE_URL
+    assert saved["profiles"]["my-site"]["cookies"][".DOTNETNUKE"] == "authed-cookie-value"
+    assert saved["active_profile"] == "my-site"
+
+
+@responses.activate
+def test_login_with_global_profile_leaves_hostname_profile_untouched(
+    runner, tmp_path, monkeypatch
+):
+    _mock_login_success()
+    hostname_profile = {"base_url": BASE_URL, "cookies": {".DOTNETNUKE": "old"}, "portal_id": 0}
+    initial = {
+        "active_profile": "example-vanjaro-com",
+        "profiles": {
+            "example-vanjaro-com": hostname_profile,
+            "child": {"base_url": BASE_URL, "api_key": "child-key", "portal_id": 3},
+        },
+    }
+
+    result, saved = _login_with_global_profile(
+        runner, tmp_path, monkeypatch, initial, "--profile", "child"
+    )
+
+    assert result.exit_code == 0, result.output
+    assert saved["profiles"]["example-vanjaro-com"] == hostname_profile
+    assert saved["profiles"]["child"]["api_key"] == "child-key"
+    assert saved["profiles"]["child"]["portal_id"] == 3
+    assert saved["profiles"]["child"]["cookies"][".DOTNETNUKE"] == "authed-cookie-value"
+
+
+@responses.activate
+def test_login_with_global_profile_refuses_different_base_url(runner, tmp_path, monkeypatch):
+    _mock_login_success()
+    initial = {
+        "active_profile": "vanjarocli-local",
+        "profiles": {"vanjarocli-local": {"base_url": "http://vanjarocli.local", "portal_id": 0}},
+    }
+
+    result, saved = _login_with_global_profile(
+        runner,
+        tmp_path,
+        monkeypatch,
+        initial,
+        "--profile",
+        "vanjarocli-local",
+        url="http://vanjarocli.local/keys-to-success",
+    )
+
+    assert result.exit_code != 0
+    assert "vanjarocli-local" in result.output
+    assert "http://vanjarocli.local" in result.output
+    assert "Drop --profile" in result.output
+    assert saved == initial
+    assert len(responses.calls) == 0
+
+
+@responses.activate
+def test_login_with_global_profile_accepts_same_base_url_with_trailing_slash(
+    runner, tmp_path, monkeypatch
+):
+    _mock_login_success()
+    initial = {
+        "active_profile": "p",
+        "profiles": {"p": {"base_url": BASE_URL, "portal_id": 1}},
+    }
+
+    result, saved = _login_with_global_profile(
+        runner, tmp_path, monkeypatch, initial, "--profile", "p", url=BASE_URL + "/"
+    )
+
+    assert result.exit_code == 0, result.output
+    assert saved["profiles"]["p"]["portal_id"] == 1
+    assert saved["profiles"]["p"]["cookies"]
+
+
+@responses.activate
+def test_login_without_global_profile_still_uses_hostname_profile(runner, tmp_path, monkeypatch):
+    _mock_login_success()
+
+    result, saved = _login_with_global_profile(runner, tmp_path, monkeypatch, None)
+
+    assert result.exit_code == 0, result.output
+    assert list(saved["profiles"]) == ["example-vanjaro-com"]

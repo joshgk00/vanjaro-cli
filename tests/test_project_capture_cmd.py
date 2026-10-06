@@ -628,6 +628,79 @@ def test_references_in_workspace_absolute_path_is_allowed(tmp_path: Path) -> Non
     assert result.exit_code == 0, result.output
 
 
+def _write_about_references(root: Path) -> Path:
+    payload_bytes = _png_bytes(1280, 800)
+    (root / "sources").mkdir(parents=True, exist_ok=True)
+    (root / "sources" / "about-desktop.png").write_bytes(payload_bytes)
+    references_doc = {
+        "schema_version": "capture-references-v1",
+        "references": [
+            {
+                "kind": "static",
+                "page_id": "about",
+                "breakpoint": "desktop",
+                "source_kind": "image",
+                "local_path": "sources/about-desktop.png",
+                "sha256": hashlib.sha256(payload_bytes).hexdigest(),
+                "canvas_width": 1280,
+                "canvas_height": 800,
+                "viewport_width": 1280,
+                "viewport_height": 800,
+                "interpretation": "viewport",
+            }
+        ],
+    }
+    references_path = root / "references.json"
+    references_path.write_text(json.dumps(references_doc), encoding="utf-8")
+    return references_path
+
+
+def test_references_relative_path_that_exists_from_cwd_is_accepted(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _live_workspace(tmp_path)
+    _write_about_references(root)
+    monkeypatch.chdir(tmp_path)
+
+    result = CliRunner().invoke(
+        project,
+        [
+            "capture",
+            str(root),
+            "--references",
+            f"{root.name}/references.json",
+            "--dry-run",
+            "--json",
+        ],
+    )
+
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    about = next(entry for entry in payload["pages"] if entry["page_id"] == "about")
+    desktop = next(b for b in about["breakpoints"] if b["breakpoint"] == "desktop")
+    assert desktop["status"] == "reference_valid"
+
+
+def test_references_missing_everywhere_names_cwd_and_workspace(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root = _live_workspace(tmp_path)
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    result = CliRunner().invoke(
+        project,
+        ["capture", str(root), "--references", "nope/references.json", "--dry-run", "--json"],
+    )
+
+    assert result.exit_code != 0, result.output
+    message = json.loads(result.output)["message"]
+    assert "does not exist" in message
+    assert str(elsewhere.resolve() / "nope" / "references.json") in message
+    assert str(root.resolve() / "nope" / "references.json") in message
+
+
 # ---------------------------------------------------------------------------
 # Route mapping: managed-path child routes, ambiguity, and explicit overrides.
 

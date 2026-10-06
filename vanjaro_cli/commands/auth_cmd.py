@@ -8,7 +8,15 @@ import click
 
 from vanjaro_cli.auth import AuthError, login, logout
 from vanjaro_cli.client import ApiError, VanjaroClient
-from vanjaro_cli.config import CONFIG_FILE, ConfigError, clear_session, get_active_profile_name, load_config
+from vanjaro_cli.config import (
+    CONFIG_FILE,
+    ConfigError,
+    clear_session,
+    get_active_profile_name,
+    get_profile_data,
+    get_profile_override,
+    load_config,
+)
 from vanjaro_cli.commands.helpers import exit_error, output_result
 
 # Lightweight endpoint used by `auth status` to verify the session is still
@@ -39,6 +47,18 @@ def login_command(url: str, username: str, password: str, profile_name: str | No
         raise click.UsageError(
             "No site URL provided. Pass --url or set VANJARO_BASE_URL."
         )
+    global_profile = get_profile_override()
+    if global_profile and not profile_name:
+        existing_url = (get_profile_data(global_profile).get("base_url") or "").rstrip("/")
+        if existing_url and existing_url != url.rstrip("/"):
+            exit_error(
+                f"Profile '{global_profile}' already points at {existing_url}, "
+                f"not {url.rstrip('/')}. Logging in would overwrite that profile's "
+                "base URL. Drop --profile to save under a profile named for the URL, "
+                "or edit the profile first.",
+                as_json,
+            )
+        profile_name = global_profile
     try:
         config = login(url, username, password, profile_name=profile_name)
     except AuthError as exc:

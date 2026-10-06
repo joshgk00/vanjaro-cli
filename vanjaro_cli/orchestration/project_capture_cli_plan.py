@@ -160,26 +160,46 @@ def load_resolved_design_document(root: Path) -> DesignDocument:
 
 
 def resolve_references_path(root: Path, reference: Path | str) -> Path:
-    """Resolve `--references` against `root`, rejecting any workspace escape.
+    """Resolve `--references`, rejecting any workspace escape.
 
-    Relative paths are resolved against `root` -- never the process cwd --
-    and containment is checked after symlink resolution, before the caller
-    ever opens the file: an out-of-workspace path fails here whether it is
-    absolute, a relative `..` escape, or a workspace-local symlink that
-    resolves outside `root`. An absolute path that resolves inside the
-    workspace is allowed. Containment is never inferred from a JSON parse
-    failure or from the file simply not existing -- both of those are
-    reported as separate, later failures via `resolve_workspace_file`, after
-    this containment check has already passed.
+    A relative path is tried against the process cwd first, then against
+    `root`; the cwd match wins when both exist, so a repo-relative path typed
+    at a shell prompt works. Containment is checked after symlink resolution,
+    before the caller ever opens the file: an out-of-workspace path fails
+    here whether it is absolute, a relative `..` escape, or a
+    workspace-local symlink that resolves outside `root`. An absolute path
+    that resolves inside the workspace is allowed. Containment is never
+    inferred from a JSON parse failure or from the file simply not existing
+    -- a missing file is reported as its own failure naming both places
+    searched, after the containment check has already passed.
     """
 
+    candidate = Path(str(reference)).expanduser()
+    cwd_candidate = Path.cwd() / candidate
+    exists_in_cwd = not candidate.is_absolute() and cwd_candidate.exists()
     try:
         absolute, _relative = resolve_workspace_file(
-            root, str(reference), source_id="--references", label="references file"
+            root,
+            str(cwd_candidate) if exists_in_cwd else str(reference),
+            source_id="--references",
+            label="references file",
         )
     except ImageAcquisitionError as error:
+        if error.code.endswith("_missing"):
+            raise CapturePlanError(_references_missing_message(root, candidate)) from None
         raise CapturePlanError(redact_diagnostic_text(str(error))) from None
     return absolute
+
+
+def _references_missing_message(root: Path, candidate: Path) -> str:
+    if candidate.is_absolute():
+        looked = f"the absolute path {candidate}"
+    else:
+        looked = (
+            f"the current directory ({Path.cwd() / candidate}) "
+            f"and the project workspace ({root.resolve() / candidate})"
+        )
+    return f"--references file does not exist; looked in {looked}"
 
 
 def load_managed_page_manifest(root: Path) -> dict[str, ManagedPageRecord]:

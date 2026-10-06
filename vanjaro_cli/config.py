@@ -21,6 +21,7 @@ __all__ = [
     "ConfigError",
     "derive_profile_name",
     "get_profile_data",
+    "get_profile_override",
     "load_config",
     "save_config",
     "clear_session",
@@ -73,6 +74,11 @@ def set_profile_override(name: str | None) -> None:
     """Set a profile override for the current CLI invocation (via --profile flag)."""
     global _profile_override
     _profile_override = name
+
+
+def get_profile_override() -> str | None:
+    """Return the profile named by the global --profile flag, if any."""
+    return _profile_override
 
 
 def get_active_profile_name() -> str:
