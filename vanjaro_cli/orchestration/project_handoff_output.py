@@ -7,6 +7,8 @@ from pathlib import Path
 import re
 from typing import Any, Mapping
 
+from vanjaro_cli.design.inferred_breakpoints import INFERRED_BREAKPOINTS_NOTE
+
 
 _SECRET_PATTERNS = (
     re.compile(
@@ -112,6 +114,13 @@ def render_handoff(scorecard: Mapping[str, Any]) -> str:
             lines.append(f"- **{category}:** {message}")
     else:
         lines.append("- None. All automated readiness checks passed.")
+    inferred_breakpoints = _mapping(scorecard.get("inferred_breakpoints"))
+    if inferred_breakpoints:
+        lines.extend(["", "## Inferred layouts", "", INFERRED_BREAKPOINTS_NOTE, ""])
+        for page_id, names in inferred_breakpoints.items():
+            if isinstance(names, list):
+                joined = ", ".join(str(name) for name in names)
+                lines.append(f"- {redact_handoff_text(str(page_id))}: {joined}")
     lines.extend(
         [
             "",

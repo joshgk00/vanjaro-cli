@@ -115,18 +115,24 @@ def design_document_from_image_evidence(
             BreakpointName.MOBILE,
         } - set(breakpoints)
         for breakpoint in sorted(missing, key=lambda item: BREAKPOINT_ORDER[item]):
+            inferred = breakpoint != BreakpointName.DESKTOP
             warnings.append(
                 DesignWarning(
                     code="IMAGE_BREAKPOINT_MISSING",
+                    severity=WarningSeverity.INFO if inferred else WarningSeverity.WARNING,
                     message=(
-                        f"Page {page_slug!r} has no observed {breakpoint.value} image; "
+                        f"Page {page_slug!r} has no {breakpoint.value} image; "
+                        f"{breakpoint.value} layout is inferred from the desktop design, not designed."
+                        if inferred
+                        else f"Page {page_slug!r} has no observed {breakpoint.value} image; "
                         "responsive behavior was not fabricated."
                     ),
                     path=page_id,
                     provenance=[image_provenance(base, evidence, page_slug, base_image=True)],
                 )
             )
-            unsupported.append(f"missing_{breakpoint.value}_image_evidence")
+            if not inferred:
+                unsupported.append(f"missing_{breakpoint.value}_image_evidence")
         title = base.page_title or page_slug.replace("-", " ").title()
         if base.page_title is None:
             warnings.append(

@@ -11,6 +11,10 @@ from typing import Any
 from pydantic import ValidationError
 
 from vanjaro_cli.design.composition import deserialize_composition_plan
+from vanjaro_cli.design.inferred_breakpoints import (
+    INFERRED_BREAKPOINTS_NOTE,
+    inferred_breakpoints_by_page,
+)
 from vanjaro_cli.design.models import ContentKind
 from vanjaro_cli.design.quality_counts import compute_quality_counts
 from vanjaro_cli.design.serialization import read_design_document
@@ -52,6 +56,7 @@ def verify_project_drafts(context: StageContext) -> StageResult:
             f"Verified {report['page_count']} page draft(s) and "
             f"{report['global_count']} global draft(s); "
             f"{report['blocker_count']} publish blocker(s)."
+            + (f" {INFERRED_BREAKPOINTS_NOTE}" if report["inferred_breakpoints"] else "")
         ),
     )
 
@@ -262,11 +267,18 @@ def preview_project_drafts(
         )
 
     quality_counts = _quality_counts_report(root, manifest)
+    inferred_breakpoints = inferred_breakpoints_by_page(document)
 
     return {
             "schema_version": "1.1",
             "valid": not blockers,
             "quality_counts": quality_counts,
+            "inferred_breakpoints": inferred_breakpoints,
+            **(
+                {"inferred_breakpoints_note": INFERRED_BREAKPOINTS_NOTE}
+                if inferred_breakpoints
+                else {}
+            ),
             "target": verified.as_dict(),
             "page_count": len(pages),
             "global_count": len(global_details),

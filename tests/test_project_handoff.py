@@ -554,3 +554,37 @@ def test_handoff_cli_reports_json_and_review_required_human_output(
     assert result.exit_code == 0, result.output
     assert "Agency handoff: review_required" in result.output
     assert "not publish-ready" in result.output
+
+
+def test_handoff_reports_inferred_layouts_without_open_item_or_score_change(
+    tmp_path: Path,
+) -> None:
+    root = _workspace(tmp_path)
+    verify_path = root / "verify/draft-verification.json"
+    report = json.loads(verify_path.read_text(encoding="utf-8"))
+    report["inferred_breakpoints"] = {"home": ["tablet", "mobile"]}
+    _write(verify_path, report)
+    _refresh_stage_fingerprint(root, ProjectStage.VERIFY)
+
+    result = generate_project_handoff(root)
+    scorecard = json.loads((root / SCORECARD_PATH).read_text(encoding="utf-8"))
+    text = (root / HANDOFF_PATH).read_text(encoding="utf-8")
+
+    assert result.status == "publish_ready"
+    assert result.score == 100
+    assert scorecard["inferred_breakpoints"] == {"home": ["tablet", "mobile"]}
+    assert scorecard["open_items"] == []
+    assert "## Inferred layouts" in text
+    assert "- home: tablet, mobile" in text
+
+
+def test_handoff_without_inferred_layouts_has_empty_field_and_no_section(
+    tmp_path: Path,
+) -> None:
+    root = _workspace(tmp_path)
+
+    generate_project_handoff(root)
+    scorecard = json.loads((root / SCORECARD_PATH).read_text(encoding="utf-8"))
+
+    assert scorecard["inferred_breakpoints"] == {}
+    assert "Inferred layouts" not in (root / HANDOFF_PATH).read_text(encoding="utf-8")

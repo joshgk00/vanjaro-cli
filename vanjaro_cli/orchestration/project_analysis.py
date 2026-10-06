@@ -14,7 +14,11 @@ from vanjaro_cli.design.composite import (
     DesignMergeError,
     merge_design_documents as merge_composite_documents,
 )
-from vanjaro_cli.design.models import DesignDocument, SourceKind
+from vanjaro_cli.design.inferred_breakpoints import (
+    INFERRED_BREAKPOINTS_NOTE,
+    inferred_breakpoints_by_page,
+)
+from vanjaro_cli.design.models import DesignDocument, SourceKind, WarningSeverity
 from vanjaro_cli.design.serialization import serialize_design_document
 from vanjaro_cli.design.html_adapter import serve_local_directory
 from vanjaro_cli.design.sources import (
@@ -201,7 +205,7 @@ def run_project_analysis(
                 "pages": len(document.pages),
                 "sections": sum(len(page.sections) for page in document.pages),
                 "assets": len(document.assets),
-                "warnings": len(document.warnings),
+                "warnings": _actionable_warning_count(document),
             }
         )
 
@@ -224,12 +228,16 @@ def run_project_analysis(
         "pages": len(combined.pages),
         "sections": sum(len(page.sections) for page in combined.pages),
         "assets": len(combined.assets),
-        "warnings": len(combined.warnings),
+        "warnings": _actionable_warning_count(combined),
         "unsupported_traits": combined.analysis.unsupported_traits,
         "section_confidence_mean": combined.analysis.section_confidence_mean,
         "content_elements": sum(retained.values()),
         "content_elements_by_section": retained,
     }
+    inferred_breakpoints = inferred_breakpoints_by_page(combined)
+    if inferred_breakpoints:
+        report["inferred_breakpoints"] = inferred_breakpoints
+        report["inferred_breakpoints_note"] = INFERRED_BREAKPOINTS_NOTE
     _atomic_write_json(context.root / index_path, index)
     _atomic_write_json(context.root / report_path, report)
     artifacts.extend((combined_path, index_path, report_path))
@@ -238,8 +246,13 @@ def run_project_analysis(
         message=(
             f"Analyzed {len(analyzed)} source(s) into {report['pages']} page(s) and "
             f"{report['sections']} section(s)."
+            + (f" {INFERRED_BREAKPOINTS_NOTE}" if inferred_breakpoints else "")
         ),
     )
+
+
+def _actionable_warning_count(document: DesignDocument) -> int:
+    return sum(1 for warning in document.warnings if warning.severity != WarningSeverity.INFO)
 
 
 def content_elements_by_section(document: DesignDocument) -> dict[str, int]:

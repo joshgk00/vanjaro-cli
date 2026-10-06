@@ -1730,7 +1730,11 @@ def analyze_figma_document(
             )]
             warnings.append(DesignWarning(
                 code="FIGMA_MOBILE_FRAME_MISSING",
-                message=f"Page {family_name!r} has no mobile frame; mobile behavior is inferred and requires review.",
+                severity=WarningSeverity.INFO,
+                message=(
+                    f"Page {family_name!r} has no mobile frame; tablet and mobile layouts are "
+                    "inferred from the desktop design, not designed."
+                ),
                 path=page_id, provenance=page_provenance,
             ))
             for section in sections:
@@ -1834,7 +1838,9 @@ def analyze_figma_document(
         warnings=warnings,
         analysis=DesignAnalysis(
             section_confidence_mean=sum(section_confidences) / len(section_confidences) if section_confidences else 0,
-            unsupported_traits=sorted({warning.code for warning in warnings}),
+            unsupported_traits=sorted({
+                warning.code for warning in warnings if warning.severity != WarningSeverity.INFO
+            }),
             metadata={"page_count": len(pages), "section_count": len(section_confidences)},
         ),
     )

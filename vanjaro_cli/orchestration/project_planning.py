@@ -13,6 +13,10 @@ from vanjaro_cli.design.composition import (
     serialize_composition_plan,
 )
 from vanjaro_cli.design.global_plan import split_global_sections
+from vanjaro_cli.design.inferred_breakpoints import (
+    INFERRED_BREAKPOINTS_NOTE,
+    inferred_breakpoints_by_page,
+)
 from vanjaro_cli.design.overlays import apply_design_overlays, read_design_overlays
 from vanjaro_cli.design.planner import (
     plan_design_document,
@@ -134,6 +138,7 @@ def run_project_planning(
         else 0.0
     )
     content_losses = _content_losses(plan)
+    inferred_breakpoints = inferred_breakpoints_by_page(document)
     _atomic_write_json(
         validation_path,
         {
@@ -143,6 +148,12 @@ def run_project_planning(
             "issues": list(issues),
             "content_loss_count": sum(len(fields) for fields in content_losses.values()),
             "content_losses": content_losses,
+            "inferred_breakpoints": inferred_breakpoints,
+            **(
+                {"inferred_breakpoints_note": INFERRED_BREAKPOINTS_NOTE}
+                if inferred_breakpoints
+                else {}
+            ),
             "section_count": total_sections,
             "composition_section_count": plan.summary.section_count,
             "global_section_count": global_plan["section_count"],
@@ -162,6 +173,7 @@ def run_project_planning(
             f"Planned {total_sections} section(s), including "
             f"{global_plan['section_count']} global section(s); "
             f"{len(issues)} approval-blocking validation issue(s)."
+            + (f" {INFERRED_BREAKPOINTS_NOTE}" if inferred_breakpoints else "")
         ),
     )
 

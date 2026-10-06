@@ -138,6 +138,7 @@ def generate_project_handoff(root: Path) -> ProjectHandoffResult:
     score = sum(int(check["earned_points"]) for check in checks)
     status = "publish_ready" if all(check["status"] == "pass" for check in checks) else "review_required"
     open_items = _open_items(validation, verification)
+    inferred_breakpoints = _inferred_breakpoints(verification)
     source_kinds = Counter(source.kind.value for source in manifest.sources)
 
     scorecard: dict[str, Any] = {
@@ -168,6 +169,7 @@ def generate_project_handoff(root: Path) -> ProjectHandoffResult:
         "status": status,
         "checks": checks,
         "open_items": open_items,
+        "inferred_breakpoints": inferred_breakpoints,
         "evidence": evidence,
     }
     scorecard = redact_handoff_value(scorecard)
@@ -394,6 +396,17 @@ def _open_items(
     _append_messages(items, "blocker", verification.get("blockers"))
     _append_messages(items, "warning", verification.get("warnings"))
     return items
+
+
+def _inferred_breakpoints(verification: Mapping[str, Any]) -> dict[str, list[str]]:
+    value = verification.get("inferred_breakpoints")
+    if not isinstance(value, dict):
+        return {}
+    return {
+        str(page_id): [name for name in names if isinstance(name, str)]
+        for page_id, names in sorted(value.items(), key=lambda item: str(item[0]))
+        if isinstance(names, list) and names
+    }
 
 
 def _append_messages(
