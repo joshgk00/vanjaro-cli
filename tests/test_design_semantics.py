@@ -47,3 +47,13 @@ def test_a_subheading_reaches_the_field_that_already_accepts_it() -> None:
     assert "subheading" in binding_field_aliases("subtitle")
     assert section_capability_aliases("subheading") == ("subtitle",)
 
+
+def test_legacy_item_roles_reach_the_same_fields_as_their_unprefixed_names() -> None:
+    """A legacy section marks a repeat item's content `item_body`; prefixing it
+    again asked for `item.item_body`, a field no template declares."""
+
+    assert item_capability_aliases("item_title") == item_capability_aliases("title")
+    assert item_capability_aliases("item_body") == item_capability_aliases("body")
+    assert item_capability_aliases("item_media") == item_capability_aliases("media")
+    assert item_capability_aliases("item_action") == item_capability_aliases("action")
+

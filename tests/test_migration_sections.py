@@ -2984,3 +2984,99 @@ def test_a_section_that_is_itself_an_address_extracts_its_own_text() -> None:
     element = BeautifulSoup("<address>PO Box 773</address>", "html.parser").find("address")
 
     assert _extract_content(element, BASE_URL)["paragraphs"] == ["PO Box 773"]
+
+
+def test_image_links_with_only_a_caption_stay_a_gallery() -> None:
+    html = _wrap(
+        """
+        <section>
+          <a href="/1"><img src="/1.jpg" alt="One"><h3>One</h3></a>
+          <a href="/2"><img src="/2.jpg" alt="Two"><h3>Two</h3></a>
+          <a href="/3"><img src="/3.jpg" alt="Three"><h3>Three</h3></a>
+        </section>
+        """
+    )
+
+    assert extract_sections(html, BASE_URL)[0]["type"] == "gallery"
+
+
+def test_image_links_that_wrap_their_own_copy_are_cards_with_one_card_per_link() -> None:
+    html = _wrap(
+        """
+        <section>
+          <a href="/a"><img src="/a.jpg" alt=""><p>Heating</p><p>Warm homes all winter.</p></a>
+          <a href="/b"><img src="/b.jpg" alt=""><p>Cooling</p><p>Cool homes all summer.</p></a>
+          <a href="/c"><img src="/c.jpg" alt=""><p>Plumbing</p><p>Leaks fixed fast.</p></a>
+        </section>
+        """
+    )
+
+    section = extract_sections(html, BASE_URL)[0]
+
+    assert section["type"] == "cards"
+    content = section["content"]
+    assert content["headings"] == ["Heating", "Cooling", "Plumbing"]
+    assert content["paragraphs"] == [
+        "Warm homes all winter.",
+        "Cool homes all summer.",
+        "Leaks fixed fast.",
+    ]
+    assert [link["href"] for link in content["links"]] == [
+        "https://example.com/a",
+        "https://example.com/b",
+        "https://example.com/c",
+    ]
+
+
+def test_a_linked_card_with_one_line_of_text_uses_it_as_the_title() -> None:
+    html = _wrap(
+        """
+        <section><h2>Get in touch</h2><p>We are here to help.</p></section>
+        <section>
+          <a href="/call"><img src="/p.svg" alt="Phone icon"><div>Call Now</div></a>
+          <a href="/book"><img src="/c.svg" alt="Calendar icon"><div>Book Online</div></a>
+          <a href="/chat"><img src="/m.svg" alt="Chat icon"><div>Contact Us</div></a>
+        </section>
+        """
+    )
+
+    section = extract_sections(html, BASE_URL)[1]
+
+    assert section["type"] == "cards"
+    assert section["content"]["headings"] == ["Call Now", "Book Online", "Contact Us"]
+
+
+def test_a_badge_strip_under_call_to_action_buttons_is_not_a_gallery() -> None:
+    html = _wrap(
+        """
+        <section>
+          <h1>Trusted Local Service</h1>
+          <p>Call today.</p>
+          <a class="btn" href="/book">Schedule Service</a>
+          <a href="https://g.example/r"><img src="/g.svg" alt="Google"></a>
+          <a href="https://f.example/r"><img src="/f.svg" alt="Facebook"></a>
+          <a href="https://b.example/r"><img src="/b.svg" alt="BBB"></a>
+        </section>
+        """
+    )
+
+    assert extract_sections(html, BASE_URL)[0]["type"] == "hero"
+
+
+def test_icon_cards_with_a_heading_and_text_each_are_not_a_gallery() -> None:
+    html = _wrap(
+        """
+        <section>
+          <div class="grid">
+            <div class="cell"><a href="/x"><img src="/1.svg" alt=""></a><h3>Responsive</h3><p>We answer every call.</p></div>
+            <div class="cell"><a href="/x"><img src="/2.svg" alt=""></a><h3>Honest</h3><p>We recommend only what you need.</p></div>
+            <div class="cell"><a href="/x"><img src="/3.svg" alt=""></a><h3>Local</h3><p>Family owned for years.</p></div>
+          </div>
+        </section>
+        """
+    )
+
+    section = extract_sections(html, BASE_URL)[0]
+
+    assert section["type"] == "cards"
+    assert section["content"]["headings"] == ["Responsive", "Honest", "Local"]

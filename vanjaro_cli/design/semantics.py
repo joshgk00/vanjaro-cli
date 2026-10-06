@@ -120,6 +120,14 @@ _ITEM_CAPABILITY_ALIASES: Final = MappingProxyType({
     "primary_action": ("item.action",),
     "tag": ("item.tag", "item.meta"),
     "eyebrow": ("item.tag", "item.meta"),
+    # The legacy HTML conversion already marks a repeat item's content with an
+    # `item_` role. Left unaliased, matching prefixed it again and looked for a
+    # template field named `item.item_body`, which no template can declare, so
+    # every grouped value of a legacy section counted as unsupported.
+    "item_title": ("item.title",),
+    "item_body": ("item.body",),
+    "item_media": ("item.media", "item.icon"),
+    "item_action": ("item.action",),
 })
 
 _SECTION_CAPABILITY_ALIASES: Final = MappingProxyType({

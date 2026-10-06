@@ -227,11 +227,17 @@ _ROLE_COMPATIBILITY: dict[str, dict[str, float]] = {
     "contact": {"contact": 1.0, "contact_cta": 0.98, "cta": 0.82, "cta_banner": 0.80},
     "about": {"about": 1.0, "bio": 0.95, "split_media": 0.88, "image_text": 0.86},
     "bio": {"bio": 1.0, "profile": 0.98, "about": 0.94},
-    "gallery": {"gallery": 1.0, "portfolio_grid": 0.98},
+    # The gallery templates hold an image per tile and nothing else. A legacy
+    # extraction labels any run of linked images a gallery, so tiles that also
+    # carry a title, body or link must be able to reach a card template; field
+    # coverage then decides, and a true image gallery still wins on semantics.
+    "gallery": {"gallery": 1.0, "portfolio_grid": 0.98, "feature_cards": 0.85},
     "faq": {"faq": 1.0, "question_answer": 0.98},
     "pricing": {"pricing_cards": 1.0, "membership_plans": 0.98},
     "team": {"team_grid": 1.0, "people_cards": 0.98},
 }
+
+_ROLE_FIT_FLOOR = 0.7
 
 _STYLE_MODIFIERS: dict[StyleProperty, str] = {
     StyleProperty.BACKGROUND_COLOR: "band-color",
@@ -712,9 +718,28 @@ def match_section(
             for requirement in candidate.missing_requirements
         )
 
+    # Among templates the section's role already fits, one that holds every
+    # observed field beats one that drops some: the score weighs a lost title or
+    # button as a fraction of one dimension, so a gallery that keeps only the
+    # images of a card row outscored the card template that kept all of it.
+    def _drops_content(candidate: TemplateMatchCandidate) -> bool:
+        return any(
+            requirement.startswith("source field ")
+            for requirement in candidate.missing_requirements
+        )
+
+    def _role_fits(candidate: TemplateMatchCandidate) -> bool:
+        return candidate.subscores.semantic_role >= _ROLE_FIT_FLOOR
+
+    lossless_fit_exists = any(
+        _role_fits(candidate) and not _drops_content(candidate) and not _unfillable(candidate)
+        for candidate in scored
+    )
+
     scored.sort(
         key=lambda candidate: (
             _unfillable(candidate),
+            lossless_fit_exists and _role_fits(candidate) and _drops_content(candidate),
             -candidate.score,
             candidate.template_id.casefold(),
             candidate.template_id,

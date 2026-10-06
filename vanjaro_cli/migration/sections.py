@@ -1091,6 +1091,16 @@ def _classify_section(element: Tag, content: dict, is_first: bool) -> str:
             return "gallery"
         return _named_card_kind(element, group) or dated_card_kind(group) or "cards"
 
+    # Builders that wrap each card in an unclassed cell defeat the sibling
+    # grouping above, but the heading walk still isolates one card per heading.
+    # A card's link can also be its whole body: an image plus its own copy
+    # inside one anchor, with no heading at all.
+    heading_cards = _find_cards_by_heading(element)
+    if len(heading_cards) >= 3:
+        return _named_card_kind(element, heading_cards) or dated_card_kind(heading_cards) or "cards"
+    if len(_find_linked_cards(element)) >= 3:
+        return "cards"
+
     # CTA: short (one heading + one button) with little else
     if (
         len(content["headings"]) <= 1
@@ -1216,14 +1226,44 @@ def _looks_like_gallery(element: Tag) -> bool:
     The thumbnail-to-fullsize lightbox pattern that ashleyslaughterdesigns
     uses fits this exactly. Plain ``<img>`` grids without anchor wrappers
     are still picked up by the existing ``cards`` detector below.
+
+    The Gallery templates hold an image and at most a title per tile, so a
+    section only is one when its tiles are image links with no more than a
+    caption. A link that also carries its own copy is a card, per-tile headings
+    with body text are cards, and a section with call-to-action buttons is a
+    hero or banner with a badge strip: each of those keeps text and actions that
+    the gallery would drop.
     """
-    anchor_image_count = 0
-    for anchor in element.find_all("a"):
-        if anchor.find("img"):
-            anchor_image_count += 1
-            if anchor_image_count >= 3:
-                return True
-    return False
+    tiles = sum(
+        1
+        for anchor in element.find_all("a")
+        if anchor.find("img") and _carries_only_a_caption(anchor)
+    )
+    if tiles < 3:
+        return False
+    if any(_is_button_styled(anchor) for anchor in element.find_all("a")):
+        return False
+    return not _tiles_carry_copy(element)
+
+
+def _carries_only_a_caption(anchor: Tag) -> bool:
+    """Whether every word inside the anchor sits in one of its headings."""
+    text = " ".join(anchor.get_text(" ", strip=True).split())
+    captions = " ".join(
+        " ".join(heading.get_text(" ", strip=True).split())
+        for heading in anchor.find_all(_HEADING_TAGS)
+    )
+    return text == captions
+
+
+def _tiles_carry_copy(element: Tag) -> bool:
+    """Whether the repeated blocks around the images each own a heading and a paragraph."""
+    cards = _find_cards_by_heading(element)
+    if len(cards) < 3:
+        cards = _find_sibling_card_group(element)
+    return len(cards) >= 3 and all(
+        card.find(_HEADING_TAGS) and card.find("p") for card in cards
+    )
 
 
 _BLOG_POST_CLASS = re.compile(r"\b(?:list-post|blog-post|post-item|article)\b", re.IGNORECASE)
@@ -1547,6 +1587,15 @@ def _find_gallery_anchors(element: Tag) -> list[Tag]:
     return [anchor for anchor in element.find_all("a") if anchor.find("img")]
 
 
+def _find_linked_cards(element: Tag) -> list[Tag]:
+    """Return the ``<a>`` elements that wrap an image and copy beyond a caption."""
+    return [
+        anchor
+        for anchor in element.find_all("a")
+        if anchor.find("img") and not _carries_only_a_caption(anchor)
+    ]
+
+
 # Animation / scroll-reveal / state tokens that vary per card (so the same
 # card grid carries different class strings: infobox01+fadeInLeft+delay1 vs
 # infobox02+fadeInRight+delay2). Stripped before grouping siblings.
@@ -1634,11 +1683,12 @@ def _first_card_button(card: Tag, base_url: str) -> dict | None:
 
 def _first_card_link(card: Tag, base_url: str) -> dict | None:
     """Return the first non-button anchor with real text and href inside ``card``."""
-    for anchor in card.find_all("a", href=True):
+    anchors = [card, *card.find_all("a", href=True)] if card.name == "a" else card.find_all("a", href=True)
+    for anchor in anchors:
         if _is_button_styled(anchor):
             continue
         text = anchor.get_text(separator=" ", strip=True)
-        href = anchor.get("href", "").strip()
+        href = (anchor.get("href") or "").strip()
         if text and href:
             return {"text": text, "href": urljoin(base_url, href)}
     return None
@@ -1684,6 +1734,8 @@ def _rescope_content_to_cards(
         # Pure anchor-wrapped image grids (e.g. portfolio thumbnail lightboxes)
         # have no per-card headings, so fall back to ``<a>`` elements as cards.
         cards = _find_gallery_anchors(element)
+    if len(cards) < 3 and section_type == "cards":
+        cards = _find_linked_cards(element)
     if len(cards) < 3:
         return content
 
@@ -1692,7 +1744,7 @@ def _rescope_content_to_cards(
     # which the flat extraction already captured. Keep that and just clean up
     # the image list (dropping chrome logos), so a service page's description
     # survives and image alt-text doesn't masquerade as card titles.
-    if all(card.find(_HEADING_TAGS) is None for card in cards):
+    if section_type == "gallery" and all(card.find(_HEADING_TAGS) is None for card in cards):
         return {**content, "images": [_first_image_entry(card, base_url) for card in cards]}
 
     headings: list[str] = []
@@ -1705,12 +1757,19 @@ def _rescope_content_to_cards(
         heading_tag = card.find(_HEADING_TAGS)
         image_entry = _first_image_entry(card, base_url)
         heading_text = heading_tag.get_text(separator=" ", strip=True) if heading_tag else ""
+        paragraph_tags = card.find_all("p")
+        paragraph_tag = paragraph_tags[0] if paragraph_tags else None
+        if not heading_text and paragraph_tags:
+            # A linked card with no heading tag: its first line of copy is the
+            # title and the next, if any, is the body. One line of text beside an
+            # image is a label, and it names the card better than the image's alt.
+            heading_text = paragraph_tags[0].get_text(separator=" ", strip=True)
+            paragraph_tag = paragraph_tags[1] if len(paragraph_tags) > 1 else None
         if not heading_text and image_entry["alt"]:
             heading_text = image_entry["alt"]
         headings.append(heading_text)
         images.append(image_entry)
 
-        paragraph_tag = card.find("p")
         paragraph_text = paragraph_tag.get_text(separator=" ", strip=True) if paragraph_tag else ""
         # A card whose paragraph is far longer than any teaser is a post grid
         # carrying the full article body in the rendered DOM; trim it to an

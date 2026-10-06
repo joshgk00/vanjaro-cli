@@ -538,3 +538,36 @@ def test_an_unfillable_template_still_wins_when_nothing_can_be_filled() -> None:
     result = match_section(section, CATALOG)
 
     assert result.selected_candidate.template_id
+
+
+def _gallery_role_section(item_fields: tuple[str, ...]) -> Section:
+    return _section(
+        role="gallery",
+        section_roles=(),
+        item_fields=item_fields,
+        group_kind=RepeatGroupKind.GALLERY_ITEM,
+    )
+
+
+def test_a_gallery_section_whose_tiles_carry_a_body_matches_a_card_template() -> None:
+    """Gallery templates hold only an image per tile (and an optional title); the
+    score weighs the dropped body as a fraction of one dimension, so the
+    gallery used to win and the copy was lost."""
+
+    result = match_section(_gallery_role_section(("title", "body", "media")), CATALOG)
+
+    assert result.selected_candidate.template_id.startswith("Cards/feature-cards")
+    assert not [
+        requirement
+        for requirement in result.selected_candidate.missing_requirements
+        if requirement.startswith("source field ")
+    ]
+
+
+@pytest.mark.parametrize("item_fields", [("media",), ("title", "media")])
+def test_a_gallery_section_of_images_and_captions_still_matches_a_gallery_template(
+    item_fields: tuple[str, ...],
+) -> None:
+    result = match_section(_gallery_role_section(item_fields), CATALOG)
+
+    assert result.selected_candidate.template_id.startswith("Cards/gallery")

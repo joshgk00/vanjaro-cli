@@ -1,0 +1,1927 @@
+{
+ "analysis": {
+  "metadata": {},
+  "section_confidence_mean": 0.8699999999999999,
+  "unsupported_traits": []
+ },
+ "assets": [
+  {
+   "alt_text": "",
+   "height": 120,
+   "id": "asset-e6716063ba95",
+   "kind": "image",
+   "local_path": "sources/live-html-1/assets/06bd8dd4a34a2a29.webp",
+   "metadata": {},
+   "mime_type": "image/webp",
+   "missing_reason": null,
+   "provenance": [
+    {
+     "bounds": null,
+     "component_id": null,
+     "css_selector": null,
+     "element_node_id": null,
+     "file_key": null,
+     "frame_node_id": null,
+     "instance_id": null,
+     "metadata": {},
+     "method": "static",
+     "page_node_id": null,
+     "source_attribute": null,
+     "source_kind": "live_html",
+     "source_url": "https://quality-hc.com/",
+     "viewport": null
+    }
+   ],
+   "role": "editorial",
+   "source_url": "https://quality-hc.com/wp-content/themes/yootheme/cache/87/service_heat@2x-875ccef9.webp",
+   "width": 120
+  },
+  {
+   "alt_text": "",
+   "height": 120,
+   "id": "asset-e9d785a8a6d4",
+   "kind": "image",
+   "local_path": "sources/live-html-1/assets/4e155c0fd6899f3a.webp",
+   "metadata": {},
+   "mime_type": "image/webp",
+   "missing_reason": null,
+   "provenance": [
+    {
+     "bounds": null,
+     "component_id": null,
+     "css_selector": null,
+     "element_node_id": null,
+     "file_key": null,
+     "frame_node_id": null,
+     "instance_id": null,
+     "metadata": {},
+     "method": "static",
+     "page_node_id": null,
+     "source_attribute": null,
+     "source_kind": "live_html",
+     "source_url": "https://quality-hc.com/",
+     "viewport": null
+    }
+   ],
+   "role": "editorial",
+   "source_url": "https://quality-hc.com/wp-content/themes/yootheme/cache/8b/service_cooling@2x-8b1a69f6.webp",
+   "width": 120
+  },
+  {
+   "alt_text": "",
+   "height": 120,
+   "id": "asset-9083e3466659",
+   "kind": "image",
+   "local_path": "sources/live-html-1/assets/a3aba2b45b03196d.webp",
+   "metadata": {},
+   "mime_type": "image/webp",
+   "missing_reason": null,
+   "provenance": [
+    {
+     "bounds": null,
+     "component_id": null,
+     "css_selector": null,
+     "element_node_id": null,
+     "file_key": null,
+     "frame_node_id": null,
+     "instance_id": null,
+     "metadata": {},
+     "method": "static",
+     "page_node_id": null,
+     "source_attribute": null,
+     "source_kind": "live_html",
+     "source_url": "https://quality-hc.com/",
+     "viewport": null
+    }
+   ],
+   "role": "editorial",
+   "source_url": "https://quality-hc.com/wp-content/themes/yootheme/cache/3f/service_plumbing@2x-3fd3544e.webp",
+   "width": 120
+  },
+  {
+   "alt_text": "",
+   "height": 120,
+   "id": "asset-149d24e5159d",
+   "kind": "image",
+   "local_path": "sources/live-html-1/assets/0e576f8923c22e8e.png",
+   "metadata": {},
+   "mime_type": "image/png",
+   "missing_reason": null,
+   "provenance": [
+    {
+     "bounds": null,
+     "component_id": null,
+     "css_selector": null,
+     "element_node_id": null,
+     "file_key": null,
+     "frame_node_id": null,
+     "instance_id": null,
+     "metadata": {},
+     "method": "static",
+     "page_node_id": null,
+     "source_attribute": null,
+     "source_kind": "live_html",
+     "source_url": "https://quality-hc.com/",
+     "viewport": null
+    }
+   ],
+   "role": "editorial",
+   "source_url": "https://quality-hc.com/wp-content/themes/yootheme/cache/fe/3-1-fe16d0ff.png",
+   "width": 120
+  },
+  {
+   "alt_text": "",
+   "height": 120,
+   "id": "asset-ee10b383024f",
+   "kind": "image",
+   "local_path": "sources/live-html-1/assets/2e16c943364538c0.webp",
+   "metadata": {},
+   "mime_type": "image/webp",
+   "missing_reason": null,
+   "provenance": [
+    {
+     "bounds": null,
+     "component_id": null,
+     "css_selector": null,
+     "element_node_id": null,
+     "file_key": null,
+     "frame_node_id": null,
+     "instance_id": null,
+     "metadata": {},
+     "method": "static",
+     "page_node_id": null,
+     "source_attribute": null,
+     "source_kind": "live_html",
+     "source_url": "https://quality-hc.com/",
+     "viewport": null
+    }
+   ],
+   "role": "editorial",
+   "source_url": "https://quality-hc.com/wp-content/themes/yootheme/cache/23/service_drain-sewer@2x-23a68531.webp",
+   "width": 120
+  },
+  {
+   "alt_text": "",
+   "height": 120,
+   "id": "asset-bc6c367d0a28",
+   "kind": "image",
+   "local_path": "sources/live-html-1/assets/dbdc7e252b3bfd6e.webp",
+   "metadata": {},
+   "mime_type": "image/webp",
+   "missing_reason": null,
+   "provenance": [
+    {
+     "bounds": null,
+     "component_id": null,
+     "css_selector": null,
+     "element_node_id": null,
+     "file_key": null,
+     "frame_node_id": null,
+     "instance_id": null,
+     "metadata": {},
+     "method": "static",
+     "page_node_id": null,
+     "source_attribute": null,
+     "source_kind": "live_html",
+     "source_url": "https://quality-hc.com/",
+     "viewport": null
+    }
+   ],
+   "role": "editorial",
+   "source_url": "https://quality-hc.com/wp-content/themes/yootheme/cache/36/service_water-heater@2x-361dc6df.webp",
+   "width": 120
+  },
+  {
+   "alt_text": "",
+   "height": null,
+   "id": "asset-322c3cae7d1d",
+   "kind": "svg",
+   "local_path": "sources/live-html-1/assets/f4900570266d431e.svg",
+   "metadata": {},
+   "mime_type": "image/svg+xml",
+   "missing_reason": null,
+   "provenance": [
+    {
+     "bounds": null,
+     "component_id": null,
+     "css_selector": null,
+     "element_node_id": null,
+     "file_key": null,
+     "frame_node_id": null,
+     "instance_id": null,
+     "metadata": {},
+     "method": "static",
+     "page_node_id": null,
+     "source_attribute": null,
+     "source_kind": "live_html",
+     "source_url": "https://quality-hc.com/",
+     "viewport": null
+    }
+   ],
+   "role": "editorial",
+   "source_url": "https://quality-hc.com/wp-content/uploads/2024/03/services.svg",
+   "width": null
+  },
+  {
+   "alt_text": "",
+   "height": null,
+   "id": "asset-c1520d3e0d36",
+   "kind": "svg",
+   "local_path": "sources/live-html-1/assets/5053afeb2de2b461.svg",
+   "metadata": {},
+   "mime_type": "image/svg+xml",
+   "missing_reason": null,
+   "provenance": [
+    {
+     "bounds": null,
+     "component_id": null,
+     "css_selector": null,
+     "element_node_id": null,
+     "file_key": null,
+     "frame_node_id": null,
+     "instance_id": null,
+     "metadata": {},
+     "method": "static",
+     "page_node_id": null,
+     "source_attribute": null,
+     "source_kind": "live_html",
+     "source_url": "https://quality-hc.com/",
+     "viewport": null
+    }
+   ],
+   "role": "editorial",
+   "source_url": "https://quality-hc.com/wp-content/uploads/2024/03/trust.svg",
+   "width": null
+  },
+  {
+   "alt_text": "",
+   "height": null,
+   "id": "asset-b0d68ce135e0",
+   "kind": "svg",
+   "local_path": "sources/live-html-1/assets/f4e1c5ed4c4d8a8f.svg",
+   "metadata": {},
+   "mime_type": "image/svg+xml",
+   "missing_reason": null,
+   "provenance": [
+    {
+     "bounds": null,
+     "component_id": null,
+     "css_selector": null,
+     "element_node_id": null,
+     "file_key": null,
+     "frame_node_id": null,
+     "instance_id": null,
+     "metadata": {},
+     "method": "static",
+     "page_node_id": null,
+     "source_attribute": null,
+     "source_kind": "live_html",
+     "source_url": "https://quality-hc.com/",
+     "viewport": null
+    }
+   ],
+   "role": "editorial",
+   "source_url": "https://quality-hc.com/wp-content/uploads/2024/03/location-1.svg",
+   "width": null
+  }
+ ],
+ "pages": [
+  {
+   "breakpoints": [
+    "desktop",
+    "mobile"
+   ],
+   "id": "home",
+   "metadata": {
+    "project_page_reference": null,
+    "project_source_id": "live-html-1"
+   },
+   "navigation_visibility": "visible",
+   "parent_page_id": null,
+   "provenance": [
+    {
+     "bounds": null,
+     "component_id": null,
+     "css_selector": null,
+     "element_node_id": null,
+     "file_key": null,
+     "frame_node_id": null,
+     "instance_id": null,
+     "metadata": {},
+     "method": "static",
+     "page_node_id": null,
+     "source_attribute": null,
+     "source_kind": "live_html",
+     "source_url": "https://quality-hc.com/",
+     "viewport": null
+    }
+   ],
+   "sections": [
+    {
+     "candidate_roles": [
+      {
+       "evidence": [],
+       "role": "gallery",
+       "score": 0.85
+      }
+     ],
+     "content": [
+      {
+       "asset_id": null,
+       "attributes": {
+        "heading_level": 2
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.heading.1",
+       "kind": "heading",
+       "metadata": {},
+       "order": 0,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_title",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Heating"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "heading_level": 3
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.heading.2",
+       "kind": "heading",
+       "metadata": {},
+       "order": 1,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_title",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Cooling"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "heading_level": 3
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.heading.3",
+       "kind": "heading",
+       "metadata": {},
+       "order": 2,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_title",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Plumbing"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "heading_level": 3
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.heading.4",
+       "kind": "heading",
+       "metadata": {},
+       "order": 3,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_title",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Electric"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "heading_level": 3
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.heading.5",
+       "kind": "heading",
+       "metadata": {},
+       "order": 4,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_title",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Drains/Sewer"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "heading_level": 3
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.heading.6",
+       "kind": "heading",
+       "metadata": {},
+       "order": 5,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_title",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Water Heaters"
+      },
+      {
+       "asset_id": null,
+       "attributes": {},
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.text.1",
+       "kind": "text",
+       "metadata": {},
+       "order": 6,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_body",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Complete heating services to restore that cozy feel and help you save as much money as possible."
+      },
+      {
+       "asset_id": null,
+       "attributes": {},
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.text.2",
+       "kind": "text",
+       "metadata": {},
+       "order": 7,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_body",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Whether your AC has called it quits or you’re due for an upgrade, we’ll help you stay cool all summer long."
+      },
+      {
+       "asset_id": null,
+       "attributes": {},
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.text.3",
+       "kind": "text",
+       "metadata": {},
+       "order": 8,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_body",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "From a leaky faucet to an outdated bathroom, we’ve got your residential plumbing needs handled."
+      },
+      {
+       "asset_id": null,
+       "attributes": {},
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.text.4",
+       "kind": "text",
+       "metadata": {},
+       "order": 9,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_body",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "That faulty outlet has met their match. Give us a call for full-service electrical repair and installation."
+      },
+      {
+       "asset_id": null,
+       "attributes": {},
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.text.5",
+       "kind": "text",
+       "metadata": {},
+       "order": 10,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_body",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Slow drains and pipes are frustrating and messy. We’ll remove those clogs and get everything back up to speed."
+      },
+      {
+       "asset_id": null,
+       "attributes": {},
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.text.6",
+       "kind": "text",
+       "metadata": {},
+       "order": 11,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_body",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Whether your water heater needs to be repaired, replaced or maintained, we’ve got you covered."
+      },
+      {
+       "asset_id": "asset-e6716063ba95",
+       "attributes": {
+        "alt": ""
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.image.1",
+       "kind": "image",
+       "metadata": {},
+       "order": 12,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_media",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "https://quality-hc.com/wp-content/themes/yootheme/cache/87/service_heat@2x-875ccef9.webp"
+      },
+      {
+       "asset_id": "asset-e9d785a8a6d4",
+       "attributes": {
+        "alt": ""
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.image.2",
+       "kind": "image",
+       "metadata": {},
+       "order": 13,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_media",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "https://quality-hc.com/wp-content/themes/yootheme/cache/8b/service_cooling@2x-8b1a69f6.webp"
+      },
+      {
+       "asset_id": "asset-9083e3466659",
+       "attributes": {
+        "alt": ""
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.image.3",
+       "kind": "image",
+       "metadata": {},
+       "order": 14,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_media",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "https://quality-hc.com/wp-content/themes/yootheme/cache/3f/service_plumbing@2x-3fd3544e.webp"
+      },
+      {
+       "asset_id": "asset-149d24e5159d",
+       "attributes": {
+        "alt": ""
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.image.4",
+       "kind": "image",
+       "metadata": {},
+       "order": 15,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_media",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "https://quality-hc.com/wp-content/themes/yootheme/cache/fe/3-1-fe16d0ff.png"
+      },
+      {
+       "asset_id": "asset-ee10b383024f",
+       "attributes": {
+        "alt": ""
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.image.5",
+       "kind": "image",
+       "metadata": {},
+       "order": 16,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_media",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "https://quality-hc.com/wp-content/themes/yootheme/cache/23/service_drain-sewer@2x-23a68531.webp"
+      },
+      {
+       "asset_id": "asset-bc6c367d0a28",
+       "attributes": {
+        "alt": ""
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.image.6",
+       "kind": "image",
+       "metadata": {},
+       "order": 17,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_media",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "https://quality-hc.com/wp-content/themes/yootheme/cache/36/service_water-heater@2x-361dc6df.webp"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "href": "https://quality-hc.com/services/heating/"
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.link.1",
+       "kind": "link",
+       "metadata": {},
+       "order": 18,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_action",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Heating Complete heating services to restore that cozy feel and help you save as much money as possible. View Service"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "href": "https://quality-hc.com/services/air-conditioning/"
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.link.2",
+       "kind": "link",
+       "metadata": {},
+       "order": 19,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_action",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Cooling Whether your AC has called it quits or you’re due for an upgrade, we’ll help you stay cool all summer long. View Service"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "href": "https://quality-hc.com/services/plumbing/"
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.link.3",
+       "kind": "link",
+       "metadata": {},
+       "order": 20,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_action",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Plumbing From a leaky faucet to an outdated bathroom, we’ve got your residential plumbing needs handled. View Service"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "href": "https://quality-hc.com/electrical-tulsa-ok/"
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.link.4",
+       "kind": "link",
+       "metadata": {},
+       "order": 21,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_action",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Electric That faulty outlet has met their match. Give us a call for full-service electrical repair and installation. View Service"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "href": "https://quality-hc.com/drain-cleaning-sewers-tulsa-ok/"
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.link.5",
+       "kind": "link",
+       "metadata": {},
+       "order": 22,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_action",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Drains/Sewer Slow drains and pipes are frustrating and messy. We’ll remove those clogs and get everything back up to speed. View Service"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "href": "https://quality-hc.com/water-heaters-tulsa-ok/"
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.5.items",
+       "id": "home.section.5.link.6",
+       "kind": "link",
+       "metadata": {},
+       "order": 23,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_action",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Water Heaters Whether your water heater needs to be repaired, replaced or maintained, we’ve got you covered. View Service"
+      }
+     ],
+     "decorative_layers": [],
+     "groups": [
+      {
+       "id": "home.section.5.items",
+       "items": [
+        {
+         "fields": {
+          "action": "home.section.5.link.1",
+          "body": "home.section.5.text.1",
+          "media": "home.section.5.image.1",
+          "title": "home.section.5.heading.1"
+         },
+         "id": "home.section.5.items.1",
+         "provenance": [
+          {
+           "bounds": null,
+           "component_id": null,
+           "css_selector": null,
+           "element_node_id": null,
+           "file_key": null,
+           "frame_node_id": null,
+           "instance_id": null,
+           "metadata": {},
+           "method": "static",
+           "page_node_id": null,
+           "source_attribute": null,
+           "source_kind": "live_html",
+           "source_url": "https://quality-hc.com/",
+           "viewport": null
+          }
+         ]
+        },
+        {
+         "fields": {
+          "action": "home.section.5.link.2",
+          "body": "home.section.5.text.2",
+          "media": "home.section.5.image.2",
+          "title": "home.section.5.heading.2"
+         },
+         "id": "home.section.5.items.2",
+         "provenance": [
+          {
+           "bounds": null,
+           "component_id": null,
+           "css_selector": null,
+           "element_node_id": null,
+           "file_key": null,
+           "frame_node_id": null,
+           "instance_id": null,
+           "metadata": {},
+           "method": "static",
+           "page_node_id": null,
+           "source_attribute": null,
+           "source_kind": "live_html",
+           "source_url": "https://quality-hc.com/",
+           "viewport": null
+          }
+         ]
+        },
+        {
+         "fields": {
+          "action": "home.section.5.link.3",
+          "body": "home.section.5.text.3",
+          "media": "home.section.5.image.3",
+          "title": "home.section.5.heading.3"
+         },
+         "id": "home.section.5.items.3",
+         "provenance": [
+          {
+           "bounds": null,
+           "component_id": null,
+           "css_selector": null,
+           "element_node_id": null,
+           "file_key": null,
+           "frame_node_id": null,
+           "instance_id": null,
+           "metadata": {},
+           "method": "static",
+           "page_node_id": null,
+           "source_attribute": null,
+           "source_kind": "live_html",
+           "source_url": "https://quality-hc.com/",
+           "viewport": null
+          }
+         ]
+        },
+        {
+         "fields": {
+          "action": "home.section.5.link.4",
+          "body": "home.section.5.text.4",
+          "media": "home.section.5.image.4",
+          "title": "home.section.5.heading.4"
+         },
+         "id": "home.section.5.items.4",
+         "provenance": [
+          {
+           "bounds": null,
+           "component_id": null,
+           "css_selector": null,
+           "element_node_id": null,
+           "file_key": null,
+           "frame_node_id": null,
+           "instance_id": null,
+           "metadata": {},
+           "method": "static",
+           "page_node_id": null,
+           "source_attribute": null,
+           "source_kind": "live_html",
+           "source_url": "https://quality-hc.com/",
+           "viewport": null
+          }
+         ]
+        },
+        {
+         "fields": {
+          "action": "home.section.5.link.5",
+          "body": "home.section.5.text.5",
+          "media": "home.section.5.image.5",
+          "title": "home.section.5.heading.5"
+         },
+         "id": "home.section.5.items.5",
+         "provenance": [
+          {
+           "bounds": null,
+           "component_id": null,
+           "css_selector": null,
+           "element_node_id": null,
+           "file_key": null,
+           "frame_node_id": null,
+           "instance_id": null,
+           "metadata": {},
+           "method": "static",
+           "page_node_id": null,
+           "source_attribute": null,
+           "source_kind": "live_html",
+           "source_url": "https://quality-hc.com/",
+           "viewport": null
+          }
+         ]
+        },
+        {
+         "fields": {
+          "action": "home.section.5.link.6",
+          "body": "home.section.5.text.6",
+          "media": "home.section.5.image.6",
+          "title": "home.section.5.heading.6"
+         },
+         "id": "home.section.5.items.6",
+         "provenance": [
+          {
+           "bounds": null,
+           "component_id": null,
+           "css_selector": null,
+           "element_node_id": null,
+           "file_key": null,
+           "frame_node_id": null,
+           "instance_id": null,
+           "metadata": {},
+           "method": "static",
+           "page_node_id": null,
+           "source_attribute": null,
+           "source_kind": "live_html",
+           "source_url": "https://quality-hc.com/",
+           "viewport": null
+          }
+         ]
+        }
+       ],
+       "kind": "gallery_item",
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ]
+      }
+     ],
+     "id": "home.section.5",
+     "interactions": [],
+     "layout": {
+      "alignment": "left",
+      "columns": 4,
+      "contained": true,
+      "direction": null,
+      "full_bleed": false,
+      "kind": "grid",
+      "media_position": "top",
+      "metadata": {},
+      "wrap": null
+     },
+     "metadata": {
+      "legacy_template": "Gallery (3-up)",
+      "legacy_type": "gallery",
+      "relationship_confidence": 0.9
+     },
+     "order": 0,
+     "provenance": [
+      {
+       "bounds": null,
+       "component_id": null,
+       "css_selector": null,
+       "element_node_id": null,
+       "file_key": null,
+       "frame_node_id": null,
+       "instance_id": null,
+       "metadata": {},
+       "method": "static",
+       "page_node_id": null,
+       "source_attribute": null,
+       "source_kind": "live_html",
+       "source_url": "https://quality-hc.com/",
+       "viewport": null
+      }
+     ],
+     "regions": [],
+     "responsive": [],
+     "role_confidence": 0.85,
+     "semantic_role": "gallery",
+     "style": {
+      "observations": [],
+      "raw": {}
+     }
+    },
+    {
+     "candidate_roles": [
+      {
+       "evidence": [],
+       "role": "gallery",
+       "score": 0.85
+      }
+     ],
+     "content": [
+      {
+       "asset_id": null,
+       "attributes": {
+        "heading_level": 2
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.6.items",
+       "id": "home.section.6.heading.1",
+       "kind": "heading",
+       "metadata": {},
+       "order": 0,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_title",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "We’re responsive and answer your calls"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "heading_level": 3
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.6.items",
+       "id": "home.section.6.heading.2",
+       "kind": "heading",
+       "metadata": {},
+       "order": 1,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_title",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "We are honest and sincere with our work"
+      },
+      {
+       "asset_id": null,
+       "attributes": {
+        "heading_level": 3
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.6.items",
+       "id": "home.section.6.heading.3",
+       "kind": "heading",
+       "metadata": {},
+       "order": 2,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_title",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "We are a locally & family owned business"
+      },
+      {
+       "asset_id": null,
+       "attributes": {},
+       "confidence": 0.9,
+       "group_id": "home.section.6.items",
+       "id": "home.section.6.text.1",
+       "kind": "text",
+       "metadata": {},
+       "order": 3,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_body",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "We have a local call center to ensure every call is answered. In addition, we have an on-call phone that is always brought home by someone in the building."
+      },
+      {
+       "asset_id": null,
+       "attributes": {},
+       "confidence": 0.9,
+       "group_id": "home.section.6.items",
+       "id": "home.section.6.text.2",
+       "kind": "text",
+       "metadata": {},
+       "order": 4,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_body",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "Integrity means everything to us. We are here to protect your best interests and recommend solutions that are right for you, not more profitable for us."
+      },
+      {
+       "asset_id": null,
+       "attributes": {},
+       "confidence": 0.9,
+       "group_id": "home.section.6.items",
+       "id": "home.section.6.text.3",
+       "kind": "text",
+       "metadata": {},
+       "order": 5,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_body",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "We don’t answer to stakeholders, which allows us to maintain full control over our company. When you work with us, you’re supporting the local community."
+      },
+      {
+       "asset_id": "asset-322c3cae7d1d",
+       "attributes": {
+        "alt": ""
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.6.items",
+       "id": "home.section.6.image.1",
+       "kind": "image",
+       "metadata": {},
+       "order": 6,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_media",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "https://quality-hc.com/wp-content/uploads/2024/03/services.svg"
+      },
+      {
+       "asset_id": "asset-c1520d3e0d36",
+       "attributes": {
+        "alt": ""
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.6.items",
+       "id": "home.section.6.image.2",
+       "kind": "image",
+       "metadata": {},
+       "order": 7,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_media",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "https://quality-hc.com/wp-content/uploads/2024/03/trust.svg"
+      },
+      {
+       "asset_id": "asset-b0d68ce135e0",
+       "attributes": {
+        "alt": ""
+       },
+       "confidence": 0.9,
+       "group_id": "home.section.6.items",
+       "id": "home.section.6.image.3",
+       "kind": "image",
+       "metadata": {},
+       "order": 8,
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ],
+       "role": "item_media",
+       "style": {
+        "observations": [],
+        "raw": {}
+       },
+       "value": "https://quality-hc.com/wp-content/uploads/2024/03/location-1.svg"
+      }
+     ],
+     "decorative_layers": [],
+     "groups": [
+      {
+       "id": "home.section.6.items",
+       "items": [
+        {
+         "fields": {
+          "body": "home.section.6.text.1",
+          "media": "home.section.6.image.1",
+          "title": "home.section.6.heading.1"
+         },
+         "id": "home.section.6.items.1",
+         "provenance": [
+          {
+           "bounds": null,
+           "component_id": null,
+           "css_selector": null,
+           "element_node_id": null,
+           "file_key": null,
+           "frame_node_id": null,
+           "instance_id": null,
+           "metadata": {},
+           "method": "static",
+           "page_node_id": null,
+           "source_attribute": null,
+           "source_kind": "live_html",
+           "source_url": "https://quality-hc.com/",
+           "viewport": null
+          }
+         ]
+        },
+        {
+         "fields": {
+          "body": "home.section.6.text.2",
+          "media": "home.section.6.image.2",
+          "title": "home.section.6.heading.2"
+         },
+         "id": "home.section.6.items.2",
+         "provenance": [
+          {
+           "bounds": null,
+           "component_id": null,
+           "css_selector": null,
+           "element_node_id": null,
+           "file_key": null,
+           "frame_node_id": null,
+           "instance_id": null,
+           "metadata": {},
+           "method": "static",
+           "page_node_id": null,
+           "source_attribute": null,
+           "source_kind": "live_html",
+           "source_url": "https://quality-hc.com/",
+           "viewport": null
+          }
+         ]
+        },
+        {
+         "fields": {
+          "body": "home.section.6.text.3",
+          "media": "home.section.6.image.3",
+          "title": "home.section.6.heading.3"
+         },
+         "id": "home.section.6.items.3",
+         "provenance": [
+          {
+           "bounds": null,
+           "component_id": null,
+           "css_selector": null,
+           "element_node_id": null,
+           "file_key": null,
+           "frame_node_id": null,
+           "instance_id": null,
+           "metadata": {},
+           "method": "static",
+           "page_node_id": null,
+           "source_attribute": null,
+           "source_kind": "live_html",
+           "source_url": "https://quality-hc.com/",
+           "viewport": null
+          }
+         ]
+        }
+       ],
+       "kind": "gallery_item",
+       "provenance": [
+        {
+         "bounds": null,
+         "component_id": null,
+         "css_selector": null,
+         "element_node_id": null,
+         "file_key": null,
+         "frame_node_id": null,
+         "instance_id": null,
+         "metadata": {},
+         "method": "static",
+         "page_node_id": null,
+         "source_attribute": null,
+         "source_kind": "live_html",
+         "source_url": "https://quality-hc.com/",
+         "viewport": null
+        }
+       ]
+      }
+     ],
+     "id": "home.section.6",
+     "interactions": [],
+     "layout": {
+      "alignment": "left",
+      "columns": 3,
+      "contained": true,
+      "direction": null,
+      "full_bleed": false,
+      "kind": "grid",
+      "media_position": "top",
+      "metadata": {},
+      "wrap": null
+     },
+     "metadata": {
+      "legacy_template": "Gallery (3-up)",
+      "legacy_type": "gallery",
+      "relationship_confidence": 0.9
+     },
+     "order": 1,
+     "provenance": [
+      {
+       "bounds": null,
+       "component_id": null,
+       "css_selector": null,
+       "element_node_id": null,
+       "file_key": null,
+       "frame_node_id": null,
+       "instance_id": null,
+       "metadata": {},
+       "method": "static",
+       "page_node_id": null,
+       "source_attribute": null,
+       "source_kind": "live_html",
+       "source_url": "https://quality-hc.com/",
+       "viewport": null
+      }
+     ],
+     "regions": [],
+     "responsive": [],
+     "role_confidence": 0.85,
+     "semantic_role": "gallery",
+     "style": {
+      "observations": [],
+      "raw": {}
+     }
+    }
+   ],
+   "seo": {
+    "canonical_url": null,
+    "description": null,
+    "open_graph": {},
+    "robots": null,
+    "title": "HVAC Contractor in Tulsa, OK - Professional Services"
+   },
+   "slug": "",
+   "source_reference": "https://quality-hc.com/",
+   "title": "HVAC Contractor in Tulsa, OK - Professional Services"
+  }
+ ],
+ "schema_version": "1.0",
+ "source": {
+  "adapter_version": "1.0",
+  "captured_at": "2026-10-06T02:46:37.287480Z",
+  "identifier": "https://quality-hc.com/",
+  "kind": "live_html",
+  "metadata": {
+   "project_page_reference": null,
+   "project_source_id": "live-html-1"
+  }
+ },
+ "tokens": {
+  "colors": {},
+  "raw": {},
+  "spacing": {},
+  "typography": []
+ },
+ "warnings": []
+}
