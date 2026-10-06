@@ -286,8 +286,11 @@ def _static_figma_attempt(
     height: int,
     file_key: str,
     frame_node_id: str,
+    canvas_height: int | None = None,
+    interpretation: CanvasInterpretation = CanvasInterpretation.VIEWPORT,
 ) -> BreakpointCaptureAttempt:
-    payload = _png_bytes(width, height)
+    canvas_height = canvas_height or height
+    payload = _png_bytes(width, canvas_height)
     local_path = f"sources/figma/{page.id}-{breakpoint.value}.png"
     (root / local_path).parent.mkdir(parents=True, exist_ok=True)
     (root / local_path).write_bytes(payload)
@@ -304,8 +307,8 @@ def _static_figma_attempt(
         static_source_kind="figma",
         static_local_path=local_path,
         static_canvas_width=width,
-        static_canvas_height=height,
-        static_interpretation=CanvasInterpretation.VIEWPORT.value,
+        static_canvas_height=canvas_height,
+        static_interpretation=interpretation.value,
         static_file_key=file_key,
         static_frame_node_id=frame_node_id,
         output_path=output_rel,
@@ -893,3 +896,131 @@ def test_expected_width_matches_the_validated_reference_not_canonical(tmp_path: 
     result = coverage.v2_records["home"].breakpoints["desktop"]
     assert result.valid is True
     assert result.expected["viewport_width"] == 1280.0
+
+
+# --- Figma frame with only a desktop reference -------------------------------
+
+
+def _figma_desktop_only_record(
+    tmp_path: Path, *, desktop: BreakpointCaptureAttempt | None = None, frame_height: int = 900
+) -> ProjectManifest:
+    file_key, frame_node_id = "figma-file-1", "12:34"
+    page = _page(
+        "home",
+        provenance=(
+            _figma_provenance(
+                file_key=file_key, frame_node_id=frame_node_id, breakpoint=BreakpointName.DESKTOP,
+                width=1440, height=frame_height,
+            ),
+        ),
+    )
+    document = _document((page,))
+    _write_resolved_document(tmp_path, document)
+    _write_build_manifests(tmp_path)
+    manifest = _manifest()
+    record_page_capture_v2(
+        tmp_path, document, manifest, page_id="home", built_url="https://build.example/home",
+        attempts=(
+            desktop
+            or _static_figma_attempt(
+                tmp_path, page, BreakpointName.DESKTOP, width=1440, height=900,
+                file_key=file_key, frame_node_id=frame_node_id,
+            ),
+            _not_declared_attempt(BreakpointName.TABLET),
+            _not_declared_attempt(BreakpointName.MOBILE),
+        ),
+    )
+    return manifest
+
+
+def test_figma_desktop_frame_is_paired_with_the_build_and_scored(tmp_path: Path) -> None:
+    manifest = _figma_desktop_only_record(tmp_path)
+
+    report, blockers = evaluate_project_fidelity(tmp_path, manifest)
+
+    page_report = report["pages"]["home"]
+    assert page_report["status"] == "scored"
+    assert page_report["scope"] == "declared_breakpoints_only"
+    assert page_report["passed"] is True
+    assert [score["breakpoint"] for score in page_report["viewport_scores"]] == ["desktop"]
+    assert isinstance(page_report["overall_score"], float)
+    assert page_report["release_completeness"]["not_declared_breakpoints"] == ["tablet", "mobile"]
+    assert page_report["release_completeness"]["canonical_complete"] is False
+    assert report["status"] == "scored"
+    assert blockers == []
+
+
+def test_full_page_figma_frame_taller_than_the_viewport_is_scored(tmp_path: Path) -> None:
+    attempt = _static_figma_attempt(
+        tmp_path, _page("home"), BreakpointName.DESKTOP, width=1440, height=900,
+        file_key="figma-file-1", frame_node_id="12:34",
+        canvas_height=8090, interpretation=CanvasInterpretation.FULL_PAGE,
+    )
+    manifest = _figma_desktop_only_record(tmp_path, desktop=attempt, frame_height=8090)
+
+    report, blockers = evaluate_project_fidelity(tmp_path, manifest)
+
+    page_report = report["pages"]["home"]
+    assert page_report["status"] == "scored"
+    assert page_report["viewport_scores"][0]["breakpoint"] == "desktop"
+    assert blockers == []
+
+
+def test_figma_desktop_score_below_draft_threshold_blocks(tmp_path: Path) -> None:
+    attempt = _static_figma_attempt(
+        tmp_path, _page("home"), BreakpointName.DESKTOP, width=1440, height=900,
+        file_key="figma-file-1", frame_node_id="12:34",
+    )
+    attempt.expected["sections"][0]["palette"] = {"colors": {"background": "#000000", "text": "#111111"}}
+    attempt.observed["sections"][0]["palette"] = {"colors": {"background": "#ffffff", "text": "#fefefe"}}
+    manifest = _figma_desktop_only_record(tmp_path, desktop=attempt)
+
+    report, blockers = evaluate_project_fidelity(tmp_path, manifest)
+
+    page_report = report["pages"]["home"]
+    assert page_report["status"] == "scored"
+    assert page_report["passed"] is False
+    assert page_report["failures"]
+    assert any("visual fidelity gate failed" in message for message in blockers)
+
+
+def test_figma_reference_without_a_build_capture_is_not_scored_with_a_reason(
+    tmp_path: Path,
+) -> None:
+    unmeasured = BreakpointCaptureAttempt(
+        breakpoint=BreakpointName.DESKTOP,
+        status=CaptureAttemptStatus.OUTPUT_NOT_MEASURABLE,
+        diagnostics=("captured output has no agency sections",),
+    )
+    manifest = _figma_desktop_only_record(tmp_path, desktop=unmeasured)
+
+    report, blockers = evaluate_project_fidelity(tmp_path, manifest)
+
+    page_report = report["pages"]["home"]
+    assert page_report["status"] == "not_scored"
+    assert "desktop: output_not_measurable (captured output has no agency sections)" in page_report["reason"]
+    assert any("not scored" in message for message in blockers)
+
+
+def test_live_source_with_undeclared_breakpoints_still_blocks_release(tmp_path: Path) -> None:
+    document = _document((_page("home"),))
+    page = document.pages[0]
+    _write_resolved_document(tmp_path, document)
+    _write_build_manifests(tmp_path)
+    manifest = _manifest()
+    record_page_capture_v2(
+        tmp_path, document, manifest, page_id="home", built_url="https://build.example/home",
+        attempts=(
+            _live_attempt(tmp_path, page, BreakpointName.DESKTOP, width=1440, height=900),
+            _not_declared_attempt(BreakpointName.TABLET),
+            _not_declared_attempt(BreakpointName.MOBILE),
+        ),
+    )
+
+    report, blockers = evaluate_project_fidelity(tmp_path, manifest)
+
+    page_report = report["pages"]["home"]
+    assert page_report["status"] == "partially_scored"
+    assert page_report["release_completeness"]["not_declared_breakpoints"] == []
+    assert any("tablet" in message for message in blockers)
+    assert any("mobile" in message for message in blockers)

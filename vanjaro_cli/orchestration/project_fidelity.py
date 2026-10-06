@@ -32,6 +32,7 @@ from vanjaro_cli.design.visual_gate import (
     StaticCaptureSource,
     ViewportCapturePair,
     VisualGateInputError,
+    VisualGatePolicy,
     evaluate_visual_gate,
     serialize_visual_gate_result,
 )
@@ -304,6 +305,27 @@ def _rebuild_gate_source(result: BreakpointV2Result, root: Path) -> CaptureImage
     )
 
 
+def _is_declared_static_only(v2: PageCaptureV2Validation) -> bool:
+    """True when the page scores a static (Figma/image) source on the breakpoints it declares.
+
+    A static source carries only the frames its author drew. A breakpoint with
+    no frame has nothing to compare, so it is reported as not declared instead
+    of failing release completeness. Live sources keep the strict three-
+    breakpoint rule: every breakpoint can be rendered, so a gap there is a
+    capture failure.
+    """
+
+    valid = [result for result in v2.breakpoints.values() if result.valid]
+    if not valid:
+        return False
+    if not all(result.source_kind == "static" and result.is_canonical for result in valid):
+        return False
+    return all(
+        result.valid or result.status == "reference_not_declared"
+        for result in v2.breakpoints.values()
+    )
+
+
 def _v2_release_completeness(v2: PageCaptureV2Validation) -> tuple[dict[str, Any], list[str]]:
     availability = {
         name: {
@@ -325,17 +347,81 @@ def _v2_release_completeness(v2: PageCaptureV2Validation) -> tuple[dict[str, Any
             and v2.breakpoints[breakpoint.value].is_canonical
         )
     ]
+    not_declared = (
+        [
+            name
+            for name in missing_or_noncanonical
+            if name in v2.breakpoints and v2.breakpoints[name].status == "reference_not_declared"
+        ]
+        if _is_declared_static_only(v2)
+        else []
+    )
     release_completeness = {
         "canonical_complete": not missing_or_noncanonical,
         "missing_or_noncanonical_breakpoints": missing_or_noncanonical,
+        "not_declared_breakpoints": not_declared,
         "viewport_availability": availability,
     }
     blockers = [
         f"{name}: release requires a canonical capture (status="
         f"{v2.breakpoints[name].status if name in v2.breakpoints else 'reference_not_declared'})"
         for name in missing_or_noncanonical
+        if name not in not_declared
     ]
     return release_completeness, blockers
+
+
+def _declared_breakpoint_failures(
+    viewport_scores: list[Any], policy: VisualGatePolicy
+) -> list[dict[str, Any]]:
+    """Apply the draft thresholds to only the breakpoints that have a reference."""
+
+    scores = [score.overall_score for score in viewport_scores]
+    overall = round(sum(scores) / len(scores), 2)
+    failures: list[dict[str, Any]] = []
+    if overall < policy.draft_overall_minimum:
+        failures.append(
+            {
+                "code": "overall_score_below_threshold",
+                "message": (
+                    f"Overall score {overall:.2f} is below the draft minimum "
+                    f"{policy.draft_overall_minimum:.2f}."
+                ),
+                "observed": overall,
+                "required": policy.draft_overall_minimum,
+            }
+        )
+    for viewport_score in viewport_scores:
+        for section in sorted(viewport_score.sections, key=lambda item: item.section_id.casefold()):
+            if section.score < policy.draft_section_minimum:
+                failures.append(
+                    {
+                        "code": "section_score_below_threshold",
+                        "message": (
+                            f"Section {section.section_id!r} scores {section.score:.2f} at "
+                            f"{viewport_score.breakpoint.value}, below "
+                            f"{policy.draft_section_minimum:.2f}."
+                        ),
+                        "observed": section.score,
+                        "required": policy.draft_section_minimum,
+                        "breakpoint": viewport_score.breakpoint.value,
+                        "section_id": section.section_id,
+                    }
+                )
+    return failures
+
+
+def _no_valid_comparison_reason(v2: PageCaptureV2Validation) -> str:
+    details = [
+        f"{name}: {result.status}" + (f" ({'; '.join(result.diagnostics)})" if result.diagnostics else "")
+        for name, result in v2.breakpoints.items()
+    ]
+    reason = "no valid source-paired comparisons recorded"
+    if details:
+        reason += " [" + ", ".join(details) + "]"
+    if v2.warnings:
+        reason += ": " + "; ".join(v2.warnings)
+    return reason
 
 
 def _score_v2_page(v2: PageCaptureV2Validation, root: Path) -> tuple[dict[str, Any], list[str]]:
@@ -356,7 +442,7 @@ def _score_v2_page(v2: PageCaptureV2Validation, root: Path) -> tuple[dict[str, A
 
     valid_breakpoints = {name: result for name, result in v2.breakpoints.items() if result.valid}
     if not valid_breakpoints:
-        report, reason_blockers = _not_scored("no valid source-paired comparisons recorded")
+        report, reason_blockers = _not_scored(_no_valid_comparison_reason(v2))
         report["legacy"] = False
         report["schema_version"] = "capture-evidence-v2"
         report["release_completeness"] = release_completeness
@@ -424,6 +510,12 @@ def _score_v2_page(v2: PageCaptureV2Validation, root: Path) -> tuple[dict[str, A
             "overall_score": overall,
             "viewport_scores": [score.model_dump(mode="json") for score in viewport_scores],
         }
+        if release_completeness["not_declared_breakpoints"]:
+            failures = _declared_breakpoint_failures(viewport_scores, VisualGatePolicy())
+            report["status"] = "scored"
+            report["scope"] = "declared_breakpoints_only"
+            report["passed"] = not failures
+            report["failures"] = failures
 
     report["schema_version"] = "capture-evidence-v2"
     report["dimension_coverage"] = _dimension_coverage(expected, observed)
