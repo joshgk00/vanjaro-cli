@@ -161,7 +161,7 @@ One bounded unit at a time:
 | RT-20 | done | Done 2026-10-06 (`87bbfeb`): live re-plan editable 0.756, native 0.995, 1 blocker (`qualityhc-trial-4`). Quality HC FAQ blocks: items carry title/body, the FAQ template wants question/answer, and the accordion interaction is unsupported. | `qualityhc-trial-3` section 10 |
 | RT-21 | 2 | Quality HC hero blocks: 2 buttons and 3 badges, but no hero template has 2 actions. Needs a template change (agency pack release, Josh's call) or an audited overlay. | `qualityhc-trial-3` section 2 |
 | RT-22 | done | Done 2026-10-06 (`87bbfeb`). The browser-render observation script does not know UIkit sections, so `--render` on these pages can't pair sections. | RT-19 helper report |
-| RT-23 | 3 | `project plan` on a workspace that already has a plan says "resumed" and keeps the old plan, even after the matching code changed. A fixed tool can't improve an existing project without a new workspace. Stamp the planner version into the plan fingerprint, as was done for the footer composer. | 2026-10-06: `qualityhc-trial-3` kept the FAQ blocker after RT-20 landed |
+| RT-23 | done | Done 2026-10-06: plan 1.7, analyze 1.2; bump again whenever matching or extraction output changes. Do NOT re-run analyze/plan on `kts-figma-trial-2`: it would void its approvals. `project plan` on a workspace that already has a plan says "resumed" and keeps the old plan, even after the matching code changed. A fixed tool can't improve an existing project without a new workspace. Stamp the planner version into the plan fingerprint, as was done for the footer composer. | 2026-10-06: `qualityhc-trial-3` kept the FAQ blocker after RT-20 landed |
 | RT-7 | 7 | Trial sources. Live website: Quality HC (`https://quality-hc.com/`, portal 1) picked 2026-10-05 because EDCA and Oasis refuse script downloads. Images: Keys to Success mockups, still to set up. | `artifacts/projects/qualityhc-trial` |
 
 ## Progress log
@@ -283,3 +283,4 @@ One bounded unit at a time:
   Claude from running both (approval resolve = "production deploy"; image
   evidence = "sensitive source"). Josh must run them at the PC, or add
   permission rules.
+- RT-23 done (suite 3,564). `qualityhc-trial-3` now re-plans to 1 blocker.
