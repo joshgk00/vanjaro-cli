@@ -15,7 +15,7 @@ from vanjaro_cli.design.html_primitives import (
     register_asset as _register_asset,
 )
 from vanjaro_cli.design.html_boundaries import media_text_split
-from vanjaro_cli.design.html_card_actions import extract_card_actions
+from vanjaro_cli.design.html_card_actions import CardAction, extract_card_actions, whole_card_destination
 from vanjaro_cli.design.html_card_fields import classify_card_paragraphs
 from vanjaro_cli.design.models import BreakpointName, Viewport
 from vanjaro_cli.migration.sections import (
@@ -26,6 +26,7 @@ from vanjaro_cli.migration.sections import (
     normalize_text_blocks,
     PHRASING_TAGS,
 )
+from vanjaro_cli.migration.uikit import uikit_heading_tag
 
 
 CANONICAL_VIEWPORTS: dict[BreakpointName, Viewport] = {
@@ -83,6 +84,10 @@ def repeating_subtrees(root: Tag, *, minimum: int = 2) -> list[Tag]:
     the cards on a real page were split across two `.row` containers, and a
     single-parent scan would have found two groups of two.
 
+    A repetition whose items carry a heading outranks one whose items are only
+    pictures: a card has a title, and a strip of logos below a row of cards is
+    more repeated but is not what the cards are.
+
     The most repeated signature wins, and outermost only breaks a tie. Ranking
     by depth first took whatever shallow wrapper happened to repeat: a services
     grid had two `div.White` bands holding one picture and six, which is not a
@@ -92,24 +97,25 @@ def repeating_subtrees(root: Tag, *, minimum: int = 2) -> list[Tag]:
     rather than the rounded box inside it.
     """
 
-    by_signature: dict[tuple[str, tuple[str, ...]], list[Tag]] = {}
+    by_signature: dict[tuple[tuple[str, tuple[str, ...]], bool], list[Tag]] = {}
     for element in root.find_all(True):
         if element.name in _INLINE_TAGS:
             continue
-        if element.find(["h1", "h2", "h3", "h4", "h5", "h6"]) is None and element.find("img") is None:
+        titled = element.find(["h1", "h2", "h3", "h4", "h5", "h6"]) is not None
+        if not titled and element.find("img") is None:
             continue
-        by_signature.setdefault(_signature(element), []).append(element)
+        by_signature.setdefault((_signature(element), titled), []).append(element)
 
-    ranked: list[tuple[int, int, list[Tag]]] = []
-    for group in by_signature.values():
+    ranked: list[tuple[bool, int, int, list[Tag]]] = []
+    for (_, titled), group in by_signature.items():
         if len(group) < minimum:
             continue
         if any(item is not other and item in other.parents for item in group for other in group):
             continue
-        ranked.append((-len(group), _depth(group[0], root), group))
+        ranked.append((not titled, -len(group), _depth(group[0], root), group))
     if not ranked:
         return []
-    return min(ranked, key=lambda entry: entry[:2])[2]
+    return min(ranked, key=lambda entry: entry[:3])[3]
 
 
 # A photo band has no words, so its picture is the band, not an
@@ -310,6 +316,17 @@ def _feature_media(root: Tag) -> Tag | None:
     return None
 
 
+def _visual_level(heading: Tag) -> int:
+    """Return the rank a reader sees, which a UIkit class can set apart from the tag.
+
+    `<h2 class="uk-h4">` over `<h3 class="uk-h1">` is a small kicker above a big
+    title, whatever the tags say. Ranking by tag alone made the kicker the
+    section's title and filed the real headline as a subheading.
+    """
+
+    return int((uikit_heading_tag(heading) or heading.name)[1])
+
+
 def _most_prominent(headings: list[Tag]) -> Tag | None:
     """Return the heading a reader would take as the section's title.
 
@@ -324,7 +341,7 @@ def _most_prominent(headings: list[Tag]) -> Tag | None:
 
     if not headings:
         return None
-    return min(headings, key=lambda heading: (int(heading.name[1]), headings.index(heading)))
+    return min(headings, key=lambda heading: (_visual_level(heading), headings.index(heading)))
 
 
 def _eyebrow_for(title: Tag | None, headings: list[Tag]) -> Tag | None:
@@ -340,7 +357,7 @@ def _eyebrow_for(title: Tag | None, headings: list[Tag]) -> Tag | None:
     for heading in headings:
         if heading is title:
             return None
-        if int(heading.name[1]) > int(title.name[1]):
+        if _visual_level(heading) > _visual_level(title):
             return heading
     return None
 
@@ -607,12 +624,22 @@ def enrich_section_from_static_dom(
                     for paragraph in item.find_all("p")
                     if id(paragraph) not in action_paragraph_ids
                 ]
+                # A linked card with no heading tag: its first line of copy is the
+                # title. One line beside a picture is a label, and it names the
+                # card better than the picture's alt text does.
+                title_paragraph = (
+                    paragraphs.pop(0)
+                    if role != "blog_cards" and not isinstance(heading, Tag) and paragraphs
+                    else None
+                )
                 if isinstance(media, Tag):
                     media_id = image(media, "card_media", group_id)
                     if media_id:
                         fields["media"] = media_id
                 if isinstance(heading, Tag):
                     fields["title"] = add("heading", "card_title", heading.get_text(" ", strip=True), group_id=group_id)
+                elif isinstance(title_paragraph, Tag):
+                    fields["title"] = add("heading", "card_title", title_paragraph.get_text(" ", strip=True), group_id=group_id)
                 if role == "blog_cards":
                     # A blog card's paragraphs are not interchangeable body
                     # copy: an explicit category label, a byline, and the
@@ -666,6 +693,17 @@ def enrich_section_from_static_dom(
                     ]
                     if body_ids:
                         fields[field] = body_ids[0] if len(body_ids) == 1 else body_ids
+                # A card with a heading keeps its destination on the picture, and a
+                # link around a titled card is not a button. One with no heading is
+                # a link whose only text is its copy, so the link is the action.
+                if not actions and isinstance(title_paragraph, Tag):
+                    destination = whole_card_destination(item)
+                    if destination:
+                        actions = [
+                            CardAction(
+                                "link", title_paragraph.get_text(" ", strip=True), destination, item
+                            )
+                        ]
                 if actions:
                     # Every action is named, in document order: the planner
                     # binds as many as the selected template owns action slots

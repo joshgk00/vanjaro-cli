@@ -28,7 +28,7 @@ from __future__ import annotations
 
 from bs4 import Tag
 
-__all__ = ["CardAction", "extract_card_actions"]
+__all__ = ["CardAction", "extract_card_actions", "whole_card_destination"]
 
 
 # Mirrors the small class-hint vocabulary `html_ownership._has_action` already
@@ -36,6 +36,7 @@ __all__ = ["CardAction", "extract_card_actions"]
 # than imported since it's the same three tokens judged the same way, not a
 # shared contract between the modules.
 _ACTION_CLASS_HINTS = ("btn", "button", "cta")
+_BUTTON_CLASS_TOKENS = frozenset((*_ACTION_CLASS_HINTS, "uk-button"))
 
 # Exact class tokens (not substrings, so "metadata" never matches "meta") that
 # mark an anchor as editorial metadata -- a category badge or byline credit --
@@ -189,8 +190,37 @@ def _label(anchor: Tag) -> str:
     ).strip()
 
 
+def _is_button_styled(tag: Tag) -> bool:
+    return bool(_classes(tag) & _BUTTON_CLASS_TOKENS)
+
+
 def _kind_for(anchor: Tag) -> str:
-    return "button" if _classes(anchor) & frozenset(_ACTION_CLASS_HINTS) else "link"
+    return "button" if _is_button_styled(anchor) else "link"
+
+
+def _wrapped_button_actions(item: Tag) -> list[CardAction]:
+    """Find buttons drawn as a styled element inside a link rather than as the link.
+
+    A card built as one big link often carries a "View Service" label styled as a
+    button: `<a href="/s"> ... <div class="uk-button">View Service</div></a>`. The
+    label is the card's call to action and the wrapping link is where it goes,
+    but no anchor of its own wraps it, so the anchor pass above never saw it and
+    the label arrived as a second line of body copy.
+    """
+
+    actions = []
+    for button in item.find_all(True):
+        if button.name == "a" or not _is_button_styled(button):
+            continue
+        anchor = button.find_parent("a", href=True)
+        if anchor is None or not (anchor is item or item in anchor.parents):
+            continue
+        label = button.get_text(" ", strip=True)
+        if label:
+            actions.append(
+                CardAction(kind="button", label=label, href=str(anchor.get("href") or ""), source=button)
+            )
+    return actions
 
 
 def extract_card_actions(item: Tag) -> tuple[list[CardAction], frozenset[int]]:
@@ -236,4 +266,28 @@ def extract_card_actions(item: Tag) -> tuple[list[CardAction], frozenset[int]]:
         actions.append(
             CardAction(kind=_kind_for(anchor), label=label, href=str(anchor.get("href") or ""), source=anchor)
         )
+    for action in _wrapped_button_actions(item):
+        actions.append(action)
+        consumed_paragraph_ids.add(id(action.source))
     return actions, frozenset(consumed_paragraph_ids)
+
+
+def whole_card_destination(item: Tag) -> str | None:
+    """Return where a card goes when one link wraps the whole card.
+
+    A linked card is a link with a picture and its copy inside it, and has no
+    separate button. The destination still belongs to the card: dropping it left
+    every such card with nothing to click through, and the picture alone carries
+    it only when the card has one.
+
+    Whole means the link holds everything the card says. A link around just the
+    picture, or around just the title, is not the card's destination.
+    """
+
+    card_text = item.get_text(" ", strip=True)
+    wrappers = [item] if item.name == "a" else item.find_all("a", href=True)
+    for anchor in wrappers:
+        if anchor.get("href") and anchor.get_text(" ", strip=True) == card_text:
+            return str(anchor.get("href"))
+    parent = item.find_parent("a", href=True)
+    return str(parent.get("href")) if parent is not None else None

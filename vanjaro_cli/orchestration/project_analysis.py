@@ -332,7 +332,15 @@ def _analyze_source(
             document = analyze_source(
                 HtmlSourceRequest(**request_fields, render_url=render_url)
             )
-        return acquire_html_assets(root=root, source_id=source.id, document=document)
+        document, acquired = acquire_html_assets(root=root, source_id=source.id, document=document)
+        if local is not None:
+            return document, acquired
+        # A fetched page exists nowhere else, and a later stage or a test
+        # fixture cannot re-fetch what the site has since changed. A local
+        # source is already in the workspace and is not copied again.
+        page_relative = f"sources/{source.id}/page.html"
+        _atomic_write_text(root / page_relative, html)
+        return document, (page_relative, *acquired)
     if source.kind == SourceKind.FIGMA:
         node_id = _string_metadata(source, "node_id")
         if node_id:

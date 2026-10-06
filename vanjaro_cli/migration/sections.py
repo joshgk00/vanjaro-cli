@@ -8,6 +8,12 @@ from urllib.parse import urljoin
 from bs4 import BeautifulSoup, Tag
 
 from vanjaro_cli.migration.crawler import IGNORED_LINK_SCHEMES
+from vanjaro_cli.migration.uikit import (
+    authored_sections,
+    is_hidden_class,
+    normalize_accordions,
+    uikit_heading_tag,
+)
 
 __all__ = [
     "extract_sections",
@@ -92,7 +98,9 @@ def _without_placeholder_phrases(text: str) -> str:
 
 def _is_hidden_marked(tag: Tag) -> bool:
     return isinstance(tag, Tag) and (
-        tag.has_attr(HIDDEN_ATTR) or tag.get("aria-hidden") == "true"
+        tag.has_attr(HIDDEN_ATTR)
+        or tag.get("aria-hidden") == "true"
+        or is_hidden_class(tag)
     )
 
 
@@ -532,6 +540,10 @@ def _top_level_sections(soup: BeautifulSoup) -> list[Tag]:
     container = soup.find("main") or soup.body
     if not container:
         return []
+
+    authored = authored_sections(container, require_page_share=True)
+    if authored:
+        return [section.element for section in authored]
 
     sections = _visible_children(container)
     for _ in range(_MAX_WRAPPER_DESCENT):
@@ -1642,7 +1654,9 @@ def _find_sibling_card_group(element: Tag) -> list[Tag]:
             if not isinstance(child, Tag) or child.name not in ("div", "article", "li"):
                 continue
             signature = (child.name, _normalized_class_signature(child))
-            if not signature[1]:
+            # A UIkit grid's columns are its items whatever they are called, and
+            # YOOtheme leaves them unclassed.
+            if not signature[1] and "uk-grid" not in container.get("class", []):
                 continue
             groups.setdefault(signature, []).append(child)
         for members in groups.values():
@@ -1943,12 +1957,13 @@ def normalize_text_blocks(soup: BeautifulSoup) -> None:
     reached no element on any page that writes one.
     """
 
+    normalize_accordions(soup)
     for element in soup.find_all("div"):
         if not element.get_text(strip=True):
             continue
         if any(child.name not in PHRASING_TAGS for child in element.find_all(True)):
             continue
-        element.name = "p"
+        element.name = uikit_heading_tag(element) or "p"
 
 
 def extract_sections(html: str, base_url: str, css_text: str | None = None) -> list[dict]:

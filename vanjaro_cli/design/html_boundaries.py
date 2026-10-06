@@ -15,6 +15,7 @@ from vanjaro_cli.migration.sections import (
     is_builder_pane,
     is_stat_value,
 )
+from vanjaro_cli.migration.uikit import authored_sections, is_hidden_at_desktop, normalize_accordions
 
 
 STABLE_NAV_MIN_LINKS = 2
@@ -115,7 +116,11 @@ def static_boundary_candidates(html: str) -> list[Tag]:
         seen.add(id(element))
         candidates.append(element)
 
-    for nav in soup.select("header nav, nav"):
+    # A page can carry a header for each width, and the one hidden on a desktop
+    # is a toggle with no menu in it. A page with only that one still has a header.
+    navs = soup.select("header nav, nav")
+    navs.sort(key=is_hidden_at_desktop)
+    for nav in navs:
         owner = nav.find_parent("header") or nav
         if css_selector_for(owner) and len(nav.find_all("a", href=True)) >= STABLE_NAV_MIN_LINKS:
             add(owner)
@@ -157,6 +162,12 @@ def static_boundary_candidates(html: str) -> list[Tag]:
         add(element)
     for element in soup.find_all(is_builder_pane):
         add(element)
+    # A UIkit page writes each section as a div. The extractor reads the same
+    # sections, bands included, so a section it splits is split here too.
+    band_offsets: dict[int, tuple[Tag, int]] = {}
+    for authored in authored_sections(soup):
+        band_offsets[id(authored.element)] = (authored.source, authored.band_index)
+        add(authored.element)
 
     # Chrome is one boundary, not several. A DNN page puts its footer panes
     # inside the `<footer>`, and reading them as their own candidates would give
@@ -167,7 +178,9 @@ def static_boundary_candidates(html: str) -> list[Tag]:
         tag for tag in candidates if not any(owner in tag.parents for owner in chrome)
     ]
 
-    positions = {id(tag): index for index, tag in enumerate(soup.find_all(True))}
+    positions = {id(tag): float(index) for index, tag in enumerate(soup.find_all(True))}
+    for band_id, (source, band_index) in band_offsets.items():
+        positions[band_id] = positions[id(source)] + band_index / 1000
     return sorted(_without_wrappers(candidates), key=lambda tag: positions.get(id(tag), 0))
 
 
@@ -350,6 +363,10 @@ def _is_link_bar(element: Tag) -> bool:
     links = element.find_all("a", href=True)
     if len(links) < _NAVIGATION_MINIMUM_LINKS:
         return False
+    # A row of links that each wrap a picture is a row of linked cards, however
+    # little else the section says: a navigation label does not carry a photo.
+    if sum(1 for link in links if link.find("img") is not None) * 2 >= len(links):
+        return False
     total = len(element.get_text(" ", strip=True))
     if not total:
         return False
@@ -420,6 +437,20 @@ def media_text_split(element: Tag) -> tuple[Tag, Tag] | None:
     return None
 
 
+def _has_content_list(element: Tag) -> bool:
+    """Report whether the element holds a list that says something.
+
+    A carousel's dot navigation is a `<ul>` of empty items, and reading it as a
+    list made every picture carousel look like a feature beside a list.
+    """
+
+    return any(
+        item.get_text(strip=True)
+        for lst in element.find_all(["ul", "ol"])
+        for item in lst.find_all("li")
+    )
+
+
 def static_role(element: Tag, section_index: int) -> str:
     """Classify a boundary from semantic structure and stable source hints."""
 
@@ -470,7 +501,7 @@ def static_role(element: Tag, section_index: int) -> str:
         or has_form_fields(element)
     ):
         return "contact"
-    if element.find("img") is not None and element.find("ul") is not None:
+    if element.find("img") is not None and _has_content_list(element):
         return "split_feature"
     if media_text_split(element) is not None:
         return "split_media"
@@ -854,6 +885,7 @@ def enrich_faq_relationships(html: str, sections: list[dict]) -> None:
     if not faq_sections:
         return
     soup = BeautifulSoup(html, "html.parser")
+    normalize_accordions(soup)
     faq_candidates = [
         element
         for element in soup.find_all(["section", "article", "div"])
