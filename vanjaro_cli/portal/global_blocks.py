@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from vanjaro_cli.design.models import ContentKind, DesignDocument, Section
@@ -144,6 +145,10 @@ def _project_brand_text(
             if isinstance(value, str) and value.strip():
                 return value.strip()
 
+    figma_name = _figma_file_brand(document.source.metadata.get("figma_file_name"))
+    if figma_name:
+        return figma_name
+
     # Project IDs are site-owned stable identities.  Remove orchestration-only
     # suffixes before presenting one to visitors.
     words = [word for word in project_id.replace("_", "-").split("-") if word]
@@ -154,6 +159,18 @@ def _project_brand_text(
     if containing_page is not None and containing_page.title.strip():
         return containing_page.title.strip()
     return "Site"
+
+
+def _figma_file_brand(value: object) -> str | None:
+    """Use the design file's name as the site name once copy markers are removed."""
+
+    if not isinstance(value, str):
+        return None
+    name = re.sub(r"\s*[(\[]\s*copy(?:\s+\d+)?\s*[)\]]\s*$", "", value.strip(), flags=re.IGNORECASE)
+    name = re.sub(r"^copy of\s+", "", name, flags=re.IGNORECASE).strip()
+    if not name or name.casefold().startswith("untitled"):
+        return None
+    return name
 
 
 __all__ = [

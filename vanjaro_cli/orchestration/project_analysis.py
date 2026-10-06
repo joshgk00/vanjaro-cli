@@ -27,7 +27,10 @@ from vanjaro_cli.design.sources import (
 )
 from vanjaro_cli.figma import FigmaClient, FigmaError, parse_file_key, parse_node_id
 from vanjaro_cli.migration.crawler import fetch_url_text
-from vanjaro_cli.orchestration.figma_assets import acquire_figma_image_fills
+from vanjaro_cli.orchestration.figma_assets import (
+    acquire_figma_image_fills,
+    acquire_figma_vector_exports,
+)
 from vanjaro_cli.orchestration.html_assets import acquire_html_assets
 from vanjaro_cli.orchestration.image_acquisition import (
     ImageAcquisitionError,
@@ -70,6 +73,7 @@ class _FigmaClient(Protocol):
     def get_file(self, key: str, depth: int | None = None, node_ids: list[str] | None = None) -> dict: ...
     def get_nodes(self, key: str, ids: list[str]) -> dict: ...
     def get_image_fills(self, key: str) -> dict[str, str]: ...
+    def get_image_renders(self, key: str, ids: list[str], scale: float = 2, image_format: str = "png") -> dict: ...
     def download(self, url: str, dest: Path) -> tuple[int, str]: ...
 
 
@@ -361,13 +365,21 @@ def _analyze_source(
         )
         if client is None or fill_urls is None:
             return document, ()
-        return acquire_figma_image_fills(
+        document, fill_artifacts = acquire_figma_image_fills(
             root=root,
             source_id=source.id,
             document=document,
             fill_urls=fill_urls,
             client=client,
         )
+        document, vector_artifacts = acquire_figma_vector_exports(
+            root=root,
+            source_id=source.id,
+            file_key=file_key,
+            document=document,
+            client=client,
+        )
+        return document, (*fill_artifacts, *vector_artifacts)
     if source.kind == SourceKind.LEGACY_SECTIONS:
         if local is None or not local.is_dir():
             raise ProjectAnalysisError(

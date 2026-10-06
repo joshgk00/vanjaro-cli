@@ -415,3 +415,45 @@ def test_a_brand_may_be_a_link_in_the_vocabulary() -> None:
     from vanjaro_cli.design.semantics import semantic_slot_types
 
     assert "link" in semantic_slot_types("brand")
+
+
+def _header_plan(section: Section) -> dict:
+    return {
+        "entries": [{
+            "id": "global-header", "kind": "header", "status": "ready",
+            "source_section_id": section.id, "name": "project / Site Header",
+            "category": "Agency - project",
+        }]
+    }
+
+
+def _brand_document(figma_file_name: str | None) -> tuple[DesignDocument, Section]:
+    section = _section([_element("home-link", 0, ContentKind.LINK, "Home", attributes={"href": "/"})])
+    document = _document(section, [])
+    if figma_file_name is not None:
+        document = document.model_copy(update={
+            "source": document.source.model_copy(update={"metadata": {"figma_file_name": figma_file_name}})
+        })
+    return document, section
+
+
+def test_header_brand_text_prefers_the_figma_file_name_over_the_project_slug() -> None:
+    document, section = _brand_document("Keys to success (Copy)")
+
+    built = compose_project_global_blocks(
+        document, _header_plan(section), project_id="kts-figma-trial-2"
+    )
+
+    assert "Keys to success" in built[0]["html"]
+    assert "(Copy)" not in built[0]["html"]
+    assert "Kts Figma Trial" not in built[0]["html"]
+
+
+def test_header_brand_text_falls_back_to_the_project_slug_for_an_untitled_figma_file() -> None:
+    document, section = _brand_document("Untitled")
+
+    built = compose_project_global_blocks(
+        document, _header_plan(section), project_id="kts-figma-trial-2"
+    )
+
+    assert "Kts Figma Trial 2" in built[0]["html"]

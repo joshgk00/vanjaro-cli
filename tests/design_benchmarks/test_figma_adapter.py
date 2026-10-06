@@ -512,6 +512,116 @@ def test_invalid_payload_and_missing_requested_frame_are_actionable():
         analyze_figma_document(source, file_key="bad", node_id="999:1", captured_at=CAPTURED_AT)
 
 
+def _vector(node_id: str, name: str = "Vector", **extra) -> dict:
+    return {"id": node_id, "type": "VECTOR", "name": name, "fills": [{"type": "SOLID"}], **extra}
+
+
+def _navigation_with_vector_logo() -> dict:
+    return {
+        "id": "50:0", "type": "INSTANCE", "name": "Navigation",
+        "absoluteBoundingBox": {"x": 0, "y": 0, "width": 1000, "height": 100},
+        "children": [
+            {"id": "50:1", "type": "GROUP", "name": "Group 2", "absoluteBoundingBox": {"x": 20, "y": 10, "width": 90, "height": 80}, "children": [
+                _vector("50:2", absoluteBoundingBox={"x": 20, "y": 10, "width": 1, "height": 39}),
+                _vector("50:3", absoluteBoundingBox={"x": 30, "y": 10, "width": 1, "height": 39}),
+                {"id": "50:4", "type": "GROUP", "name": "Group 1", "children": [
+                    _vector("50:5"), _vector("50:6"),
+                ]},
+            ]},
+            {"id": "50:7", "type": "TEXT", "name": "Home", "characters": "Home", "absoluteBoundingBox": {"x": 500, "y": 40, "width": 40, "height": 13}},
+            {"id": "50:8", "type": "GROUP", "name": "Group 3", "absoluteBoundingBox": {"x": 600, "y": 10, "width": 100, "height": 80}, "children": [
+                {"id": "50:9", "type": "TEXT", "name": "Menu", "characters": "Menu"},
+                {"id": "50:10", "type": "LINE", "name": "Line 1"},
+            ]},
+        ],
+    }
+
+
+def test_vector_fragments_export_through_their_group_and_the_logo_is_marked():
+    requested: list[str] = []
+
+    def resolver(node):
+        requested.append(node["id"])
+        return f"https://signed.invalid/{node['id']}.svg"
+
+    document = analyze_figma_document(
+        _minimal_file([_navigation_with_vector_logo()]), file_key="logo",
+        vector_resolver=resolver, captured_at=CAPTURED_AT,
+    )
+
+    assert sorted(requested) == ["50:1", "50:10"]
+    logo = next(asset for asset in document.assets if asset.metadata["figma_node_id"] == "50:1")
+    assert logo.metadata["fragment_count"] == 4
+    assert logo.metadata["role_hint"] == "logo"
+    line = next(asset for asset in document.assets if asset.metadata["figma_node_id"] == "50:10")
+    assert "role_hint" not in line.metadata
+    layer_assets = [layer.asset_id for layer in document.pages[0].sections[0].decorative_layers]
+    assert sorted(layer_assets) == sorted(asset.id for asset in document.assets)
+
+
+def test_unresolved_vector_group_warns_once_for_the_group_not_each_fragment():
+    document = analyze_figma_document(
+        _minimal_file([_navigation_with_vector_logo()]), file_key="logo", captured_at=CAPTURED_AT,
+    )
+
+    unresolved = [w.path for w in document.warnings if w.code == "FIGMA_VECTOR_EXPORT_UNRESOLVED"]
+    assert sorted(unresolved) == ["figma.nodes[50:10]", "figma.nodes[50:1]"]
+
+
+def test_a_vector_group_named_logo_wins_over_a_larger_unnamed_group():
+    nav = _navigation_with_vector_logo()
+    nav["children"].append({
+        "id": "50:20", "type": "GROUP", "name": "Brand Logo",
+        "absoluteBoundingBox": {"x": 700, "y": 10, "width": 40, "height": 40},
+        "children": [_vector("50:21")],
+    })
+    document = analyze_figma_document(_minimal_file([nav]), file_key="logo", captured_at=CAPTURED_AT)
+
+    hinted = [a.metadata["figma_node_id"] for a in document.assets if a.metadata.get("role_hint") == "logo"]
+    assert hinted == ["50:20"]
+
+
+def test_vector_export_does_not_climb_through_a_painted_frame_or_mixed_content():
+    hero = {
+        "id": "60:0", "type": "FRAME", "name": "Hero", "layoutMode": "VERTICAL",
+        "children": [
+            {"id": "60:1", "type": "TEXT", "name": "Heading", "characters": "A useful heading"},
+            {"id": "60:2", "type": "FRAME", "name": "Badge", "fills": [{"type": "SOLID"}], "children": [_vector("60:3")]},
+            {"id": "60:4", "type": "GROUP", "name": "Icon", "children": [_vector("60:5"), _vector("60:6")]},
+            {"id": "60:7", "type": "GROUP", "name": "Icon with label", "children": [
+                _vector("60:8"), {"id": "60:9", "type": "TEXT", "name": "Label", "characters": "Label"},
+            ]},
+        ],
+    }
+    document = analyze_figma_document(
+        _minimal_file([hero]), file_key="icons",
+        vector_resolver=lambda node: "https://signed.invalid/x.svg", captured_at=CAPTURED_AT,
+    )
+
+    exported = sorted(asset.metadata["figma_node_id"] for asset in document.assets)
+    assert exported == ["60:3", "60:4", "60:8"]
+
+
+def test_a_lone_mask_vector_is_not_exported_but_a_mask_inside_an_icon_is():
+    hero = {
+        "id": "70:0", "type": "FRAME", "name": "Hero", "layoutMode": "VERTICAL",
+        "children": [
+            {"id": "70:1", "type": "TEXT", "name": "Heading", "characters": "A useful heading"},
+            {"id": "70:2", "type": "GROUP", "name": "Photo mask", "children": [
+                _vector("70:3", isMask=True),
+                {"id": "70:4", "type": "RECTANGLE", "name": "Photo", "fills": [{"type": "IMAGE", "imageRef": "photo"}]},
+            ]},
+            {"id": "70:5", "type": "GROUP", "name": "Clipped icon", "children": [_vector("70:6", isMask=True), _vector("70:7")]},
+        ],
+    }
+    document = analyze_figma_document(_minimal_file([hero]), file_key="masks", captured_at=CAPTURED_AT)
+
+    exported = sorted(
+        asset.metadata["figma_node_id"] for asset in document.assets if asset.metadata.get("figma_node_id")
+    )
+    assert exported == ["70:5"]
+
+
 def _minimal_file(sections: list[dict]) -> dict:
     return {
         "name": "Synthetic Test",

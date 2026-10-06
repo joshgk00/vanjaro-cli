@@ -430,7 +430,10 @@ class _AssetRegistry:
                 draft["role"] = AssetRole.EDITORIAL
         return asset_id
 
-    def vector(self, node: Mapping[str, Any], frame_id: str) -> str:
+    def vector(
+        self, node: Mapping[str, Any], frame_id: str, *,
+        fragment_count: int = 1, role_hint: str | None = None,
+    ) -> str:
         node_id = str(node.get("id"))
         key = f"vector:{node_id}"
         resolved_url = self.vector_resolver(node) if self.vector_resolver is not None else None
@@ -444,6 +447,8 @@ class _AssetRegistry:
                 "provenance": [provenance],
                 "metadata": {
                     "figma_node_id": node_id,
+                    "figma_node_name": str(node.get("name", "")),
+                    "fragment_count": fragment_count,
                     "resolution": "vector_export",
                     "original_available": bool(resolved_url),
                 },
@@ -454,10 +459,108 @@ class _AssetRegistry:
                     message=f"Visible vector node {node_id!r} requires a vector_resolver export URL.",
                     path=f"figma.nodes[{node_id}]", provenance=[provenance],
                 ))
+        if role_hint:
+            self._drafts[key]["metadata"]["role_hint"] = role_hint
         return asset_id
 
     def records(self) -> list[AssetRecord]:
         return [AssetRecord(**draft) for _, draft in sorted(self._drafts.items())]
+
+
+_VECTOR_TYPES = frozenset({"VECTOR", "STAR", "LINE", "BOOLEAN_OPERATION"})
+_VECTOR_CONTAINER_TYPES = frozenset({"GROUP", "FRAME", "COMPONENT", "INSTANCE"})
+_LOGO_FRAGMENT_MINIMUM = 3
+
+
+def _has_visible_paint(node: Mapping[str, Any]) -> bool:
+    return any(
+        isinstance(paint, Mapping) and paint.get("visible") is not False
+        for key in ("fills", "strokes") for paint in (node.get(key) or [])
+    )
+
+
+def _vector_export_roots(section_node: Mapping[str, Any]) -> dict[str, tuple[Mapping[str, Any], int]]:
+    """Map each vector fragment to the one node Figma should render for it.
+
+    Icons and logos are usually drawn as many vector pieces inside a group.
+    Rendering one piece at a time yields unusable slivers, so a fragment is
+    exported through its highest ancestor whose visible descendants are all
+    vector pieces. A frame that paints its own fill or stroke is not climbed
+    through, because exporting it would bake that background into the image.
+    """
+
+    parents: dict[str, Mapping[str, Any]] = {}
+    fragment_totals: dict[str, int] = {}
+    pure: dict[str, bool] = {}
+
+    def classify(current: Mapping[str, Any]) -> bool:
+        current_id = str(current.get("id"))
+        if current.get("type") in _VECTOR_TYPES:
+            fragment_totals[current_id] = 1
+            pure[current_id] = True
+            return True
+        total = 0
+        every_child_is_vector = True
+        for child in _children(current):
+            parents[str(child.get("id"))] = current
+            child_is_pure = classify(child)
+            if not _visible(child):
+                continue
+            total += fragment_totals.get(str(child.get("id")), 0)
+            every_child_is_vector = every_child_is_vector and child_is_pure
+        fragment_totals[current_id] = total
+        container_ok = current.get("type") == "GROUP" or not _has_visible_paint(current)
+        pure[current_id] = (
+            current.get("type") in _VECTOR_CONTAINER_TYPES and every_child_is_vector
+            and total > 0 and container_ok
+        )
+        return pure[current_id]
+
+    classify(section_node)
+    section_id = str(section_node.get("id"))
+    roots: dict[str, tuple[Mapping[str, Any], int]] = {}
+    for current in _walk(section_node):
+        if current.get("type") not in _VECTOR_TYPES:
+            continue
+        top = current
+        while True:
+            parent = parents.get(str(top.get("id")))
+            if parent is None or str(parent.get("id")) == section_id or not pure.get(str(parent.get("id"))):
+                break
+            top = parent
+        roots[str(current.get("id"))] = (top, fragment_totals[str(top.get("id"))])
+    return roots
+
+
+def _header_logo_root_id(
+    role: str, vector_exports: Mapping[str, tuple[Mapping[str, Any], int]],
+) -> str | None:
+    """Pick the vector export that is the site logo of a navigation section.
+
+    A logo drawn from outlines has no image fill and a generic layer name, so
+    the name rarely says so. A vector group named for a logo or brand wins;
+    otherwise the leftmost multi-piece group is the wordmark.
+    """
+
+    if role != "navigation":
+        return None
+    candidates = {
+        str(root.get("id")): (root, fragments)
+        for root, fragments in vector_exports.values()
+    }
+    named = [
+        root for root, _ in candidates.values()
+        if re.search(r"logo|brand", str(root.get("name", "")), re.IGNORECASE)
+    ]
+    pool = named or [
+        root for root, fragments in candidates.values()
+        if fragments >= _LOGO_FRAGMENT_MINIMUM
+    ]
+    positioned = [
+        (bounds.x, bounds.y, str(root.get("id")))
+        for root in pool if (bounds := _box(root)) is not None
+    ]
+    return min(positioned)[2] if positioned else None
 
 
 def _extract_section(
@@ -493,6 +596,9 @@ def _extract_section(
         for descendant in _walk(unit)
         if descendant.get("id") is not None
     }
+    vector_exports = _vector_export_roots(node)
+    exported_roots: set[str] = set()
+    logo_root_id = _header_logo_root_id(role, vector_exports)
     first_text = True
     for current in _walk(node):
         if current is node or not _visible(current):
@@ -563,10 +669,19 @@ def _extract_section(
                 ))
                 node_to_element[node_id] = element_id
 
-        if current.get("type") in {"VECTOR", "STAR", "LINE", "BOOLEAN_OPERATION"} and _is_decorative(current):
-            asset_id = assets.vector(current, frame_id)
+        if current.get("type") in _VECTOR_TYPES and _is_decorative(current):
+            export_root, fragments = vector_exports.get(node_id, (current, 1))
+            export_id = str(export_root.get("id"))
+            # A lone mask only clips its siblings; Figma will not render it.
+            if export_id in exported_roots or (export_root is current and current.get("isMask")):
+                continue
+            exported_roots.add(export_id)
+            asset_id = assets.vector(
+                export_root, frame_id, fragment_count=fragments,
+                role_hint="logo" if export_id == logo_root_id else None,
+            )
             decorative_layers.append(DecorativeLayer(
-                id=f"{section_id}.decoration.{_safe(node_id)}.vector",
+                id=f"{section_id}.decoration.{_safe(export_id)}.vector",
                 kind="figma_vector", order=len(decorative_layers), asset_id=asset_id,
                 provenance=current_provenance, confidence=0.96,
             ))
