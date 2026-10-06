@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+from pathlib import Path
+
+import pytest
 from bs4 import BeautifulSoup
 
-from vanjaro_cli.design.html_adapter import design_document_from_html
+from vanjaro_cli.design.html_adapter import _RENDERED_OBSERVATION_JS, design_document_from_html
 from vanjaro_cli.design.html_boundaries import static_boundary_candidates, static_role
 from vanjaro_cli.migration.sections import extract_sections, normalize_text_blocks
 from vanjaro_cli.migration.uikit import (
@@ -213,3 +216,76 @@ def test_a_row_of_linked_cards_is_not_a_navigation_bar() -> None:
 
     assert static_role(BeautifulSoup(f"<div>{cards}</div>", "html.parser").div, 3) != "navigation"
     assert static_role(BeautifulSoup(f"<div>{links}</div>", "html.parser").div, 3) == "navigation"
+
+
+def test_the_rendered_observation_script_carries_the_uikit_section_rule() -> None:
+    """RT-22: the static side reads `uk-section` / `uk-section-*` as boundaries, and
+    pairing is by selector, so the rendered side must read the same ones."""
+
+    assert "name === 'uk-section' || name.startsWith('uk-section-')" in _RENDERED_OBSERVATION_JS
+    assert "'uk-hidden@m'" in _RENDERED_OBSERVATION_JS
+
+
+def _rendered_selectors(html: str) -> list[str]:
+    sync_api = pytest.importorskip("playwright.sync_api")
+    with sync_api.sync_playwright() as playwright:
+        try:
+            browser = playwright.chromium.launch()
+        except sync_api.Error as error:
+            pytest.skip(f"no browser available: {error}")
+        try:
+            page = browser.new_page()
+            page.route("**/*", lambda route: route.abort())
+            page.set_content(html)
+            snapshot = page.evaluate(_RENDERED_OBSERVATION_JS)
+        finally:
+            browser.close()
+    return [section["selector"] for section in snapshot["sections"]]
+
+
+def _static_selectors(html: str) -> list[str]:
+    document = design_document_from_html(html, URL)
+    return [
+        provenance.css_selector
+        for section in document.pages[0].sections
+        for provenance in section.provenance
+        if provenance.css_selector
+    ]
+
+
+def test_the_rendered_script_finds_the_sections_the_static_side_selects() -> None:
+    hidden_twin = _section(f"<h2>Mobile twin</h2><p>{FILLER}</p>", "uk-hidden@m uk-section-default")
+    footer = f'<footer><div class="uk-section"><p>{FILLER}</p></div></footer>'
+    # A sectioning element elsewhere keeps the script's fallback to <main>'s
+    # children from standing in for the rule under test.
+    sections = "".join(
+        [_text_section("Alpha"), hidden_twin, _text_section("Beta"), _text_section("Gamma")]
+    )
+    html = (
+        f"<html><body><div>{sections}</div>"
+        f"<article><p>{FILLER}</p></article>{footer}</body></html>"
+    )
+
+    rendered = _rendered_selectors(html)
+    static = [selector for selector in _static_selectors(html) if not selector.startswith("footer")]
+
+    wrapper = "body:nth-of-type(1) > div:nth-of-type(1) > div:nth-of-type("
+    assert static and set(static) <= set(rendered)
+    assert [wrapper + f"{position})" in rendered for position in (1, 2, 3, 4)] == [
+        True, False, True, True,
+    ]
+
+
+def test_the_real_quality_hc_page_pairs_its_uikit_sections_by_selector() -> None:
+    fixture = Path(__file__).parent / "fixtures" / "real-sources" / "quality-hc-home-real.html"
+    html = fixture.read_text(encoding="utf-8")
+
+    rendered = set(_rendered_selectors(html))
+    static = [
+        selector
+        for selector in _static_selectors(html)
+        if selector and not selector.startswith(("header", "footer"))
+    ]
+
+    assert len(static) >= 8
+    assert set(static) <= rendered

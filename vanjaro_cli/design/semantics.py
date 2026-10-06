@@ -130,6 +130,21 @@ _ITEM_CAPABILITY_ALIASES: Final = MappingProxyType({
     "item_action": ("item.action",),
 })
 
+# A question/answer pair is a title and a body that happen to sit in a
+# question-and-answer list. Only a repeat group the source already identified as
+# FAQ items may fill `item.question` / `item.answer`; the same title and body in
+# a card list must not make an FAQ template look like a fit.
+_FAQ_ITEM_CAPABILITY_ALIASES: Final = MappingProxyType({
+    "title": ("item.question",),
+    "item_title": ("item.question",),
+    "card_title": ("item.question",),
+    "body": ("item.answer",),
+    "item_body": ("item.answer",),
+    "card_body": ("item.answer",),
+})
+
+_FAQ_REPEAT_KIND: Final = "faq_item"
+
 _SECTION_CAPABILITY_ALIASES: Final = MappingProxyType({
     "section_title": ("section_title", "title"),
     "title": ("title", "section_title"),
@@ -172,11 +187,18 @@ def semantic_slot_types(field: str) -> tuple[str, ...] | None:
     return _SEMANTIC_SLOT_TYPES.get(_leaf(field))
 
 
-def item_capability_aliases(role: str) -> tuple[str, ...]:
-    """Map an observed repeat-item role to supported capability fields."""
+def item_capability_aliases(role: str, repeat_kind: str | None = None) -> tuple[str, ...]:
+    """Map an observed repeat-item role to supported capability fields.
+
+    `repeat_kind` is the kind of the group the item belongs to; it widens the
+    aliases only where the group's meaning, not the role name, decides the field.
+    """
 
     normalized = normalize_semantic_name(role)
-    return _ITEM_CAPABILITY_ALIASES.get(normalized, (f"item.{normalized}",))
+    aliases = _ITEM_CAPABILITY_ALIASES.get(normalized, (f"item.{normalized}",))
+    if repeat_kind is not None and normalize_semantic_name(repeat_kind) == _FAQ_REPEAT_KIND:
+        return aliases + _FAQ_ITEM_CAPABILITY_ALIASES.get(normalized, ())
+    return aliases
 
 
 def section_capability_aliases(role: str) -> tuple[str, ...]:

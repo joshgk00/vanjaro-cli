@@ -278,16 +278,17 @@ def _semantic_score(section: Section, capabilities: CapabilityManifest) -> float
 def _observed_fields(section: Section) -> tuple[tuple[str, tuple[str, ...]], ...]:
     observations: dict[tuple[str, ...], str] = {}
     grouped_ids = {element.id for element in section.content if element.group_id is not None}
+    group_kinds = {group.id: group.kind.value for group in section.groups}
 
     for group in section.groups:
         for item in group.items:
             for field_name in item.fields:
-                alternatives = item_capability_aliases(field_name)
+                alternatives = item_capability_aliases(field_name, group.kind.value)
                 observations.setdefault(alternatives, f"item.{_normalize(field_name)}")
 
     for element in section.content:
         if element.id in grouped_ids:
-            alternatives = item_capability_aliases(element.role)
+            alternatives = item_capability_aliases(element.role, group_kinds.get(element.group_id))
             label = f"item.{_normalize(element.role)}"
         else:
             alternatives = section_capability_aliases(element.role)

@@ -195,6 +195,28 @@ _RENDERED_OBSERVATION_JS = r"""() => {
         .querySelectorAll("[data-elementor-type] > [data-id][data-element_type='container']")
         .forEach(add);
     document.querySelectorAll("#Body > [id^='dnn_'], [id^='dnn_'][class*='Pane']").forEach(add);
+    // A UIkit page writes each section as a div carrying `uk-section` or a
+    // `uk-section-<variant>` class, so none of the rules above see it. Same
+    // test as the static rule: whole class tokens, outermost only, never page
+    // chrome, never the mobile twin a `uk-hidden@*` class hides on a desktop,
+    // and never an empty box. A section the static side splits into bands has
+    // no selector there, so it is left unpaired here as well.
+    const isUikitSection = (el) =>
+        Array.from(el.classList).some((name) => name === 'uk-section' || name.startsWith('uk-section-'));
+    const HIDDEN_AT_DESKTOP = ['uk-hidden@s', 'uk-hidden@m', 'uk-hidden@l'];
+    const hiddenAtDesktop = (el) => {
+        for (let node = el; node; node = node.parentElement) {
+            if (HIDDEN_AT_DESKTOP.some((name) => node.classList.contains(name))) return true;
+        }
+        return false;
+    };
+    const uikitSections = Array.from(document.querySelectorAll('[class*="uk-section"]')).filter(
+        (el) => isUikitSection(el) && !el.closest('header, footer, nav') && !hiddenAtDesktop(el),
+    );
+    uikitSections
+        .filter((el) => !uikitSections.some((other) => other !== el && other.contains(el)))
+        .filter((el) => (el.textContent || '').trim() || el.querySelector('img, video'))
+        .forEach(add);
     if (!candidates.length) {
         const main = document.querySelector('main, [role="main"]');
         if (main) Array.from(main.children).forEach(add);

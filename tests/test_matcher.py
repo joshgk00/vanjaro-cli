@@ -571,3 +571,49 @@ def test_a_gallery_section_of_images_and_captions_still_matches_a_gallery_templa
     result = match_section(_gallery_role_section(item_fields), CATALOG)
 
     assert result.selected_candidate.template_id.startswith("Cards/gallery")
+
+
+def _faq_section(group_kind: RepeatGroupKind) -> Section:
+    section = _section(
+        role="faq",
+        layout_kind=LayoutKind.STACK,
+        columns=1,
+        media_position=None,
+        section_roles=("section_title",),
+        item_fields=("title", "body"),
+        item_count=5,
+        group_kind=group_kind,
+        interactions=(InteractionKind.ACCORDION,),
+    )
+    return section.model_copy(
+        update={
+            "content": [
+                element.model_copy(update={"role": element.role.replace("card_", "item_")})
+                for element in section.content
+            ]
+        }
+    )
+
+
+def test_faq_items_carrying_title_and_body_match_the_faq_template() -> None:
+    """The extractor labels a question `item_title` and its answer `item_body`;
+    the FAQ template declares `item.question` and `item.answer`. Matching did not
+    connect them, so a real FAQ lost to an icon list that cannot hold an accordion."""
+
+    result = match_section(_faq_section(RepeatGroupKind.FAQ_ITEM), CATALOG)
+    selected = result.selected_candidate
+
+    assert selected.template_id == "Content/faq-accordion"
+    assert selected.missing_requirements == ()
+    assert not result.blocking
+
+
+def test_a_card_group_does_not_gain_question_and_answer_fields() -> None:
+    candidate = score_template(
+        _faq_section(RepeatGroupKind.CARD), _entry("faq-accordion.json")
+    )
+
+    assert any(
+        requirement == "required template field 'item.question' has no source content"
+        for requirement in candidate.missing_requirements
+    )

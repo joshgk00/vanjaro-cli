@@ -99,8 +99,23 @@ def test_the_page_plans_with_fewer_blockers_more_editable_content_and_native_tem
 
     assert summary.editable_content_coverage > 0.5
     assert summary.blocking_count <= 3
-    assert summary.native_component_ratio == 1.0
+    # The FAQ template declares 0.95, so a page that uses it averages just under 1.
+    assert summary.native_component_ratio >= 0.9
 
 
 def test_no_template_that_is_not_native_is_chosen(plan) -> None:
     assert "Cards/class-photo-cards-4up" not in {entry.template_id for entry in plan.entries}
+
+
+def test_the_faq_matches_the_faq_template_with_every_question_and_answer_bound(plan) -> None:
+    """RT-20: items carry title/body, the FAQ template wants question/answer, and
+    the section used to fall to an icon list that cannot hold an accordion."""
+
+    entry = next(e for e in plan.entries if e.source_section_id == "home.section.10")
+
+    assert entry.template_id == "Content/faq-accordion"
+    assert not entry.match.blocking
+    assert entry.simplifications == ()
+    fields = [binding.semantic_field for binding in entry.bindings]
+    assert fields.count("item.question") == 5
+    assert fields.count("item.answer") == 5

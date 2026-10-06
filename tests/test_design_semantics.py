@@ -57,3 +57,25 @@ def test_legacy_item_roles_reach_the_same_fields_as_their_unprefixed_names() -> 
     assert item_capability_aliases("item_media") == item_capability_aliases("media")
     assert item_capability_aliases("item_action") == item_capability_aliases("action")
 
+
+
+def test_faq_items_title_and_body_also_reach_question_and_answer() -> None:
+    """A title and body inside a repeat group the source marked as FAQ items are
+    a question and an answer; the FAQ template declares only those two fields."""
+
+    for title in ("title", "item_title", "card_title"):
+        assert item_capability_aliases(title, "faq_item") == (
+            *item_capability_aliases(title),
+            "item.question",
+        )
+    for body in ("body", "item_body", "card_body"):
+        assert item_capability_aliases(body, "faq_item") == (
+            *item_capability_aliases(body),
+            "item.answer",
+        )
+
+
+def test_the_question_and_answer_aliases_depend_on_the_group_kind() -> None:
+    assert item_capability_aliases("item_title", "card") == ("item.title",)
+    assert item_capability_aliases("item_title", None) == ("item.title",)
+    assert item_capability_aliases("item_media", "faq_item") == item_capability_aliases("item_media")
