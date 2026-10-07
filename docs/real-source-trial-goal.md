@@ -319,3 +319,4 @@ One bounded unit at a time:
   re-analyze that voids its approvals, so the rebuild goes into a fresh
   workspace (`kts-figma-trial-4`) with trial 2's overlays replayed. It
   needs Josh's plan, portal-mutation, and publish approvals.
+- `kts-figma-trial-4` (pack 1.13.0): analyze 12 sections / 3 warnings; 13 overlays replayed; plan valid, editable 0.946, native 0.967, 0 blockers. Waiting on Josh for plan + portal-mutation approvals.
