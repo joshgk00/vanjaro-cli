@@ -45,6 +45,7 @@ from vanjaro_cli.design.models import (
     ResponsiveObservation,
     Section,
     SourceKind,
+    StyleObservation,
     StyleSet,
     TokenValue,
     TypographyToken,
@@ -54,6 +55,11 @@ from vanjaro_cli.design.models import (
 from vanjaro_cli.design.figma_layout_geometry import infer_side_media as _infer_side_media
 from vanjaro_cli.design.figma_text_roles import select_hero_title
 from vanjaro_cli.design.figma_sections import segment_frame as _segment_frame
+from vanjaro_cli.design.figma_shapes import (
+    background_bands as _background_bands,
+    image_shape_style as _image_shape_style,
+    parent_index as _parent_index,
+)
 from vanjaro_cli.design.figma_tree import (
     CONTAINER_TYPES as _CONTAINER_TYPES,
     box as _box,
@@ -597,6 +603,7 @@ def _extract_section(
         if descendant.get("id") is not None
     }
     vector_exports = _vector_export_roots(node)
+    parents = _parent_index(node)
     exported_roots: set[str] = set()
     logo_root_id = _header_logo_root_id(role, vector_exports)
     first_text = True
@@ -665,6 +672,13 @@ def _extract_section(
                     id=element_id, kind=ContentKind.IMAGE, role=image_role,
                     value=str(ref), asset_id=asset_id, order=len(content),
                     attributes={"figma_node_id": node_id, "figma_node_name": str(current.get("name", ""))},
+                    style=StyleSet(observations=[
+                        StyleObservation(
+                            property=style_property, value=style_value,
+                            confidence=0.9, provenance=current_provenance,
+                        )
+                        for style_property, style_value in _image_shape_style(current, fill, parents)
+                    ]),
                     provenance=current_provenance, confidence=0.91,
                 ))
                 node_to_element[node_id] = element_id
@@ -695,19 +709,22 @@ def _extract_section(
         node_to_element=node_to_element, file_key=file_key,
         page_node_id=page_node_id, frame_id=frame_id,
     )
+    metadata: dict[str, Any] = {
+        "figma_node_id": str(node.get("id")),
+        "section_boundary_confidence": 0.78 if boundary_inference else (0.98 if node.get("layoutMode") else 0.84),
+        "section_boundary_evidence": "inferred" if boundary_inference else "observed",
+        "layout_confidence": layout_confidence,
+        "layout_evidence_status": "observed" if layout_method == ObservationMethod.API else "inferred",
+    }
+    bands = _background_bands(node, _box(node))
+    if bands:
+        metadata["background_bands"] = bands
     return Section(
         id=section_id, order=order, semantic_role=role,
         role_confidence=role_confidence, candidate_roles=candidates,
         layout=layout, content=content, groups=groups, style=StyleSet(),
         responsive=[], decorative_layers=decorative_layers, interactions=[],
-        provenance=provenance,
-        metadata={
-            "figma_node_id": str(node.get("id")),
-            "section_boundary_confidence": 0.78 if boundary_inference else (0.98 if node.get("layoutMode") else 0.84),
-            "section_boundary_evidence": "inferred" if boundary_inference else "observed",
-            "layout_confidence": layout_confidence,
-            "layout_evidence_status": "observed" if layout_method == ObservationMethod.API else "inferred",
-        },
+        provenance=provenance, metadata=metadata,
     )
 
 

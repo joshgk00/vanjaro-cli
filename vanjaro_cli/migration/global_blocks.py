@@ -20,11 +20,12 @@ from __future__ import annotations
 import uuid
 from typing import Any
 
-from vanjaro_cli.utils.block_compose import apply_section_background
+from vanjaro_cli.utils.block_compose import _add_class, _is_dark_color, apply_section_background
 from vanjaro_cli.utils.image_links import is_safe_link_href
 
 # Bump when build_footer_block output changes so project plans regenerate.
-FOOTER_COMPOSER_CONTRACT_VERSION = "1.1"
+# 1.2: footers keep the design's columns, band colour, and bottom strip.
+FOOTER_COMPOSER_CONTRACT_VERSION = "1.2"
 
 __all__ = [
     "build_header_block",
@@ -415,7 +416,15 @@ def build_footer_block(
 
     With a ``palette``, band colors become theme classes (and any per-id rules
     land in ``styles``).
+
+    A content dict with ``columns`` (from a design that records where each
+    element sits) is laid out as those columns instead, with an optional
+    ``bottom_bar`` strip under them in its own colour.
     """
+    designed_columns = content.get("columns")
+    if isinstance(designed_columns, list):
+        return _build_designed_footer(content, designed_columns, palette)
+
     link_columns = _footer_link_columns(content)
     about_text = _first_paragraph(content)
     badge_images = _footer_badge_images(content)
@@ -467,6 +476,90 @@ def build_footer_block(
     styles: list = []
     apply_section_background(section, content, palette=palette, styles=styles)
     return _wrap(section, styles)
+
+
+_LIGHT_TEXT_TYPES = frozenset({"heading", "text", "link", "list-item"})
+
+
+def _build_designed_footer(
+    content: dict,
+    columns: list[dict],
+    palette: dict[str, tuple[int, int, int]] | None,
+) -> dict:
+    """Lay out a footer whose columns and bottom strip come from the design.
+
+    Column count sets the column width. A dark band gets light text on every
+    text component, because theme text classes carry their own colour and would
+    not inherit the band's.
+    """
+    column_count = max(1, len(columns))
+    width = max(2, 12 // column_count)
+    sizes = ["col-12"] if column_count == 1 else [f"col-md-{width}", "col-sm-6", "col-12"]
+    column_components = [
+        _col(_designed_entries(column.get("entries") or []), size_classes=list(sizes))
+        for column in columns
+        if isinstance(column, dict) and column.get("entries")
+    ]
+    if not column_components:
+        column_components = [_col([_text("(migrated footer — no content captured)")], size_classes=["col-12"])]
+
+    has_band = bool(content.get("background_color"))
+    main = _section(
+        extra_classes=["py-5"] if has_band else ["py-5", "bg-light"],
+        children=[_container([_row(column_components, extra_classes=["g-4"])])],
+    )
+    styles: list = []
+    apply_section_background(main, content, palette=palette, styles=styles)
+    if has_band and _is_dark_color(content["background_color"]):
+        _light_text(main)
+
+    bar = content.get("bottom_bar")
+    if not isinstance(bar, dict) or not bar.get("entries"):
+        return _wrap(main, styles)
+    strip = _section(
+        extra_classes=["py-3"],
+        children=[_container([
+            _row(
+                [_col(_designed_entries(bar["entries"], gap_class="mb-0"), size_classes=["col-12"])],
+                extra_classes=["text-center"],
+            )
+        ])],
+    )
+    bar_color = bar.get("background_color")
+    if isinstance(bar_color, str) and bar_color:
+        apply_section_background(strip, {"background_color": bar_color}, palette=palette, styles=styles)
+        if _is_dark_color(bar_color):
+            _light_text(strip)
+    return _wrap(_section_group([main, strip]), styles)
+
+
+def _designed_entries(entries: list[dict], gap_class: str = "mb-2") -> list[dict]:
+    components: list[dict] = []
+    for position, entry in enumerate(entries):
+        kind = entry.get("kind")
+        text = entry.get("text", "")
+        if kind == "heading":
+            spacing = [gap_class] if position == 0 else ["mt-3", gap_class]
+            components.append(_heading(text, tag="h5", extra_classes=spacing))
+        elif kind == "link":
+            components.append(
+                _component(
+                    "link", tag_name="a", content=text,
+                    classes=["d-block", gap_class], attributes={"href": entry["href"]},
+                )
+            )
+        elif kind == "image":
+            components.append(_image(entry["src"], entry.get("alt", ""), extra_classes=["footer-badge", gap_class]))
+        else:
+            components.append(_text(text, extra_classes=[gap_class]))
+    return components
+
+
+def _light_text(component: dict) -> None:
+    if component.get("type") in _LIGHT_TEXT_TYPES:
+        _add_class(component, "text-white")
+    for child in component.get("components") or []:
+        _light_text(child)
 
 
 def _footer_social_row(content: dict) -> dict | None:

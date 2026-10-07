@@ -80,6 +80,7 @@ def compose_project_pages(
                     {},
                     {},
                     variant_lookup,
+                    keep_image_identity=True,
                 )
             namespaced, renamed = _namespace_components(
                 block_components,

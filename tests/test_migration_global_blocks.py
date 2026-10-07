@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 from vanjaro_cli.migration.global_blocks import (
+    FOOTER_COMPOSER_CONTRACT_VERSION,
     MENU_BLOCK_GUID,
     build_footer_block,
     build_header_block,
@@ -495,3 +496,122 @@ def test_footer_dedupes_repeated_links_and_list_items():
     text = repr(built)
     assert text.count("Privacy Policy") == 1
     assert text.count("'Home'") == 1
+
+
+# --- designed footers: columns and a bottom bar from a design ---
+
+
+def _designed_columns(count: int) -> list[dict]:
+    return [
+        {"entries": [{"kind": "heading", "text": f"Column {index}"}, {"kind": "text", "text": f"Line {index}"}]}
+        for index in range(1, count + 1)
+    ]
+
+
+def _components_of_type(tree: dict, component_type: str) -> list[dict]:
+    found: list[dict] = []
+
+    def walk(node):
+        if node.get("type") == component_type:
+            found.append(node)
+        for child in node.get("components", []) or []:
+            walk(child)
+
+    walk(tree)
+    return found
+
+
+def _column_classes(count: int) -> list[str]:
+    root = build_footer_block({"columns": _designed_columns(count)})["components"][0]
+    return [cls["name"] for cls in _components_of_type(root, "column")[0]["classes"]]
+
+
+def test_footer_composer_version_marks_the_designed_layout():
+    assert FOOTER_COMPOSER_CONTRACT_VERSION == "1.2"
+
+
+def test_designed_footer_sizes_columns_by_how_many_there_are():
+    assert _column_classes(4) == ["col-md-3", "col-sm-6", "col-12"]
+    assert _column_classes(3) == ["col-md-4", "col-sm-6", "col-12"]
+    assert _column_classes(2) == ["col-md-6", "col-sm-6", "col-12"]
+    assert _column_classes(6) == ["col-md-2", "col-sm-6", "col-12"]
+    assert _column_classes(1) == ["col-12"]
+
+
+def test_designed_footer_renders_each_column_in_order():
+    root = build_footer_block({"columns": _designed_columns(3)})["components"][0]
+
+    columns = _components_of_type(root, "column")
+
+    assert [_flatten_content(column) for column in columns] == [
+        ["Column 1", "Line 1"], ["Column 2", "Line 2"], ["Column 3", "Line 3"],
+    ]
+
+
+def test_designed_footer_renders_links_images_and_paragraphs():
+    root = build_footer_block({"columns": [{"entries": [
+        {"kind": "image", "src": "/logo.png", "alt": "Logo"},
+        {"kind": "paragraph", "text": "About the studio"},
+        {"kind": "link", "text": "Contact", "href": "/contact"},
+    ]}]})["components"][0]
+
+    links = _components_of_type(root, "link")
+
+    assert _image_srcs(root) == ["/logo.png"]
+    assert [(link["content"], link["attributes"]["href"]) for link in links] == [("Contact", "/contact")]
+    assert "d-block" in [cls["name"] for cls in links[0]["classes"]]
+    assert "About the studio" in _flatten_content(root)
+
+
+def test_designed_footer_without_a_band_color_keeps_the_light_fallback():
+    root = build_footer_block({"columns": _designed_columns(2)})["components"][0]
+
+    assert "bg-light" in _flatten_classes(root)
+    assert "text-white" not in _flatten_classes(root)
+
+
+def test_designed_footer_on_a_dark_band_gets_light_text_everywhere():
+    built = build_footer_block({"columns": _designed_columns(2), "background_color": "#103030"})
+    root = built["components"][0]
+
+    text_nodes = [
+        node for kind in ("heading", "text") for node in _components_of_type(root, kind)
+    ]
+
+    assert "background-color:#103030" in root["attributes"]["style"]
+    assert "bg-light" not in _flatten_classes(root)
+    assert text_nodes
+    assert all("text-white" in [cls["name"] for cls in node["classes"]] for node in text_nodes)
+
+
+def test_designed_footer_adds_a_bottom_strip_in_its_own_color_under_the_columns():
+    built = build_footer_block({
+        "columns": _designed_columns(2),
+        "background_color": "#103030",
+        "bottom_bar": {
+            "background_color": "#fdbb2c",
+            "entries": [{"kind": "text", "text": "All rights reserved"}],
+        },
+    })
+    group = built["components"][0]
+
+    main, strip = _components_of_type(group, "section")
+
+    assert group["classes"][0]["name"] == "vj-section-group"
+    assert "background-color:#103030" in main["attributes"]["style"]
+    assert "background-color:#fdbb2c" in strip["attributes"]["style"]
+    assert _flatten_content(strip) == ["All rights reserved"]
+    assert "text-white" not in _flatten_classes(strip)
+    assert "All rights reserved" not in _flatten_content(main)
+
+
+def test_designed_footer_with_no_columns_says_nothing_was_captured():
+    built = build_footer_block({"columns": []})
+
+    assert "no content captured" in repr(built)
+
+
+def test_a_footer_dict_without_columns_still_uses_the_crawl_layout():
+    built = build_footer_block({"headings": ["Links"], "list_items": ["Home"]})
+
+    assert "col-md-12" in _flatten_classes(built["components"][0])

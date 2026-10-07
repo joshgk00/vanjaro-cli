@@ -120,6 +120,65 @@ def test_preserves_extra_image_attributes_but_drops_src_and_id():
     assert "id" not in inner["attributes"]
 
 
+def _styled_image() -> dict:
+    return {
+        "type": "image",
+        "classes": [
+            {"name": "image-box", "active": False},
+            {"name": "vj-image", "active": False},
+            {"name": "img-fluid", "active": False},
+            {"name": "rounded-circle", "active": False},
+            {"name": "mb-3", "active": False},
+        ],
+        "attributes": {"id": "photo", "src": "/old.png", "alt": "Alt"},
+    }
+
+
+def test_keep_source_identity_carries_the_id_and_template_classes():
+    box = build_picture_box(
+        _styled_image(), "/Portals/0/Images/x.png", _variants(), keep_source_identity=True
+    )
+    inner = _find(box, lambda c: c.get("type") == "image")
+    assert inner["attributes"]["id"] == "photo"
+    assert [c["name"] for c in inner["classes"]] == [
+        "vj-image", "img-fluid", "rounded-circle", "mb-3",
+    ]
+
+
+def test_keep_source_identity_leaves_the_wrapper_unclassed():
+    box = build_picture_box(
+        _styled_image(), "/Portals/0/Images/x.png", _variants(), keep_source_identity=True
+    )
+    picture = box["components"][0]["components"][0]
+    assert "classes" not in box
+    assert [c["name"] for c in box["components"][0]["classes"]] == ["image-frame"]
+    assert [c["name"] for c in picture["classes"]] == ["picture-box"]
+
+
+def test_default_still_drops_the_source_id_and_extra_classes():
+    box = build_picture_box(_styled_image(), "/Portals/0/Images/x.png", _variants())
+    inner = _find(box, lambda c: c.get("type") == "image")
+    assert {c["name"] for c in inner["classes"]} == {"vj-image", "img-fluid"}
+    assert "id" not in inner["attributes"]
+
+
+def test_rewrite_tree_passes_keep_image_identity_to_the_wrapper():
+    from vanjaro_cli.migration.url_rewrite import rewrite_tree
+
+    variants = {"/x.png": _variants()}
+    kept = {"components": [_styled_image() | {"attributes": {"id": "photo", "src": "/x.png"}}]}
+    dropped = {"components": [_styled_image() | {"attributes": {"id": "photo", "src": "/x.png"}}]}
+
+    rewrite_tree(kept, {}, {}, variants, keep_image_identity=True)
+    rewrite_tree(dropped, {}, {}, variants)
+
+    kept_inner = _find(kept["components"][0], lambda c: c.get("type") == "image")
+    dropped_inner = _find(dropped["components"][0], lambda c: c.get("type") == "image")
+    assert kept_inner["attributes"]["id"] == "photo"
+    assert "rounded-circle" in {c["name"] for c in kept_inner["classes"]}
+    assert "id" not in dropped_inner["attributes"]
+
+
 # -- idempotence guard --
 
 

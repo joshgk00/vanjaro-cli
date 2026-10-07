@@ -30,6 +30,9 @@ __all__ = [
 WEBP_VARIANT_TYPE = "webp"
 IMAGE_VARIANT_TYPE = "image"
 
+_WRAPPER_CLASSES = frozenset({"image-box", "image-frame", "picture-box"})
+_INNER_IMAGE_CLASSES = frozenset({"vj-image", "img-fluid"})
+
 
 def is_picture_box(component: dict[str, Any]) -> bool:
     """Report whether a component is already a ``picture-box`` wrapper.
@@ -82,10 +85,31 @@ def _source(srcset: str, mime_type: str | None) -> dict[str, Any]:
     }
 
 
+def _source_classes(image_component: dict[str, Any]) -> list[dict[str, Any]]:
+    """The source image's own classes, minus the wrapper and base ones.
+
+    ``rounded-circle`` or a margin utility on the template image has to stay on
+    the ``<img>`` that actually renders; the wrapper types and the two classes
+    every inner image already carries would only duplicate or confuse.
+    """
+    names = [
+        entry["name"]
+        for entry in image_component.get("classes") or []
+        if isinstance(entry, dict) and isinstance(entry.get("name"), str) and entry["name"]
+    ]
+    return [
+        {"name": name, "active": False}
+        for name in dict.fromkeys(names)
+        if name not in _WRAPPER_CLASSES and name not in _INNER_IMAGE_CLASSES
+    ]
+
+
 def build_picture_box(
     image_component: dict[str, Any],
     original_url: str,
     variants: list[dict[str, Any]],
+    *,
+    keep_source_identity: bool = False,
 ) -> dict[str, Any] | None:
     """Build a ``picture-box`` tree from an image component and its variants.
 
@@ -94,6 +118,11 @@ def build_picture_box(
     "type"}, ...]``). The inner image preserves the source component's ``alt``
     and any extra non-src attributes, and carries the ``vj-image``/``img-fluid``
     classes plus ``loading="lazy"`` like the hand-authored markup.
+
+    The source image's own ``id`` and extra classes are dropped unless
+    ``keep_source_identity`` is set. A style rule or a template class aimed at
+    the original ``<img>`` (a circular crop on a team photo) must follow it
+    into the wrapper, or the wrapped image renders unstyled.
 
     Returns ``None`` when there are no usable variants — the caller should
     leave the plain image untouched in that case (external URLs, SVGs, upload
@@ -111,10 +140,11 @@ def build_picture_box(
         sources.append(_source(original_srcset, None))
 
     source_attributes = image_component.get("attributes")
+    dropped_attributes = ("src",) if keep_source_identity else ("src", "id")
     preserved_attributes: dict[str, Any] = {}
     if isinstance(source_attributes, dict):
         for key, value in source_attributes.items():
-            if key in ("src", "id"):
+            if key in dropped_attributes:
                 continue
             preserved_attributes[key] = value
 
@@ -123,6 +153,7 @@ def build_picture_box(
         "classes": [
             {"name": "vj-image", "active": False},
             {"name": "img-fluid", "active": False},
+            *(_source_classes(image_component) if keep_source_identity else []),
         ],
         "attributes": {
             "loading": "lazy",

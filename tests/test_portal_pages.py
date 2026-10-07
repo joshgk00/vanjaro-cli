@@ -391,6 +391,60 @@ def test_page_assembly_wraps_uploaded_image_variants() -> None:
     assert "/.versions/" in desired[0]["content_html"]
 
 
+def test_wrapped_image_keeps_its_template_class_and_its_style_rule() -> None:
+    """The picture wrapper rebuilds the <img>. A per-image rule (a circular
+    crop) and a template class (rounded-circle) must follow it, or a team photo
+    renders as a plain rectangle even though the plan asked for a circle."""
+
+    blocks = _blocks(1)
+    blocks[0]["content_json"][0]["components"] = [
+        {
+            "type": "image",
+            "classes": [{"name": "img-fluid"}, {"name": "rounded-circle"}],
+            "attributes": {"id": "photo", "src": "/Portals/2/photo.jpg?ver=x", "alt": "Photo"},
+        }
+    ]
+    blocks[0]["style_json"] = [
+        {
+            "selectors": [{"name": "photo", "type": 2}],
+            "style": {"border-radius": "50%", "object-fit": "cover"},
+        }
+    ]
+    desired = compose_project_pages(
+        _document(),
+        blocks,
+        {"entries": []},
+        project_id="project",
+        isolated=True,
+        asset_records=[
+            {
+                "vanjaro_url": "/Portals/2/photo.jpg?ver=x",
+                "variants": [
+                    {"type": "webp", "url": "/Portals/2/.versions/photo_720w.webp", "width": 720},
+                ],
+            }
+        ],
+    )
+
+    inner = next(
+        component for component in _descendants(desired[0]["components"])
+        if component.get("type") == "image"
+    )
+    assert "rounded-circle" in {item["name"] for item in inner["classes"]}
+    rule = next(
+        rule for rule in desired[0]["styles"]
+        if rule["selectors"][0]["name"] == inner["attributes"]["id"]
+    )
+    assert rule["style"] == {"border-radius": "50%", "object-fit": "cover"}
+    assert f'id="{inner["attributes"]["id"]}"' in desired[0]["content_html"]
+
+
+def _descendants(components: list[dict]):
+    for component in components:
+        yield component
+        yield from _descendants(component.get("components", []))
+
+
 def _chrome_page(key: str = "home") -> dict:
     return {
         "key": key,

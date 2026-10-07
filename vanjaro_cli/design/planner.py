@@ -1422,9 +1422,14 @@ def validate_composition_plan(
                 issues.append(
                     f"{prefix}: element style slot '{action.slot}' is not exposed by {template.name}"
                 )
-        scoped_rules = len(entry.scoped_css) + sum(
-            len(action.scoped_css) for action in entry.element_styles
-        )
+        # The same declaration repeated on every item of a repeat group (five
+        # circular team photos) is one design decision, not five to maintain.
+        distinct_element_rules = {
+            (key, value)
+            for action in entry.element_styles
+            for key, value in action.scoped_css.items()
+        }
+        scoped_rules = len(entry.scoped_css) + len(distinct_element_rules)
         if entry.scoped_css and not entry.css_scope:
             issues.append(f"{prefix}: generated CSS has no project/section scope")
         if scoped_rules > plan.policy.css_rule_budget:

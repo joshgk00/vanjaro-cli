@@ -5,7 +5,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
-from vanjaro_cli.design.models import ContentKind, DesignDocument, Section
+from vanjaro_cli.design.models import DesignDocument, Section
 from vanjaro_cli.migration.global_blocks import build_footer_block
 from vanjaro_cli.portal.global_block_reconciliation import (
     CREATE_BLOCK,
@@ -17,6 +17,7 @@ from vanjaro_cli.portal.global_block_reconciliation import (
     reconcile_project_global_blocks,
 )
 from vanjaro_cli.portal.global_block_manifest import global_block_content_hash
+from vanjaro_cli.portal.global_footer import footer_builder_content
 from vanjaro_cli.portal.global_header_matching import compose_header_block
 from vanjaro_cli.portal.pages import namespace_component_payload
 from vanjaro_cli.utils.grapesjs import render_components, render_styles
@@ -50,7 +51,7 @@ def compose_project_global_blocks(
                 brand_text=_project_brand_text(document, section, project_id),
             )
         elif kind == "footer":
-            content = _builder_content(section, assets)
+            content = footer_builder_content(section, assets)
             built = build_footer_block(content)
         else:
             raise ProjectGlobalBlockError(f"unsupported global kind: {kind!r}")
@@ -88,39 +89,6 @@ def compose_project_global_blocks(
             }
         )
     return desired
-
-
-def _builder_content(section: Section, assets: dict[str, Any]) -> dict[str, Any]:
-    headings: list[str] = []
-    list_items: list[str] = []
-    paragraphs: list[str] = []
-    images: list[dict[str, str]] = []
-    links: list[dict[str, str]] = []
-    for element in sorted(section.content, key=lambda value: (value.order, value.id)):
-        text = str(element.value or "").strip()
-        if element.kind == ContentKind.IMAGE and element.asset_id in assets:
-            asset = assets[element.asset_id]
-            src = asset.source_url or asset.local_path
-            if src:
-                images.append({"src": src, "alt": asset.alt_text or ""})
-        elif element.kind == ContentKind.HEADING and text:
-            headings.append(text)
-        elif element.kind in {ContentKind.BUTTON, ContentKind.LINK} and text:
-            href = str(element.attributes.get("href") or "")
-            links.append({"text": text, "href": href})
-            list_items.append(text)
-        elif text:
-            if len(text) > 100:
-                paragraphs.append(text)
-            else:
-                list_items.append(text)
-    return {
-        "headings": headings,
-        "list_items": list_items,
-        "paragraphs": paragraphs,
-        "images": images,
-        "links": links,
-    }
 
 
 def _project_brand_text(

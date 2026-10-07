@@ -73,12 +73,12 @@ STAGE_DEFINITIONS: dict[ProjectStage, StageDefinition] = {
     ProjectStage.ANALYZE: StageDefinition(
         ProjectStage.ANALYZE,
         (ProjectStage.INTAKE,),
-        contract_version="1.3",
+        contract_version="1.4",
     ),
     ProjectStage.PLAN: StageDefinition(
         ProjectStage.PLAN,
         (ProjectStage.ANALYZE,),
-        contract_version="1.7",
+        contract_version="1.8",
     ),
     ProjectStage.THEME: StageDefinition(
         ProjectStage.THEME,
@@ -106,14 +106,14 @@ STAGE_DEFINITIONS: dict[ProjectStage, StageDefinition] = {
         (ProjectStage.LIBRARY,),
         ApprovalGate.PORTAL_MUTATION,
         True,
-        contract_version="1.2",
+        contract_version="1.3",
     ),
     ProjectStage.GLOBAL_BLOCKS: StageDefinition(
         ProjectStage.GLOBAL_BLOCKS,
         (ProjectStage.PAGES,),
         ApprovalGate.PORTAL_MUTATION,
         True,
-        contract_version="1.2",
+        contract_version="1.3",
     ),
     ProjectStage.VERIFY: StageDefinition(
         ProjectStage.VERIFY,

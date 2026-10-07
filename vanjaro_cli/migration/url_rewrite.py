@@ -197,6 +197,8 @@ def rewrite_tree(
     asset_lookup: dict[str, str],
     page_lookup: dict[str, str],
     variant_lookup: dict[str, list] | None = None,
+    *,
+    keep_image_identity: bool = False,
 ) -> RewriteReport:
     """Mutate ``content`` in place, rewriting image and link URLs.
 
@@ -208,7 +210,9 @@ def rewrite_tree(
     When ``variant_lookup`` is supplied, plain image components whose rewritten
     URL maps to manifest variants are replaced in place with a responsive
     ``picture-box`` tree (``<picture>`` with WebP + original-format srcsets).
-    Images with no variants stay as plain ``<img>``.
+    Images with no variants stay as plain ``<img>``. With ``keep_image_identity``
+    the wrapped ``<img>`` keeps the source image's ``id`` and own classes, so
+    style rules and template classes aimed at it still apply.
     """
     if not isinstance(content, dict):
         raise RewriteError("Content must be a JSON object.")
@@ -218,11 +222,11 @@ def rewrite_tree(
     if "components" in content and isinstance(content["components"], list):
         components = content["components"]
         for component in components:
-            _walk(component, asset_lookup, page_lookup, report, variant_lookup)
+            _walk(component, asset_lookup, page_lookup, report, variant_lookup, keep_image_identity)
         if variant_lookup:
-            _wrap_images_in_list(components, variant_lookup, report)
+            _wrap_images_in_list(components, variant_lookup, report, keep_image_identity)
     else:
-        _walk(content, asset_lookup, page_lookup, report, variant_lookup)
+        _walk(content, asset_lookup, page_lookup, report, variant_lookup, keep_image_identity)
 
     # Style rules carry section background images as url(...) values — the
     # component walk never sees them, so without this pass migrated hero
@@ -248,6 +252,7 @@ def _walk(
     page_lookup: dict[str, str],
     report: RewriteReport,
     variant_lookup: dict[str, list] | None = None,
+    keep_image_identity: bool = False,
 ) -> None:
     if not isinstance(node, dict):
         return
@@ -263,15 +268,16 @@ def _walk(
     children = node.get("components")
     if isinstance(children, list):
         for child in children:
-            _walk(child, asset_lookup, page_lookup, report, variant_lookup)
+            _walk(child, asset_lookup, page_lookup, report, variant_lookup, keep_image_identity)
         if variant_lookup and not is_picture_box(node):
-            _wrap_images_in_list(children, variant_lookup, report)
+            _wrap_images_in_list(children, variant_lookup, report, keep_image_identity)
 
 
 def _wrap_images_in_list(
     components: list,
     variant_lookup: dict[str, list],
     report: RewriteReport,
+    keep_image_identity: bool = False,
 ) -> None:
     """Replace plain image components in ``components`` with picture-box trees.
 
@@ -294,7 +300,9 @@ def _wrap_images_in_list(
         variants = variant_lookup.get(rewritten_url)
         if not variants:
             continue
-        picture_box = build_picture_box(child, rewritten_url, variants)
+        picture_box = build_picture_box(
+            child, rewritten_url, variants, keep_source_identity=keep_image_identity
+        )
         if picture_box is not None:
             components[index] = picture_box
             report.images_wrapped += 1

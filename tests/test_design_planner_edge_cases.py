@@ -18,6 +18,7 @@ from vanjaro_cli.cli import cli
 from vanjaro_cli.design.composition import (
     CompositionPlan,
     CompositionPlanEntry,
+    ElementStyleAction,
     IssueSeverity,
     PlanBlock,
     PlanMatch,
@@ -619,6 +620,55 @@ def _over_budget_plan() -> CompositionPlan:
 
 def test_css_budget_is_reported_by_library_aware_validator():
     issues = validate_composition_plan(_over_budget_plan(), catalog=CATALOG)
+    assert any("rule count 13 exceeds budget 12" in issue for issue in issues)
+
+
+def _photo_style_plan(*, same_style_on_every_photo: bool) -> CompositionPlan:
+    entry = _entry("team-member-grid-4up.json")
+    scope = ".audit-project .design-section-audit"
+    actions = tuple(
+        ElementStyleAction(
+            source_element_id=f"photo-{index}",
+            slot=f"image_{index}_src",
+            css_scope=scope,
+            scoped_css=(
+                {"border-radius": "50%", "height": "281px", "object-fit": "cover", "width": "281px"}
+                if same_style_on_every_photo
+                else {
+                    "border-radius": f"{index}px", "height": f"{280 + index}px",
+                    "object-fit": "cover", "width": f"{280 + index}px",
+                }
+            ),
+        )
+        for index in range(1, 5)
+    )
+    plan_entry = CompositionPlanEntry(
+        id="entry", source_section_id="section", template_id=entry.template_id,
+        template=entry.name, match=PlanMatch(score=1, confidence="high"),
+        block=PlanBlock(name="Audit Team", category=entry.category),
+        element_styles=actions,
+    )
+    return CompositionPlan(
+        source_document_id="audit", policy=PlanPolicy(css_rule_budget=12),
+        entries=(plan_entry,),
+        summary=PlanSummary(
+            section_count=1, blocking_count=0, native_component_ratio=1,
+            editable_content_coverage=1, scoped_css_rule_count=16, scoped_css_bytes=0,
+        ),
+    )
+
+
+def test_one_style_repeated_on_every_photo_counts_once_against_the_css_budget():
+    issues = validate_composition_plan(
+        _photo_style_plan(same_style_on_every_photo=True), catalog=CATALOG
+    )
+    assert not any("exceeds budget" in issue for issue in issues)
+
+
+def test_different_styles_on_each_photo_still_count_against_the_css_budget():
+    issues = validate_composition_plan(
+        _photo_style_plan(same_style_on_every_photo=False), catalog=CATALOG
+    )
     assert any("rule count 13 exceeds budget 12" in issue for issue in issues)
 
 
