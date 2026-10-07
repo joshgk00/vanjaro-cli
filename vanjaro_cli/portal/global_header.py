@@ -16,7 +16,7 @@ from vanjaro_cli.design.models import AssetRecord, ContentElement, ContentKind, 
 
 
 _LOGO_TERMS = ("logo", "brand")
-HEADER_COMPOSER_CONTRACT_VERSION = "1.1"
+HEADER_COMPOSER_CONTRACT_VERSION = "1.2"
 
 
 def build_project_header(

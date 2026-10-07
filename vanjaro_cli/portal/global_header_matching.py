@@ -10,12 +10,14 @@ comparison is possible.
 
 from __future__ import annotations
 
+import re
 from collections.abc import Mapping, Sequence
 from typing import Any
 
 from vanjaro_cli.design.matcher import ConfidenceLevel, match_section
-from vanjaro_cli.design.models import AssetRecord, Section
+from vanjaro_cli.design.models import AssetRecord, Section, StyleProperty
 from vanjaro_cli.design.planner import PlanningError, bind_section
+from vanjaro_cli.design.style_transport import build_style_rules, ensure_scoped_selector_id
 from vanjaro_cli.design.template_catalog import (
     TemplateCatalogEntry,
     load_template_catalog,
@@ -51,9 +53,48 @@ def compose_header_block(
     if navigation:
         matched = _compose_from_template(section, assets, brand_text, navigation)
         if matched is not None:
-            return matched
+            return _with_designed_height(matched, section)
     built = build_project_header(section, assets, brand_text=brand_text)
-    return {**built, "composition_path": "composer", "template_id": None}
+    return _with_designed_height(
+        {**built, "composition_path": "composer", "template_id": None}, section
+    )
+
+
+# Strict enough to need no further style validation: digits and "px" only.
+_POSITIVE_PIXELS = re.compile(r"^(?=.*[1-9])\d+(?:\.\d+)?px$")
+
+
+def _with_designed_height(built: dict[str, Any], section: Section) -> dict[str, Any]:
+    """Give a composed header the minimum height its design section carried.
+
+    Body sections get this from the composition plan. A header is composed
+    outside that plan, so without this its height was whatever its content
+    needed (53px against a 131px design). Only a positive pixel minimum is
+    carried: a rendered page reports ``auto`` or ``0px`` for "no minimum".
+    """
+
+    minimum = next(
+        (
+            observation.value.strip()
+            for observation in section.style.observations
+            if observation.property is StyleProperty.MIN_HEIGHT
+            and observation.condition is None
+            and isinstance(observation.value, str)
+            and _POSITIVE_PIXELS.fullmatch(observation.value.strip())
+        ),
+        None,
+    )
+    components = built.get("components")
+    if minimum is None or not components or not isinstance(components[0], dict):
+        return built
+    element_id = ensure_scoped_selector_id(components[0], section.id)
+    return {
+        **built,
+        "styles": [
+            *built.get("styles", []),
+            *build_style_rules(element_id, {(): {"min-height": minimum}}),
+        ],
+    }
 
 
 def _is_navigation_template(entry: TemplateCatalogEntry) -> bool:

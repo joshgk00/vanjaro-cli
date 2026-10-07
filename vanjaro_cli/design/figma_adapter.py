@@ -46,6 +46,7 @@ from vanjaro_cli.design.models import (
     Section,
     SourceKind,
     StyleObservation,
+    StyleProperty,
     StyleSet,
     TokenValue,
     TypographyToken,
@@ -569,6 +570,33 @@ def _header_logo_root_id(
     return min(positioned)[2] if positioned else None
 
 
+def _designed_height_style(
+    box: BoundingBox | None, provenance: Provenance, *, inferred: bool
+) -> StyleSet:
+    """Record how tall a frame was drawn, as a minimum height.
+
+    A Figma frame is a fixed-size drawing, so its height is a sizing constraint
+    the designer chose rather than a layout outcome. Nothing downstream could
+    read it: the box lives only on provenance, so a template built at whatever
+    height its content needed (a 664px hero came out 152px). Stating it as a
+    minimum lets a section whose copy runs taller still grow.
+    """
+
+    if box is None or box.height < 1:
+        return StyleSet()
+    return StyleSet(
+        observations=[
+            StyleObservation(
+                property=StyleProperty.MIN_HEIGHT,
+                value=f"{round(box.height)}px",
+                status=EvidenceStatus.INFERRED if inferred else EvidenceStatus.OBSERVED,
+                confidence=0.78 if inferred else 1.0,
+                provenance=[provenance],
+            )
+        ]
+    )
+
+
 def _extract_section(
     node: Mapping[str, Any], *, page_frame: Mapping[str, Any], page_node_id: str | None,
     file_key: str, page_id: str, order: int, viewport: BreakpointName,
@@ -722,7 +750,10 @@ def _extract_section(
     return Section(
         id=section_id, order=order, semantic_role=role,
         role_confidence=role_confidence, candidate_roles=candidates,
-        layout=layout, content=content, groups=groups, style=StyleSet(),
+        layout=layout, content=content, groups=groups,
+        style=_designed_height_style(
+            _box(node), base_provenance, inferred=bool(boundary_inference)
+        ),
         responsive=[], decorative_layers=decorative_layers, interactions=[],
         provenance=provenance, metadata=metadata,
     )
@@ -1722,6 +1753,7 @@ def analyze_figma_document(
                     viewport=_BREAKPOINT_VIEWPORTS[breakpoint],
                     status=EvidenceStatus.OBSERVED,
                     layout_changes=changes,
+                    style=paired_section.style,
                     provenance=paired_section.provenance,
                 )
                 metadata = dict(base_section.metadata)

@@ -73,12 +73,12 @@ STAGE_DEFINITIONS: dict[ProjectStage, StageDefinition] = {
     ProjectStage.ANALYZE: StageDefinition(
         ProjectStage.ANALYZE,
         (ProjectStage.INTAKE,),
-        contract_version="1.4",
+        contract_version="1.5",
     ),
     ProjectStage.PLAN: StageDefinition(
         ProjectStage.PLAN,
         (ProjectStage.ANALYZE,),
-        contract_version="1.8",
+        contract_version="1.9",
     ),
     ProjectStage.THEME: StageDefinition(
         ProjectStage.THEME,

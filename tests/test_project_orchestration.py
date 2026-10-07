@@ -94,7 +94,7 @@ def test_project_analyze_and_plan_local_html_are_resumable(
     global_plan = json.loads(
         (root / "plans" / "global-block-plan.json").read_text(encoding="utf-8")
     )
-    assert global_plan["header_composer_contract_version"] == "1.1"
+    assert global_plan["header_composer_contract_version"] == "1.2"
     assert global_plan["footer_composer_contract_version"] == "1.2"
 
     resumed_plan = runner.invoke(cli, ["project", "plan", str(root), "--json"])
