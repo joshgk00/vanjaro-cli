@@ -169,6 +169,10 @@ One bounded unit at a time:
 | RT-28 | done | Done 2026-10-06. Trial 2 footer: built as one cream column; design is a dark-teal 4-column footer with a yellow bar (68.8). | RT-25 report |
 | RT-29 | done | Done 2026-10-06 (regime 2): trial 2 simulated 82.08 -> 72.09; hero 53.7 and video 41.5 fail the 60 floor. The earlier 82 was too generous. Live HTML could get the same drift tolerance later (would move pilot-measure ~+1 to +5). Scorer can't see CSS background photos or section heights for Figma pages (expected bounds are null), so hero and CTA banner heights (152px built vs ~660px designed) go unmeasured. | RT-25 report |
 | RT-30 | done | Done 2026-10-06: circles fixed; the "wrong photo" is what the Figma file has (an off-canvas slide), not a tool bug. Trial 2 team photos keep their natural shape instead of circles, and one wrong photo ("Rachel Stoner") is bound. | RT-25 report |
+| RT-31 | done | Done 2026-10-07: Figma section heights reach the build as min-height (hero 664px, header 131px). | trial 2 regime-2 scores |
+| RT-32 | 2 | Taller sections don't centre their content (hero text sits at the top of a 664px band); needs a flex/justify style property. | RT-31 report |
+| RT-33 | 3 | A desktop-only design applies desktop min-heights at every width (131px header, 286px marquee on phones). Decide a desktop-only scope. | RT-31 report |
+| RT-34 | 4 | Footer logo (vector-only group) is never assigned to a section; team order follows Figma layers, not x position; design text colours aren't carried. | RT-28 report |
 | RT-7 | 7 | Trial sources. Live website: Quality HC (`https://quality-hc.com/`, portal 1) picked 2026-10-05 because EDCA and Oasis refuse script downloads. Images: Keys to Success mockups, still to set up. | `artifacts/projects/qualityhc-trial` |
 
 ## Progress log
@@ -308,3 +312,10 @@ One bounded unit at a time:
 - Quality HC pack upgrade to 1.13.0: blocked for Claude by the safety check.
 - Scorer regime 2 landed. Trial 2's honest desktop estimate is ~72 (under 75). Main gaps: hero height, video poster (fixed, needs rebuild), footer/team (helper running).
 - RT-28/RT-30 done. Open: footer logo (vector-only group not assigned), team order follows layers, text colours not carried. RT-31 (section heights) helper still running.
+
+### 2026-10-07 — Rebuild plan
+
+- RT-31 landed (suite 3,732). Trial 2 can't take the new fixes without a
+  re-analyze that voids its approvals, so the rebuild goes into a fresh
+  workspace (`kts-figma-trial-4`) with trial 2's overlays replayed. It
+  needs Josh's plan, portal-mutation, and publish approvals.
