@@ -159,9 +159,12 @@ One bounded unit at a time:
 | RT-18 | done | Done 2026-10-05 (`9024841`). `project init` can't take a local file source: it needs an empty folder, but analyze needs the file inside it. Copy local sources into `sources/` at init. | `kts-mockup-trial` and `edca-trial-1` needed a hand edit of project.json |
 | RT-19 | done | Done 2026-10-06: live re-plan editable 0.75, 2 blockers (`qualityhc-trial-3`). The Quality HC page is built with the YOOtheme page builder (`div.uk-section`). The tool finds no section edges in it, so sections fall back to the old guesswork path and some get merged (reviews + FAQ + services in one). Teach section detection about this builder. Also keep the fetched page HTML in the workspace so later steps and test fixtures can reuse it. | RT-17 helper report; `qualityhc-trial-2` sections 2, 7, 8 |
 | RT-20 | done | Done 2026-10-06 (`87bbfeb`): live re-plan editable 0.756, native 0.995, 1 blocker (`qualityhc-trial-4`). Quality HC FAQ blocks: items carry title/body, the FAQ template wants question/answer, and the accordion interaction is unsupported. | `qualityhc-trial-3` section 10 |
-| RT-21 | 2 | Quality HC hero blocks: 2 buttons and 3 badges, but no hero template has 2 actions. Needs a template change (agency pack release, Josh's call) or an audited overlay. | `qualityhc-trial-3` section 2 |
+| RT-21 | done | Done 2026-10-06 (`ee76e2e`): pack 1.13.0 adds `Heroes/trust-badge-hero`, released on Josh's instruction. Quality HC upgrade dry-run is compatible (fingerprint `6210e9f6…`); the apply needs Josh. Quality HC hero blocks: 2 buttons and 3 badges, but no hero template has 2 actions. Needs a template change (agency pack release, Josh's call) or an audited overlay. | `qualityhc-trial-3` section 2 |
 | RT-22 | done | Done 2026-10-06 (`87bbfeb`). The browser-render observation script does not know UIkit sections, so `--render` on these pages can't pair sections. | RT-19 helper report |
 | RT-23 | done | Done 2026-10-06: plan 1.7, analyze 1.2; bump again whenever matching or extraction output changes. Do NOT re-run analyze/plan on `kts-figma-trial-2`: it would void its approvals. `project plan` on a workspace that already has a plan says "resumed" and keeps the old plan, even after the matching code changed. A fixed tool can't improve an existing project without a new workspace. Stamp the planner version into the plan fingerprint, as was done for the footer composer. | 2026-10-06: `qualityhc-trial-3` kept the FAQ blocker after RT-20 landed |
+| RT-24 | 1 | The look scorer reports `desktop output file is unsafe, a symlink, or missing` when the workspace path is relative, though the file exists. With an absolute path it scores. | 2026-10-06 trial 2 scoring |
+| RT-25 | 2 | Trial 2's video section scores 55.7 at desktop; the floor is 60. It's the only thing failing the look gate. | trial 2 capture 2026-10-06 |
+| RT-26 | 3 | With `core.autocrlf=true`, checking out pack JSON writes Windows line endings, and the immutable-digest check then calls the pack "stale". Mark pack and release JSON as exact bytes in `.gitattributes`. | 2026-10-06, after merging pack 1.13.0 |
 | RT-7 | 7 | Trial sources. Live website: Quality HC (`https://quality-hc.com/`, portal 1) picked 2026-10-05 because EDCA and Oasis refuse script downloads. Images: Keys to Success mockups, still to set up. | `artifacts/projects/qualityhc-trial` |
 
 ## Progress log
@@ -285,3 +288,17 @@ One bounded unit at a time:
   permission rules.
 - RT-23 done (suite 3,564). `qualityhc-trial-3` now re-plans to 1 blocker.
 - RT-5 done (suite 3,574); analyze contract now 1.3.
+
+### 2026-10-06 — Trial 2 published and scored
+
+- Josh granted the stuck commands through `/permissions`. Pack 1.13.0
+  released (`ee76e2e`). Trial 2 published (hidden), receipt `3826fc88…`.
+- Capture needed the Figma reference reused from trial 1
+  (`qa/capture-references.json`, same frame and hash).
+- **Trial 2 desktop look score: 82.08** (bar 75). It fails only on the
+  video section (55.7, floor 60, RT-25). Tablet and mobile are inferred.
+  Scoring with a relative path wrongly said the screenshot was missing
+  (RT-24).
+- Image trial: no `OPENAI_API_KEY` on this machine. Josh must add it to
+  `.env`.
+- Quality HC pack upgrade to 1.13.0: blocked for Claude by the safety check.
