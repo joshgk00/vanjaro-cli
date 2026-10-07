@@ -55,6 +55,9 @@ _PLACEHOLDER_RE = re.compile(
     re.IGNORECASE,
 )
 
+# Share of the section's area a background photo must cover to be the band's own.
+_MAIN_BAND_COVERAGE = 0.5
+
 # Returns raw values only. Anything requiring a judgement is left to Python.
 MEASURE_SCRIPT = """
 () => {
@@ -210,6 +213,28 @@ MEASURE_SCRIPT = """
     });
     return hasContent ? 1 : null;
   };
+  // CSS background photos, as raw candidates: the section itself and every
+  // descendant that paints a url() image. A gradient or a flat colour is not
+  // imagery. Whether one of them is the section's main band is a judgement, so
+  // Python makes it from these boxes. An <img> never appears here; those are
+  // measured as `media`.
+  const backgroundImages = (root) => {
+    const found = [];
+    [root, ...root.querySelectorAll('*')].forEach((element) => {
+      const style = getComputedStyle(element);
+      if (!(style.backgroundImage || '').includes('url(')) return;
+      const box = element.getBoundingClientRect();
+      if (!(box.width > 0 && box.height > 0)) return;
+      const parts = (style.backgroundPosition || '').split(' ');
+      found.push({
+        rendered_width: box.width,
+        rendered_height: box.height,
+        focal_x: parts[0] && parts[0].endsWith('%') ? parseFloat(parts[0]) / 100 : null,
+        focal_y: parts[1] && parts[1].endsWith('%') ? parseFloat(parts[1]) / 100 : null,
+      });
+    });
+    return found;
+  };
   return {
     console_error_count: null,
     sections: roots.map((node, index) => {
@@ -257,6 +282,7 @@ MEASURE_SCRIPT = """
             focal_y: parts[1] && parts[1].endsWith('%') ? parseFloat(parts[1]) / 100 : null,
           };
         }),
+        backgrounds: backgroundImages(node),
         text_samples: Array.from(
           node.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, a, button')
         ).map((element) => element.textContent.trim()),
@@ -296,10 +322,11 @@ def parse_measured_page(
 
 def _section(entry: Mapping[str, Any]) -> RenderedSection:
     samples = [value for value in entry.get("text_samples", []) if isinstance(value, str)]
+    bounds = _bounds(entry.get("bounds"))
     return RenderedSection(
         section_id=str(entry["section_id"]),
         order=int(entry.get("order") or 0),
-        bounds=_bounds(entry.get("bounds")),
+        bounds=bounds,
         columns=_columns(entry.get("columns")),
         background_color=_color(entry.get("background_color")),
         text_color=_color(entry.get("text_color")),
@@ -309,6 +336,7 @@ def _section(entry: Mapping[str, Any]) -> RenderedSection:
         padding_bottom=_length(entry.get("padding_bottom")),
         element_gap=_length(entry.get("element_gap")),
         media=_media(entry.get("media")),
+        background_media=_background_media(entry.get("backgrounds"), bounds),
         horizontal_overflow_px=_length(entry.get("horizontal_overflow_px")),
         empty_slot_count=sum(1 for value in samples if not value.strip()),
         placeholder_leaks=_placeholder_leaks(samples),
@@ -415,6 +443,28 @@ def _media(value: Any) -> tuple[RenderedMedia, ...]:
             )
         )
     return tuple(media)
+
+
+def _background_media(value: Any, section_bounds: BoundingBox | None) -> RenderedMedia | None:
+    """Pick the CSS background photo that paints the section's main band.
+
+    Several elements in a section can carry a background image: the section, a
+    wrapper, a small decorative tile. Only one spanning most of the section is
+    the band's photo; a tile is not, and counting it would credit a build for a
+    photo that was never the design's background. With no section box to
+    compare against, nothing can be called the main band.
+    """
+
+    if section_bounds is None or not section_bounds.width or not section_bounds.height:
+        return None
+    candidates = _media(value)
+    if not candidates:
+        return None
+    largest = max(candidates, key=lambda item: item.rendered_width * item.rendered_height)
+    covered = (largest.rendered_width * largest.rendered_height) / (
+        section_bounds.width * section_bounds.height
+    )
+    return largest if covered >= _MAIN_BAND_COVERAGE else None
 
 
 def _placeholder_leaks(samples: Iterable[str]) -> tuple[str, ...]:

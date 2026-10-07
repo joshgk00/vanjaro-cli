@@ -44,7 +44,12 @@ __all__ = [
 
 # Frozen scoring regime. Bump ONLY alongside re-scoring every committed
 # baseline in the same commit; see docs/visual-fidelity-goal.md (VF-1).
-CURRENT_REGIME_VERSION = 1
+#
+# 2: a Figma design now supplies section boxes (placed relative to its page
+#    frame) that are compared without vertical offset, and a background photo is
+#    its own media slot. Layout and media on Figma pages measure different
+#    things than under 1, and no committed baseline held a Figma score.
+CURRENT_REGIME_VERSION = 2
 
 
 class FidelityDimension(str, Enum):

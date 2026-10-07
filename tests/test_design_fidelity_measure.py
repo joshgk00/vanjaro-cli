@@ -154,6 +154,66 @@ def test_focal_values_outside_the_unit_range_are_rejected() -> None:
     assert section.media[0].focal_x is None
 
 
+def _background(width: float, height: float, **extra) -> dict:
+    return {"rendered_width": width, "rendered_height": height, **extra}
+
+
+def test_a_background_photo_spanning_the_section_is_its_main_band() -> None:
+    section = _parse(
+        bounds={"x": 0, "y": 0, "width": 1440, "height": 152},
+        backgrounds=[_background(1440, 152, focal_x=0.5, focal_y=0.5)],
+    ).sections[0]
+
+    assert section.background_media is not None
+    assert section.background_media.rendered_height == 152
+    assert section.background_media.focal_x == 0.5
+
+
+def test_a_wrapper_carrying_the_background_is_found_among_the_candidates() -> None:
+    # The section root paints nothing; an inner wrapper spanning it does, and a
+    # small decorative tile beside it is not the band.
+    section = _parse(
+        bounds={"x": 0, "y": 0, "width": 1440, "height": 600},
+        backgrounds=[_background(120, 120), _background(1440, 580)],
+    ).sections[0]
+
+    assert section.background_media is not None
+    assert section.background_media.rendered_height == 580
+
+
+def test_a_small_background_tile_is_not_the_main_band() -> None:
+    section = _parse(
+        bounds={"x": 0, "y": 0, "width": 1440, "height": 600},
+        backgrounds=[_background(200, 200)],
+    ).sections[0]
+
+    assert section.background_media is None
+
+
+def test_no_background_candidates_means_no_background_photo() -> None:
+    assert _parse().sections[0].background_media is None
+    assert _parse(backgrounds=[]).sections[0].background_media is None
+
+
+def test_a_background_cannot_be_the_main_band_without_a_section_box() -> None:
+    section = _parse(bounds=None, backgrounds=[_background(1440, 600)]).sections[0]
+
+    assert section.background_media is None
+
+
+def test_a_zero_sized_background_is_not_a_measurement() -> None:
+    section = _parse(backgrounds=[_background(0, 0)]).sections[0]
+
+    assert section.background_media is None
+
+
+def test_the_measurement_script_reports_url_backgrounds_and_leaves_the_judgement_to_python() -> None:
+    assert "backgroundImages" in MEASURE_SCRIPT
+    assert "backgrounds: backgroundImages(node)" in MEASURE_SCRIPT
+    # A gradient or a flat colour is not imagery.
+    assert ".includes('url(')" in MEASURE_SCRIPT
+
+
 def test_placeholder_copy_is_detected_with_the_planner_vocabulary() -> None:
     section = _parse(
         text_samples=["Lorem ipsum dolor sit amet", "Real copy", "  "]

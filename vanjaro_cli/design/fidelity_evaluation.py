@@ -76,10 +76,16 @@ class SectionObservation(_EvaluationModel):
 
 
 class PageObservation(_EvaluationModel):
-    """All section observations for one page at one breakpoint."""
+    """All section observations for one page at one breakpoint.
+
+    `vertical_offset_tolerated` is a property of the *design* side: see
+    `PageGeometry`. It defaults off, so evidence recorded before the field
+    existed scores exactly as it did.
+    """
 
     viewport_width: float = Field(gt=0)
     sections: tuple[SectionObservation, ...] = Field(min_length=1)
+    vertical_offset_tolerated: bool = False
 
     @model_validator(mode="after")
     def unique_sections(self) -> "PageObservation":
@@ -92,6 +98,7 @@ class PageObservation(_EvaluationModel):
         return PageGeometry(
             viewport_width=self.viewport_width,
             sections=tuple(section.geometry for section in self.sections),
+            vertical_offset_tolerated=self.vertical_offset_tolerated,
         )
 
     def by_id(self) -> dict[str, SectionObservation]:
@@ -114,6 +121,7 @@ def score_section_fidelity(
     expected_viewport_width: float,
     observed_viewport_width: float,
     section_count: int,
+    vertical_offset_tolerated: bool = False,
 ) -> SectionFidelityScore:
     """Score one section across every dimension that has evidence."""
 
@@ -123,6 +131,7 @@ def score_section_fidelity(
         expected_viewport_width=expected_viewport_width,
         observed_viewport_width=observed_viewport_width,
         section_count=section_count,
+        vertical_offset_tolerated=vertical_offset_tolerated,
     )
 
     if observed is None:
@@ -174,6 +183,7 @@ def score_breakpoint_fidelity(
                 expected_viewport_width=expected.viewport_width,
                 observed_viewport_width=observed.viewport_width,
                 section_count=section_count,
+                vertical_offset_tolerated=expected.vertical_offset_tolerated,
             )
             for section in expected.sections
         ],

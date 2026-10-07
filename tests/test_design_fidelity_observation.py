@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 import pytest
 
 from vanjaro_cli.design.fidelity_color import ColorRole
-from vanjaro_cli.design.fidelity_evaluation import score_breakpoint_fidelity
+from vanjaro_cli.design.fidelity_evaluation import PageObservation, score_breakpoint_fidelity
 from vanjaro_cli.design.fidelity_extraction import observe_expected_page
 from vanjaro_cli.design.fidelity_layout import BoundingBox
 from vanjaro_cli.design.fidelity_observation import (
@@ -19,6 +19,9 @@ from vanjaro_cli.design.fidelity_observation import (
     observe_built_section,
 )
 from vanjaro_cli.design.models import (
+    AssetKind,
+    AssetRecord,
+    AssetRole,
     BoundingBox as SourceBox,
     BreakpointName,
     ContentElement,
@@ -391,3 +394,263 @@ def test_a_dimension_without_evidence_stays_unmeasured_rather_than_zero() -> Non
     )
 
     assert media.score is None
+
+
+def test_a_css_background_photo_is_keyed_apart_from_the_images() -> None:
+    observation = observe_built_section(
+        _section(
+            media=[RenderedMedia(rendered_width=400, rendered_height=400)],
+            background_media=RenderedMedia(rendered_width=1440, rendered_height=664),
+        )
+    )
+
+    assert set(observation.media.media) == {"media_1", "background_1"}
+    assert observation.media.media["media_1"].aspect_ratio == pytest.approx(1.0)
+    assert observation.media.media["background_1"].aspect_ratio == pytest.approx(1440 / 664)
+
+
+def test_a_section_without_a_background_photo_reports_no_background_slot() -> None:
+    assert "background_1" not in observe_built_section(_section()).media.media
+
+
+# --- A Figma hero built far shorter than designed (RT-29) ----------------------
+
+
+def _figma_hero_design():
+    frame = SourceBox(x=-3884, y=-513, width=1440, height=8090)
+    frame_record = Provenance(
+        source_kind=SourceKind.FIGMA,
+        method=ObservationMethod.API,
+        viewport=BreakpointName.DESKTOP,
+        frame_node_id="156:890",
+        element_node_id="156:890",
+        bounds=frame,
+    )
+    hero_record = Provenance(
+        source_kind=SourceKind.FIGMA,
+        method=ObservationMethod.INFERRED,
+        viewport=BreakpointName.DESKTOP,
+        frame_node_id="156:890",
+        element_node_id="156:890:inferred-2",
+        bounds=SourceBox(x=-3884, y=-382, width=1440, height=664),
+        metadata={"inference": "flat_geometry"},
+    )
+    background = ContentElement(
+        id="hero.bg",
+        order=0,
+        kind=ContentKind.IMAGE,
+        role="background_media",
+        asset_id="hero-photo",
+        provenance=[
+            Provenance(
+                source_kind=SourceKind.FIGMA,
+                method=ObservationMethod.API,
+                viewport=BreakpointName.DESKTOP,
+                frame_node_id="156:890",
+                element_node_id="156:909",
+                bounds=SourceBox(x=-3884, y=-382, width=1440, height=664),
+            )
+        ],
+        confidence=1,
+    )
+    section = Section(
+        id="home.hero",
+        order=0,
+        semantic_role="hero",
+        role_confidence=1,
+        candidate_roles=[],
+        layout=LayoutObservation(kind=LayoutKind.GRID, contained=False, columns=1),
+        content=[background],
+        groups=[],
+        style=StyleSet(),
+        responsive=[],
+        decorative_layers=[],
+        interactions=[],
+        provenance=[hero_record],
+    )
+    banner = section.model_copy(
+        update={
+            "id": "home.cta",
+            "order": 1,
+            "semantic_role": "call_to_action",
+            "content": [],
+            "provenance": [
+                hero_record.model_copy(
+                    update={"bounds": SourceBox(x=-3884, y=282, width=1440, height=500)}
+                )
+            ],
+        }
+    )
+    page = Page(
+        id="home",
+        source_reference="156:890",
+        title="Home",
+        slug="home",
+        sections=[section, banner],
+        breakpoints=[BreakpointName.DESKTOP],
+        navigation_visibility=NavigationVisibility.UNKNOWN,
+        provenance=[frame_record],
+    )
+    document = DesignDocument(
+        schema_version="1.0",
+        source=DesignSource(
+            kind=SourceKind.FIGMA,
+            identifier="file",
+            captured_at=datetime(2026, 10, 6, tzinfo=timezone.utc),
+            adapter_version="1.0.0",
+        ),
+        tokens=DesignTokens(),
+        assets=[
+            AssetRecord(
+                id="hero-photo",
+                kind=AssetKind.IMAGE,
+                role=AssetRole.EDITORIAL,
+                source_url="figma://file/ref",
+                width=1440,
+                height=664,
+            )
+        ],
+        pages=[page],
+        warnings=[],
+        analysis=DesignAnalysis(section_confidence_mean=1.0, unsupported_traits=[]),
+    )
+    return observe_expected_page(page, document, BreakpointName.DESKTOP)
+
+
+def _built_hero(*, y: float, height: float, background: bool = True):
+    return observe_built_page(
+        RenderedPage(
+            viewport_width=1440,
+            sections=(
+                RenderedSection(
+                    section_id="home.hero",
+                    order=0,
+                    columns=1,
+                    bounds=BoundingBox(x=0, y=y, width=1440, height=height),
+                    background_media=(
+                        RenderedMedia(rendered_width=1440, rendered_height=height)
+                        if background
+                        else None
+                    ),
+                ),
+            ),
+        )
+    )
+
+
+def _dimensions(built, section_id: str = "home.hero") -> dict[str, float | None]:
+    result = score_breakpoint_fidelity(
+        _figma_hero_design(), built, breakpoint=BreakpointName.DESKTOP
+    )
+    section = next(entry for entry in result.sections if entry.section_id == section_id)
+    return {entry.dimension.value: entry.score for entry in section.dimensions}
+
+
+def test_a_hero_built_as_designed_scores_full_layout_and_media() -> None:
+    scores = _dimensions(_built_hero(y=131, height=664))
+
+    assert scores["layout"] == 100.0
+    assert scores["media"] == 100.0
+
+
+def test_a_hero_built_152px_tall_instead_of_664_loses_layout_as_well_as_media() -> None:
+    # Before the design side carried a section box, the height was never
+    # compared and this section kept a perfect layout score.
+    faithful = _dimensions(_built_hero(y=131, height=664))
+    short = _dimensions(_built_hero(y=53, height=152))
+
+    assert short["layout"] < 60.0
+    assert short["layout"] < faithful["layout"]
+    # The photo is present, so media is credited, but at the wrong shape.
+    assert 0.0 < short["media"] < faithful["media"]
+
+
+def test_a_hero_with_its_photo_missing_still_scores_media_zero() -> None:
+    scores = _dimensions(_built_hero(y=131, height=664, background=False))
+
+    assert scores["media"] == 0.0
+
+
+def _built_hero_and_banner(*, hero_height: float, banner_y: float, banner_order: int = 1):
+    hero_order = 1 - banner_order
+    return observe_built_page(
+        RenderedPage(
+            viewport_width=1440,
+            sections=(
+                RenderedSection(
+                    section_id="home.hero",
+                    order=hero_order,
+                    columns=1,
+                    bounds=BoundingBox(x=0, y=53, width=1440, height=hero_height),
+                    background_media=RenderedMedia(
+                        rendered_width=1440, rendered_height=hero_height
+                    ),
+                ),
+                RenderedSection(
+                    section_id="home.cta",
+                    order=banner_order,
+                    columns=1,
+                    bounds=BoundingBox(x=0, y=banner_y, width=1440, height=500),
+                ),
+            ),
+        )
+    )
+
+
+def test_a_short_hero_fails_its_own_section_but_not_the_one_below_it() -> None:
+    # The banner is built at its designed height; it only sits higher because
+    # the hero above it came out 512px short.
+    built = _built_hero_and_banner(hero_height=152, banner_y=205)
+
+    assert _dimensions(built, "home.hero")["layout"] < 60.0
+    assert _dimensions(built, "home.cta")["layout"] == 100.0
+
+
+def test_a_banner_built_too_short_still_fails_when_the_hero_is_right() -> None:
+    built = observe_built_page(
+        RenderedPage(
+            viewport_width=1440,
+            sections=(
+                RenderedSection(
+                    section_id="home.hero",
+                    order=0,
+                    columns=1,
+                    bounds=BoundingBox(x=0, y=131, width=1440, height=664),
+                    background_media=RenderedMedia(rendered_width=1440, rendered_height=664),
+                ),
+                RenderedSection(
+                    section_id="home.cta",
+                    order=1,
+                    columns=1,
+                    bounds=BoundingBox(x=0, y=795, width=1440, height=100),
+                ),
+            ),
+        )
+    )
+
+    assert _dimensions(built, "home.hero")["layout"] == 100.0
+    assert _dimensions(built, "home.cta")["layout"] < 60.0
+
+
+def test_swapping_the_hero_and_the_banner_still_loses_layout_points() -> None:
+    in_order = _built_hero_and_banner(hero_height=664, banner_y=795)
+    swapped = _built_hero_and_banner(hero_height=664, banner_y=795, banner_order=0)
+
+    for section_id in ("home.hero", "home.cta"):
+        assert (
+            _dimensions(swapped, section_id)["layout"]
+            < _dimensions(in_order, section_id)["layout"]
+        )
+
+
+def test_the_tolerance_survives_the_recorded_evidence_round_trip() -> None:
+    recorded = _figma_hero_design().model_dump(mode="json")
+
+    assert PageObservation.model_validate(recorded).vertical_offset_tolerated is True
+
+
+def test_evidence_recorded_before_the_tolerance_existed_compares_absolute_positions() -> None:
+    recorded = _figma_hero_design().model_dump(mode="json")
+    del recorded["vertical_offset_tolerated"]
+
+    assert PageObservation.model_validate(recorded).vertical_offset_tolerated is False

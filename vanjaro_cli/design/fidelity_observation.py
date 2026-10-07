@@ -97,6 +97,8 @@ class RenderedSection(_RenderedModel):
     padding_bottom: float | None = Field(default=None, ge=0)
     element_gap: float | None = Field(default=None, ge=0)
     media: Sequence[RenderedMedia] = ()
+    # The CSS background photo that paints the section's main band, if any.
+    background_media: RenderedMedia | None = None
     horizontal_overflow_px: float | None = Field(default=None, ge=0)
     empty_slot_count: int | None = Field(default=None, ge=0)
     placeholder_leaks: tuple[str, ...] = ()
@@ -199,18 +201,26 @@ def _media(section: RenderedSection) -> SectionMedia:
     """Key media by position so both sides address the same slot.
 
     The expected side numbers image elements in document order; the render is
-    numbered the same way, so `media_2` means the second image in both.
+    numbered the same way, so `media_2` means the second image in both. A CSS
+    background photo is not an `<img>`, so it is keyed `background_1`, which is
+    what the design side calls a section's background photo.
     """
 
     media: dict[str, MediaSample] = {}
     for index, sample in enumerate(section.media, start=1):
-        media[f"media_{index}"] = MediaSample(
-            aspect_ratio=sample.rendered_width / sample.rendered_height,
-            focal_x=sample.focal_x,
-            focal_y=sample.focal_y,
-            crop_coverage=_crop_coverage(sample),
-        )
+        media[f"media_{index}"] = _media_sample(sample)
+    if section.background_media is not None:
+        media["background_1"] = _media_sample(section.background_media)
     return SectionMedia(media=media)
+
+
+def _media_sample(sample: RenderedMedia) -> MediaSample:
+    return MediaSample(
+        aspect_ratio=sample.rendered_width / sample.rendered_height,
+        focal_x=sample.focal_x,
+        focal_y=sample.focal_y,
+        crop_coverage=_crop_coverage(sample),
+    )
 
 
 def _crop_coverage(sample: RenderedMedia) -> float | None:

@@ -299,3 +299,134 @@ class TestDeterminism:
 
     def test_sub_weights_sum_to_one(self) -> None:
         assert BOUNDS_WEIGHT + COLUMNS_WEIGHT + ORDER_WEIGHT == pytest.approx(1.0)
+
+
+def _page(*sections: SectionGeometry, tolerated: bool = False) -> PageGeometry:
+    return PageGeometry(
+        viewport_width=1440, sections=sections, vertical_offset_tolerated=tolerated
+    )
+
+
+def _designed_page(*, tolerated: bool) -> PageGeometry:
+    return _page(
+        _section("hero", order=0, bounds=_box(y=131, height=664)),
+        _section("cta", order=1, bounds=_box(y=795, height=500)),
+        tolerated=tolerated,
+    )
+
+
+class TestVerticalOffsetTolerated:
+    """A static design frame: judge each section on its own geometry (RT-29)."""
+
+    def test_iou_ignores_where_the_section_starts_down_the_page(self) -> None:
+        shifted = normalized_iou(
+            _box(y=0, height=500),
+            _box(y=900, height=500),
+            expected_viewport_width=1440,
+            observed_viewport_width=1440,
+            vertical_offset_tolerated=True,
+        )
+
+        assert shifted == 1.0
+
+    def test_iou_still_compares_height(self) -> None:
+        short = normalized_iou(
+            _box(y=0, height=664),
+            _box(y=900, height=152),
+            expected_viewport_width=1440,
+            observed_viewport_width=1440,
+            vertical_offset_tolerated=True,
+        )
+
+        assert short == pytest.approx(152 / 664, abs=1e-3)
+
+    def test_iou_still_compares_horizontal_placement(self) -> None:
+        sideways = normalized_iou(
+            _box(x=0, width=720),
+            _box(x=720, width=720),
+            expected_viewport_width=1440,
+            observed_viewport_width=1440,
+            vertical_offset_tolerated=True,
+        )
+
+        assert sideways == 0.0
+
+    def test_a_short_section_fails_on_its_own_but_the_next_one_is_not_charged_for_it(
+        self,
+    ) -> None:
+        observed = _page(
+            _section("hero", order=0, bounds=_box(y=53, height=152)),
+            _section("cta", order=1, bounds=_box(y=205, height=500)),
+        )
+
+        results = score_page_layout(_designed_page(tolerated=True), observed)
+
+        assert results["hero"].score < 60.0
+        assert results["cta"].score == 100.0
+
+    def test_without_the_tolerance_the_same_build_charges_the_drift_to_the_next_section(
+        self,
+    ) -> None:
+        observed = _page(
+            _section("hero", order=0, bounds=_box(y=53, height=152)),
+            _section("cta", order=1, bounds=_box(y=205, height=500)),
+        )
+
+        results = score_page_layout(_designed_page(tolerated=False), observed)
+
+        assert results["cta"].score < 60.0
+
+    def test_a_short_section_still_scores_below_a_correct_one(self) -> None:
+        correct = _page(
+            _section("hero", order=0, bounds=_box(y=131, height=664)),
+            _section("cta", order=1, bounds=_box(y=795, height=500)),
+        )
+        short = _page(
+            _section("hero", order=0, bounds=_box(y=53, height=152)),
+            _section("cta", order=1, bounds=_box(y=205, height=500)),
+        )
+
+        designed = _designed_page(tolerated=True)
+
+        assert score_page_layout(designed, correct)["hero"].score == 100.0
+        assert (
+            score_page_layout(designed, short)["hero"].score
+            < score_page_layout(designed, correct)["hero"].score
+        )
+
+    def test_swapped_sections_still_lose_points(self) -> None:
+        in_order = _page(
+            _section("hero", order=0, bounds=_box(y=131, height=664)),
+            _section("cta", order=1, bounds=_box(y=795, height=500)),
+        )
+        swapped = _page(
+            _section("cta", order=0, bounds=_box(y=131, height=500)),
+            _section("hero", order=1, bounds=_box(y=631, height=664)),
+        )
+        designed = _designed_page(tolerated=True)
+
+        correct_scores = score_page_layout(designed, in_order)
+        swapped_scores = score_page_layout(designed, swapped)
+
+        assert correct_scores["hero"].score == 100.0
+        assert swapped_scores["hero"].score < correct_scores["hero"].score
+        assert swapped_scores["cta"].score < correct_scores["cta"].score
+
+    def test_a_missing_section_still_scores_zero(self) -> None:
+        observed = _page(_section("hero", order=0, bounds=_box(y=131, height=664)))
+
+        results = score_page_layout(_designed_page(tolerated=True), observed)
+
+        assert results["cta"].score == 0.0
+
+    def test_a_section_with_no_measured_box_stays_unavailable_not_zero(self) -> None:
+        expected = _page(_section("hero", bounds=None), tolerated=True)
+        observed = _page(_section("hero", bounds=_box(y=900, height=100)))
+
+        result = score_page_layout(expected, observed)["hero"]
+
+        assert result.score == 100.0
+        assert result.detail == "no geometry evidence for bounds"
+
+    def test_the_default_keeps_comparing_absolute_positions(self) -> None:
+        assert _page(_section("hero")).vertical_offset_tolerated is False

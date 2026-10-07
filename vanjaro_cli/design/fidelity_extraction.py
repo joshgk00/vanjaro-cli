@@ -45,7 +45,9 @@ from vanjaro_cli.design.models import (
     EvidenceStatus,
     ObservationMethod,
     Page,
+    Provenance,
     Section,
+    SourceKind,
     StyleProperty,
     StyleSet,
     Viewport,
@@ -65,6 +67,15 @@ __all__ = [
 # rendered surface and must not be scored as if they were.
 MEASURED_METHODS = frozenset({ObservationMethod.RENDERED, ObservationMethod.API})
 
+# A Figma page frame with no designed sections is cut into bands from the boxes
+# of the nodes it holds. Those section records say `inferred` because the
+# *grouping* is a guess, yet every coordinate on them is the union of boxes the
+# Figma API measured -- unlike an inferred layout, which has no measured box
+# behind it. Only these boundary kinds carry measured geometry.
+_MEASURED_BOUNDARY_INFERENCES = frozenset(
+    {"flat_geometry", "whitespace_geometry", "background_band"}
+)
+
 # Stable sample keys, so both sides of a comparison agree without round-tripping
 # element identity through the build.
 TYPOGRAPHY_SAMPLE_KEYS = ("heading", "body")
@@ -72,6 +83,7 @@ TYPOGRAPHY_SAMPLE_KEYS = ("heading", "body")
 _ACTION_KINDS = frozenset({ContentKind.BUTTON, ContentKind.LINK})
 _HEADING_KINDS = frozenset({ContentKind.HEADING})
 _BODY_KINDS = frozenset({ContentKind.TEXT})
+_BACKGROUND_MEDIA_ROLE = "background_media"
 _PIXEL_VALUE = re.compile(r"^\s*(-?\d+(?:\.\d+)?)\s*(?:px)?\s*$")
 
 
@@ -96,12 +108,17 @@ def observe_expected_page(
         return None
     assets = {asset.id: asset for asset in document.assets}
     resolved_viewport = viewport if viewport is not None else CANONICAL_VIEWPORTS[breakpoint]
+    frames = _page_frames(page)
     return PageObservation(
         viewport_width=float(resolved_viewport.width),
         sections=tuple(
-            observe_expected_section(section, assets, breakpoint)
+            observe_expected_section(section, assets, breakpoint, frames)
             for section in sorted(page.sections, key=lambda item: (item.order, item.id))
         ),
+        # A Figma frame is one static drawing of the page. A build cannot
+        # reproduce its vertical rhythm exactly, so each section is judged on
+        # its own size rather than on where upstream sections left it.
+        vertical_offset_tolerated=breakpoint in frames,
     )
 
 
@@ -109,30 +126,102 @@ def observe_expected_section(
     section: Section,
     assets: Mapping[str, AssetRecord],
     breakpoint: BreakpointName,
+    frames: Mapping[BreakpointName, LayoutBox] | None = None,
 ) -> SectionObservation:
-    """Build the expected observation for one section at one breakpoint."""
+    """Build the expected observation for one section at one breakpoint.
+
+    `frames` holds each Figma page frame's own box by breakpoint. A Figma node
+    reports its box in canvas coordinates, so a section is only comparable to a
+    rendered page once it is placed relative to the frame that holds it.
+    """
 
     return SectionObservation(
-        geometry=_geometry(section, breakpoint),
+        geometry=_geometry(section, breakpoint, frames or {}),
         palette=_palette(section),
         typography=_typography(section),
         spacing=_spacing(section, breakpoint),
-        media=_media(section, assets),
+        media=_media(section, assets, breakpoint),
         # Integrity has no design-side counterpart; only a build can be defective.
         integrity=None,
     )
 
 
-def _geometry(section: Section, breakpoint: BreakpointName) -> SectionGeometry:
+def _geometry(
+    section: Section,
+    breakpoint: BreakpointName,
+    frames: Mapping[BreakpointName, LayoutBox],
+) -> SectionGeometry:
     return SectionGeometry(
         section_id=section.id,
         order=section.order,
-        bounds=_bounds(section, breakpoint),
+        bounds=_bounds(section, breakpoint, frames),
         columns=_columns(section, breakpoint),
     )
 
 
-def _bounds(section: Section, breakpoint: BreakpointName) -> LayoutBox | None:
+def _page_frames(page: Page) -> dict[BreakpointName, LayoutBox]:
+    """Collect the Figma page frames' own boxes, keyed by the breakpoint they draw."""
+
+    frames: dict[BreakpointName, LayoutBox] = {}
+    for record in page.provenance:
+        if (
+            record.source_kind is SourceKind.FIGMA
+            and record.method in MEASURED_METHODS
+            and record.bounds is not None
+            and record.viewport is not None
+            and record.element_node_id == record.frame_node_id
+        ):
+            frames.setdefault(record.viewport, _to_layout_box(record.bounds))
+    return frames
+
+
+def _measures_geometry(record: Provenance) -> bool:
+    if record.bounds is None:
+        return False
+    if record.method in MEASURED_METHODS:
+        return True
+    return (
+        record.source_kind is SourceKind.FIGMA
+        and record.method is ObservationMethod.INFERRED
+        and record.metadata.get("inference") in _MEASURED_BOUNDARY_INFERENCES
+    )
+
+
+def _placed_box(
+    record: Provenance,
+    breakpoint: BreakpointName,
+    frames: Mapping[BreakpointName, LayoutBox],
+) -> LayoutBox | None:
+    """Turn a record's box into page coordinates, or None when it cannot be placed.
+
+    A Figma box is relative to the canvas, not the page, so it is shifted to the
+    frame's origin and clipped to the frame -- the frame is all a visitor sees,
+    and a rendered page cannot be wider than its viewport. With no frame to
+    anchor it the box stays unavailable: canvas coordinates compared against
+    page coordinates would read as a gross mismatch that was never measured.
+    """
+
+    assert record.bounds is not None
+    box = _to_layout_box(record.bounds)
+    if record.source_kind is not SourceKind.FIGMA:
+        return box
+    frame = frames.get(record.viewport or breakpoint)
+    if frame is None:
+        return None
+    left = max(box.x - frame.x, 0.0)
+    top = max(box.y - frame.y, 0.0)
+    right = min(box.x - frame.x + box.width, frame.width)
+    bottom = min(box.y - frame.y + box.height, frame.height)
+    if right <= left or bottom <= top:
+        return None
+    return LayoutBox(x=left, y=top, width=right - left, height=bottom - top)
+
+
+def _bounds(
+    section: Section,
+    breakpoint: BreakpointName,
+    frames: Mapping[BreakpointName, LayoutBox],
+) -> LayoutBox | None:
     """Return measured geometry for this breakpoint, or None.
 
     Geometry lives on provenance rather than on the section itself. Only a
@@ -141,10 +230,10 @@ def _bounds(section: Section, breakpoint: BreakpointName) -> LayoutBox | None:
     """
 
     for record in section.provenance:
-        if record.bounds is None or record.method not in MEASURED_METHODS:
+        if not _measures_geometry(record):
             continue
         if record.viewport == breakpoint:
-            return _to_layout_box(record.bounds)
+            return _placed_box(record, breakpoint, frames)
 
     # A rendered crawl measures every breakpoint and records the non-desktop
     # boxes on the responsive observation rather than on the section, because
@@ -158,17 +247,13 @@ def _bounds(section: Section, breakpoint: BreakpointName) -> LayoutBox | None:
             continue
         for record in observation.provenance:
             if record.bounds is not None and record.method in MEASURED_METHODS:
-                return _to_layout_box(record.bounds)
+                return _placed_box(record, breakpoint, frames)
 
     # A record with no viewport describes the base layout, which is desktop.
     if breakpoint is BreakpointName.DESKTOP:
         for record in section.provenance:
-            if (
-                record.bounds is not None
-                and record.method in MEASURED_METHODS
-                and record.viewport is None
-            ):
-                return _to_layout_box(record.bounds)
+            if _measures_geometry(record) and record.viewport is None:
+                return _placed_box(record, breakpoint, frames)
     return None
 
 
@@ -316,29 +401,68 @@ def _padding(value: object) -> tuple[float | None, float | None]:
     return None, None
 
 
-def _media(section: Section, assets: Mapping[str, AssetRecord]) -> SectionMedia:
-    """Derive per-slot media from asset intrinsics.
+def _media(
+    section: Section,
+    assets: Mapping[str, AssetRecord],
+    breakpoint: BreakpointName,
+) -> SectionMedia:
+    """Derive per-slot media aspect, keyed the way the render keys its slots.
 
     Only the aspect ratio is knowable from a design: focal point and crop
     coverage describe how a build placed the image, so both stay unavailable
     until the render supplies them on both sides.
+
+    A background photo is its own slot. The build paints it as a CSS background
+    on the section, which is not an `<img>`, so numbering it among the images
+    would shift every later `media_N` out of step with the render.
     """
 
     media: dict[str, MediaSample] = {}
-    index = 0
+    image_index = 0
+    background_index = 0
     for element in _ordered(section.content):
         if element.kind != ContentKind.IMAGE or element.asset_id is None:
             continue
         asset = assets.get(element.asset_id)
         if asset is None:
             continue
-        index += 1
-        if not asset.width or not asset.height:
+        if element.role == _BACKGROUND_MEDIA_ROLE:
+            background_index += 1
+            key = f"background_{background_index}"
+        else:
+            image_index += 1
+            key = f"media_{image_index}"
+        aspect_ratio = _image_aspect_ratio(element, asset, breakpoint)
+        if aspect_ratio is None:
             continue
-        media[f"media_{index}"] = MediaSample(
-            aspect_ratio=asset.width / asset.height
-        )
+        media[key] = MediaSample(aspect_ratio=aspect_ratio)
     return SectionMedia(media=media)
+
+
+def _image_aspect_ratio(
+    element: ContentElement, asset: AssetRecord, breakpoint: BreakpointName
+) -> float | None:
+    """Prefer the shape this element was drawn at over the asset's recorded size.
+
+    A Figma asset record keeps the size of the first node that used the image,
+    so a picture reused elsewhere (a video poster over a banner's background)
+    was judged against the other node's frame. The element's own measured box
+    is the shape the design gave this slot.
+    """
+
+    for record in element.provenance:
+        if (
+            record.source_kind is SourceKind.FIGMA
+            and record.method in MEASURED_METHODS
+            and record.bounds is not None
+            and record.bounds.width > 0
+            and record.bounds.height > 0
+            and (record.viewport or BreakpointName.DESKTOP) == breakpoint
+        ):
+            return record.bounds.width / record.bounds.height
+    if asset.width and asset.height:
+        return asset.width / asset.height
+    return None
 
 
 def _ordered(content: Iterable[ContentElement]) -> list[ContentElement]:

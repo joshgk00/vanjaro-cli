@@ -67,10 +67,18 @@ class PageGeometry(_LayoutModel):
 
     `viewport_width` scales pixel coordinates so a 1440px design and a 1280px
     render compare proportionally rather than registering a false offset.
+
+    `vertical_offset_tolerated` is set on a design drawn as one static frame.
+    A build never reproduces that frame's vertical rhythm exactly, so a section
+    that is short upstream shifts every section below it. Comparing absolute
+    positions charges that single defect to each later section as well. When
+    set, each section is judged on its own height and width and its horizontal
+    placement; where it starts down the page is left to the order subscore.
     """
 
     viewport_width: float = Field(gt=0)
     sections: tuple[SectionGeometry, ...] = Field(min_length=1)
+    vertical_offset_tolerated: bool = False
 
     @model_validator(mode="after")
     def unique_sections(self) -> "PageGeometry":
@@ -105,11 +113,18 @@ def normalized_iou(
     *,
     expected_viewport_width: float,
     observed_viewport_width: float,
+    vertical_offset_tolerated: bool = False,
 ) -> float:
-    """Intersection over union of two boxes, each scaled to its own viewport."""
+    """Intersection over union of two boxes, each scaled to its own viewport.
+
+    With `vertical_offset_tolerated` the observed box is slid to the expected
+    top first, so only height, width, and horizontal placement are compared.
+    """
 
     ex, ey, ew, eh = _scaled(expected, expected_viewport_width)
     ox, oy, ow, oh = _scaled(observed, observed_viewport_width)
+    if vertical_offset_tolerated:
+        oy = ey
 
     expected_area = ew * eh
     observed_area = ow * oh
@@ -164,6 +179,7 @@ def score_section_layout(
     expected_viewport_width: float,
     observed_viewport_width: float,
     section_count: int,
+    vertical_offset_tolerated: bool = False,
 ) -> DimensionScore:
     """Score one section's placement against its design geometry."""
 
@@ -183,6 +199,7 @@ def score_section_layout(
                 observed.bounds,
                 expected_viewport_width=expected_viewport_width,
                 observed_viewport_width=observed_viewport_width,
+                vertical_offset_tolerated=vertical_offset_tolerated,
             )
         )
 
@@ -238,6 +255,7 @@ def score_page_layout(
             expected_viewport_width=expected.viewport_width,
             observed_viewport_width=observed.viewport_width,
             section_count=section_count,
+            vertical_offset_tolerated=expected.vertical_offset_tolerated,
         )
         for section in expected.sections
     }

@@ -527,3 +527,292 @@ def test_a_breakpoint_with_no_observation_still_reads_the_base_style() -> None:
     section = _section(style=_named_style(padding="48px"), responsive=[])
 
     assert _observe(section, BreakpointName.MOBILE).spacing.spacing.padding_top == 48.0
+
+
+# --- Figma geometry and media (RT-27, RT-29) -----------------------------------
+
+# A Figma node reports canvas coordinates, so the page frame sits far from the
+# origin and every section box must be shifted back to it.
+_FRAME = BoundingBox(x=-3884, y=-513, width=1440, height=8090)
+
+
+def _figma_provenance(
+    bounds: BoundingBox | None,
+    *,
+    method: ObservationMethod = ObservationMethod.API,
+    viewport: BreakpointName | None = BreakpointName.DESKTOP,
+    inference: str | None = None,
+    element_node_id: str = "156:900",
+    frame_node_id: str = "156:890",
+) -> Provenance:
+    return Provenance(
+        source_kind=SourceKind.FIGMA,
+        method=method,
+        viewport=viewport,
+        file_key="file",
+        frame_node_id=frame_node_id,
+        element_node_id=element_node_id,
+        bounds=bounds,
+        metadata={"inference": inference} if inference else {},
+    )
+
+
+def _figma_page(sections: list[Section], frame: BoundingBox | None = _FRAME) -> Page:
+    page = _page(sections)
+    if frame is not None:
+        page = page.model_copy(
+            update={
+                "provenance": [
+                    _figma_provenance(frame, element_node_id="156:890", frame_node_id="156:890")
+                ]
+            }
+        )
+    return page
+
+
+def _figma_bounds(
+    section: Section,
+    frame: BoundingBox | None = _FRAME,
+    breakpoint: BreakpointName = BreakpointName.DESKTOP,
+):
+    page = _figma_page([section], frame)
+    observation = observe_expected_page(page, _document(page), breakpoint)
+    assert observation is not None
+    return observation.sections[0].geometry.bounds
+
+
+def test_an_inferred_figma_section_box_is_placed_relative_to_the_page_frame() -> None:
+    # The grouping is inferred but the box is the union of boxes the API
+    # measured, so it is real geometry once it is moved into page coordinates.
+    section = _section(
+        provenance=[
+            _figma_provenance(
+                BoundingBox(x=-3884, y=-382, width=1440, height=664),
+                method=ObservationMethod.INFERRED,
+                inference="flat_geometry",
+            )
+        ]
+    )
+
+    box = _figma_bounds(section)
+
+    assert (box.x, box.y, box.width, box.height) == (0, 131, 1440, 664)
+
+
+@pytest.mark.parametrize("inference", ["flat_geometry", "background_band", "whitespace_geometry"])
+def test_every_measured_boundary_kind_carries_geometry(inference: str) -> None:
+    section = _section(
+        provenance=[
+            _figma_provenance(
+                BoundingBox(x=-3884, y=-382, width=1440, height=664),
+                method=ObservationMethod.INFERRED,
+                inference=inference,
+            )
+        ]
+    )
+
+    assert _figma_bounds(section) is not None
+
+
+def test_an_inferred_figma_layout_record_is_still_not_geometry() -> None:
+    # `geometry_layout` states a guessed layout, with no measured box behind it.
+    section = _section(
+        provenance=[
+            _figma_provenance(
+                BoundingBox(x=-3884, y=-382, width=1440, height=664),
+                method=ObservationMethod.INFERRED,
+                inference="geometry_layout",
+            )
+        ]
+    )
+
+    assert _figma_bounds(section) is None
+
+
+def test_a_designed_figma_section_is_also_placed_relative_to_the_page_frame() -> None:
+    section = _section(
+        provenance=[_figma_provenance(BoundingBox(x=-3884, y=-413, width=1440, height=500))]
+    )
+
+    box = _figma_bounds(section)
+
+    assert (box.x, box.y, box.width, box.height) == (0, 100, 1440, 500)
+
+
+def test_a_section_hanging_past_the_frame_is_clipped_to_it() -> None:
+    # A rotated banner or a carousel runs past the frame edge; a rendered page
+    # cannot be wider than its viewport, so the overhang is not part of the box.
+    section = _section(
+        provenance=[
+            _figma_provenance(
+                BoundingBox(x=-3915, y=173, width=1471, height=286),
+                method=ObservationMethod.INFERRED,
+                inference="flat_geometry",
+            )
+        ]
+    )
+
+    box = _figma_bounds(section)
+
+    assert (box.x, box.width) == (0, 1440)
+
+
+def test_a_figma_box_with_no_page_frame_stays_unavailable() -> None:
+    # Canvas coordinates against page coordinates would read as a gross
+    # mismatch that nobody measured.
+    section = _section(
+        provenance=[_figma_provenance(BoundingBox(x=-3884, y=-413, width=1440, height=500))]
+    )
+
+    assert _figma_bounds(section, frame=None) is None
+
+
+def test_a_figma_box_wholly_outside_the_frame_stays_unavailable() -> None:
+    section = _section(
+        provenance=[_figma_provenance(BoundingBox(x=-3884, y=9000, width=1440, height=500))]
+    )
+
+    assert _figma_bounds(section) is None
+
+
+def test_a_figma_frame_is_only_used_for_the_breakpoint_it_draws() -> None:
+    section = _section(
+        provenance=[
+            _figma_provenance(
+                BoundingBox(x=100, y=0, width=390, height=300), viewport=BreakpointName.MOBILE
+            )
+        ]
+    )
+
+    # Only the desktop frame is on the page, so a mobile box cannot be placed.
+    assert _figma_bounds(section, breakpoint=BreakpointName.MOBILE) is None
+
+
+def _figma_image(
+    key: str,
+    order: int,
+    asset_id: str,
+    bounds: BoundingBox | None,
+    *,
+    role: str = "section_media",
+) -> ContentElement:
+    return _element(key, order, ContentKind.IMAGE, asset_id=asset_id).model_copy(
+        update={"role": role, "provenance": [_figma_provenance(bounds)] if bounds else []}
+    )
+
+
+def _shared_asset() -> AssetRecord:
+    # Figma records an image's size from the first node that used it: here the
+    # banner's background, 1496 x 503.
+    return AssetRecord(
+        id="shared",
+        kind=AssetKind.IMAGE,
+        role=AssetRole.EDITORIAL,
+        source_url="figma://file/ref",
+        width=1496,
+        height=503,
+    )
+
+
+def test_a_shared_asset_is_judged_by_each_elements_own_frame() -> None:
+    poster = _figma_image("poster", 0, "shared", BoundingBox(x=0, y=0, width=902, height=493))
+    background = _figma_image(
+        "banner",
+        0,
+        "shared",
+        BoundingBox(x=0, y=0, width=1496, height=503),
+        role="background_media",
+    )
+
+    poster_media = _observe(_section(content=[poster]), assets={"shared": _shared_asset()}).media
+    banner_media = _observe(
+        _section(content=[background]), assets={"shared": _shared_asset()}
+    ).media
+
+    assert poster_media.media["media_1"].aspect_ratio == pytest.approx(902 / 493)
+    assert banner_media.media["background_1"].aspect_ratio == pytest.approx(1496 / 503)
+
+
+def test_an_image_with_no_figma_frame_keeps_the_asset_size() -> None:
+    element = _figma_image("poster", 0, "shared", None)
+
+    media = _observe(_section(content=[element]), assets={"shared": _shared_asset()}).media
+
+    assert media.media["media_1"].aspect_ratio == pytest.approx(1496 / 503)
+
+
+def test_a_frame_drawn_for_another_breakpoint_is_not_this_breakpoints_shape() -> None:
+    element = _figma_image("poster", 0, "shared", BoundingBox(x=0, y=0, width=902, height=493))
+
+    media = _observe(
+        _section(content=[element]),
+        BreakpointName.MOBILE,
+        assets={"shared": _shared_asset()},
+    ).media
+
+    assert media.media["media_1"].aspect_ratio == pytest.approx(1496 / 503)
+
+
+def test_a_live_html_rendered_image_box_does_not_replace_the_asset_size() -> None:
+    # Live pages keep their asset-size behaviour; only Figma records a shared
+    # asset's size from its first owner.
+    element = _element("img", 0, ContentKind.IMAGE, asset_id="shared").model_copy(
+        update={
+            "provenance": [
+                _provenance(
+                    viewport=BreakpointName.DESKTOP,
+                    bounds=BoundingBox(x=0, y=0, width=300, height=300),
+                )
+            ]
+        }
+    )
+
+    media = _observe(_section(content=[element]), assets={"shared": _shared_asset()}).media
+
+    assert media.media["media_1"].aspect_ratio == pytest.approx(1496 / 503)
+
+
+def test_a_background_photo_is_its_own_slot_and_does_not_shift_image_numbering() -> None:
+    # The build paints the background as CSS, not an <img>, so numbering it
+    # among the images would put every later image out of step with the render.
+    photo = AssetRecord(
+        id="photo",
+        kind=AssetKind.IMAGE,
+        role=AssetRole.EDITORIAL,
+        source_url="figma://file/photo",
+        width=400,
+        height=400,
+    )
+    background = _figma_image(
+        "bg", 0, "shared", BoundingBox(x=0, y=0, width=1440, height=664), role="background_media"
+    )
+    mascot = _figma_image("mascot", 1, "photo", BoundingBox(x=0, y=0, width=400, height=400))
+
+    media = _observe(
+        _section(content=[background, mascot]), assets={"shared": _shared_asset(), "photo": photo}
+    ).media
+
+    assert set(media.media) == {"background_1", "media_1"}
+    assert media.media["media_1"].aspect_ratio == pytest.approx(1.0)
+
+
+def test_a_figma_page_tolerates_vertical_offset_at_the_breakpoint_it_draws() -> None:
+    page = _figma_page([_section()])
+
+    desktop = observe_expected_page(page, _document(page), BreakpointName.DESKTOP)
+    mobile = observe_expected_page(page, _document(page), BreakpointName.MOBILE)
+
+    # Only a desktop frame is on the page, so mobile has nothing to be lenient about.
+    assert desktop is not None and desktop.vertical_offset_tolerated is True
+    assert mobile is not None and mobile.vertical_offset_tolerated is False
+
+
+def test_a_live_html_page_keeps_comparing_absolute_positions() -> None:
+    # A rendered crawl of the source is not one static frame, and its recorded
+    # scores must not move when this tolerance is introduced for Figma.
+    page = _page([_section()])
+
+    observation = observe_expected_page(page, _document(page), BreakpointName.DESKTOP)
+
+    assert observation is not None
+    assert observation.vertical_offset_tolerated is False
