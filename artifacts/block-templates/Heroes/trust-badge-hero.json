@@ -1,0 +1,283 @@
+{
+  "name": "Trust Badge Hero",
+  "category": "Heroes",
+  "description": "Left-aligned hero with a row of up to three trust badges, an eyebrow, heading, body, and two buttons",
+  "capabilities": {
+    "schema_version": "1.1",
+    "roles": [
+      "hero",
+      "hero_badges"
+    ],
+    "layout": {
+      "kind": "single",
+      "columns": [
+        1
+      ],
+      "media_positions": [
+        "top",
+        "background"
+      ],
+      "alignment": [
+        "left"
+      ]
+    },
+    "repeat_group": null,
+    "fields": {
+      "eyebrow": "optional",
+      "title": "required",
+      "body": "optional",
+      "action": "optional",
+      "media": "required"
+    },
+    "physical_fields": {
+      "eyebrow": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "title": {
+        "owner": "section",
+        "slot_type": "heading",
+        "slots": [
+          "heading_2"
+        ],
+        "slots_per_owner": 1
+      },
+      "body": {
+        "owner": "section",
+        "slot_type": "text",
+        "slots": [
+          "text_1"
+        ],
+        "slots_per_owner": 1
+      },
+      "action": {
+        "owner": "section",
+        "slot_type": "button",
+        "slots": [
+          "button_1",
+          "button_2"
+        ],
+        "slots_per_owner": 2
+      },
+      "media": {
+        "owner": "section",
+        "slot_type": "image",
+        "slots": [
+          "image_1_src",
+          "image_2_src",
+          "image_3_src"
+        ],
+        "slots_per_owner": 3
+      }
+    },
+    "responsive": {
+      "desktop_columns": 1,
+      "tablet_columns": 1,
+      "mobile_columns": 1,
+      "stacking_order": "source"
+    },
+    "interactions": [
+      "link"
+    ],
+    "native_component_ratio": 1.0,
+    "supported_modifiers": [
+      "background-image",
+      "background-overlay",
+      "band-color",
+      "button-style",
+      "content-width",
+      "image-focal-point",
+      "spacing",
+      "text-alignment"
+    ]
+  },
+  "template": {
+    "type": "section",
+    "classes": [
+      {"name": "vj-section", "active": false},
+      {"name": "py-5", "active": false}
+    ],
+    "attributes": {"id": "tpl-tbh-s1"},
+    "components": [
+      {
+        "type": "grid",
+        "classes": [
+          {"name": "container", "active": false}
+        ],
+        "attributes": {"id": "tpl-tbh-g1"},
+        "components": [
+          {
+            "type": "row",
+            "classes": [
+              {"name": "row", "active": false},
+              {"name": "align-items-center", "active": false},
+              {"name": "g-4", "active": false}
+            ],
+            "attributes": {"id": "tpl-tbh-r1"},
+            "components": [
+              {
+                "type": "column",
+                "classes": [
+                  {"name": "col-xl-7", "active": false},
+                  {"name": "col-lg-8", "active": false},
+                  {"name": "col-12", "active": false}
+                ],
+                "attributes": {"id": "tpl-tbh-c1"},
+                "components": [
+                  {
+                    "type": "row",
+                    "classes": [
+                      {"name": "row", "active": false},
+                      {"name": "g-3", "active": false},
+                      {"name": "align-items-center", "active": false},
+                      {"name": "mb-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tbh-r2"},
+                    "components": [
+                      {
+                        "type": "column",
+                        "classes": [
+                          {"name": "col-sm-4", "active": false},
+                          {"name": "col-md-auto", "active": false},
+                          {"name": "col-12", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-tbh-bc1"},
+                        "components": [
+                          {
+                            "type": "image",
+                            "classes": [
+                              {"name": "image-box", "active": false},
+                              {"name": "vj-image", "active": false},
+                              {"name": "img-fluid", "active": false}
+                            ],
+                            "attributes": {
+                              "id": "tpl-tbh-i1",
+                              "src": "https://placehold.co/185x57",
+                              "alt": "Trust badge"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "column",
+                        "classes": [
+                          {"name": "col-sm-4", "active": false},
+                          {"name": "col-md-auto", "active": false},
+                          {"name": "col-12", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-tbh-bc2"},
+                        "components": [
+                          {
+                            "type": "image",
+                            "classes": [
+                              {"name": "image-box", "active": false},
+                              {"name": "vj-image", "active": false},
+                              {"name": "img-fluid", "active": false}
+                            ],
+                            "attributes": {
+                              "id": "tpl-tbh-i2",
+                              "src": "https://placehold.co/185x57",
+                              "alt": "Trust badge"
+                            }
+                          }
+                        ]
+                      },
+                      {
+                        "type": "column",
+                        "classes": [
+                          {"name": "col-sm-4", "active": false},
+                          {"name": "col-md-auto", "active": false},
+                          {"name": "col-12", "active": false}
+                        ],
+                        "attributes": {"id": "tpl-tbh-bc3"},
+                        "components": [
+                          {
+                            "type": "image",
+                            "classes": [
+                              {"name": "image-box", "active": false},
+                              {"name": "vj-image", "active": false},
+                              {"name": "img-fluid", "active": false}
+                            ],
+                            "attributes": {
+                              "id": "tpl-tbh-i3",
+                              "src": "https://placehold.co/185x57",
+                              "alt": "Trust badge"
+                            }
+                          }
+                        ]
+                      }
+                    ]
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h5",
+                    "content": "Eyebrow",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-5", "active": false},
+                      {"name": "text-uppercase", "active": false},
+                      {"name": "text-primary", "active": false},
+                      {"name": "fw-bold", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tbh-h1"}
+                  },
+                  {
+                    "type": "heading",
+                    "tagName": "h1",
+                    "content": "Your Headline Here",
+                    "classes": [
+                      {"name": "vj-heading", "active": false},
+                      {"name": "head-style-1", "active": false},
+                      {"name": "mt-2", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tbh-h2"}
+                  },
+                  {
+                    "type": "text",
+                    "content": "Supporting text that explains the value proposition and tells visitors what to do next.",
+                    "classes": [
+                      {"name": "vj-text", "active": false},
+                      {"name": "paragraph-style-1", "active": false},
+                      {"name": "mt-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tbh-t1"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Get Started",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-primary", "active": false},
+                      {"name": "button-style-1", "active": false},
+                      {"name": "mt-4", "active": false},
+                      {"name": "me-3", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tbh-b1", "role": "button", "href": "#"}
+                  },
+                  {
+                    "type": "button",
+                    "tagName": "a",
+                    "content": "Learn More",
+                    "classes": [
+                      {"name": "btn", "active": false},
+                      {"name": "btn-outline-primary", "active": false},
+                      {"name": "button-style-2", "active": false},
+                      {"name": "mt-4", "active": false}
+                    ],
+                    "attributes": {"id": "tpl-tbh-b2", "role": "button", "href": "#"}
+                  }
+                ]
+              }
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "styles": []
+}

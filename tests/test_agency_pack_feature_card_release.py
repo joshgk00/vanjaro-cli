@@ -29,6 +29,7 @@ from vanjaro_cli.agency_library.generation import (
     render_repository_pack_artifacts,
     write_repository_pack_artifacts,
 )
+from vanjaro_cli.utils.semver import compare_semver
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -41,21 +42,21 @@ def _sha256(path: Path) -> str:
     return hashlib.sha256(path.read_bytes()).hexdigest()
 
 
-def test_this_release_is_1_12_0_and_repository_snapshot_is_current() -> None:
-    assert _PACK_VERSION == "1.12.0"
-    assert _TEMPLATE_VERSION == "1.12.0"
+def test_repository_snapshot_is_current_and_not_older_than_1_12_0() -> None:
+    assert compare_semver(_PACK_VERSION, "1.12.0") >= 0
+    assert compare_semver(_TEMPLATE_VERSION, "1.12.0") >= 0
     assert check_repository_pack_artifacts() == ()
 
 
 def test_every_prior_published_byte_and_digest_is_frozen() -> None:
     # Every payload pinned in the historical digest map (1.0.0 through the
-    # now-frozen 1.11.0) must still be byte-identical on disk.
+    # now-frozen 1.12.0) must still be byte-identical on disk.
     for relative, expected_digest in _HISTORICAL_DIGESTS.items():
         path = FAMILY / relative
         assert path.is_file(), f"missing historical payload: {relative}"
         assert _sha256(path) == expected_digest, f"historical payload drifted: {relative}"
-    assert "templates/1.11.0.json" in _HISTORICAL_DIGESTS
-    assert "packs/1.11.0.json" in _HISTORICAL_DIGESTS
+    assert "templates/1.12.0.json" in _HISTORICAL_DIGESTS
+    assert "packs/1.12.0.json" in _HISTORICAL_DIGESTS
 
 
 def test_check_and_write_are_deterministic_and_idempotent(tmp_path: Path) -> None:

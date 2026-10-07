@@ -24,9 +24,9 @@ from vanjaro_cli.design.template_catalog import (
 _PROJECT_ROOT = Path(__file__).resolve().parents[2]
 _DEFAULT_REGISTRY = _PROJECT_ROOT / "artifacts" / "agency-packs"
 _PACK_NAME = "clicks-and-mortars"
-_TEMPLATE_VERSION = "1.12.0"
+_TEMPLATE_VERSION = "1.13.0"
 _MODIFIER_VERSION = "1.0.0"
-_PACK_VERSION = "1.12.0"
+_PACK_VERSION = "1.13.0"
 _HISTORICAL_DIGESTS = {
     "templates/1.0.0.json": "c4e1316345e4c275ae9fb99312a3c2014de1ce39781a547b6a2d8685f42c8a73",
     "modifiers/1.0.0.json": "331b7c14af6ae87ac9d04a6559ff9ae3ed4c252a21be80c6fa5159c1f720f087",
@@ -54,6 +54,8 @@ _HISTORICAL_DIGESTS = {
     "packs/1.10.0.json": "65e006a5ecbaa15a447879a4e0f6118bec1f1b8f28b15000cc684b72a6f20e63",
     "templates/1.11.0.json": "e1f334f40b3251e3aacc501306aca14424180ed0eded66fbc24aae6fdc295679",
     "packs/1.11.0.json": "1293e2c803b1708c878e7db0f180dd872a787a60b6113f18c5f938ab39a5a595",
+    "templates/1.12.0.json": "aae01415732f6cb1440e0c91ffee084c65db51c327ce6219271ce3c20e17d9c9",
+    "packs/1.12.0.json": "5fe4f767b30a3800498003c2b7af7f8e89b0ffefb083f3a50ae2f4799486dadf",
 }
 _AUDITED_EXECUTABLE_DIGESTS = {
     "CTAs/cta-banner": "f1af9e60b5086e510411ac5548097bdcfc5530ee1d474caa55cb04f3c2fe3028",
@@ -82,6 +84,7 @@ _AUDITED_EXECUTABLE_DIGESTS = {
     "Heroes/centered-hero": "e523ecda49c5a3cb0fd43013ab0a2298d0fdaa44e50878154ea89ec55bbecaaa",
     "Heroes/photo-band": "e86fd5ed8de34657254283eef73177007c3e1d2c505c7a556692bd5a0f5bc910",
     "Heroes/split-hero": "2a8f8bc85e0fa2519641c270aac3940cee10345397bb421b3601c2b0514a46e6",
+    "Heroes/trust-badge-hero": "869db73f9bc1c5e06228edddc3fc489c045e43b9ea5e2f17a0161ee29d520b85",
     "Lists/icon-feature-list": "e1749c56d50da2ecd0bc29f01e1ab92ac8e87985dab1d32e30642ef388aae3b7",
     "Navigation/footer-3col": "3a136c0341de8406a4c5a49c41c646a8b37fcdd2243e4ecf1e73908f2bc1e5ec",
     "Navigation/footer-4col": "d08141a70fd7756668d187e6a469a071f7ad587d7fa3177a5bedecf61305c9c1",
@@ -94,9 +97,10 @@ _REVIEWED_EXECUTABLE_CHANGES = (
     "Lists/icon-feature-list",
 )
 _FEATURE_CARDS_3UP = "Cards/feature-cards-3up"
+_BADGE_HERO = "Heroes/trust-badge-hero"
 _CURRENT_RELEASE_DIGESTS = {
-    "templates/1.12.0.json": "aae01415732f6cb1440e0c91ffee084c65db51c327ce6219271ce3c20e17d9c9",
-    "packs/1.12.0.json": "5fe4f767b30a3800498003c2b7af7f8e89b0ffefb083f3a50ae2f4799486dadf",
+    "templates/1.13.0.json": "d1e5f92a591e266ab8568d1af64a30acaeff25383e7f9afa583b1aec15795ef3",
+    "packs/1.13.0.json": "f900d3a7d28bdb87817dcac39d9940c45aa8641c2f818cb48f7de11f90369fad",
 }
 
 
@@ -163,6 +167,17 @@ def render_repository_pack_artifacts(
                 "The section heading moved into its own standard grid/row/column with "
                 "head-style-2; existing card nodes and capabilities are unchanged. This rule "
                 "approves no other template or modifier change.",
+            ),
+        ),
+        PackUpgradeRule(
+            from_version="1.12.0",
+            compatible_capability_schema_change=False,
+            compatible_template_changes=(),
+            notes=(
+                f"Additive upgrade from 1.12.0: adds {_BADGE_HERO} (up to three trust badges, "
+                "eyebrow, heading, body, two buttons). No existing template or modifier "
+                "changed, so a project's current plan is unaffected until it is re-planned. "
+                "This rule approves no template change.",
             ),
         ),
     )

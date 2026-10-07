@@ -76,6 +76,7 @@ EXPECTED_FIELDS_BY_TEMPLATE = {
     "Content/video-feature.json": {"eyebrow", "title", "body", "media", "action"},
     "CTAs/cta-banner.json": {"title", "subtitle", "body", "action", "background_media"},
     "CTAs/cta-split.json": {"title", "subtitle", "body", "media", "action"},
+    "Heroes/trust-badge-hero.json": {"eyebrow", "title", "body", "action", "media"},
     "Heroes/centered-hero.json": {"title", "body", "action", "background_media"},
     "Heroes/photo-band.json": {"background_media"},
     "Heroes/split-hero.json": {"title", "body", "action", "media"},
@@ -143,7 +144,7 @@ def _write_template(root: Path, relative_path: str, name: str, capabilities: dic
 def test_all_tracked_templates_have_valid_unique_capabilities() -> None:
     catalog = load_template_catalog(TEMPLATES_DIR)
 
-    assert len(catalog) == 31
+    assert len(catalog) == 32
     assert len({entry.name.casefold() for entry in catalog}) == len(catalog)
     assert all(entry.capabilities.fields for entry in catalog)
     assert all(entry.capabilities.schema_version == "1.1" for entry in catalog)
@@ -183,6 +184,9 @@ AUDITED_MULTI_SLOT_CAPACITY = {
     ("Content/split-media.json", "body"): 3,
     ("Content/split-media-reverse.json", "body"): 3,
     ("Content/rich-text.json", "body"): 4,
+    # A hero with two buttons and a row of three trust badges (pack 1.13.0).
+    ("Heroes/trust-badge-hero.json", "action"): 2,
+    ("Heroes/trust-badge-hero.json", "media"): 3,
     # Lists: an address block, and a footer's columns of links.
     ("Content/contact-section.json", "contact_items"): 3,
     ("Navigation/footer-3col.json", "contact_items"): 6,
