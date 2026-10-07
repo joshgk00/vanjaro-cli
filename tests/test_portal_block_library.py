@@ -126,6 +126,42 @@ def test_preflight_composes_entire_plan_before_any_post(
     assert client.posts == []
 
 
+def _image_sources(component: dict) -> list[str]:
+    sources = [component["attributes"]["src"]] if component.get("type") == "image" else []
+    for child in component.get("components", []):
+        sources.extend(_image_sources(child))
+    return sources
+
+
+def test_composed_video_feature_keeps_the_poster_its_plan_bound(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.delenv("VANJARO_TEMPLATES_DIR", raising=False)
+    plan = [
+        {
+            "key": "page.section.10.video-feature",
+            "template": "Video Feature",
+            "name": "project / Home Video Feature",
+            "category": "Agency - project",
+            "type": "custom",
+            "overrides": {
+                "heading_1": "See what our students can do",
+                "heading_2": "Our Media",
+                "text_1": "Watch our students.",
+                "image_1_alt": "",
+                "image_1_href": "",
+                "image_1_src": "/Portals/2/Images/agency/project/poster.jpg",
+                "link_1": "",
+                "link_1_href": "",
+            },
+        }
+    ]
+
+    (composed,) = compose_project_library(plan)
+
+    assert _image_sources(composed["content_json"][0]) == ["/Portals/2/Images/agency/project/poster.jpg"]
+
+
 def test_preflight_rejects_template_changed_after_plan_approval(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:

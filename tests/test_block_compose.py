@@ -179,6 +179,89 @@ def test_apply_overrides_removes_explicitly_cleared_existing_image():
     assert composed["template"]["components"] == []
 
 
+def make_wrapped_image_template() -> dict:
+    return {
+        "name": "Wrapped Image",
+        "category": "Content",
+        "template": {
+            "type": "section",
+            "attributes": {"id": "tpl-w-s1"},
+            "components": [
+                {
+                    "type": "column",
+                    "attributes": {"id": "tpl-w-c1"},
+                    "components": [
+                        {
+                            "type": "link",
+                            "tagName": "a",
+                            "attributes": {"id": "tpl-w-l1", "href": "#"},
+                            "components": [
+                                {"type": "image", "attributes": {"id": "tpl-w-i1", "src": "", "alt": ""}},
+                                {"type": "default", "tagName": "div", "attributes": {"id": "tpl-w-play"}},
+                            ],
+                        }
+                    ],
+                }
+            ],
+        },
+    }
+
+
+def test_apply_overrides_keeps_cleared_link_that_wraps_a_filled_image():
+    composed = apply_overrides(
+        make_wrapped_image_template(),
+        {"link_1": "", "link_1_href": "", "image_1_src": "/poster.jpg"},
+    )
+
+    column = composed["template"]["components"][0]
+    link = column["components"][0]
+    assert link["type"] == "link"
+    assert "href" not in link["attributes"]
+    assert "content" not in link
+    assert [child["attributes"]["id"] for child in link["components"]] == ["tpl-w-i1", "tpl-w-play"]
+    assert link["components"][0]["attributes"]["src"] == "/poster.jpg"
+
+
+def test_apply_overrides_removes_cleared_link_when_its_image_is_cleared_too():
+    composed = apply_overrides(
+        make_wrapped_image_template(),
+        {"link_1": "", "link_1_href": "", "image_1_src": ""},
+    )
+
+    assert composed["template"]["components"] == []
+
+
+def test_apply_overrides_removes_cleared_link_when_its_image_is_not_filled():
+    composed = apply_overrides(
+        make_wrapped_image_template(),
+        {"link_1": "", "link_1_href": ""},
+    )
+
+    assert composed["template"]["components"] == []
+
+
+def test_apply_overrides_keeps_video_feature_poster_when_its_link_is_cleared():
+    overrides = {
+        "heading_1": "See what our students can do",
+        "heading_2": "Our Media",
+        "text_1": "Watch our students.",
+        "image_1_alt": "",
+        "image_1_href": "",
+        "image_1_src": "/Portals/2/poster.jpg",
+        "link_1": "",
+        "link_1_href": "",
+    }
+
+    composed = apply_overrides(find_template("Video Feature"), overrides)
+
+    media_column = composed["template"]["components"][0]["components"][1]["components"][0]
+    link = media_column["components"][0]
+    image, play_button = link["components"]
+    assert image["attributes"]["src"] == "/Portals/2/poster.jpg"
+    assert "kts-play-btn" in [entry["name"] for entry in play_button["classes"]]
+    assert "href" not in link["attributes"]
+
+
 def test_apply_overrides_does_not_mutate_original():
     original_heading = HERO_TEMPLATE["template"]["components"][0]["components"][0]["components"][0]["components"][0]["content"]
     apply_overrides(HERO_TEMPLATE, {"heading_1": "Changed"})

@@ -753,11 +753,34 @@ def prune_unfilled_images(section: dict, overrides: dict[str, str]) -> None:
                 break
 
 
+def _override_value(comp_type: str, index: int, overrides: dict[str, str]) -> str:
+    """The override that fills one slot's visitor content, or ``""`` when it has none."""
+
+    key = f"image_{index}_src" if comp_type == "image" else f"{comp_type}_{index}"
+    return overrides.get(key) or ""
+
+
 def _prune_explicitly_empty_slots(section: dict, overrides: dict[str, str]) -> None:
-    """Remove template chrome for slots the composition plan explicitly cleared."""
+    """Remove template chrome for slots the composition plan explicitly cleared.
+
+    A cleared ``link`` or ``button`` can wrap content the plan did fill (the
+    Video Feature template wraps its poster image and play button in the
+    video link). Removing it outright would delete that content with it, so a
+    cleared component that still holds filled content is kept as an inert
+    wrapper: its own sample text and destination are dropped and its
+    children stay.
+    """
+
+    all_slots = list(_walk_overridable_with_ancestors(section))
+    wraps_filled_content = {
+        id(ancestor)
+        for component, ancestors, comp_type, index in all_slots
+        if _override_value(comp_type, index, overrides)
+        for ancestor in ancestors
+    }
 
     to_remove: list[tuple[dict, list[dict]]] = []
-    for component, ancestors, comp_type, index in _walk_overridable_with_ancestors(section):
+    for component, ancestors, comp_type, index in all_slots:
         content_key = f"{comp_type}_{index}"
         cleared_content = (
             comp_type in CONTENT_TYPES
@@ -774,6 +797,10 @@ def _prune_explicitly_empty_slots(section: dict, overrides: dict[str, str]) -> N
             to_remove.append((component, ancestors))
 
     for component, ancestors in to_remove:
+        if id(component) in wraps_filled_content:
+            component.pop("content", None)
+            component.get("attributes", {}).pop("href", None)
+            continue
         chain = [*ancestors, component]
         for depth in range(len(chain) - 1, 0, -1):
             child, parent = chain[depth], chain[depth - 1]

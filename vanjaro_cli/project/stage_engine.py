@@ -66,7 +66,8 @@ class StageDefinition:
 # contract_version is hashed into each stage's input fingerprint. Bump ANALYZE
 # when extraction output changes and PLAN when template matching or planning
 # output changes; completed projects then rerun the stage (invalidating
-# downstream state and approvals) instead of resuming a stale result.
+# downstream state and approvals) instead of resuming a stale result. Bump
+# LIBRARY when the block composer changes what it builds from an unchanged plan.
 STAGE_DEFINITIONS: dict[ProjectStage, StageDefinition] = {
     ProjectStage.INTAKE: StageDefinition(ProjectStage.INTAKE),
     ProjectStage.ANALYZE: StageDefinition(
@@ -98,7 +99,7 @@ STAGE_DEFINITIONS: dict[ProjectStage, StageDefinition] = {
         (ProjectStage.ASSETS,),
         ApprovalGate.PORTAL_MUTATION,
         True,
-        contract_version="1.2",
+        contract_version="1.3",
     ),
     ProjectStage.PAGES: StageDefinition(
         ProjectStage.PAGES,
