@@ -12,6 +12,8 @@ import hashlib
 from pathlib import Path
 import struct
 
+import pytest
+
 from vanjaro_cli.design.capture_references import CanvasInterpretation
 from vanjaro_cli.design.models import (
     BoundingBox,
@@ -1024,3 +1026,87 @@ def test_live_source_with_undeclared_breakpoints_still_blocks_release(tmp_path: 
     assert page_report["release_completeness"]["not_declared_breakpoints"] == []
     assert any("tablet" in message for message in blockers)
     assert any("mobile" in message for message in blockers)
+
+
+# --- relative workspace root -------------------------------------------------
+
+
+def test_relative_workspace_root_scores_the_same_as_an_absolute_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    manifest = _figma_desktop_only_record(workspace)
+    absolute_report, absolute_blockers = evaluate_project_fidelity(workspace, manifest)
+    monkeypatch.chdir(tmp_path)
+
+    relative_report, relative_blockers = evaluate_project_fidelity(Path("workspace"), manifest)
+
+    assert relative_report["pages"]["home"]["status"] == "scored"
+    assert relative_report == absolute_report
+    assert relative_blockers == absolute_blockers == []
+
+
+def test_relative_workspace_root_reads_the_same_coverage_as_an_absolute_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    document = _document((_page("home"),))
+    page = document.pages[0]
+    _write_resolved_document(workspace, document)
+    _write_build_manifests(workspace)
+    manifest = _manifest()
+    record_page_capture_v2(
+        workspace, document, manifest, page_id="home", built_url="https://build.example/home",
+        attempts=tuple(
+            _live_attempt(
+                workspace, page, breakpoint, width=CANONICAL_VIEWPORTS[breakpoint].width,
+                height=CANONICAL_VIEWPORTS[breakpoint].height,
+            )
+            for breakpoint in (BreakpointName.DESKTOP, BreakpointName.TABLET, BreakpointName.MOBILE)
+        ),
+    )
+    monkeypatch.chdir(tmp_path)
+
+    coverage = resolve_workspace_capture_coverage(Path("workspace"), manifest)
+
+    assert coverage.capture_evidence["home"] == frozenset({"desktop", "tablet", "mobile"})
+    assert coverage.warnings == resolve_workspace_capture_coverage(workspace, manifest).warnings
+
+
+def test_relative_workspace_root_still_rejects_a_symlinked_capture(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    document = _document((_page("home"),))
+    page = document.pages[0]
+    _write_resolved_document(workspace, document)
+    _write_build_manifests(workspace)
+    manifest = _manifest()
+    desktop = _live_attempt(workspace, page, BreakpointName.DESKTOP, width=1440, height=900)
+    record_page_capture_v2(
+        workspace, document, manifest, page_id="home", built_url="https://build.example/home",
+        attempts=(
+            desktop,
+            _not_declared_attempt(BreakpointName.TABLET),
+            _not_declared_attempt(BreakpointName.MOBILE),
+        ),
+    )
+    # Identical bytes keep the recorded hash valid, so only the link check can reject it.
+    output = workspace / desktop.output_path
+    outside = tmp_path / "outside.png"
+    outside.write_bytes(output.read_bytes())
+    output.unlink()
+    try:
+        output.symlink_to(outside)
+    except OSError as exc:
+        pytest.skip(f"symlink creation is unavailable: {exc}")
+    monkeypatch.chdir(tmp_path)
+
+    coverage = resolve_workspace_capture_coverage(Path("workspace"), manifest)
+
+    record = coverage.v2_records["home"]
+    assert record.breakpoints["desktop"].valid is False
+    assert any("unsafe, a symlink, or missing" in warning for warning in record.warnings)

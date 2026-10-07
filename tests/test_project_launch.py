@@ -19,6 +19,7 @@ from tests.test_project_publish import (
 )
 from vanjaro_cli.commands.project_cmd import project
 from vanjaro_cli.design.serialization import write_design_document
+from vanjaro_cli.orchestration import project_launch as launch_module
 from vanjaro_cli.orchestration.project_launch import (
     ProjectLaunchWorkflowError,
     apply_project_launch,
@@ -451,6 +452,30 @@ def test_prepare_accepts_evidence_bound_to_the_current_publish(
 
     assert result["status"] == "ready_for_review"
     assert client.launch_preview_posts == 1
+
+
+def test_launch_scores_fidelity_against_an_absolute_workspace_when_given_a_relative_directory(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    root, _ = _launch_workspace(tmp_path, monkeypatch)
+    scored_roots: list[Path] = []
+    stub = launch_module.evaluate_project_fidelity
+
+    def spy(scored_root: Path, manifest: object) -> tuple[dict, list[str]]:
+        scored_roots.append(scored_root)
+        return stub(scored_root, manifest)
+
+    monkeypatch.setattr(launch_module, "evaluate_project_fidelity", spy)
+    monkeypatch.chdir(root.parent)
+    relative = Path(root.name)
+
+    receipt = prepare_project_launch(relative, clock=lambda: NOW)["receipt"]
+    approval_id = _approve_launch(root, receipt["fingerprint"])
+    result = _apply(relative, receipt, approval_id)
+
+    assert result["status"] == "completed"
+    assert scored_roots
+    assert all(scored_root.is_absolute() for scored_root in scored_roots)
 
 
 def test_apply_refuses_when_evidence_was_rebound_away_from_the_publish(

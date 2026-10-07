@@ -56,7 +56,9 @@ def _resolve_repository_path(
         return None
     path = candidate.resolve()
     try:
-        path.relative_to(root)
+        # `resolve()` always returns an absolute path, so a relative `root`
+        # must be resolved too or every in-root file looks like an escape.
+        path.relative_to(root.resolve())
     except ValueError:
         return None
     if expected_type == "file" and not path.is_file():

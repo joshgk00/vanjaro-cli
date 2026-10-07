@@ -736,6 +736,47 @@ def test_symlink_escape_in_a_capture_path_rejected(tmp_path: Path) -> None:
     )
 
 
+def test_relative_workspace_root_reads_the_same_coverage_as_an_absolute_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    document = _document((_page("home", section_ids=("home.s1",)),))
+    _write_resolved_document(workspace, document)
+    _record_page(workspace, document, "home")
+    monkeypatch.chdir(tmp_path)
+
+    relative = resolve_workspace_capture_coverage(Path("workspace"), _manifest())
+
+    assert relative.capture_evidence == {"home": frozenset({"desktop", "tablet", "mobile"})}
+    assert relative.warnings == ()
+    assert relative == resolve_workspace_capture_coverage(workspace, _manifest())
+
+
+def test_relative_workspace_root_still_rejects_a_symlink_escape(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    workspace.mkdir()
+    document = _document((_page("home", section_ids=("home.s1",)),))
+    _write_resolved_document(workspace, document)
+    _record_page(workspace, document, "home")
+    source = workspace / "qa/captures/home-desktop-source.png"
+    outside = tmp_path / "outside.png"
+    outside.write_bytes(source.read_bytes())
+    source.unlink()
+    try:
+        source.symlink_to(outside)
+    except OSError as exc:
+        pytest.skip(f"symlink creation is unavailable: {exc}")
+    monkeypatch.chdir(tmp_path)
+
+    coverage = resolve_workspace_capture_coverage(Path("workspace"), _manifest())
+
+    assert "home" not in coverage.capture_evidence
+    assert any("unsafe, a symlink, or missing" in warning for warning in coverage.warnings)
+
+
 def test_symlinked_evidence_record_itself_is_rejected(tmp_path: Path) -> None:
     document = _document((_page("home", section_ids=("home.s1",)),))
     _write_resolved_document(tmp_path, document)

@@ -1175,6 +1175,55 @@ def test_workspace_internal_paths_reject_links_and_escapes(tmp_path: Path) -> No
     ) is None
 
 
+def test_relative_root_resolves_the_same_files_as_the_absolute_root(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    (workspace / "qa").mkdir(parents=True)
+    capture = workspace / "qa" / "capture.png"
+    capture.write_bytes(b"png")
+    monkeypatch.chdir(tmp_path)
+
+    for root in (workspace, Path("workspace"), Path("./workspace"), Path("workspace/../workspace")):
+        assert _resolve_repository_path(
+            root, "qa/capture.png", expected_type="file"
+        ) == capture.resolve()
+        assert _resolve_repository_path(
+            root, "qa", expected_type="directory"
+        ) == (workspace / "qa").resolve()
+        assert _resolve_repository_path(root, "qa/missing.png", expected_type="file") is None
+
+
+def test_relative_root_still_rejects_links_and_escapes(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    workspace = tmp_path / "workspace"
+    (workspace / "qa").mkdir(parents=True)
+    outside = tmp_path / "outside"
+    outside.mkdir()
+    secret = outside / "secret.png"
+    secret.write_bytes(b"secret")
+    inside = workspace / "qa" / "inside.png"
+    inside.write_bytes(b"inside")
+    try:
+        (workspace / "qa" / "file-link.png").symlink_to(secret)
+        (workspace / "dir-link").symlink_to(outside, target_is_directory=True)
+        (tmp_path / "root-link").symlink_to(workspace, target_is_directory=True)
+    except OSError as exc:
+        pytest.skip(f"symlink creation is unavailable: {exc}")
+    monkeypatch.chdir(tmp_path)
+    root = Path("workspace")
+
+    assert _resolve_repository_path(root, "qa/inside.png", expected_type="file") is not None
+    assert _resolve_repository_path(root, "qa/file-link.png", expected_type="file") is None
+    assert _resolve_repository_path(root, "dir-link/secret.png", expected_type="file") is None
+    assert _resolve_repository_path(root, "../outside/secret.png", expected_type="file") is None
+    assert _resolve_repository_path(root, str(secret), expected_type="file") is None
+    assert _resolve_repository_path(
+        Path("root-link"), "qa/inside.png", expected_type="file"
+    ) is None
+
+
 @pytest.mark.parametrize(
     ("current_minutes", "expected_status"),
     ((40.0, "passed"), (40.0000001, "failed")),
