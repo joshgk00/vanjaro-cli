@@ -166,9 +166,9 @@ One bounded unit at a time:
 | RT-25 | done | Done 2026-10-06: the build deleted the video poster and play button. Fixed; library contract 1.3. Estimated section 55.7 -> ~74.5, page 82 -> ~83.6 after a rebuild. Trial 2's video section scores 55.7 at desktop; the floor is 60. It's the only thing failing the look gate. | trial 2 capture 2026-10-06 |
 | RT-26 | done | Done 2026-10-06 (`b30ca79`). With `core.autocrlf=true`, checking out pack JSON writes Windows line endings, and the immutable-digest check then calls the pack "stale". Mark pack and release JSON as exact bytes in `.gitattributes`. | 2026-10-06, after merging pack 1.13.0 |
 | RT-27 | done | Done 2026-10-06. Scorer: an asset used twice (video poster and CTA background) takes the first owner's size, so the poster is judged against 2.97:1 instead of its own 1.83:1. Use each element's own bounds in `_media` (`design/fidelity_extraction.py`). Changes scoring inputs for every Figma project. | RT-25 report |
-| RT-28 | 2 | Trial 2 footer: built as one cream column; design is a dark-teal 4-column footer with a yellow bar (68.8). | RT-25 report |
+| RT-28 | done | Done 2026-10-06. Trial 2 footer: built as one cream column; design is a dark-teal 4-column footer with a yellow bar (68.8). | RT-25 report |
 | RT-29 | done | Done 2026-10-06 (regime 2): trial 2 simulated 82.08 -> 72.09; hero 53.7 and video 41.5 fail the 60 floor. The earlier 82 was too generous. Live HTML could get the same drift tolerance later (would move pilot-measure ~+1 to +5). Scorer can't see CSS background photos or section heights for Figma pages (expected bounds are null), so hero and CTA banner heights (152px built vs ~660px designed) go unmeasured. | RT-25 report |
-| RT-30 | 4 | Trial 2 team photos keep their natural shape instead of circles, and one wrong photo ("Rachel Stoner") is bound. | RT-25 report |
+| RT-30 | done | Done 2026-10-06: circles fixed; the "wrong photo" is what the Figma file has (an off-canvas slide), not a tool bug. Trial 2 team photos keep their natural shape instead of circles, and one wrong photo ("Rachel Stoner") is bound. | RT-25 report |
 | RT-7 | 7 | Trial sources. Live website: Quality HC (`https://quality-hc.com/`, portal 1) picked 2026-10-05 because EDCA and Oasis refuse script downloads. Images: Keys to Success mockups, still to set up. | `artifacts/projects/qualityhc-trial` |
 
 ## Progress log
@@ -307,3 +307,4 @@ One bounded unit at a time:
   `.env`.
 - Quality HC pack upgrade to 1.13.0: blocked for Claude by the safety check.
 - Scorer regime 2 landed. Trial 2's honest desktop estimate is ~72 (under 75). Main gaps: hero height, video poster (fixed, needs rebuild), footer/team (helper running).
+- RT-28/RT-30 done. Open: footer logo (vector-only group not assigned), team order follows layers, text colours not carried. RT-31 (section heights) helper still running.
