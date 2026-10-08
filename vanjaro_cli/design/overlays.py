@@ -14,8 +14,13 @@ from vanjaro_cli.design.models import (
     ContentElement,
     ContentKind,
     DesignDocument,
+    EvidenceStatus,
     ObservationMethod,
     Provenance,
+    RepeatGroup,
+    StyleObservation,
+    StyleProperty,
+    StyleSet,
 )
 from vanjaro_cli.design.serialization import stable_design_id
 from vanjaro_cli.utils.image_links import is_safe_link_href
@@ -150,6 +155,7 @@ def _add_repeat_field(
                             value=overlay.value,
                             group_id=group.id,
                             order=max((element.order for element in content), default=-1) + 1,
+                            style=_sibling_font_size(document, overlay, group, content),
                             provenance=[_provenance(document, overlay)],
                             confidence=1.0,
                             metadata={"design_overlay_id": overlay.id},
@@ -170,6 +176,47 @@ def _add_repeat_field(
             f"overlay {overlay.id!r} target {overlay.target_id!r} matched {matched} repeat items"
         )
     return document.model_copy(update={"pages": pages})
+
+
+def _sibling_font_size(
+    document: DesignDocument,
+    overlay: DesignOverlay,
+    group: RepeatGroup,
+    content: list[ContentElement],
+) -> StyleSet:
+    """Give an added repeat field the size its siblings were drawn at.
+
+    A stat figure drawn as outlines has no text node to read a size from, so it
+    would sit beside its siblings at the template's default size. Siblings that
+    disagree give no size to copy.
+    """
+
+    by_id = {element.id: element for element in content}
+    sibling_ids = [
+        item.fields.get(overlay.field) for item in group.items if item.id != overlay.target_id
+    ]
+    sizes = {
+        observation.value
+        for element_id in sibling_ids
+        if isinstance(element_id, str) and element_id in by_id
+        for observation in by_id[element_id].style.observations
+        if observation.property is StyleProperty.FONT_SIZE
+        and observation.condition is None
+        and isinstance(observation.value, str)
+    }
+    if len(sizes) != 1:
+        return StyleSet()
+    return StyleSet(
+        observations=[
+            StyleObservation(
+                property=StyleProperty.FONT_SIZE,
+                value=sizes.pop(),
+                status=EvidenceStatus.INFERRED,
+                confidence=0.8,
+                provenance=[_provenance(document, overlay)],
+            )
+        ]
+    )
 
 
 def _with_value(element: ContentElement, overlay: DesignOverlay) -> dict[str, object]:

@@ -597,6 +597,34 @@ def _designed_height_style(
     )
 
 
+def _stat_value_style(role: str, font_size: object, provenance: list[Provenance]) -> StyleSet:
+    """Keep the size a Figma stat figure was drawn at.
+
+    A stat figure is the one text whose size is the design: a 100px "80+" over a
+    30px label. Left to the template's heading style it came out at 32px. Other
+    text keeps its theme heading and body styles, since carrying every drawn
+    size would pin a 1440px layout's type onto phones.
+    """
+
+    if (
+        role != "stat_value"
+        or isinstance(font_size, bool)
+        or not isinstance(font_size, (int, float))
+        or font_size <= 0
+    ):
+        return StyleSet()
+    return StyleSet(
+        observations=[
+            StyleObservation(
+                property=StyleProperty.FONT_SIZE,
+                value=f"{font_size:g}px",
+                confidence=0.9,
+                provenance=provenance,
+            )
+        ]
+    )
+
+
 def _extract_section(
     node: Mapping[str, Any], *, page_frame: Mapping[str, Any], page_node_id: str | None,
     file_key: str, page_id: str, order: int, viewport: BreakpointName,
@@ -663,6 +691,7 @@ def _extract_section(
             content.append(ContentElement(
                 id=element_id, kind=kind, role=element_role, value=value,
                 attributes=attributes, order=len(content), provenance=current_provenance,
+                style=_stat_value_style(element_role, style.get("fontSize"), current_provenance),
                 confidence=0.95 if element_role != "body" else 0.86,
             ))
             node_to_element[node_id] = element_id

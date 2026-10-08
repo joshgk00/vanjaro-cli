@@ -173,11 +173,36 @@ def build_capture_plan(
     return list(entries.values())
 
 
+# Chrome starts a native lazy image when its own scheduler sees it near the
+# viewport, and a 60ms stop per screen is not always long enough on a tall page
+# (a 7,700px page left every image below the third screen blank). Scrolling only
+# nominates the images, so the walk is followed by an explicit load-and-wait.
+SETTLE_IMAGE_WAIT_MAX_MS = 10_000
+
+# The attribute is switched to eager and back so the serialized DOM that
+# render_page_html returns still carries the markup the page authored.
+SETTLE_LOAD_IMAGES_JS = """async (maxWaitMs) => {
+    const deferred = [...document.querySelectorAll('img[loading="lazy"]')];
+    deferred.forEach(img => img.setAttribute('loading', 'eager'));
+    const pending = [...document.images]
+        .filter(img => !img.complete)
+        .map(img => new Promise(resolve => {
+            img.addEventListener('load', resolve, {once: true});
+            img.addEventListener('error', resolve, {once: true});
+        }));
+    await Promise.race([
+        Promise.all(pending),
+        new Promise(resolve => setTimeout(resolve, maxWaitMs)),
+    ]);
+    deferred.forEach(img => img.setAttribute('loading', 'lazy'));
+}"""
+
+
 def _settle(page, timeout_ms: int) -> None:
     """Make the page render-stable: fonts loaded, lazy images in, no motion."""
     page.evaluate("() => document.fonts.ready")
     page.add_style_tag(content=SETTLE_DISABLE_ANIMATIONS_CSS)
-    # Walk the page to trigger lazy loading, then return to the top
+    # Walk the page to trigger scroll-driven lazy loaders, then return to the top
     page.evaluate(
         """async () => {
             const step = window.innerHeight;
@@ -188,6 +213,7 @@ def _settle(page, timeout_ms: int) -> None:
             window.scrollTo(0, 0);
         }"""
     )
+    page.evaluate(SETTLE_LOAD_IMAGES_JS, min(SETTLE_IMAGE_WAIT_MAX_MS, timeout_ms))
     page.wait_for_timeout(min(500, timeout_ms))
 
 
