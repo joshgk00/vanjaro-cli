@@ -173,6 +173,8 @@ One bounded unit at a time:
 | RT-32 | 2 | Taller sections don't centre their content (hero text sits at the top of a 664px band); needs a flex/justify style property. | RT-31 report |
 | RT-33 | 3 | A desktop-only design applies desktop min-heights at every width (131px header, 286px marquee on phones). Decide a desktop-only scope. | RT-31 report |
 | RT-34 | 4 | Footer logo (vector-only group) is never assigned to a section; team order follows Figma layers, not x position; design text colours aren't carried. | RT-28 report |
+| RT-35 | 1 | Trial 4 capture shows blank team, blog, CTA, and video images (trial 2 showed team and blog photos with the same img markup); stats numerals render tiny. | Trial 4 capture review |
+| RT-36 | 1 | Scorer gives trial 4 83.81 and scores hero, marquee, and stats at 100 while they visibly miss the design; missing media and colours don't cost enough. Trial 4's 83.81 does not count toward the 75 target until this is fixed. | Trial 4 capture review |
 | RT-7 | 7 | Trial sources. Live website: Quality HC (`https://quality-hc.com/`, portal 1) picked 2026-10-05 because EDCA and Oasis refuse script downloads. Images: Keys to Success mockups, still to set up. | `artifacts/projects/qualityhc-trial` |
 
 ## Progress log
@@ -320,3 +322,8 @@ One bounded unit at a time:
   workspace (`kts-figma-trial-4`) with trial 2's overlays replayed. It
   needs Josh's plan, portal-mutation, and publish approvals.
 - `kts-figma-trial-4` (pack 1.13.0): analyze 12 sections / 3 warnings; 13 overlays replayed; plan valid, editable 0.946, native 0.967, 0 blockers. Waiting on Josh for plan + portal-mutation approvals.
+
+### 2026-10-08 — Trial 4 built, published hidden, scored, and rejected by eye
+- Josh approved plan, portal-mutation, and publish (approval-0001..0003). All stages through verify passed; handoff 100/100; published hidden as DNN page 190 (receipt `e23101772f72...`).
+- Capture: desktop captured; tablet/mobile not declared (expected for a Figma source).
+- Scorer (regime 2): 83.81 overall. Side-by-side review says that's too high: many images blank, marquee and hero wrong, stats tiny, class-card colours gone. Not counted. Filed RT-35 (blank images) and RT-36 (scorer leniency); helpers working both.
