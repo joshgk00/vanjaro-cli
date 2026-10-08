@@ -174,7 +174,8 @@ One bounded unit at a time:
 | RT-33 | 3 | A desktop-only design applies desktop min-heights at every width (131px header, 286px marquee on phones). Decide a desktop-only scope. | RT-31 report |
 | RT-34 | 4 | Footer logo (vector-only group) is never assigned to a section; team order follows Figma layers, not x position; design text colours aren't carried. | RT-28 report |
 | RT-35 | 1 | Trial 4 capture shows blank team, blog, CTA, and video images (trial 2 showed team and blog photos with the same img markup); stats numerals render tiny. | Trial 4 capture review |
-| RT-36 | 1 | Scorer gives trial 4 83.81 and scores hero, marquee, and stats at 100 while they visibly miss the design; missing media and colours don't cost enough. Trial 4's 83.81 does not count toward the 75 target until this is fixed. | Trial 4 capture review |
+| RT-36 | done | Done 2026-10-08 (516cb97, regime 3): Figma colour bands, text size/weight, and blank images now scored. Trial 4 re-derives to ~78.7, still too high. Original: | Scorer gives trial 4 83.81 and scores hero, marquee, and stats at 100 while they visibly miss the design; missing media and colours don't cost enough. Trial 4's 83.81 does not count toward the 75 target until this is fixed. | Trial 4 capture review |
+| RT-37 | 1 | Scorer honesty part 2: stale old-regime evidence must force a re-capture; carry Figma text colours, card fills, and photo overlays; score whether design copy appears in the build. | RT-36 report |
 | RT-7 | 7 | Trial sources. Live website: Quality HC (`https://quality-hc.com/`, portal 1) picked 2026-10-05 because EDCA and Oasis refuse script downloads. Images: Keys to Success mockups, still to set up. | `artifacts/projects/qualityhc-trial` |
 
 ## Progress log
@@ -327,3 +328,4 @@ One bounded unit at a time:
 - Josh approved plan, portal-mutation, and publish (approval-0001..0003). All stages through verify passed; handoff 100/100; published hidden as DNN page 190 (receipt `e23101772f72...`).
 - Capture: desktop captured; tablet/mobile not declared (expected for a Figma source).
 - Scorer (regime 2): 83.81 overall. Side-by-side review says that's too high: many images blank, marquee and hero wrong, stats tiny, class-card colours gone. Not counted. Filed RT-35 (blank images) and RT-36 (scorer leniency); helpers working both.
+- RT-36 merged (516cb97, suite 3,771). Trial 4 re-derives to 78.72 (76.93 with blank team photos), trial 2 to 71.10. Live-HTML scores unchanged. Still lenient on hero, class cards, stats: filed RT-37, helper working.
