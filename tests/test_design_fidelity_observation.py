@@ -181,6 +181,23 @@ def test_an_uncropped_image_keeps_full_coverage() -> None:
     assert observation.media.media["media_1"].crop_coverage == pytest.approx(1.0)
 
 
+@pytest.mark.parametrize("loaded", [True, False, None])
+def test_whether_an_image_loaded_is_carried_to_its_media_sample(loaded: bool | None) -> None:
+    observation = observe_built_section(
+        _section(media=[RenderedMedia(rendered_width=800, rendered_height=450, loaded=loaded)])
+    )
+
+    assert observation.media.media["media_1"].loaded is loaded
+
+
+def test_a_css_background_photo_does_not_report_loading() -> None:
+    observation = observe_built_section(
+        _section(background_media=RenderedMedia(rendered_width=1440, rendered_height=664))
+    )
+
+    assert observation.media.media["background_1"].loaded is None
+
+
 def test_integrity_is_measured_on_the_build_including_page_level_console_errors() -> None:
     observation = observe_built_section(
         _section(
@@ -654,3 +671,209 @@ def test_evidence_recorded_before_the_tolerance_existed_compares_absolute_positi
     del recorded["vertical_offset_tolerated"]
 
     assert PageObservation.model_validate(recorded).vertical_offset_tolerated is False
+
+
+# --- A Figma page scored on the colour and type its design states (RT-36) -------
+
+_FIGMA_FRAME = SourceBox(x=-3884, y=-513, width=1440, height=8090)
+
+
+def _figma_record(
+    bounds: SourceBox, *, element_node_id: str, method: ObservationMethod = ObservationMethod.API
+) -> Provenance:
+    return Provenance(
+        source_kind=SourceKind.FIGMA,
+        method=method,
+        viewport=BreakpointName.DESKTOP,
+        frame_node_id="156:890",
+        element_node_id=element_node_id,
+        bounds=bounds,
+        metadata={"inference": "flat_geometry"} if method is ObservationMethod.INFERRED else {},
+    )
+
+
+def _figma_text(
+    element_id: str,
+    order: int,
+    kind: ContentKind,
+    *,
+    size: float,
+    role: str = "section_title",
+) -> ContentElement:
+    return ContentElement(
+        id=element_id,
+        order=order,
+        kind=kind,
+        role=role,
+        value="Copy",
+        attributes={"font_family": "Mortina DEMO", "font_size": size, "font_weight": 400},
+        provenance=[
+            _figma_record(
+                SourceBox(x=-3700, y=-300, width=600, height=100), element_node_id=element_id
+            )
+        ],
+        confidence=1,
+    )
+
+
+def _figma_section(
+    section_id: str,
+    order: int,
+    *,
+    y: float,
+    height: float,
+    content: list[ContentElement],
+    band_color: str | None = None,
+) -> Section:
+    band = {
+        "role": "base",
+        "color": band_color,
+        "node_id": "1:1",
+        "bounds": {"x": -3884, "y": y - 513, "width": 1440, "height": height},
+    }
+    return Section(
+        id=section_id,
+        order=order,
+        semantic_role="hero" if order == 0 else "marquee",
+        role_confidence=1,
+        candidate_roles=[],
+        layout=LayoutObservation(kind=LayoutKind.GRID, contained=False, columns=1),
+        content=content,
+        groups=[],
+        style=StyleSet(),
+        responsive=[],
+        decorative_layers=[],
+        interactions=[],
+        provenance=[
+            _figma_record(
+                SourceBox(x=-3884, y=y - 513, width=1440, height=height),
+                element_node_id=f"{section_id}:node",
+                method=ObservationMethod.INFERRED,
+            )
+        ],
+        metadata={"background_bands": [band]} if band_color else {},
+    )
+
+
+def _hero_and_marquee_design(*, band_color: str | None = "#f0709d"):
+    sections = [
+        _figma_section(
+            "home.hero",
+            0,
+            y=0,
+            height=664,
+            content=[_figma_text("hero.title", 0, ContentKind.HEADING, size=80)],
+        ),
+        _figma_section(
+            "home.marquee",
+            1,
+            y=664,
+            height=286,
+            content=[_figma_text("marquee.item", 0, ContentKind.LIST_ITEM, size=50, role="body")],
+            band_color=band_color,
+        ),
+    ]
+    page = Page(
+        id="home",
+        source_reference="156:890",
+        title="Home",
+        slug="home",
+        sections=sections,
+        breakpoints=[BreakpointName.DESKTOP],
+        navigation_visibility=NavigationVisibility.UNKNOWN,
+        provenance=[_figma_record(_FIGMA_FRAME, element_node_id="156:890")],
+    )
+    document = DesignDocument(
+        schema_version="1.0",
+        source=DesignSource(
+            kind=SourceKind.FIGMA,
+            identifier="file",
+            captured_at=datetime(2026, 10, 8, tzinfo=timezone.utc),
+            adapter_version="1.0.0",
+        ),
+        tokens=DesignTokens(),
+        assets=[],
+        pages=[page],
+        warnings=[],
+        analysis=DesignAnalysis(section_confidence_mean=1.0, unsupported_traits=[]),
+    )
+    return observe_expected_page(page, document, BreakpointName.DESKTOP)
+
+
+def _built_hero_and_marquee(
+    *,
+    heading_px: float = 80,
+    marquee_background: str = "#f0709d",
+):
+    return observe_built_page(
+        RenderedPage(
+            viewport_width=1440,
+            sections=(
+                RenderedSection(
+                    section_id="home.hero",
+                    order=0,
+                    columns=1,
+                    bounds=BoundingBox(x=0, y=0, width=1440, height=664),
+                    typography={"heading": RenderedText(size_px=heading_px, weight=400)},
+                ),
+                RenderedSection(
+                    section_id="home.marquee",
+                    order=1,
+                    columns=1,
+                    bounds=BoundingBox(x=0, y=664, width=1440, height=286),
+                    background_color=marquee_background,
+                    typography={"body": RenderedText(size_px=50, weight=400)},
+                ),
+            ),
+        )
+    )
+
+
+def _figma_section_score(design, built, section_id: str):
+    result = score_breakpoint_fidelity(design, built, breakpoint=BreakpointName.DESKTOP)
+    section = next(entry for entry in result.sections if entry.section_id == section_id)
+    return section.score, {entry.dimension.value: entry.score for entry in section.dimensions}
+
+
+def test_a_figma_build_that_matches_its_colour_and_type_still_scores_full_marks() -> None:
+    design = _hero_and_marquee_design()
+    built = _built_hero_and_marquee()
+
+    assert _figma_section_score(design, built, "home.hero")[0] == 100.0
+    assert _figma_section_score(design, built, "home.marquee")[0] == 100.0
+
+
+def test_a_hero_heading_built_at_half_the_designed_size_loses_typography_points() -> None:
+    # Figma states the heading at 80px. Before regime 3 that size was never
+    # read, typography was unmeasured, and a 40px heading kept a perfect hero.
+    design = _hero_and_marquee_design()
+
+    score, dimensions = _figma_section_score(
+        design, _built_hero_and_marquee(heading_px=40), "home.hero"
+    )
+
+    assert dimensions["typography"] == pytest.approx(200 / 3, abs=0.01)
+    assert score < 90.0
+
+
+def test_a_band_painted_the_wrong_colour_loses_colour_points() -> None:
+    # The design's pink band was measured as a base band; the build painted orange.
+    design = _hero_and_marquee_design()
+
+    score, dimensions = _figma_section_score(
+        design, _built_hero_and_marquee(marquee_background="#fe6124"), "home.marquee"
+    )
+
+    assert dimensions["color"] == 0.0
+    assert score < 70.0
+
+
+def test_a_section_with_no_band_has_no_colour_evidence_rather_than_full_credit() -> None:
+    design = _hero_and_marquee_design(band_color=None)
+
+    _, dimensions = _figma_section_score(
+        design, _built_hero_and_marquee(marquee_background="#fe6124"), "home.marquee"
+    )
+
+    assert dimensions["color"] is None
+    assert dimensions["spacing"] is None

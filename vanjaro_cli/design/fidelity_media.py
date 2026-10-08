@@ -105,12 +105,19 @@ class MediaSample(_MediaModel):
 
     `crop_coverage` is the fraction of the source asset still visible, so 1.0
     is uncropped. `focal_x` and `focal_y` are normalized to the image box.
+
+    `loaded` is a build-side fact: whether the browser decoded pixels into the
+    box. An `<img>` that failed to load still has a rendered box, so its aspect
+    ratio looks like a match for a photo that is not there. ``None`` means the
+    measurement did not report it (a design, a CSS background, or evidence
+    recorded before it existed), and is never read as a failure.
     """
 
     aspect_ratio: float | None = Field(default=None, gt=0)
     focal_x: float | None = Field(default=None, ge=0, le=1)
     focal_y: float | None = Field(default=None, ge=0, le=1)
     crop_coverage: float | None = Field(default=None, gt=0, le=1)
+    loaded: bool | None = None
 
 
 class SectionMedia(_MediaModel):
@@ -164,6 +171,7 @@ def score_section_media(
 
     scored: list[float] = []
     missing: list[str] = []
+    blank: list[str] = []
     unmeasured: list[str] = []
 
     for media_id in sorted(expected.media):
@@ -172,6 +180,12 @@ def score_section_media(
             # A designed image that never made it into the build is a failure,
             # not absent evidence.
             missing.append(media_id)
+            scored.append(0.0)
+            continue
+        if observed_sample.loaded is False:
+            # The slot exists but shows nothing. A visitor sees the same hole as
+            # a missing image, and its box would otherwise score as a match.
+            blank.append(media_id)
             scored.append(0.0)
             continue
 
@@ -184,6 +198,8 @@ def score_section_media(
     details: list[str] = []
     if missing:
         details.append("media absent from the build: " + ", ".join(missing))
+    if blank:
+        details.append("media present but not loaded: " + ", ".join(blank))
     if unmeasured:
         details.append("no media evidence for " + ", ".join(unmeasured))
 

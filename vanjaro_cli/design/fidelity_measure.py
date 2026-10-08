@@ -278,6 +278,8 @@ MEASURE_SCRIPT = """
             rendered_height: box.height,
             natural_width: image.naturalWidth || null,
             natural_height: image.naturalHeight || null,
+            // `complete` is true for a broken image too; only decoded pixels count.
+            loaded: image.complete && image.naturalWidth > 0,
             focal_x: parts[0] && parts[0].endsWith('%') ? parseFloat(parts[0]) / 100 : null,
             focal_y: parts[1] && parts[1].endsWith('%') ? parseFloat(parts[1]) / 100 : null,
           };
@@ -440,6 +442,7 @@ def _media(value: Any) -> tuple[RenderedMedia, ...]:
                 natural_height=_length(entry.get("natural_height")) or None,
                 focal_x=_fraction(entry.get("focal_x")),
                 focal_y=_fraction(entry.get("focal_y")),
+                loaded=entry["loaded"] if isinstance(entry.get("loaded"), bool) else None,
             )
         )
     return tuple(media)

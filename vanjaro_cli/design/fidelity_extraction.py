@@ -83,6 +83,12 @@ TYPOGRAPHY_SAMPLE_KEYS = ("heading", "body")
 _ACTION_KINDS = frozenset({ContentKind.BUTTON, ContentKind.LINK})
 _HEADING_KINDS = frozenset({ContentKind.HEADING})
 _BODY_KINDS = frozenset({ContentKind.TEXT})
+# A stat's big numeral is the display text of its band and the build renders it
+# as a heading, so the build's most prominent heading is what it is compared
+# against. A repeated line such as a marquee item is a Figma list item, and the
+# build's first leaf text is that line.
+_FIGMA_HEADING_KINDS = _HEADING_KINDS | {ContentKind.STAT}
+_FIGMA_BODY_KINDS = _BODY_KINDS | {ContentKind.LIST_ITEM}
 _BACKGROUND_MEDIA_ROLE = "background_media"
 _PIXEL_VALUE = re.compile(r"^\s*(-?\d+(?:\.\d+)?)\s*(?:px)?\s*$")
 
@@ -287,7 +293,9 @@ def _palette(section: Section) -> SectionPalette:
     """
 
     colors: dict[ColorRole, str] = {}
-    background = normalize_css_color(_style_value(section.style, StyleProperty.BACKGROUND_COLOR))
+    background = normalize_css_color(
+        _style_value(section.style, StyleProperty.BACKGROUND_COLOR)
+    ) or _band_background(section)
     if background is not None:
         colors[ColorRole.BACKGROUND] = background
     text = normalize_css_color(_style_value(section.style, StyleProperty.TEXT_COLOR))
@@ -297,6 +305,23 @@ def _palette(section: Section) -> SectionPalette:
     if accent is not None:
         colors[ColorRole.ACCENT] = accent
     return SectionPalette(colors=colors)
+
+
+def _band_background(section: Section) -> str | None:
+    """Read the section's background from the solid band Figma measured behind it.
+
+    A flat Figma frame draws a section's colour as a separate full-width
+    rectangle, so the section itself carries no `background_color` style. The
+    adapter records that rectangle's fill as the `base` band; leaving it unread
+    left every Figma section's background unmeasured, and a build that painted
+    the wrong colour scored the same as one that painted the right one.
+    """
+
+    bands = section.metadata.get("background_bands")
+    for band in bands if isinstance(bands, list) else []:
+        if isinstance(band, dict) and band.get("role") == "base":
+            return normalize_css_color(band.get("color"))
+    return None
 
 
 def _accent(section: Section) -> str | None:
@@ -313,17 +338,52 @@ def _accent(section: Section) -> str | None:
 
 
 def _typography(section: Section) -> SectionTypography:
+    ordered = _ordered(section.content)
     samples: dict[str, TypeSample] = {}
-    for key, kinds in (("heading", _HEADING_KINDS), ("body", _BODY_KINDS)):
-        element = next(
-            (item for item in _ordered(section.content) if item.kind in kinds), None
-        )
-        if element is None:
-            continue
-        sample = _type_sample(element.style)
+    for key, kinds, figma_kinds in (
+        ("heading", _HEADING_KINDS, _FIGMA_HEADING_KINDS),
+        ("body", _BODY_KINDS, _FIGMA_BODY_KINDS),
+    ):
+        element = next((item for item in ordered if item.kind in kinds), None)
+        sample = _type_sample(element.style) if element is not None else None
+        if sample is None:
+            sample = _figma_type_sample(ordered, figma_kinds)
         if sample is not None:
             samples[key] = sample
     return SectionTypography(samples=samples)
+
+
+def _figma_type_sample(
+    ordered: Iterable[ContentElement], kinds: frozenset[ContentKind]
+) -> TypeSample | None:
+    """Sample the first Figma text node of these kinds from its API-measured type.
+
+    The Figma adapter keeps a text node's `fontSize` and `fontWeight` in the
+    element's attributes, not in its style set, so the style-based reader above
+    found nothing and typography was unmeasured on every Figma section. A heading
+    drawn at 80px and built at 40px scored as if the sizes agreed.
+
+    The family is left out on purpose. Figma fonts are usually unregistered
+    (`FIGMA_FONT_SOURCE_UNRESOLVED`), so the build shows a stand-in, and scoring
+    that mismatch on every section would charge a known, separately warned gap
+    to each of them.
+    """
+
+    element = next((item for item in ordered if item.kind in kinds), None)
+    if element is None or not _is_figma_measured(element):
+        return None
+    size = _positive_pixels(element.attributes.get("font_size"))
+    weight = _weight(element.attributes.get("font_weight"))
+    if size is None and weight is None:
+        return None
+    return TypeSample(size_px=size, weight=weight)
+
+
+def _is_figma_measured(element: ContentElement) -> bool:
+    return any(
+        record.source_kind is SourceKind.FIGMA and record.method in MEASURED_METHODS
+        for record in element.provenance
+    )
 
 
 def _type_sample(style: StyleSet) -> TypeSample | None:

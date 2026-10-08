@@ -49,7 +49,16 @@ __all__ = [
 #    frame) that are compared without vertical offset, and a background photo is
 #    its own media slot. Layout and media on Figma pages measure different
 #    things than under 1, and no committed baseline held a Figma score.
-CURRENT_REGIME_VERSION = 2
+# 3: a Figma design now supplies the evidence its Design Document already held
+#    but the scorer never read -- a section's measured background band and each
+#    text node's API-measured size and weight -- so colour and typography score
+#    on Figma pages instead of dropping out of the weighted mean. A build image
+#    the browser reports as not loaded counts as absent from the build instead
+#    of matching on its empty box (every source, new captures only). Live-HTML
+#    design sides carry none of the Figma inputs, so recorded live-HTML evidence
+#    scores exactly as under 2. Evidence recorded before this regime keeps its
+#    frozen design side and build side until the page is captured again.
+CURRENT_REGIME_VERSION = 3
 
 
 class FidelityDimension(str, Enum):

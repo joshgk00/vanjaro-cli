@@ -168,6 +168,44 @@ class TestMissingMedia:
         assert result.score == 100.0
 
 
+class TestBlankMedia:
+    """An `<img>` that never loaded still has a box, and its box looks like a match."""
+
+    def test_an_image_box_that_did_not_load_scores_zero(self) -> None:
+        loaded_box = MediaSample(aspect_ratio=1.5, loaded=False)
+
+        result = score_section_media(_media(hero=_sample()), _media(hero=loaded_box))
+
+        assert result.score == 0.0
+        assert "media present but not loaded: hero" in (result.detail or "")
+
+    def test_one_blank_image_among_several_drags_the_mean(self) -> None:
+        result = score_section_media(
+            _media(first=_sample(), second=_sample()),
+            _media(first=_sample(), second=MediaSample(aspect_ratio=1.5, loaded=False)),
+        )
+
+        assert result.score == 50.0
+
+    def test_a_blank_image_is_not_reported_as_absent(self) -> None:
+        result = score_section_media(
+            _media(hero=_sample()), _media(hero=MediaSample(aspect_ratio=1.5, loaded=False))
+        )
+
+        assert "absent from the build" not in (result.detail or "")
+
+    @pytest.mark.parametrize("loaded", [True, None])
+    def test_a_loaded_or_unreported_image_scores_on_its_shape(self, loaded: bool | None) -> None:
+        observed = MediaSample(
+            aspect_ratio=1.5, focal_x=0.5, focal_y=0.5, crop_coverage=1.0, loaded=loaded
+        )
+
+        result = score_section_media(_media(hero=_sample()), _media(hero=observed))
+
+        assert result.score == 100.0
+        assert result.detail is None
+
+
 class TestIntegrityClean:
     def test_clean_section_scores_100(self) -> None:
         result = score_section_integrity(_clean())

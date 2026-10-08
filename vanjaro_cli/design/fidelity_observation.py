@@ -80,6 +80,9 @@ class RenderedMedia(_RenderedModel):
     natural_height: float | None = Field(default=None, gt=0)
     focal_x: float | None = Field(default=None, ge=0, le=1)
     focal_y: float | None = Field(default=None, ge=0, le=1)
+    # Whether the browser decoded pixels into this box. Distinct from a missing
+    # natural size, which only says the measurement did not report one.
+    loaded: bool | None = None
 
 
 class RenderedSection(_RenderedModel):
@@ -220,6 +223,7 @@ def _media_sample(sample: RenderedMedia) -> MediaSample:
         focal_x=sample.focal_x,
         focal_y=sample.focal_y,
         crop_coverage=_crop_coverage(sample),
+        loaded=sample.loaded,
     )
 
 

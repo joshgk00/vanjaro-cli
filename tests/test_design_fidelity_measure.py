@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 from contextlib import contextmanager
+import json
+from pathlib import Path
+import subprocess
+import sys
 
 import pytest
 
@@ -144,6 +148,86 @@ def test_media_carries_intrinsic_size_and_focal_point() -> None:
     assert section.media[0].natural_width == 1600
     assert section.media[0].focal_x == 0.5
     assert section.media[0].focal_y == 0.25
+
+
+@pytest.mark.parametrize(
+    ("reported", "expected"),
+    [(True, True), (False, False), (None, None), ("false", None), (0, None)],
+)
+def test_an_image_reports_whether_the_browser_loaded_it_only_as_a_real_boolean(
+    reported: object, expected: bool | None
+) -> None:
+    entry = {"rendered_width": 800, "rendered_height": 450, "loaded": reported}
+
+    assert _parse(media=[entry]).sections[0].media[0].loaded is expected
+
+
+def test_an_image_whose_payload_has_no_loaded_flag_stays_unreported() -> None:
+    section = _parse(media=[{"rendered_width": 800, "rendered_height": 450}]).sections[0]
+
+    assert section.media[0].loaded is None
+
+
+_ONE_PIXEL_PNG = (
+    "data:image/png;base64,"
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg=="
+)
+
+
+_NO_BROWSER_EXIT_CODE = 77
+
+# Run out of process: importing Playwright here would leave it in `sys.modules`
+# and break the capture command's check that a dry run never loads it.
+_BROWSER_SNIPPET = f"""
+import json, sys
+try:
+    from playwright.sync_api import Error, sync_playwright
+except ImportError:
+    sys.exit({_NO_BROWSER_EXIT_CODE})
+from vanjaro_cli.design.fidelity_measure import MEASURE_SCRIPT
+
+with sync_playwright() as playwright:
+    try:
+        browser = playwright.chromium.launch()
+    except Error:
+        sys.exit({_NO_BROWSER_EXIT_CODE})
+    try:
+        page = browser.new_page()
+        page.route("**/*", lambda route: route.abort())
+        page.set_content(sys.stdin.read())
+        print(json.dumps(page.evaluate(MEASURE_SCRIPT)))
+    finally:
+        browser.close()
+"""
+
+
+def _measure_in_browser(html: str):
+    result = subprocess.run(
+        [sys.executable, "-c", _BROWSER_SNIPPET],
+        input=html,
+        capture_output=True,
+        text=True,
+        cwd=Path(__file__).resolve().parents[1],
+    )
+    if result.returncode == _NO_BROWSER_EXIT_CODE:
+        pytest.skip("no Playwright browser available")
+    assert result.returncode == 0, result.stderr
+    return parse_measured_page(json.loads(result.stdout), viewport_width=1440)
+
+
+def test_a_real_browser_reports_a_broken_image_as_not_loaded() -> None:
+    # `complete` is true for a broken image, and its box is the size the CSS gave
+    # it, so only decoded pixels can tell a photo from a hole.
+    page = _measure_in_browser(
+        '<section data-agency-section="s1">'
+        f'<img src="{_ONE_PIXEL_PNG}" style="width:100px;height:100px">'
+        '<img src="http://127.0.0.1:9/missing.png" style="width:100px;height:100px">'
+        "</section>"
+    )
+
+    loaded = [image.loaded for image in page.sections[0].media]
+
+    assert loaded == [True, False]
 
 
 def test_focal_values_outside_the_unit_range_are_rejected() -> None:

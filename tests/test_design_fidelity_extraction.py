@@ -816,3 +816,162 @@ def test_a_live_html_page_keeps_comparing_absolute_positions() -> None:
 
     assert observation is not None
     assert observation.vertical_offset_tolerated is False
+
+
+# --- Figma background bands and API-measured type (RT-36) -----------------------
+
+
+def _band(role: str, color: str) -> dict[str, object]:
+    return {
+        "role": role,
+        "color": color,
+        "node_id": "156:925",
+        "bounds": {"x": -3884, "y": 173, "width": 1440, "height": 205},
+    }
+
+
+def _banded_section(*bands: dict[str, object], style: StyleSet | None = None) -> Section:
+    return _section(style=style).model_copy(update={"metadata": {"background_bands": list(bands)}})
+
+
+def _figma_text(
+    key: str,
+    order: int,
+    kind: ContentKind,
+    attributes: dict[str, object],
+    *,
+    provenance: Provenance | None = None,
+) -> ContentElement:
+    return _element(key, order, kind).model_copy(
+        update={
+            "attributes": attributes,
+            "provenance": [provenance or _figma_provenance(None)],
+        }
+    )
+
+
+def test_a_figma_section_background_is_the_base_band_the_adapter_measured() -> None:
+    section = _banded_section(_band("base", "#f0709d"), _band("bottom_bar", "#fdbb2c"))
+
+    assert _observe(section).palette.get(ColorRole.BACKGROUND) == "#f0709d"
+
+
+def test_a_bottom_bar_alone_is_not_the_section_background() -> None:
+    section = _banded_section(_band("bottom_bar", "#fdbb2c"))
+
+    assert _observe(section).palette.get(ColorRole.BACKGROUND) is None
+
+
+def test_an_observed_background_style_wins_over_the_band() -> None:
+    section = _banded_section(
+        _band("base", "#f0709d"), style=_style((StyleProperty.BACKGROUND_COLOR, "#ffffff"))
+    )
+
+    assert _observe(section).palette.get(ColorRole.BACKGROUND) == "#ffffff"
+
+
+@pytest.mark.parametrize("metadata", [{}, {"background_bands": []}, {"background_bands": "pink"}])
+def test_a_section_with_no_usable_band_has_no_background(metadata: dict[str, object]) -> None:
+    section = _section().model_copy(update={"metadata": metadata})
+
+    assert _observe(section).palette.get(ColorRole.BACKGROUND) is None
+
+
+def test_a_band_colour_in_a_form_the_palette_cannot_read_is_dropped() -> None:
+    section = _banded_section(_band("base", "hotpink"))
+
+    assert _observe(section).palette.get(ColorRole.BACKGROUND) is None
+
+
+def test_figma_text_size_and_weight_come_from_the_api_measured_attributes() -> None:
+    heading = _figma_text(
+        "h",
+        0,
+        ContentKind.HEADING,
+        {"font_family": "Mortina DEMO", "font_size": 80.0, "font_weight": 400},
+    )
+    body = _figma_text("p", 1, ContentKind.TEXT, {"font_size": 20.0, "font_weight": 700})
+
+    typography = _observe(_section(content=[heading, body])).typography
+
+    assert typography.samples["heading"].size_px == 80.0
+    assert typography.samples["heading"].weight == 400
+    assert typography.samples["body"].size_px == 20.0
+    assert typography.samples["body"].weight == 700
+
+
+def test_a_figma_font_family_is_not_scored_because_its_source_is_unregistered() -> None:
+    heading = _figma_text(
+        "h", 0, ContentKind.HEADING, {"font_family": "Mortina DEMO", "font_size": 80.0}
+    )
+
+    typography = _observe(_section(content=[heading])).typography
+
+    assert typography.samples["heading"].family is None
+    assert typography.samples["heading"].substitution_refused is False
+
+
+def test_a_stat_numeral_is_the_figma_heading_sample() -> None:
+    numeral = _figma_text("n", 0, ContentKind.STAT, {"font_size": 100.0, "font_weight": 900})
+    label = _figma_text("l", 1, ContentKind.TEXT, {"font_size": 30.0, "font_weight": 400})
+
+    typography = _observe(_section(content=[numeral, label])).typography
+
+    assert typography.samples["heading"].size_px == 100.0
+    assert typography.samples["body"].size_px == 30.0
+
+
+def test_a_figma_list_item_is_the_body_sample_when_the_section_has_no_text() -> None:
+    marquee = _figma_text("m", 0, ContentKind.LIST_ITEM, {"font_size": 49.9, "font_weight": 400})
+
+    assert _observe(_section(content=[marquee])).typography.samples["body"].size_px == 49.9
+
+
+def test_a_stat_is_not_a_heading_when_a_real_heading_states_its_own_type() -> None:
+    heading = _figma_text("h", 0, ContentKind.HEADING, {"font_size": 40.0})
+    numeral = _figma_text("n", 1, ContentKind.STAT, {"font_size": 100.0})
+
+    assert _observe(_section(content=[heading, numeral])).typography.samples["heading"].size_px == 40.0
+
+
+def test_observed_style_type_wins_over_figma_attributes() -> None:
+    heading = _figma_text("h", 0, ContentKind.HEADING, {"font_size": 80.0}).model_copy(
+        update={"style": _style((StyleProperty.FONT_SIZE, "48px"))}
+    )
+
+    assert _observe(_section(content=[heading])).typography.samples["heading"].size_px == 48.0
+
+
+def test_only_the_first_figma_text_node_is_sampled() -> None:
+    # The build samples its first heading, so a later one's size would assert a
+    # measurement that was never taken for the element being compared.
+    first = _figma_text("h1", 0, ContentKind.HEADING, {"font_family": "Mortina DEMO"})
+    later = _figma_text("h2", 1, ContentKind.HEADING, {"font_size": 40.0})
+
+    assert "heading" not in _observe(_section(content=[first, later])).typography.samples
+
+
+@pytest.mark.parametrize(
+    "provenance",
+    [
+        _provenance(),
+        _figma_provenance(None, method=ObservationMethod.INFERRED),
+    ],
+    ids=["live-html", "inferred-figma"],
+)
+def test_text_attributes_are_only_evidence_when_figma_measured_them(provenance: Provenance) -> None:
+    # A live-HTML or guessed value must keep scoring exactly as before.
+    heading = _figma_text(
+        "h", 0, ContentKind.HEADING, {"font_size": 80.0, "font_weight": 400}, provenance=provenance
+    )
+
+    assert _observe(_section(content=[heading])).typography.samples == {}
+
+
+@pytest.mark.parametrize("attributes", [{}, {"font_size": 0}, {"font_size": "big", "font_weight": 0}])
+def test_figma_text_without_a_readable_size_or_weight_yields_no_sample(
+    attributes: dict[str, object],
+) -> None:
+    heading = _figma_text("h", 0, ContentKind.HEADING, attributes)
+
+    assert _observe(_section(content=[heading])).typography.samples == {}
