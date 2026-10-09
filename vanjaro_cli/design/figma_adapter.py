@@ -815,6 +815,28 @@ def _element_box(element: ContentElement) -> BoundingBox | None:
     return element.provenance[0].bounds if element.provenance else None
 
 
+def _reading_order(boxes: list[BoundingBox | None]) -> list[int]:
+    """Return indexes in on-screen order: rows top to bottom, then left to right.
+
+    Figma layer order is not reading order, and a small vertical offset between
+    neighbouring cards must not push one card into an earlier row. Items without
+    a box keep their original order after the positioned ones.
+    """
+
+    located = sorted(
+        ((index, box) for index, box in enumerate(boxes) if box is not None),
+        key=lambda pair: (pair[1].y, pair[1].x),
+    )
+    rows: list[list[tuple[int, BoundingBox]]] = []
+    for index, box in located:
+        if rows and box.y - rows[-1][0][1].y < rows[-1][0][1].height / 2:
+            rows[-1].append((index, box))
+        else:
+            rows.append([(index, box)])
+    ordered = [index for row in rows for index, _ in sorted(row, key=lambda pair: pair[1].x)]
+    return ordered + [index for index, box in enumerate(boxes) if box is None]
+
+
 def _font_size(element: ContentElement) -> float:
     try:
         return float(element.attributes.get("font_size") or 0)
@@ -1027,10 +1049,8 @@ def _image_anchor_clusters(
         chosen = max(cluster, key=preference)
         selected.append(chosen)
         duplicates.update(element.id for element in cluster if element.id != chosen.id)
-    selected.sort(
-        key=lambda item: (_element_box(item).y, _element_box(item).x),  # type: ignore[union-attr]
-    )
-    return selected, duplicates
+    order = _reading_order([_element_box(element) for element in selected])
+    return [selected[index] for index in order], duplicates
 
 
 def _geometric_card_group(
@@ -1384,6 +1404,9 @@ def _repeat_groups(
             if ids:
                 item_element_ids.append(ids)
                 item_nodes.append(unit)
+        order = _reading_order([_box(unit) for unit in item_nodes])
+        item_element_ids = [item_element_ids[index] for index in order]
+        item_nodes = [item_nodes[index] for index in order]
     else:
         eligible = [element for element in content if element.role != "section_title"]
         if section_role in {"logo_cloud", "call_to_action"}:
