@@ -15,7 +15,7 @@ import re
 from typing import Any
 
 
-__all__ = ["normalize_css_color"]
+__all__ = ["css_color_alpha", "normalize_css_color"]
 
 
 _RGB_FUNCTION = re.compile(
@@ -56,4 +56,25 @@ def normalize_css_color(value: Any) -> str | None:
         return "#" + "".join(f"{channel:02x}" for channel in channels)
     if _HEX.fullmatch(text):
         return text
+    return None
+
+
+def css_color_alpha(value: Any) -> float | None:
+    """Return a colour's opacity from 0 to 1, or None when the form is not recognized.
+
+    `normalize_css_color` keeps only the channels, so a caller that must know
+    whether the colour hides what is behind it reads the alpha here.
+    """
+
+    if not isinstance(value, str):
+        return None
+    text = value.strip()
+    if text.casefold() == "transparent":
+        return 0.0
+    match = _RGB_FUNCTION.match(text)
+    if match:
+        alpha = match.group(4)
+        return min(1.0, float(alpha)) if alpha is not None else 1.0
+    if _HEX.fullmatch(text):
+        return 1.0
     return None

@@ -39,6 +39,7 @@ from vanjaro_cli.design.capture_references import (
     StaticReference,
     StaticSourceKind,
 )
+from vanjaro_cli.design.fidelity import CURRENT_REGIME_VERSION
 from vanjaro_cli.design.models import BreakpointName, DesignDocument
 from vanjaro_cli.design.serialization import serialize_design_document
 from vanjaro_cli.design.visual_gate import CANONICAL_VIEWPORTS
@@ -48,6 +49,7 @@ from vanjaro_cli.orchestration.project_capture_evidence import (
     _record_filename,
     _publish_receipt_binding,
     recorded_publish_binding,
+    recorded_regime_version,
     _target_identity_fingerprint,
     _validate_observation,
 )
@@ -199,6 +201,7 @@ def record_page_capture_v2(
 
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION_V2,
+        "regime_version": CURRENT_REGIME_VERSION,
         "page_id": page_id,
         "built_url": built_url,
         "design_document_sha256": hashlib.sha256(
@@ -254,6 +257,7 @@ class PageCaptureV2Validation:
     breakpoints: dict[str, BreakpointV2Result] = field(default_factory=dict)
     warnings: tuple[str, ...] = ()
     publish_receipt_fingerprint: str | None = None
+    regime_version: int | None = None
 
     def canonical_breakpoints(self) -> frozenset[str]:
         """Breakpoints valid *and* at exactly the canonical viewport.
@@ -642,4 +646,5 @@ def validate_page_capture_v2(
         breakpoints=results,
         warnings=tuple(warnings),
         publish_receipt_fingerprint=recorded_publish_binding(payload),
+        regime_version=recorded_regime_version(payload),
     )

@@ -399,6 +399,7 @@ def test_a_section_that_was_never_built_fails_every_comparable_dimension() -> No
         "typography": 0.0,
         "spacing": 0.0,
         "media": 0.0,
+        "copy": 0.0,
     }
 
 

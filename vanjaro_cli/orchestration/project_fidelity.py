@@ -16,7 +16,11 @@ import json
 from pathlib import Path
 from typing import Any
 
-from vanjaro_cli.design.fidelity import UnavailableScoreError, to_viewport_visual_score
+from vanjaro_cli.design.fidelity import (
+    CURRENT_REGIME_VERSION,
+    UnavailableScoreError,
+    to_viewport_visual_score,
+)
 from vanjaro_cli.design.fidelity_evaluation import (
     PageObservation,
     score_breakpoint_fidelity,
@@ -39,6 +43,7 @@ from vanjaro_cli.design.visual_gate import (
 from vanjaro_cli.orchestration.project_capture_evidence import (
     CAPTURE_EVIDENCE_DIRECTORY,
     recorded_publish_binding,
+    recorded_regime_version,
     resolve_workspace_capture_coverage,
 )
 from vanjaro_cli.orchestration.project_capture_plan import REQUIRED_BREAKPOINTS
@@ -130,6 +135,25 @@ def _not_scored(reason: str) -> tuple[dict[str, Any], list[str]]:
     )
 
 
+def _stale_regime(recorded: int | None) -> tuple[dict[str, Any], list[str]]:
+    """Refuse to score evidence captured under another scoring regime.
+
+    A record keeps the design and build as that regime read them, and scores from
+    two regimes mean different things. Scoring it anyway would let a frozen score
+    stand for a page nobody has measured under the current rules, and launch
+    would pass on it. The only repair is a new capture, so that is the only
+    reason given.
+    """
+
+    report, blockers = _not_scored(f"re-capture required (regime {CURRENT_REGIME_VERSION})")
+    report["recorded_regime_version"] = recorded
+    return report, blockers
+
+
+def _is_stale_regime(recorded: int | None) -> bool:
+    return recorded is None or recorded < CURRENT_REGIME_VERSION
+
+
 def evaluate_project_fidelity(
     root: Path, manifest: ProjectManifest | None = None
 ) -> tuple[dict[str, Any], list[str]]:
@@ -169,7 +193,11 @@ def _evaluate_legacy_fidelity(root: Path) -> tuple[dict[str, Any], list[str]]:
     if not isinstance(payload, dict):
         raise ProjectFidelityError(f"{FIDELITY_EVIDENCE_PATH} must contain an object")
 
-    report, blockers = _score_payload(payload, root)
+    recorded = recorded_regime_version(payload)
+    if _is_stale_regime(recorded):
+        report, blockers = _stale_regime(recorded)
+    else:
+        report, blockers = _score_payload(payload, root)
     report["legacy"] = True
     return report, blockers
 
@@ -192,7 +220,14 @@ def _evaluate_workspace_fidelity(
     for page_id in coverage.page_identity.page_ids:
         payload = coverage.valid_records.get(page_id)
         v2_record = coverage.v2_records.get(page_id)
-        if payload is not None:
+        recorded_regime = (
+            recorded_regime_version(payload)
+            if payload is not None
+            else v2_record.regime_version if v2_record is not None else None
+        )
+        if (payload is not None or v2_record is not None) and _is_stale_regime(recorded_regime):
+            page_report, page_blockers = _stale_regime(recorded_regime)
+        elif payload is not None:
             try:
                 page_report, page_blockers = _score_payload(payload, root)
             except ProjectFidelityError as error:

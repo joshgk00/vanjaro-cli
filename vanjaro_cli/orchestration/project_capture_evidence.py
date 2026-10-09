@@ -48,6 +48,7 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from vanjaro_cli.design.fidelity import CURRENT_REGIME_VERSION
 from vanjaro_cli.design.fidelity_evaluation import PageObservation
 from vanjaro_cli.design.models import BreakpointName, DesignDocument
 from vanjaro_cli.design.quality_counts import PageIdentityMap, resolve_page_identity
@@ -76,6 +77,7 @@ __all__ = [
     "WorkspaceCaptureCoverage",
     "record_page_capture_evidence",
     "recorded_publish_binding",
+    "recorded_regime_version",
     "resolve_workspace_capture_coverage",
 ]
 
@@ -139,6 +141,17 @@ def recorded_publish_binding(payload: Mapping[str, Any]) -> str | None:
     return value if isinstance(value, str) and value else None
 
 
+def recorded_regime_version(payload: Mapping[str, Any]) -> int | None:
+    """The scoring regime a record was captured under; `None` when absent or malformed.
+
+    The observations in a record are the design and build as that regime read
+    them, so a record from another regime cannot be scored as if it were current.
+    """
+
+    value = payload.get("regime_version")
+    return value if isinstance(value, int) and not isinstance(value, bool) and value >= 1 else None
+
+
 def record_page_capture_evidence(
     root: Path,
     document: DesignDocument,
@@ -184,6 +197,7 @@ def record_page_capture_evidence(
 
     payload: dict[str, Any] = {
         "schema_version": SCHEMA_VERSION,
+        "regime_version": CURRENT_REGIME_VERSION,
         "page_id": page_id,
         "source_url": source_url,
         "built_url": built_url,

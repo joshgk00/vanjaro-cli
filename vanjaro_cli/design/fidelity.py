@@ -29,6 +29,7 @@ from vanjaro_cli.design.models import BreakpointName
 __all__ = [
     "CURRENT_REGIME_VERSION",
     "DIMENSION_WEIGHTS",
+    "PRESENCE_DIMENSIONS",
     "BreakpointFidelityScore",
     "DimensionScore",
     "FidelityDimension",
@@ -58,7 +59,18 @@ __all__ = [
 #    design sides carry none of the Figma inputs, so recorded live-HTML evidence
 #    scores exactly as under 2. Evidence recorded before this regime keeps its
 #    frozen design side and build side until the page is captured again.
-CURRENT_REGIME_VERSION = 3
+# 4: a design's wording is now scored. A new `copy` measure checks that each
+#    heading, item title, stat value, and other line of text the design states
+#    shows up, legibly, in the built section's rendered text, and scales the
+#    section's score by the share that does (down to half for no copy at all). It is a presence factor, not a
+#    weighted dimension: a mostly-right page would otherwise earn a bonus for the
+#    words it has (on trial 4 a 0.20 weight lifted the score from 82.5 to 86.2),
+#    which is the leniency this measure exists to remove. Sections without copy
+#    evidence score exactly as under 3. The colour dimension also reads Figma text
+#    fill colours, the solid fills of cards and panels, and a darkening layer over
+#    a background photo. Evidence now carries the regime that recorded it, and
+#    evidence from an earlier regime is not scored: it must be captured again.
+CURRENT_REGIME_VERSION = 4
 
 
 class FidelityDimension(str, Enum):
@@ -70,10 +82,23 @@ class FidelityDimension(str, Enum):
     SPACING = "spacing"
     MEDIA = "media"
     INTEGRITY = "integrity"
+    COPY = "copy"
+
+
+# Dimensions that scale a section's score instead of averaging into it. They ask
+# whether the content is there at all, which is a precondition for every other
+# dimension rather than one more quality to trade against them.
+PRESENCE_DIMENSIONS = frozenset({FidelityDimension.COPY})
+
+# Missing words cost at most half a section's score. A full multiplier made one
+# dropped heading in a three-line section cost over 40%, more than a wrong
+# layout does, while the section's visuals were still right.
+PRESENCE_FLOOR = 0.5
 
 
 # The single typed location for regime weights. Editing these changes the
-# meaning of every score and requires a regime version bump.
+# meaning of every score and requires a regime version bump. Presence dimensions
+# carry no weight; see `PRESENCE_DIMENSIONS`.
 DIMENSION_WEIGHTS: Mapping[FidelityDimension, float] = MappingProxyType(
     {
         FidelityDimension.LAYOUT: 0.30,
@@ -152,7 +177,7 @@ def _weighted_mean(dimensions: Iterable[DimensionScore]) -> float | None:
     total_weight = 0.0
     total = 0.0
     for entry in dimensions:
-        if entry.score is None:
+        if entry.score is None or entry.dimension in PRESENCE_DIMENSIONS:
             continue
         weight = DIMENSION_WEIGHTS[entry.dimension]
         total += entry.score * weight
@@ -190,7 +215,16 @@ class SectionFidelityScore(_FidelityModel):
     def score(self) -> float | None:
         if any(entry.forces_zero for entry in self.dimensions):
             return 0.0
-        return _weighted_mean(self.dimensions)
+        mean = _weighted_mean(self.dimensions)
+        if mean is None:
+            return None
+        # Each presence dimension keeps only the share of the section that is
+        # there: a build that shows 75% of the designed words earns at most 75%
+        # of what its other dimensions would have scored.
+        for entry in self.dimensions:
+            if entry.dimension in PRESENCE_DIMENSIONS and entry.score is not None:
+                mean *= PRESENCE_FLOOR + (1 - PRESENCE_FLOOR) * entry.score / 100.0
+        return _round(mean)
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -209,10 +243,15 @@ class SectionFidelityScore(_FidelityModel):
         own floor and the expected side usually supplies the least evidence.
 
         Derived from dimensions already present, so this reports the regime
-        rather than changing it.
+        rather than changing it. A presence dimension is not counted: it scales
+        the score instead of contributing to the weighted mean this describes.
         """
 
-        return sum(1 for entry in self.dimensions if entry.score is not None)
+        return sum(
+            1
+            for entry in self.dimensions
+            if entry.score is not None and entry.dimension not in PRESENCE_DIMENSIONS
+        )
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -238,6 +277,8 @@ class SectionFidelityScore(_FidelityModel):
         total = 0.0
         measured = 0.0
         for entry in self.dimensions:
+            if entry.dimension in PRESENCE_DIMENSIONS:
+                continue
             weight = DIMENSION_WEIGHTS[entry.dimension]
             total += weight
             if entry.score is None:

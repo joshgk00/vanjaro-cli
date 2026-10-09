@@ -58,8 +58,11 @@ from vanjaro_cli.design.figma_text_roles import select_hero_title
 from vanjaro_cli.design.figma_sections import segment_frame as _segment_frame
 from vanjaro_cli.design.figma_shapes import (
     background_bands as _background_bands,
+    background_overlay as _background_overlay,
     image_shape_style as _image_shape_style,
     parent_index as _parent_index,
+    surface_fills as _surface_fills,
+    text_fill_color as _text_fill_color,
 )
 from vanjaro_cli.design.figma_tree import (
     CONTAINER_TYPES as _CONTAINER_TYPES,
@@ -688,6 +691,9 @@ def _extract_section(
                 attributes["font_size"] = style["fontSize"]
             if style.get("fontWeight") is not None:
                 attributes["font_weight"] = style["fontWeight"]
+            text_color = _text_fill_color(current)
+            if text_color is not None:
+                attributes["text_color"] = text_color
             content.append(ContentElement(
                 id=element_id, kind=kind, role=element_role, value=value,
                 attributes=attributes, order=len(content), provenance=current_provenance,
@@ -776,6 +782,14 @@ def _extract_section(
     bands = _background_bands(node, _box(node))
     if bands:
         metadata["background_bands"] = bands
+    surfaces = _surface_fills(
+        node, _box(node), _loose_band_nodes(node, page_frame) if boundary_inference else ()
+    )
+    if surfaces:
+        metadata["surface_fills"] = surfaces
+    overlay = _background_overlay(node, _box(node))
+    if overlay:
+        metadata["background_overlay"] = overlay
     return Section(
         id=section_id, order=order, semantic_role=role,
         role_confidence=role_confidence, candidate_roles=candidates,
@@ -786,6 +800,31 @@ def _extract_section(
         responsive=[], decorative_layers=decorative_layers, interactions=[],
         provenance=provenance, metadata=metadata,
     )
+
+
+def _loose_band_nodes(
+    section: Mapping[str, Any], page_frame: Mapping[str, Any]
+) -> list[dict[str, Any]]:
+    """Find the page-frame nodes that lie inside an inferred section's band.
+
+    Cutting a flat page into sections keeps only nodes with text or a photo, so a
+    plain card rectangle is not among the section's children even though it is
+    drawn inside the band.
+    """
+
+    band = _box(section)
+    if band is None:
+        return []
+    grouped = {id(child) for child in _children(section)}
+    loose = []
+    for child in _children(page_frame):
+        bounds = _box(child)
+        if id(child) in grouped or bounds is None or not _visible(child):
+            continue
+        centre = bounds.y + bounds.height / 2
+        if band.y <= centre <= band.y + band.height:
+            loose.append(child)
+    return loose
 
 
 def _structural_signature(node: Mapping[str, Any]) -> tuple[int, int, int]:

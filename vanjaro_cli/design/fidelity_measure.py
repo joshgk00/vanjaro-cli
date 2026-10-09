@@ -25,13 +25,17 @@ from collections.abc import Callable, Iterable, Mapping
 from contextlib import AbstractContextManager
 from typing import Any
 
-from vanjaro_cli.design.css_color import normalize_css_color
+from vanjaro_cli.design.css_color import css_color_alpha, normalize_css_color
+from vanjaro_cli.design.fidelity_color import contrast_ratio
 from vanjaro_cli.design.fidelity_layout import BoundingBox
 from vanjaro_cli.design.fidelity_observation import (
     RenderedMedia,
+    RenderedOverlayLayer,
     RenderedPage,
     RenderedSection,
+    RenderedSurface,
     RenderedText,
+    RenderedTextRun,
 )
 from vanjaro_cli.design.models import BreakpointName
 from vanjaro_cli.design.visual_gate import CANONICAL_VIEWPORTS
@@ -57,6 +61,12 @@ _PLACEHOLDER_RE = re.compile(
 
 # Share of the section's area a background photo must cover to be the band's own.
 _MAIN_BAND_COVERAGE = 0.5
+
+# WCAG contrast ratio below which text and the opaque colour behind it are one
+# colour to the eye. 1.0 is identical; white on pale yellow is about 1.7 and is
+# still read, so this sits just above "the same colour" and nowhere near the 3:1
+# to 4.5:1 that accessibility asks of text.
+_MIN_VISIBLE_CONTRAST = 1.25
 
 # Returns raw values only. Anything requiring a judgement is left to Python.
 MEASURE_SCRIPT = """
@@ -235,6 +245,117 @@ MEASURE_SCRIPT = """
     });
     return found;
   };
+  // What a visitor can read, run by run. A run is a text node whose element is
+  // rendered, not hidden, and has a box. Alongside each run the page reports what
+  // is painted directly behind it, so Python can tell text that is in the page
+  // from text that is camouflaged on its background. An image or gradient on the
+  // way up means the backdrop is unknown, and that is reported as such.
+  const paintCache = new Map();
+  const paintedBehind = (start) => {
+    const chain = [];
+    let result = [null, false];
+    let node = start;
+    while (node) {
+      if (paintCache.has(node)) {
+        result = paintCache.get(node);
+        break;
+      }
+      chain.push(node);
+      const style = getComputedStyle(node);
+      if ((style.backgroundImage || 'none') !== 'none') {
+        result = [null, true];
+        break;
+      }
+      const value = style.backgroundColor;
+      if (value && value !== 'transparent' && value !== 'rgba(0, 0, 0, 0)') {
+        result = [value, false];
+        break;
+      }
+      node = node.parentElement;
+    }
+    chain.forEach((element) => paintCache.set(element, result));
+    return result;
+  };
+  const textRuns = (root) => {
+    const runs = [];
+    const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+    let current = walker.nextNode();
+    while (current) {
+      const text = (current.nodeValue || '').replace(/\\s+/g, ' ').trim();
+      const parent = current.parentElement;
+      current = walker.nextNode();
+      if (!text || !parent) continue;
+      if (/^(SCRIPT|STYLE|NOSCRIPT|TEMPLATE)$/.test(parent.tagName)) continue;
+      const style = getComputedStyle(parent);
+      if (style.display === 'none' || style.visibility === 'hidden') continue;
+      if (parseFloat(style.opacity) === 0 || !parent.getClientRects().length) continue;
+      const behind = paintedBehind(parent);
+      runs.push({
+        text: text,
+        color: style.color || null,
+        background: behind[0],
+        over_image: behind[1],
+      });
+    }
+    return runs;
+  };
+  // Painted boxes, as raw candidates. Whether one is a card is a judgement the
+  // design side makes by the same rules, so Python makes it from these boxes.
+  const surfaceCandidates = (root) => {
+    const origin = root.getBoundingClientRect();
+    const found = [];
+    root.querySelectorAll('*').forEach((element) => {
+      if (found.length >= 200) return;
+      const value = getComputedStyle(element).backgroundColor;
+      if (!/^rgb\\(/.test(value || '')) return;
+      const box = element.getBoundingClientRect();
+      if (!(box.width > 0 && box.height > 0)) return;
+      found.push({
+        color: value,
+        x: box.x - origin.x,
+        y: box.y - origin.y,
+        width: box.width,
+        height: box.height,
+        has_text: (element.innerText || '').trim().length > 0,
+      });
+    });
+    return found;
+  };
+  // Translucent layers that could darken a photo: a background colour with
+  // alpha, a gradient of one colour, or a pseudo-element. How much of the
+  // section each spans is reported; whether it counts is Python's call.
+  const overlayLayers = (root) => {
+    const origin = root.getBoundingClientRect();
+    const area = origin.width * origin.height;
+    if (!(area > 0)) return [];
+    const share = (width, height) =>
+      (Math.min(width, origin.width) * Math.min(height, origin.height)) / area;
+    const layers = [];
+    const keep = (color, coverage) => {
+      if (layers.length < 50 && /^rgba\\(/.test(color || '') && color !== 'rgba(0, 0, 0, 0)') {
+        layers.push({ color: color, coverage: coverage });
+      }
+    };
+    const gradient = new RegExp('linear-gradient\\\\(\\\\s*(?:[^,()]*,\\\\s*)?(rgba?\\\\([^)]*\\\\))[^,]*,\\\\s*(rgba?\\\\([^)]*\\\\))');
+    [root, ...Array.from(root.querySelectorAll('*')).slice(0, 400)].forEach((element) => {
+      const style = getComputedStyle(element);
+      const box = element.getBoundingClientRect();
+      if (box.width > 0 && box.height > 0) {
+        const covered = share(box.width, box.height);
+        keep(style.backgroundColor, covered);
+        const match = gradient.exec(style.backgroundImage || '');
+        if (match && match[1] === match[2]) keep(match[1], covered);
+      }
+      ['::before', '::after'].forEach((pseudo) => {
+        const pseudoStyle = getComputedStyle(element, pseudo);
+        if (!pseudoStyle || pseudoStyle.content === 'none' || pseudoStyle.content === 'normal') return;
+        const width = parseFloat(pseudoStyle.width);
+        const height = parseFloat(pseudoStyle.height);
+        if (width > 0 && height > 0) keep(pseudoStyle.backgroundColor, share(width, height));
+      });
+    });
+    return layers;
+  };
   return {
     console_error_count: null,
     sections: roots.map((node, index) => {
@@ -285,6 +406,9 @@ MEASURE_SCRIPT = """
           };
         }),
         backgrounds: backgroundImages(node),
+        text_runs: textRuns(node),
+        surfaces: surfaceCandidates(node),
+        overlay_layers: overlayLayers(node),
         text_samples: Array.from(
           node.querySelectorAll('h1, h2, h3, h4, h5, h6, p, li, a, button')
         ).map((element) => element.textContent.trim()),
@@ -339,6 +463,9 @@ def _section(entry: Mapping[str, Any]) -> RenderedSection:
         element_gap=_length(entry.get("element_gap")),
         media=_media(entry.get("media")),
         background_media=_background_media(entry.get("backgrounds"), bounds),
+        text_runs=_text_runs(entry.get("text_runs")),
+        surfaces=_surfaces(entry.get("surfaces")),
+        overlay_layers=_overlay_layers(entry.get("overlay_layers")),
         horizontal_overflow_px=_length(entry.get("horizontal_overflow_px")),
         empty_slot_count=sum(1 for value in samples if not value.strip()),
         placeholder_leaks=_placeholder_leaks(samples),
@@ -468,6 +595,95 @@ def _background_media(value: Any, section_bounds: BoundingBox | None) -> Rendere
         section_bounds.width * section_bounds.height
     )
     return largest if covered >= _MAIN_BAND_COVERAGE else None
+
+
+def _legible(entry: Mapping[str, Any]) -> bool:
+    """Decide whether a visitor can read a run of text against what is behind it.
+
+    Only two things make rendered text unreadable on this evidence: a fully
+    transparent colour, and a colour that is all but identical to the opaque
+    background painted directly behind it. Anything the page could not pin down
+    -- an image behind the text, a translucent backdrop, an unrecognized colour
+    form -- gets the benefit of the doubt, because calling readable text missing
+    would put an invented defect into the score.
+    """
+
+    if entry.get("over_image") is True:
+        return True
+    text_opacity = css_color_alpha(entry.get("color"))
+    if text_opacity == 0.0:
+        return False
+    text = normalize_css_color(entry.get("color"))
+    backdrop = normalize_css_color(entry.get("background"))
+    if text is None or backdrop is None or css_color_alpha(entry.get("background")) != 1.0:
+        return True
+    return contrast_ratio(text, backdrop) >= _MIN_VISIBLE_CONTRAST
+
+
+def _text_runs(value: Any) -> tuple[RenderedTextRun, ...] | None:
+    if not isinstance(value, list):
+        return None
+    runs: list[RenderedTextRun] = []
+    for entry in value:
+        if not isinstance(entry, Mapping):
+            continue
+        text = entry.get("text")
+        if isinstance(text, str) and text.strip():
+            runs.append(RenderedTextRun(text=text.strip(), legible=_legible(entry)))
+    return tuple(runs)
+
+
+def _surfaces(value: Any) -> tuple[RenderedSurface, ...] | None:
+    if not isinstance(value, list):
+        return None
+    surfaces: list[RenderedSurface] = []
+    for entry in value:
+        if not isinstance(entry, Mapping):
+            continue
+        # A translucent background blends with what is behind it, so its own
+        # channels are not the colour a visitor sees.
+        color = _color(entry.get("color")) if css_color_alpha(entry.get("color")) == 1.0 else None
+        width = _length(entry.get("width"))
+        height = _length(entry.get("height"))
+        x, y = entry.get("x"), entry.get("y")
+        if (
+            color is None
+            or not width
+            or not height
+            or isinstance(x, bool)
+            or isinstance(y, bool)
+            or not isinstance(x, (int, float))
+            or not isinstance(y, (int, float))
+        ):
+            continue
+        surfaces.append(
+            RenderedSurface(
+                color=color,
+                x=float(x),
+                y=float(y),
+                width=width,
+                height=height,
+                has_text=entry.get("has_text") is True,
+            )
+        )
+    return tuple(surfaces)
+
+
+def _overlay_layers(value: Any) -> tuple[RenderedOverlayLayer, ...] | None:
+    if not isinstance(value, list):
+        return None
+    layers: list[RenderedOverlayLayer] = []
+    for entry in value:
+        if not isinstance(entry, Mapping):
+            continue
+        opacity = css_color_alpha(entry.get("color"))
+        color = _color(entry.get("color"))
+        coverage = _length(entry.get("coverage"))
+        # A fully opaque layer hides the photo instead of darkening it.
+        if color is None or opacity is None or not 0.0 < opacity < 1.0 or coverage is None:
+            continue
+        layers.append(RenderedOverlayLayer(color=color, opacity=opacity, coverage=coverage))
+    return tuple(layers)
 
 
 def _placeholder_leaks(samples: Iterable[str]) -> tuple[str, ...]:

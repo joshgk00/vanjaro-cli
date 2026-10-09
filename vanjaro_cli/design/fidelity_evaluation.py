@@ -27,6 +27,7 @@ from vanjaro_cli.design.fidelity import (
     aggregate_breakpoint,
 )
 from vanjaro_cli.design.fidelity_color import SectionPalette, score_section_color
+from vanjaro_cli.design.fidelity_copy import SectionCopy, score_section_copy
 from vanjaro_cli.design.fidelity_layout import (
     PageGeometry,
     SectionGeometry,
@@ -67,6 +68,7 @@ class SectionObservation(_EvaluationModel):
     typography: SectionTypography = Field(default_factory=SectionTypography)
     spacing: SectionSpacing = Field(default_factory=SectionSpacing)
     media: SectionMedia = Field(default_factory=SectionMedia)
+    wording: SectionCopy = Field(default_factory=SectionCopy)
     # Integrity has no design-side counterpart; only the build can be defective.
     integrity: IntegrityObservation | None = None
 
@@ -144,6 +146,11 @@ def score_section_fidelity(
             _absent_dimension(FidelityDimension.SPACING, expected.section_id),
             _absent_dimension(FidelityDimension.MEDIA, expected.section_id),
         )
+        if expected.wording.expected:
+            dimensions = (
+                *dimensions,
+                _absent_dimension(FidelityDimension.COPY, expected.section_id),
+            )
     else:
         dimensions = (
             layout,
@@ -152,6 +159,11 @@ def score_section_fidelity(
             score_section_spacing(expected.spacing, observed.spacing),
             score_section_media(expected.media, observed.media),
         )
+        if expected.wording.expected:
+            dimensions = (
+                *dimensions,
+                score_section_copy(expected.wording, observed.wording),
+            )
         if observed.integrity is not None:
             dimensions = (*dimensions, score_section_integrity(observed.integrity))
 

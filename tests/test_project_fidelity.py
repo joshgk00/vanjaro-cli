@@ -103,6 +103,7 @@ def _write_evidence(
     observed: dict[str, Any] | None = None,
     captures: list[dict[str, Any]] | None = None,
     settled: bool = True,
+    regime_version: int | None = CURRENT_REGIME_VERSION,
 ) -> None:
     (root / "qa").mkdir(parents=True, exist_ok=True)
     if captures is None:
@@ -127,6 +128,8 @@ def _write_evidence(
         "observed": observed if observed is not None else {},
         "captures": captures,
     }
+    if regime_version is not None:
+        payload["regime_version"] = regime_version
     (root / FIDELITY_EVIDENCE_PATH).write_text(
         json.dumps(payload), encoding="utf-8"
     )

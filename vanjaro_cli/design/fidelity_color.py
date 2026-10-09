@@ -7,7 +7,9 @@ hue is glaring, while the same shift in a dark neutral is invisible.
 
 Background, text, and accent roles are scored separately so a correct
 background cannot mask a wrong accent, and so the finding says which role
-drifted.
+drifted. Two further signals score only when the design states them: the
+colours of a section's cards and panels, and a darkening layer over its
+background photo.
 
 Implemented with the standard library only. sRGB is converted to linear RGB,
 then CIE XYZ under a D65 white point, then CIE L*a*b*, then compared with the
@@ -29,11 +31,16 @@ from vanjaro_cli.design.fidelity import DimensionScore, FidelityDimension
 
 __all__ = [
     "MAX_PERCEPTUAL_DISTANCE",
+    "OVERLAY_OPACITY_TOLERANCE",
+    "OVERLAY_WEIGHT",
     "ROLE_WEIGHTS",
+    "SURFACE_WEIGHT",
     "ColorRole",
     "InvalidColorError",
     "Lab",
+    "OverlaySample",
     "SectionPalette",
+    "contrast_ratio",
     "delta_e_2000",
     "distance_to_score",
     "hex_to_lab",
@@ -77,6 +84,14 @@ ROLE_WEIGHTS: Mapping[ColorRole, float] = {
     ColorRole.ACCENT: 0.20,
 }
 
+# Scored only when the design states them, so a section without cards or a
+# background photo scores exactly as it did. Card fills cover as much area as
+# text does; a darkening layer is small next to the photo it sits on.
+SURFACE_WEIGHT = 0.35
+OVERLAY_WEIGHT = 0.20
+# A swing this large in how much light a layer lets through is a different layer.
+OVERLAY_OPACITY_TOLERANCE = 0.5
+
 
 def _round(value: float) -> float:
     return round(value + 0.0, 4)
@@ -103,6 +118,17 @@ def _linearize(channel: float) -> float:
     if channel <= 0.04045:
         return channel / 12.92
     return ((channel + 0.055) / 1.055) ** 2.4
+
+
+def contrast_ratio(first: str, second: str) -> float:
+    """WCAG contrast ratio between two hex colours: 1.0 for identical, 21.0 at most."""
+
+    def luminance(value: str) -> float:
+        red, green, blue = (_linearize(channel / 255.0) for channel in hex_to_rgb(value))
+        return 0.2126 * red + 0.7152 * green + 0.0722 * blue
+
+    lighter, darker = sorted((luminance(first), luminance(second)), reverse=True)
+    return (lighter + 0.05) / (darker + 0.05)
 
 
 def _pivot(value: float) -> float:
@@ -240,21 +266,54 @@ def distance_to_score(distance: float) -> float:
     return _round(100.0 * (1 - distance / MAX_PERCEPTUAL_DISTANCE))
 
 
+class OverlaySample(BaseModel):
+    """A darkening or tint layer over a section's background photo.
+
+    The design states one with a colour and how much light it lets through. The
+    build either has such a layer (`present`) or was measured without one.
+    """
+
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    present: bool = True
+    color: str | None = None
+    opacity: float | None = Field(default=None, ge=0, le=1)
+
+    @model_validator(mode="after")
+    def present_layer_states_its_paint(self) -> "OverlaySample":
+        if self.present:
+            if self.color is None or self.opacity is None:
+                raise ValueError("a present overlay needs a colour and an opacity")
+            hex_to_rgb(self.color)
+        elif self.color is not None or self.opacity is not None:
+            raise ValueError("an absent overlay carries no colour or opacity")
+        return self
+
+
 class SectionPalette(BaseModel):
     """Colours observed or expected for one section, keyed by role.
 
     A role absent from the mapping is unmeasured. It is excluded from the score
     rather than counted as a mismatch.
+
+    `surfaces` lists the colours of the section's cards and panels and `overlay`
+    describes a darkening layer over its background photo. ``None`` means the
+    side did not measure them. An empty `surfaces` on the build side is a
+    measurement: the build paints no cards.
     """
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     colors: Mapping[ColorRole, str] = Field(default_factory=dict)
+    surfaces: tuple[str, ...] | None = None
+    overlay: OverlaySample | None = None
 
     @model_validator(mode="after")
     def colors_are_parseable(self) -> "SectionPalette":
         for role, value in self.colors.items():
             hex_to_rgb(value)  # raises InvalidColorError on malformed input
+        for value in self.surfaces or ():
+            hex_to_rgb(value)
         return self
 
     def get(self, role: ColorRole) -> str | None:
@@ -286,22 +345,33 @@ def score_section_color(
 ) -> DimensionScore:
     """Score a section's colours against its design tokens, role by role."""
 
-    subscores: dict[ColorRole, float | None] = {}
+    subscores: dict[str, float | None] = {}
+    weights: dict[str, float] = {}
     for role in ColorRole:
+        weights[role.value] = ROLE_WEIGHTS[role]
         expected_value = expected.get(role)
         observed_value = observed.get(role)
         if expected_value is None or observed_value is None:
-            subscores[role] = None
+            subscores[role.value] = None
             continue
-        subscores[role] = distance_to_score(role_distance(expected_value, observed_value))
+        subscores[role.value] = distance_to_score(
+            role_distance(expected_value, observed_value)
+        )
 
-    score = _combine((ROLE_WEIGHTS[role], subscores[role]) for role in ColorRole)
+    # These two only exist when the design states them, so they neither add to
+    # the subscore total nor weigh on a section whose design has no card or photo.
+    if expected.surfaces:
+        weights["surfaces"] = SURFACE_WEIGHT
+        subscores["surfaces"] = _score_surfaces(expected.surfaces, observed)
+    if expected.overlay is not None:
+        weights["overlay"] = OVERLAY_WEIGHT
+        subscores["overlay"] = _score_overlay(expected.overlay, observed.overlay)
 
-    unmeasured = [role.value for role in ColorRole if subscores[role] is None]
+    score = _combine((weights[name], value) for name, value in subscores.items())
+
+    unmeasured = [name for name, value in subscores.items() if value is None]
     drifted = sorted(
-        role.value
-        for role in ColorRole
-        if subscores[role] is not None and subscores[role] < 100.0
+        name for name, value in subscores.items() if value is not None and value < 100.0
     )
 
     details: list[str] = []
@@ -314,6 +384,56 @@ def score_section_color(
         dimension=FidelityDimension.COLOR,
         score=score,
         detail="; ".join(details) if details else None,
-        measured_subscores=len(ColorRole) - len(unmeasured),
-        total_subscores=len(ColorRole),
+        measured_subscores=len(subscores) - len(unmeasured),
+        total_subscores=len(subscores),
     )
+
+
+def _score_surfaces(expected: tuple[str, ...], observed: SectionPalette) -> float | None:
+    """Match each designed card colour to a painted build surface, one to one.
+
+    A card the build leaves unpainted shows the band behind it, so the build's
+    background colour is always an available match; it can stand in for any
+    number of cards. A card painted a different colour, or not matched by any
+    surface, scores down by how far its colour is from the nearest one left.
+    """
+
+    if observed.surfaces is None:
+        return None
+    painted = list(observed.surfaces)
+    backdrop = observed.get(ColorRole.BACKGROUND)
+
+    pairs = sorted(
+        (role_distance(wanted, colour), wanted_index, painted_index)
+        for wanted_index, wanted in enumerate(expected)
+        for painted_index, colour in enumerate(painted)
+    )
+    nearest: dict[int, float] = {}
+    taken: set[int] = set()
+    for distance, wanted_index, painted_index in pairs:
+        if wanted_index in nearest or painted_index in taken:
+            continue
+        nearest[wanted_index] = distance
+        taken.add(painted_index)
+
+    scores: list[float] = []
+    for wanted_index, wanted in enumerate(expected):
+        options = [nearest[wanted_index]] if wanted_index in nearest else []
+        if backdrop is not None:
+            options.append(role_distance(wanted, backdrop))
+        scores.append(distance_to_score(min(options)) if options else 0.0)
+    return _round(sum(scores) / len(scores))
+
+
+def _score_overlay(expected: OverlaySample, observed: OverlaySample | None) -> float | None:
+    """Score a darkening layer on its colour and on how much light it lets through."""
+
+    if observed is None:
+        return None
+    if not observed.present:
+        return 0.0
+    assert expected.color is not None and expected.opacity is not None
+    assert observed.color is not None and observed.opacity is not None
+    colour = distance_to_score(role_distance(expected.color, observed.color))
+    swing = abs(expected.opacity - observed.opacity) / OVERLAY_OPACITY_TOLERANCE
+    return _round((colour + 100.0 * max(0.0, 1.0 - swing)) / 2)

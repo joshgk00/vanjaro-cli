@@ -8,6 +8,7 @@ from pydantic import ValidationError
 from vanjaro_cli.design.fidelity import (
     CURRENT_REGIME_VERSION,
     DIMENSION_WEIGHTS,
+    PRESENCE_DIMENSIONS,
     BreakpointFidelityScore,
     DimensionScore,
     FidelityDimension,
@@ -24,7 +25,7 @@ from vanjaro_cli.design.models import BreakpointName
 
 def _dimensions(value: float | None = 80.0) -> tuple[DimensionScore, ...]:
     return tuple(
-        DimensionScore(dimension=dimension, score=value) for dimension in FidelityDimension
+        DimensionScore(dimension=dimension, score=value) for dimension in DIMENSION_WEIGHTS
     )
 
 
@@ -102,7 +103,7 @@ class TestScoreBoundaries:
             DimensionScore(dimension=FidelityDimension.LAYOUT, score=-0.1)
 
     def test_weights_are_declared_once_and_cover_every_dimension(self) -> None:
-        assert set(DIMENSION_WEIGHTS) == set(FidelityDimension)
+        assert set(DIMENSION_WEIGHTS) == set(FidelityDimension) - PRESENCE_DIMENSIONS
         assert sum(DIMENSION_WEIGHTS.values()) == pytest.approx(1.0)
 
     def test_weighted_mean_reflects_declared_weights(self) -> None:

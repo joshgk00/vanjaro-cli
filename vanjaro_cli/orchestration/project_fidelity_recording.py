@@ -20,6 +20,7 @@ from collections.abc import Iterable
 from pathlib import Path
 from typing import Any
 
+from vanjaro_cli.design.fidelity import CURRENT_REGIME_VERSION
 from vanjaro_cli.design.fidelity_capture import (
     CaptureRequest,
     PageRenderer,
@@ -115,6 +116,7 @@ def record_project_fidelity_evidence(
         observed[breakpoint.value] = build.model_dump(mode="json")
 
     payload = {
+        "regime_version": CURRENT_REGIME_VERSION,
         "page_id": page_id,
         "source_url": source_url,
         "built_url": built_url,

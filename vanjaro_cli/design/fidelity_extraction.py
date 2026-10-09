@@ -25,7 +25,14 @@ import re
 from collections.abc import Iterable, Mapping
 
 from vanjaro_cli.design.css_color import normalize_css_color
-from vanjaro_cli.design.fidelity_color import ColorRole, SectionPalette
+from vanjaro_cli.design.fidelity_color import ColorRole, OverlaySample, SectionPalette
+from vanjaro_cli.design.fidelity_copy import (
+    BODY_WEIGHT,
+    HEADLINE_WEIGHT,
+    PLACEHOLDER_COPY,
+    CopyExpectation,
+    SectionCopy,
+)
 from vanjaro_cli.design.fidelity_evaluation import PageObservation, SectionObservation
 from vanjaro_cli.design.fidelity_layout import BoundingBox as LayoutBox
 from vanjaro_cli.design.fidelity_layout import SectionGeometry
@@ -89,6 +96,21 @@ _BODY_KINDS = frozenset({ContentKind.TEXT})
 # build's first leaf text is that line.
 _FIGMA_HEADING_KINDS = _HEADING_KINDS | {ContentKind.STAT}
 _FIGMA_BODY_KINDS = _BODY_KINDS | {ContentKind.LIST_ITEM}
+# Text a visitor reads as the section's own words. A button's label is copy too,
+# but its colour belongs to the accent role, so it does not set the text colour.
+_COPY_KINDS = frozenset(
+    {
+        ContentKind.HEADING,
+        ContentKind.TEXT,
+        ContentKind.BUTTON,
+        ContentKind.LINK,
+        ContentKind.STAT,
+        ContentKind.LIST_ITEM,
+        ContentKind.QUOTE,
+    }
+)
+_HEADLINE_KINDS = frozenset({ContentKind.HEADING, ContentKind.STAT})
+_TEXT_COLOUR_KINDS = _COPY_KINDS - _ACTION_KINDS
 _BACKGROUND_MEDIA_ROLE = "background_media"
 _PIXEL_VALUE = re.compile(r"^\s*(-?\d+(?:\.\d+)?)\s*(?:px)?\s*$")
 
@@ -147,6 +169,7 @@ def observe_expected_section(
         typography=_typography(section),
         spacing=_spacing(section, breakpoint),
         media=_media(section, assets, breakpoint),
+        wording=_wording(section, breakpoint),
         # Integrity has no design-side counterpart; only a build can be defective.
         integrity=None,
     )
@@ -298,13 +321,17 @@ def _palette(section: Section) -> SectionPalette:
     ) or _band_background(section)
     if background is not None:
         colors[ColorRole.BACKGROUND] = background
-    text = normalize_css_color(_style_value(section.style, StyleProperty.TEXT_COLOR))
+    text = normalize_css_color(
+        _style_value(section.style, StyleProperty.TEXT_COLOR)
+    ) or _figma_text_color(section)
     if text is not None:
         colors[ColorRole.TEXT] = text
     accent = normalize_css_color(_accent(section))
     if accent is not None:
         colors[ColorRole.ACCENT] = accent
-    return SectionPalette(colors=colors)
+    return SectionPalette(
+        colors=colors, surfaces=_surface_colors(section), overlay=_overlay(section)
+    )
 
 
 def _band_background(section: Section) -> str | None:
@@ -322,6 +349,96 @@ def _band_background(section: Section) -> str | None:
         if isinstance(band, dict) and band.get("role") == "base":
             return normalize_css_color(band.get("color"))
     return None
+
+
+def _figma_text_color(section: Section) -> str | None:
+    """Read the section's text colour from the fills Figma measured on its text.
+
+    A Figma section has no one colour for its text the way a styled section does,
+    so the colour that fills the most characters stands for it, as the colour a
+    browser inherits into most of the text would. A text node whose characters
+    are filled differently was never recorded, and a button's label is left to
+    the accent role.
+    """
+
+    characters: dict[str, int] = {}
+    for element in section.content:
+        if element.kind not in _TEXT_COLOUR_KINDS or not _is_figma_measured(element):
+            continue
+        color = normalize_css_color(element.attributes.get("text_color"))
+        if color is None or not isinstance(element.value, str):
+            continue
+        characters[color] = characters.get(color, 0) + len(element.value.strip())
+    if not characters:
+        return None
+    return max(characters, key=lambda color: (characters[color], color))
+
+
+def _surface_colors(section: Section) -> tuple[str, ...] | None:
+    """List the colours of the cards and panels Figma measured as solid fills."""
+
+    records = section.metadata.get("surface_fills")
+    colors = [
+        color
+        for record in (records if isinstance(records, list) else [])
+        if isinstance(record, dict)
+        and (color := normalize_css_color(record.get("color"))) is not None
+    ]
+    return tuple(colors) or None
+
+
+def _overlay(section: Section) -> OverlaySample | None:
+    """Read the darkening layer Figma measured over the section's background photo."""
+
+    record = section.metadata.get("background_overlay")
+    if not isinstance(record, dict):
+        return None
+    color = normalize_css_color(record.get("color"))
+    opacity = record.get("opacity")
+    if (
+        color is None
+        or isinstance(opacity, bool)
+        or not isinstance(opacity, (int, float))
+        or not 0 <= opacity <= 1
+    ):
+        return None
+    return OverlaySample(present=True, color=color, opacity=float(opacity))
+
+
+def _wording(section: Section, breakpoint: BreakpointName) -> SectionCopy:
+    """List the lines of text the design states for this section.
+
+    A section the design hides at this breakpoint states nothing there, an element
+    it hides is not copy a visitor was meant to see, and sample text such as
+    "Lorem ipsum" is not copy at all: the build is required to leave it out.
+    """
+
+    if any(
+        observation.breakpoint == breakpoint and observation.hidden is True
+        for observation in section.responsive
+    ):
+        return SectionCopy()
+    lines: list[CopyExpectation] = []
+    for element in _ordered(section.content):
+        if element.kind not in _COPY_KINDS or not isinstance(element.value, str):
+            continue
+        text = " ".join(element.value.split())
+        if not text or PLACEHOLDER_COPY.search(text) or _is_hidden(element):
+            continue
+        lines.append(
+            CopyExpectation(
+                text=text,
+                weight=HEADLINE_WEIGHT if element.kind in _HEADLINE_KINDS else BODY_WEIGHT,
+            )
+        )
+    return SectionCopy(expected=tuple(lines))
+
+
+def _is_hidden(element: ContentElement) -> bool:
+    return (
+        _style_value(element.style, StyleProperty.DISPLAY) == "none"
+        or _style_value(element.style, StyleProperty.VISIBILITY) == "hidden"
+    )
 
 
 def _accent(section: Section) -> str | None:

@@ -29,7 +29,8 @@ from typing import Protocol
 
 from pydantic import BaseModel, ConfigDict, Field
 
-from vanjaro_cli.design.fidelity_color import ColorRole, SectionPalette
+from vanjaro_cli.design.fidelity_color import ColorRole, OverlaySample, SectionPalette
+from vanjaro_cli.design.fidelity_copy import SectionCopy
 from vanjaro_cli.design.fidelity_evaluation import PageObservation, SectionObservation
 from vanjaro_cli.design.fidelity_layout import BoundingBox, SectionGeometry
 from vanjaro_cli.design.fidelity_media import (
@@ -44,13 +45,17 @@ from vanjaro_cli.design.fidelity_type import (
     TypeSample,
 )
 from vanjaro_cli.design.models import BreakpointName
+from vanjaro_cli.design.surface_rules import SurfaceCandidate, select_surfaces
 
 __all__ = [
     "PageMeasurer",
     "RenderedMedia",
+    "RenderedOverlayLayer",
     "RenderedPage",
     "RenderedSection",
+    "RenderedSurface",
     "RenderedText",
+    "RenderedTextRun",
     "observe_built_page",
     "observe_built_section",
 ]
@@ -85,6 +90,42 @@ class RenderedMedia(_RenderedModel):
     loaded: bool | None = None
 
 
+class RenderedTextRun(_RenderedModel):
+    """One stretch of text the page rendered, and whether a visitor can read it.
+
+    `legible` is False for text that is in the page but camouflaged: painted in
+    the same colour as the opaque background directly behind it, or fully
+    transparent. White text on a white card is rendered and still unseen.
+    """
+
+    text: str = Field(min_length=1)
+    legible: bool = True
+
+
+class RenderedSurface(_RenderedModel):
+    """One element that paints an opaque background, placed within its section."""
+
+    color: str
+    x: float
+    y: float
+    width: float = Field(gt=0)
+    height: float = Field(gt=0)
+    has_text: bool = False
+
+
+class RenderedOverlayLayer(_RenderedModel):
+    """A translucent painted layer, and the share of the section it spans."""
+
+    color: str
+    opacity: float = Field(gt=0, lt=1)
+    coverage: float = Field(ge=0)
+
+
+# A layer must span most of the section to read as a darkening of its photo
+# rather than a tint on one corner of it.
+_OVERLAY_MIN_COVERAGE = 0.8
+
+
 class RenderedSection(_RenderedModel):
     """Everything a browser measured for one section."""
 
@@ -102,6 +143,11 @@ class RenderedSection(_RenderedModel):
     media: Sequence[RenderedMedia] = ()
     # The CSS background photo that paints the section's main band, if any.
     background_media: RenderedMedia | None = None
+    # ``None`` means the measurement did not report it (evidence recorded before
+    # these existed); an empty tuple means it looked and found none.
+    text_runs: tuple[RenderedTextRun, ...] | None = None
+    surfaces: tuple[RenderedSurface, ...] | None = None
+    overlay_layers: tuple[RenderedOverlayLayer, ...] | None = None
     horizontal_overflow_px: float | None = Field(default=None, ge=0)
     empty_slot_count: int | None = Field(default=None, ge=0)
     placeholder_leaks: tuple[str, ...] = ()
@@ -166,6 +212,7 @@ def observe_built_section(
             )
         ),
         media=_media(section),
+        wording=_wording(section),
         integrity=IntegrityObservation(
             horizontal_overflow_px=section.horizontal_overflow_px,
             empty_slot_count=section.empty_slot_count,
@@ -184,7 +231,56 @@ def _palette(section: RenderedSection) -> SectionPalette:
     ):
         if isinstance(value, str) and value.strip():
             colors[role] = value.strip()
-    return SectionPalette(colors=colors)
+    return SectionPalette(
+        colors=colors, surfaces=_surfaces(section), overlay=_overlay(section)
+    )
+
+
+def _surfaces(section: RenderedSection) -> tuple[str, ...] | None:
+    """Pick the cards and panels from the painted elements, by the design side's rules."""
+
+    if section.surfaces is None or section.bounds is None:
+        return None
+    selected = select_surfaces(
+        (
+            SurfaceCandidate(
+                color=surface.color,
+                x=surface.x,
+                y=surface.y,
+                width=surface.width,
+                height=surface.height,
+                has_text=surface.has_text,
+            )
+            for surface in section.surfaces
+        ),
+        section.bounds.width,
+        section.bounds.height,
+    )
+    return tuple(candidate.color for candidate in selected)
+
+
+def _overlay(section: RenderedSection) -> OverlaySample | None:
+    """Report the layer that darkens the section, or that the build has none."""
+
+    if section.overlay_layers is None:
+        return None
+    covering = [
+        layer for layer in section.overlay_layers if layer.coverage >= _OVERLAY_MIN_COVERAGE
+    ]
+    if not covering:
+        return OverlaySample(present=False)
+    strongest = max(covering, key=lambda layer: (layer.coverage, layer.opacity))
+    return OverlaySample(present=True, color=strongest.color, opacity=strongest.opacity)
+
+
+def _wording(section: RenderedSection) -> SectionCopy:
+    """Join the text a visitor can read; text camouflaged on its background is left out."""
+
+    if section.text_runs is None:
+        return SectionCopy()
+    return SectionCopy(
+        rendered=" ".join(run.text for run in section.text_runs if run.legible)
+    )
 
 
 def _typography(section: RenderedSection) -> SectionTypography:
