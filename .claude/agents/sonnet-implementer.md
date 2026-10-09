@@ -12,6 +12,7 @@ Rules:
 - Every behavior change gets tests (happy path and the error case). Match the style of nearby code and tests.
 - Run the focused tests while you work, then the full suite: `python -m pytest -m "not integration" -q -p no:cacheprovider`. It must pass.
 - For extraction, matching, or scoring changes, also run `vanjaro migrate benchmark-all` and say whether any metric went down.
+- In a worktree, the `vanjaro` command on PATH runs the main checkout, not your code. Run the CLI as `python -c "import sys; sys.argv=['vanjaro', ...]; from vanjaro_cli.cli import main; main()"` from the worktree (or set `PYTHONPATH` to it). Do not `pip install -e` in a worktree.
 - Do not commit, push, or touch any live site, portal, theme, or approval gate. Do not add dependencies.
 - Do not edit `docs/real-source-trial-goal.md` or project memory. The orchestrator owns those.
 
